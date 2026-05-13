@@ -1,0 +1,62 @@
+name: triage
+description: Classifies untriaged GitHub issues as accept, reject, or needs-human. Processes up to 5 issues per run, accepts at most 3.
+
+provider: claude
+model: claude-haiku-4-5
+
+nodes:
+  - id: fetch-issues
+    bash: |
+      set -euo pipefail
+      gh issue list --label "factory:untriaged" --limit 5 --json number,title,body,labels,author > issues.json
+      cat issues.json
+    timeout: 60000
+
+  - id: classify
+    command: triage-classify
+    depends_on: [fetch-issues]
+    model: claude-haiku-4-5
+    maxBudgetUsd: 0.10
+    allowed_tools: [Read]
+    output_format:
+      type: array
+      items:
+        type: object
+        properties:
+          issue_number:
+            type: integer
+          decision:
+            type: string
+            enum: ["accept", "reject", "needs-human"]
+          reason:
+            type: string
+          confidence:
+            type: number
+        required: [issue_number, decision, reason, confidence]
+
+  - id: apply-labels
+    bash: |
+      DECISIONS='$classify.output'
+      ACCEPTED=0
+
+      echo "$DECISIONS" | jq -c '.[]' | while read item; do
+        NUM=$(echo "$item" | jq '.number')
+        DECISION=$(echo "$item" | jq -r '.decision')
+        REASON=$(echo "$item" | jq -r '.reason')
+
+        if [ "$DECISION" = "accept" ] && [ $ACCEPTED -lt 3 ]; then
+          gh issue edit $NUM --remove-label "factory:untriaged" --add-label "factory:accepted"
+          ACCEPTED=$((ACCEPTED + 1))
+        elif [ "$DECISION" = "reject" ]; then
+          gh issue edit $NUM --remove-label "factory:untriaged" --add-label "factory:rejected"
+          gh issue close $NUM --comment "Factory triage rejected: $REASON"
+        elif [ "$DECISION" = "needs-human" ]; then
+          gh issue edit $NUM --remove-label "factory:untriaged" --add-label "factory:needs-human"
+          gh issue comment $NUM --body "Factory triage escalated to human review: $REASON"
+        else
+          # Over accept limit — defer to next run
+          echo "Deferring issue $NUM (accept limit reached)"
+        fi
+      done
+    depends_on: [classify]
+    timeout: 120000

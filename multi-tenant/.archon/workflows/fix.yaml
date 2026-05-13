@@ -1,0 +1,105 @@
+name: fix
+description: |
+  Finds an in-progress issue with failure_notes (returned by validate workflow),
+  reads the failure context, and fixes the implementation.
+  After fixing, moves back to review/ for re-validation.
+
+provider: claude
+model: sonnet
+
+nodes:
+  - id: pick-failed
+    bash: |
+      set -euo pipefail
+      ISSUES_DIR="$(pwd)/issues"
+      IN_PROGRESS_DIR="${ISSUES_DIR}/in-progress"
+
+      # Find first in-progress issue that has actual failure_notes
+      ISSUE_FILE=""
+      for f in $(ls -t "${IN_PROGRESS_DIR}"/*.md 2>/dev/null | tail -10 || true); do
+        NOTES=$(grep "^failure_notes:" "${f}" | sed 's/failure_notes: //' | tr -d '"')
+        if [ -n "${NOTES}" ] && [ "${NOTES}" != "null" ]; then
+          ISSUE_FILE="${f}"
+          break
+        fi
+      done
+
+      if [ -z "${ISSUE_FILE}" ]; then
+        echo "NO_ISSUE_FOUND"
+        exit 0
+      fi
+
+      FILENAME=$(basename "${ISSUE_FILE}")
+      FAILURE_NOTES=$(grep "^failure_notes:" "${ISSUE_FILE}" | sed 's/failure_notes: //' | tr -d '"')
+
+      echo "ISSUE_FILE=${ISSUE_FILE}"
+      echo "FILENAME=${FILENAME}"
+      echo "FAILURE_NOTES=${FAILURE_NOTES}"
+    timeout: 10000
+
+  - id: read-context
+    bash: |
+      set -euo pipefail
+      FILENAME=$(echo "$pick-failed.output" | grep "^FILENAME=" | cut -d= -f2)
+      ISSUES_DIR="$(pwd)/issues"
+
+      if [ -z "${FILENAME}" ]; then
+        echo "No failed issue found."
+        exit 1
+      fi
+
+      ISSUE_FILE="${ISSUES_DIR}/in-progress/${FILENAME}"
+
+      echo "=== ISSUE (with failure notes) ==="
+      cat "${ISSUE_FILE}"
+      echo ""
+      echo "=== CLAUDE.md ==="
+      cat "$(pwd)/CLAUDE.md"
+      echo ""
+      echo "=== FACTORY_RULES.md ==="
+      cat "$(pwd)/FACTORY_RULES.md"
+    depends_on: [pick-failed]
+    timeout: 15000
+
+  - id: fix
+    command: fix-implementation
+    depends_on: [read-context]
+    model: sonnet
+    allowed_tools: [Read, Write, Edit, Bash]
+    context: fresh
+    maxBudgetUsd: 1.50
+
+  - id: mark-review
+    bash: |
+      set -euo pipefail
+      ISSUES_DIR="$(pwd)/issues"
+      FILENAME=$(echo "$pick-failed.output" | grep "^FILENAME=" | cut -d= -f2)
+
+      if [ -z "${FILENAME}" ]; then
+        echo "No filename."
+        exit 0
+      fi
+
+      ISSUE_FILE="${ISSUES_DIR}/in-progress/${FILENAME}"
+
+      if [ ! -f "${ISSUE_FILE}" ]; then
+        echo "File not found in in-progress/. Already moved?"
+        exit 0
+      fi
+
+      python3 -c "
+      import re
+      from datetime import datetime
+      with open('${ISSUE_FILE}', 'r') as f:
+          content = f.read()
+      content = re.sub(r'^status: \".*\"', 'status: \"review\"', content, flags=re.MULTILINE)
+      # Clear failure notes so validate starts fresh
+      content = re.sub(r'^failure_notes: .*', 'failure_notes: null', content, flags=re.MULTILINE)
+      content += f'\n\n---\n**[fix] {datetime.now().strftime(\"%Y-%m-%d\")}:** Fix applied. Returning to review.\n'
+      with open('${ISSUE_FILE}', 'w') as f:
+          f.write(content)
+      "
+      mv "${ISSUE_FILE}" "${ISSUES_DIR}/review/${FILENAME}"
+      echo "Fixed and moved to review: ${FILENAME}"
+    depends_on: [fix]
+    timeout: 15000

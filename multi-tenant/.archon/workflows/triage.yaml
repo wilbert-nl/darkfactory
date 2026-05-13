@@ -1,0 +1,117 @@
+name: triage
+description: |
+  Reads up to 5 untriaged issues, classifies each as accept/reject/needs-human,
+  and moves them to the correct directory. Pure filesystem state management.
+
+provider: claude
+model: sonnet
+
+nodes:
+  - id: fetch-untriaged
+    bash: |
+      set -euo pipefail
+      ISSUES_DIR="$(pwd)/issues/untriaged"
+
+      # Get up to 5 issue files, oldest first
+      FILES=$(ls -t "${ISSUES_DIR}"/*.md 2>/dev/null | tail -5 || true)
+
+      if [ -z "${FILES}" ]; then
+        echo "NO_ISSUES"
+        exit 0
+      fi
+
+      echo "=== UNTRIAGED ISSUES ==="
+      for f in ${FILES}; do
+        echo "--- FILE: $(basename ${f}) ---"
+        cat "${f}"
+        echo ""
+      done
+    timeout: 15000
+
+  - id: fetch-rules
+    bash: |
+      set -euo pipefail
+      echo "=== MISSION.md ==="
+      cat "$(pwd)/MISSION.md"
+      echo ""
+      echo "=== FACTORY_RULES.md (Triage section) ==="
+      cat "$(pwd)/FACTORY_RULES.md"
+    timeout: 10000
+
+  - id: classify
+    command: triage-classify
+    depends_on: [fetch-untriaged, fetch-rules]
+    model: sonnet
+    allowed_tools: []
+    context: fresh
+    output_format:
+      type: object
+      properties:
+        decisions:
+          type: array
+          items:
+            type: object
+            properties:
+              filename:
+                type: string
+              decision:
+                type: string
+                enum: ["accept", "reject", "needs-human"]
+              reason:
+                type: string
+            required: [filename, decision, reason]
+      required: [decisions]
+    maxBudgetUsd: 0.50
+
+  - id: apply-decisions
+    bash: |
+      set -euo pipefail
+      DECISIONS='$classify.output'
+      ISSUES_DIR="$(pwd)/issues"
+
+      echo "${DECISIONS}" | python3 -c "
+      import json, sys, os, re, subprocess
+      from datetime import datetime
+
+      decisions = json.loads(sys.stdin.read())['decisions']
+
+      for d in decisions:
+          filename = d['filename']
+          decision = d['decision']
+          reason = d['reason']
+
+          src = os.path.join('${ISSUES_DIR}', 'untriaged', filename)
+          if not os.path.exists(src):
+              print(f'WARNING: {filename} not found, skipping')
+              continue
+
+          # Read file
+          with open(src, 'r') as f:
+              content = f.read()
+
+          # Update status in frontmatter
+          content = re.sub(r'^status: \".*\"', f'status: \"{decision}\"', content, flags=re.MULTILINE)
+          content = re.sub(r'^last_attempt: .*', f'last_attempt: \"{datetime.now().isoformat()}\"', content, flags=re.MULTILINE)
+
+          # Add triage note
+          note = f'\n\n---\n**[triage] {datetime.now().strftime(\"%Y-%m-%d\")}:** {reason}\n'
+          content = content + note
+
+          # Determine destination
+          dest_dir_map = {
+              'accept': 'accepted',
+              'reject': 'rejected',
+              'needs-human': 'needs-human'
+          }
+          dest_dir = dest_dir_map.get(decision, 'needs-human')
+          dest = os.path.join('${ISSUES_DIR}', dest_dir, filename)
+
+          # Write updated file and move
+          with open(src, 'w') as f:
+              f.write(content)
+          os.rename(src, dest)
+
+          print(f'[{decision}] {filename}: {reason}')
+      "
+    depends_on: [classify]
+    timeout: 30000

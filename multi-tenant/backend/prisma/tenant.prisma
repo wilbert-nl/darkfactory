@@ -1,0 +1,226 @@
+// Tenant schema template — one copy per tenant at runtime.
+// This file generates TenantPrismaClient (see src/generated/tenant-client).
+// Each tenant's schema is: tenant_{tenantId}
+
+generator tenantClient {
+  provider = "prisma-client-js"
+  output   = "../src/generated/tenant-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("TENANT_SCHEMA_URL")
+}
+
+// ── Users (tenant-local profiles) ────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  globalUserId String   @unique
+  email        String   @unique
+  firstName    String
+  lastName     String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userRoles UserRole[]
+
+  @@map("users")
+}
+
+// ── RBAC ──────────────────────────────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  isCustom    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id       String @id @default(uuid())
+  action   String @unique
+  resource String
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ── Tenant Settings ───────────────────────────────────────────────────────────
+
+model TenantSettings {
+  id                String   @id @default(uuid())
+  logoUrl           String?
+  primaryColor      String   @default("#1976D2")
+  accentColor       String   @default("#FF4081")
+  fontFamily        String   @default("Roboto")
+  tenantDisplayName String?
+  metadata          Json?
+  updatedAt         DateTime @updatedAt
+
+  @@map("tenant_settings")
+}
+
+// ── Products ──────────────────────────────────────────────────────────────────
+
+model ProductCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  products Product[]
+
+  @@map("product_categories")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  categoryId  String?
+  isActive    Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category     ProductCategory? @relation(fields: [categoryId], references: [id])
+  reservations Reservation[]
+  orderItems   OrderItem[]
+
+  @@map("products")
+}
+
+// ── Customers ─────────────────────────────────────────────────────────────────
+
+model Customer {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String?  @unique
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations Reservation[]
+  orders       Order[]
+
+  @@map("customers")
+}
+
+// ── Reservations ──────────────────────────────────────────────────────────────
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model Reservation {
+  id         String            @id @default(uuid())
+  customerId String
+  productId  String?
+  startTime  DateTime
+  endTime    DateTime
+  status     ReservationStatus @default(PENDING)
+  notes      String?
+  metadata   Json?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  customer Customer  @relation(fields: [customerId], references: [id])
+  product  Product?  @relation(fields: [productId], references: [id])
+
+  @@map("reservations")
+}
+
+// ── Orders ────────────────────────────────────────────────────────────────────
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  customerId  String
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+// ── Tenant Audit Log ──────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  action    String
+  resource  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}

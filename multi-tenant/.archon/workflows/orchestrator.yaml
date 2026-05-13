@@ -1,0 +1,82 @@
+name: orchestrator
+description: |
+  Main factory orchestrator. Run on a cron schedule (every 4-6 hours).
+  Checks filesystem state and dispatches the highest-priority workflow:
+    1. Fix    → issues with failure_notes in in-progress/
+    2. Validate → issues waiting in review/
+    3. Implement → issues waiting in accepted/
+    4. Triage   → issues waiting in untriaged/
+  Pure bash — no AI budget consumed here.
+
+provider: claude
+model: haiku
+
+nodes:
+  - id: check-state
+    bash: |
+      set -euo pipefail
+      PROJECT_DIR="$(pwd)"
+      ISSUES_DIR="${PROJECT_DIR}/issues"
+
+      # Count issues in each state
+      FIX_COUNT=$(grep -rl "failure_notes:" "${ISSUES_DIR}/in-progress/" 2>/dev/null | xargs grep -l "failure_notes: .\+" 2>/dev/null | wc -l | tr -d ' ')
+      VALIDATE_COUNT=$(ls "${ISSUES_DIR}/review/" 2>/dev/null | grep -c "\.md$" || echo 0)
+      IMPLEMENT_COUNT=$(ls "${ISSUES_DIR}/accepted/" 2>/dev/null | grep -c "\.md$" || echo 0)
+      TRIAGE_COUNT=$(ls "${ISSUES_DIR}/untriaged/" 2>/dev/null | grep -c "\.md$" || echo 0)
+      NEEDS_HUMAN_COUNT=$(ls "${ISSUES_DIR}/needs-human/" 2>/dev/null | grep -c "\.md$" || echo 0)
+
+      echo "=== Factory State ==="
+      echo "needs-fix: ${FIX_COUNT}"
+      echo "needs-validate: ${VALIDATE_COUNT}"
+      echo "needs-implement: ${IMPLEMENT_COUNT}"
+      echo "needs-triage: ${TRIAGE_COUNT}"
+      echo "needs-human: ${NEEDS_HUMAN_COUNT}"
+
+      # Determine priority action
+      if [ "${FIX_COUNT}" -gt 0 ]; then
+        echo "ACTION=fix"
+      elif [ "${VALIDATE_COUNT}" -gt 0 ]; then
+        echo "ACTION=validate"
+      elif [ "${IMPLEMENT_COUNT}" -gt 0 ]; then
+        echo "ACTION=implement"
+      elif [ "${TRIAGE_COUNT}" -gt 0 ]; then
+        echo "ACTION=triage"
+      else
+        echo "ACTION=idle"
+      fi
+    timeout: 10000
+
+  - id: dispatch
+    bash: |
+      set -euo pipefail
+      ACTION=$(echo "$check-state.output" | grep "^ACTION=" | cut -d= -f2)
+
+      echo "Dispatching: ${ACTION}"
+
+      case "${ACTION}" in
+        fix)
+          echo "Running fix workflow..."
+          archon workflow run fix || echo "Fix workflow failed"
+          ;;
+        validate)
+          echo "Running validate workflow..."
+          archon workflow run validate || echo "Validate workflow failed"
+          ;;
+        implement)
+          echo "Running implement workflow..."
+          archon workflow run implement || echo "Implement workflow failed"
+          ;;
+        triage)
+          echo "Running triage workflow..."
+          archon workflow run triage || echo "Triage workflow failed"
+          ;;
+        idle)
+          echo "No work to do. Factory is idle."
+          ;;
+        *)
+          echo "Unknown action: ${ACTION}"
+          exit 1
+          ;;
+      esac
+    depends_on: [check-state]
+    timeout: 1800000

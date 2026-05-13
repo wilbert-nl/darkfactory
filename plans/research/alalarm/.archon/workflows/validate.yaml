@@ -1,0 +1,129 @@
+name: validate
+description: Validates a factory:review PR against all quality gates. Auto-merges on pass; labels factory:needs-fix on failure. Input — pr_number.
+
+provider: claude
+model: claude-haiku-4-5
+
+nodes:
+  - id: fetch-pr
+    bash: |
+      set -euo pipefail
+      gh pr view $PR_NUMBER --json number,title,body,headRefName,baseRefName,files,additions,deletions > pr.json
+      gh pr diff $PR_NUMBER > pr.diff
+      cat pr.json
+    timeout: 60000
+
+  - id: check-pr-size
+    bash: |
+      set -euo pipefail
+      ADDITIONS=$(cat pr.json | jq '.additions')
+      DELETIONS=$(cat pr.json | jq '.deletions')
+      TOTAL=$((ADDITIONS + DELETIONS))
+      if [ $TOTAL -gt 500 ]; then
+        echo "PR_TOO_LARGE: $TOTAL lines"
+        exit 1
+      fi
+      echo "SIZE_OK: $TOTAL lines"
+    depends_on: [fetch-pr]
+    timeout: 15000
+
+  - id: check-protected-files
+    bash: |
+      set -euo pipefail
+      PROTECTED_PATHS="MISSION.md CLAUDE.md FACTORY_RULES.md .archon/ .github/workflows/factory-orchestrator.yml api/src/auth/ api/src/subscriptions/stripe-webhook api/prisma/schema.prisma app/src/boot/stripe.ts"
+      FILES=$(cat pr.json | jq -r '.files[].path')
+      VIOLATION=""
+      for path in $PROTECTED_PATHS; do
+        if echo "$FILES" | grep -q "$path"; then
+          VIOLATION="$VIOLATION $path"
+        fi
+      done
+      if [ -n "$VIOLATION" ]; then
+        echo "PROTECTED_FILE_VIOLATION:$VIOLATION"
+        exit 1
+      fi
+      echo "PROTECTED_FILES_OK"
+    depends_on: [fetch-pr]
+    timeout: 15000
+
+  - id: check-secrets
+    bash: |
+      set -euo pipefail
+      # Scan diff for common secret patterns
+      if grep -E "(ANTHROPIC_API_KEY|sk-ant-|STRIPE_SECRET|sk_live_|password\s*=|secret\s*=)" pr.diff; then
+        echo "SECRET_DETECTED"
+        exit 1
+      fi
+      echo "NO_SECRETS_DETECTED"
+    depends_on: [fetch-pr]
+    timeout: 15000
+
+  - id: run-tests
+    bash: |
+      set -euo pipefail
+      BRANCH=$(cat pr.json | jq -r '.headRefName')
+      git fetch origin "$BRANCH"
+      git checkout "$BRANCH"
+      cd app && pnpm install --frozen-lockfile && pnpm lint && pnpm type-check && pnpm test:unit
+      cd ../api && pnpm install --frozen-lockfile && pnpm lint && pnpm type-check && pnpm test
+    depends_on: [check-protected-files, check-secrets, check-pr-size]
+    timeout: 600000
+
+  - id: code-review
+    command: validate-pr
+    depends_on: [run-tests]
+    model: claude-haiku-4-5
+    maxBudgetUsd: 0.10
+    context: fresh
+    output_format:
+      type: object
+      properties:
+        verdict:
+          type: string
+          enum: ["pass", "fail"]
+        findings:
+          type: array
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum: ["critical", "high", "medium", "low", "info"]
+              description:
+                type: string
+        summary:
+          type: string
+      required: [verdict, findings, summary]
+
+  - id: merge-or-fail
+    bash: |
+      VERDICT='$code-review.output.verdict'
+      SUMMARY='$code-review.output.summary'
+      FINDINGS='$code-review.output.findings'
+      CRITICAL=$(echo "$FINDINGS" | jq '[.[] | select(.severity == "critical" or .severity == "high")] | length')
+
+      if [ "$VERDICT" = "pass" ] && [ "$CRITICAL" = "0" ]; then
+        gh pr merge $PR_NUMBER --squash --auto
+        # Find linked issue and update label
+        BODY=$(cat pr.json | jq -r '.body')
+        ISSUE_NUM=$(echo "$BODY" | grep -oP 'Closes #\K[0-9]+' | head -1)
+        if [ -n "$ISSUE_NUM" ]; then
+          gh issue close $ISSUE_NUM --label "factory:done"
+        fi
+      else
+        gh pr comment $PR_NUMBER --body "Factory validation failed.
+
+**Summary:** $SUMMARY
+
+**Findings:**
+$(echo "$FINDINGS" | jq -r '.[] | "- [\(.severity)] \(.description)"')
+
+Fix attempts remaining: see PR description for count."
+        gh pr edit $PR_NUMBER --remove-label "factory:review" --add-label "factory:needs-fix"
+        ISSUE_NUM=$(cat pr.json | jq -r '.body' | grep -oP 'Closes #\K[0-9]+' | head -1)
+        if [ -n "$ISSUE_NUM" ]; then
+          gh issue edit $ISSUE_NUM --remove-label "factory:in-progress" --add-label "factory:accepted"
+        fi
+      fi
+    depends_on: [code-review]
+    timeout: 60000

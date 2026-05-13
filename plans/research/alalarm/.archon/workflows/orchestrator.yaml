@@ -1,0 +1,99 @@
+name: orchestrator
+description: Routes work across the factory. Priority order — Fix-PR → Validate → Implement → Triage. Runs every 6 hours via GitHub Actions cron.
+
+provider: claude
+model: claude-haiku-4-5
+
+nodes:
+  - id: check-fix-prs
+    bash: |
+      set -euo pipefail
+      gh pr list --label "factory:review" --json number,title,headRefName,reviewDecision > fix_prs.json
+      # Find PRs with failed checks
+      gh run list --limit 20 --json headBranch,conclusion,status > ci_runs.json
+      cat fix_prs.json
+    timeout: 60000
+
+  - id: route-fix
+    prompt: |
+      Read fix_prs.json and ci_runs.json from the previous step.
+      If any PR has a failed CI run on its branch, output {"action": "fix", "pr_numbers": [...list of PR numbers...]}.
+      If none, output {"action": "skip"}.
+      Output ONLY valid JSON.
+    depends_on: [check-fix-prs]
+    model: claude-haiku-4-5
+    maxBudgetUsd: 0.05
+    output_format:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: ["fix", "skip"]
+        pr_numbers:
+          type: array
+          items:
+            type: integer
+      required: [action]
+
+  - id: trigger-fix
+    bash: |
+      PR_NUMS='$route-fix.output.pr_numbers'
+      for num in $(echo $PR_NUMS | jq '.[]'); do
+        archon workflow run fix-pr --input pr_number=$num
+      done
+    depends_on: [route-fix]
+    when: "$route-fix.output.action == 'fix'"
+    timeout: 30000
+
+  - id: check-validate
+    bash: |
+      set -euo pipefail
+      gh pr list --label "factory:review" --json number,title,headRefName > validate_prs.json
+      cat validate_prs.json
+    depends_on: [route-fix]
+    timeout: 30000
+
+  - id: trigger-validate
+    bash: |
+      PR_NUMS=$(cat validate_prs.json | jq '.[].number')
+      for num in $PR_NUMS; do
+        archon workflow run validate --input pr_number=$num
+      done
+    depends_on: [check-validate]
+    timeout: 30000
+
+  - id: check-implement
+    bash: |
+      set -euo pipefail
+      # Check how many PRs are currently in-progress (cap at 3 parallel)
+      IN_PROGRESS=$(gh issue list --label "factory:in-progress" --json number | jq length)
+      ACCEPTED=$(gh issue list --label "factory:accepted" --json number,title,body | head -c 10000)
+      echo "{\"in_progress\": $IN_PROGRESS, \"accepted\": $ACCEPTED}"
+    depends_on: [check-validate]
+    timeout: 30000
+
+  - id: trigger-implement
+    bash: |
+      IN_PROGRESS=$(echo '$check-implement.output' | jq '.in_progress')
+      SLOTS=$((3 - $IN_PROGRESS))
+      if [ $SLOTS -le 0 ]; then
+        echo "No implementation slots available"
+        exit 0
+      fi
+      ISSUE_NUMS=$(gh issue list --label "factory:accepted" --json number --limit $SLOTS | jq '.[].number')
+      for num in $ISSUE_NUMS; do
+        archon workflow run implement --input issue_number=$num
+      done
+    depends_on: [check-implement]
+    timeout: 60000
+
+  - id: trigger-triage
+    bash: |
+      UNTRIAGED=$(gh issue list --label "factory:untriaged" --json number | jq length)
+      if [ $UNTRIAGED -gt 0 ]; then
+        archon workflow run triage
+      else
+        echo "No untriaged issues"
+      fi
+    depends_on: [trigger-implement]
+    timeout: 30000

@@ -1,0 +1,209 @@
+name: validate
+description: |
+  Takes the oldest issue in review/, runs all quality gates (lint, typecheck, tests),
+  then uses AI to review the code against acceptance criteria.
+  Pass → moves to done/. Fail (≤2 attempts) → back to in-progress/ with notes.
+  Fail (>2 attempts) → needs-human/.
+
+provider: claude
+model: sonnet
+
+nodes:
+  - id: pick-review
+    bash: |
+      set -euo pipefail
+      ISSUES_DIR="$(pwd)/issues"
+      REVIEW_DIR="${ISSUES_DIR}/review"
+
+      ISSUE_FILE=$(ls -t "${REVIEW_DIR}"/*.md 2>/dev/null | tail -1 || true)
+
+      if [ -z "${ISSUE_FILE}" ]; then
+        echo "NO_ISSUE_FOUND"
+        exit 0
+      fi
+
+      FILENAME=$(basename "${ISSUE_FILE}")
+      echo "ISSUE_FILE=${ISSUE_FILE}"
+      echo "FILENAME=${FILENAME}"
+
+      # Read attempts from frontmatter
+      ATTEMPTS=$(grep "^attempts:" "${ISSUE_FILE}" | awk '{print $2}' | tr -d '"')
+      echo "ATTEMPTS=${ATTEMPTS:-0}"
+    timeout: 10000
+
+  - id: run-checks
+    bash: |
+      set -euo pipefail
+      FILENAME=$(echo "$pick-review.output" | grep "^FILENAME=" | cut -d= -f2)
+
+      if [ -z "${FILENAME}" ]; then
+        echo "CHECKS_SKIPPED=true"
+        exit 0
+      fi
+
+      RESULTS=""
+      PASS=true
+
+      # Backend checks
+      if [ -d "$(pwd)/backend" ]; then
+        cd "$(pwd)/backend"
+
+        echo "--- Running backend lint ---"
+        if npm run lint 2>&1; then
+          RESULTS="${RESULTS}\n[PASS] Backend lint"
+        else
+          RESULTS="${RESULTS}\n[FAIL] Backend lint"
+          PASS=false
+        fi
+
+        echo "--- Running backend typecheck ---"
+        if npm run typecheck 2>&1; then
+          RESULTS="${RESULTS}\n[PASS] Backend typecheck"
+        else
+          RESULTS="${RESULTS}\n[FAIL] Backend typecheck"
+          PASS=false
+        fi
+
+        echo "--- Running backend tests ---"
+        if npm run test 2>&1; then
+          RESULTS="${RESULTS}\n[PASS] Backend tests"
+        else
+          RESULTS="${RESULTS}\n[FAIL] Backend tests"
+          PASS=false
+        fi
+
+        cd "$(pwd)"
+      else
+        RESULTS="${RESULTS}\n[SKIP] Backend not initialized yet"
+      fi
+
+      # Frontend checks
+      if [ -d "$(pwd)/frontend" ]; then
+        cd "$(pwd)/frontend"
+
+        echo "--- Running frontend lint ---"
+        if npm run lint 2>&1; then
+          RESULTS="${RESULTS}\n[PASS] Frontend lint"
+        else
+          RESULTS="${RESULTS}\n[FAIL] Frontend lint"
+          PASS=false
+        fi
+
+        echo "--- Running frontend typecheck ---"
+        if npm run typecheck 2>&1; then
+          RESULTS="${RESULTS}\n[PASS] Frontend typecheck"
+        else
+          RESULTS="${RESULTS}\n[FAIL] Frontend typecheck"
+          PASS=false
+        fi
+
+        cd "$(pwd)"
+      else
+        RESULTS="${RESULTS}\n[SKIP] Frontend not initialized yet"
+      fi
+
+      echo -e "${RESULTS}"
+      if [ "${PASS}" = "true" ]; then
+        echo "CHECKS_PASSED=true"
+      else
+        echo "CHECKS_PASSED=false"
+      fi
+    depends_on: [pick-review]
+    timeout: 300000
+
+  - id: ai-review
+    command: validate-implementation
+    depends_on: [pick-review, run-checks]
+    model: sonnet
+    allowed_tools: [Read, Bash]
+    context: fresh
+    output_format:
+      type: object
+      properties:
+        verdict:
+          type: string
+          enum: ["pass", "fail"]
+        issues_found:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+      required: [verdict, issues_found, summary]
+    maxBudgetUsd: 0.50
+
+  - id: apply-result
+    bash: |
+      set -euo pipefail
+      ISSUES_DIR="$(pwd)/issues"
+      FILENAME=$(echo "$pick-review.output" | grep "^FILENAME=" | cut -d= -f2)
+      ATTEMPTS=$(echo "$pick-review.output" | grep "^ATTEMPTS=" | cut -d= -f2)
+      CHECKS_PASSED=$(echo "$run-checks.output" | grep "^CHECKS_PASSED=" | cut -d= -f2)
+      VERDICT=$(echo '$ai-review.output' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['verdict'])")
+      SUMMARY=$(echo '$ai-review.output' | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['summary'])")
+      ISSUES=$(echo '$ai-review.output' | python3 -c "import json,sys; d=json.load(sys.stdin); print('\n'.join(d['issues_found']))")
+
+      ISSUE_FILE="${ISSUES_DIR}/review/${FILENAME}"
+      ATTEMPTS=${ATTEMPTS:-0}
+      NEW_ATTEMPTS=$((ATTEMPTS + 1))
+
+      if [ -z "${FILENAME}" ]; then
+        echo "No filename. Skipping."
+        exit 0
+      fi
+
+      # Determine overall result
+      if [ "${CHECKS_PASSED}" = "true" ] && [ "${VERDICT}" = "pass" ]; then
+        # SUCCESS
+        python3 -c "
+      import re
+      from datetime import datetime
+      with open('${ISSUE_FILE}', 'r') as f:
+          content = f.read()
+      content = re.sub(r'^status: \".*\"', 'status: \"done\"', content, flags=re.MULTILINE)
+      content += f'\n\n---\n**[validate] {datetime.now().strftime(\"%Y-%m-%d\")}:** All quality gates passed. ${SUMMARY}\n'
+      with open('${ISSUE_FILE}', 'w') as f:
+          f.write(content)
+      "
+        mv "${ISSUE_FILE}" "${ISSUES_DIR}/done/${FILENAME}"
+        echo "SUCCESS: ${FILENAME} moved to done/"
+      else
+        # FAILURE
+        FAILURE_NOTES="Checks: ${CHECKS_PASSED}. Review: ${VERDICT}. Issues: ${ISSUES}. Summary: ${SUMMARY}"
+
+        if [ "${NEW_ATTEMPTS}" -gt 2 ]; then
+          # Escalate to needs-human
+          python3 -c "
+      import re
+      from datetime import datetime
+      with open('${ISSUE_FILE}', 'r') as f:
+          content = f.read()
+      content = re.sub(r'^status: \".*\"', 'status: \"needs-human\"', content, flags=re.MULTILINE)
+      content = re.sub(r'^attempts: .*', 'attempts: ${NEW_ATTEMPTS}', content, flags=re.MULTILINE)
+      content = re.sub(r'^failure_notes: .*', f'failure_notes: \"${FAILURE_NOTES}\"', content, flags=re.MULTILINE)
+      content += f'\n\n---\n**[validate] {datetime.now().strftime(\"%Y-%m-%d\")}:** ESCALATED after ${NEW_ATTEMPTS} attempts. ${SUMMARY}\n'
+      with open('${ISSUE_FILE}', 'w') as f:
+          f.write(content)
+      "
+          mv "${ISSUE_FILE}" "${ISSUES_DIR}/needs-human/${FILENAME}"
+          echo "ESCALATED: ${FILENAME} → needs-human/ after ${NEW_ATTEMPTS} attempts"
+        else
+          # Back to in-progress for fix
+          python3 -c "
+      import re
+      from datetime import datetime
+      with open('${ISSUE_FILE}', 'r') as f:
+          content = f.read()
+      content = re.sub(r'^status: \".*\"', 'status: \"in-progress\"', content, flags=re.MULTILINE)
+      content = re.sub(r'^attempts: .*', 'attempts: ${NEW_ATTEMPTS}', content, flags=re.MULTILINE)
+      content = re.sub(r'^failure_notes: .*', f'failure_notes: \"${FAILURE_NOTES}\"', content, flags=re.MULTILINE)
+      content += f'\n\n---\n**[validate] {datetime.now().strftime(\"%Y-%m-%d\")}:** Attempt ${NEW_ATTEMPTS}/2 failed. Returning to fix. ${SUMMARY}\n'
+      with open('${ISSUE_FILE}', 'w') as f:
+          f.write(content)
+      "
+          mv "${ISSUE_FILE}" "${ISSUES_DIR}/in-progress/${FILENAME}"
+          echo "RETRY: ${FILENAME} → in-progress/ (attempt ${NEW_ATTEMPTS}/2)"
+        fi
+      fi
+    depends_on: [ai-review, run-checks]
+    timeout: 30000

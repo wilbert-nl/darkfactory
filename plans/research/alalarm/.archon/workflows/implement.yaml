@@ -1,0 +1,87 @@
+name: implement
+description: Implements a factory:accepted GitHub issue. Opens a PR, labels it factory:review. Input — issue_number.
+
+provider: claude
+model: sonnet
+
+nodes:
+  - id: fetch-issue
+    bash: |
+      set -euo pipefail
+      gh issue view $ISSUE_NUMBER --json number,title,body,labels > issue.json
+      cat issue.json
+    timeout: 30000
+
+  - id: check-protected
+    bash: |
+      set -euo pipefail
+      # Verify issue doesn't require touching protected files
+      BODY=$(cat issue.json | jq -r '.body')
+      PROTECTED="MISSION.md CLAUDE.md FACTORY_RULES.md api/src/auth/ api/src/subscriptions/stripe-webhook api/prisma/schema.prisma app/src/boot/stripe.ts"
+      for path in $PROTECTED; do
+        if echo "$BODY" | grep -qi "$path"; then
+          echo "PROTECTED_PATH_MENTIONED: $path"
+          exit 1
+        fi
+      done
+      echo "OK"
+    depends_on: [fetch-issue]
+    timeout: 15000
+
+  - id: create-branch
+    bash: |
+      set -euo pipefail
+      SLUG=$(cat issue.json | jq -r '.title' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | cut -c1-40)
+      BRANCH="feat/issue-${ISSUE_NUMBER}-${SLUG}"
+      git checkout main && git pull origin main
+      git checkout -b "$BRANCH"
+      echo "$BRANCH" > branch_name.txt
+    depends_on: [check-protected]
+    timeout: 30000
+
+  - id: write-code
+    command: implement-code
+    depends_on: [create-branch]
+    model: sonnet
+    maxBudgetUsd: 0.10
+    allowed_tools: [Read, Write, Edit, Bash]
+    context: fresh
+
+  - id: run-checks
+    bash: |
+      set -euo pipefail
+      cd app && pnpm lint && pnpm type-check && pnpm test:unit
+      cd ../api && pnpm lint && pnpm type-check && pnpm test
+    depends_on: [write-code]
+    timeout: 300000
+
+  - id: open-pr
+    bash: |
+      set -euo pipefail
+      BRANCH=$(cat branch_name.txt)
+      TITLE=$(cat issue.json | jq -r '.title')
+      git add -A
+      git commit -m "feat(issue-${ISSUE_NUMBER}): ${TITLE}"
+      git push origin "$BRANCH"
+      gh pr create \
+        --title "$TITLE" \
+        --body "$(cat <<EOF
+## Summary
+Factory-implemented solution for issue #${ISSUE_NUMBER}.
+
+Closes #${ISSUE_NUMBER}
+
+## Changes
+- See diff for implementation details
+
+## Test Plan
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] E2E tests pass
+- [ ] Protected files untouched
+EOF
+)" \
+        --label "factory:review"
+      gh issue edit $ISSUE_NUMBER --remove-label "factory:accepted" --add-label "factory:in-progress"
+    depends_on: [run-checks]
+    timeout: 60000

@@ -1,0 +1,144 @@
+// Public schema — platform-level tables only.
+// Tenant business data lives in tenant_{id} schemas (see tenant.prisma).
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../node_modules/.prisma/client"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+// ── Tenants ──────────────────────────────────────────────────────────────────
+
+enum TenantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+
+  @@schema("public")
+}
+
+model Tenant {
+  id        String       @id @default(uuid())
+  slug      String       @unique
+  subdomain String       @unique
+  name      String
+  status    TenantStatus @default(PENDING)
+  plan      String       @default("free")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  memberships UserTenantMembership[]
+
+  @@map("tenants")
+  @@schema("public")
+}
+
+// ── Global Users ─────────────────────────────────────────────────────────────
+
+model GlobalUser {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  isActive      Boolean  @default(true)
+  isSuperAdmin  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  memberships         UserTenantMembership[]
+  refreshTokens       RefreshToken[]
+  impersonations      ImpersonationLog[]     @relation("SuperAdminImpersonations")
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("global_users")
+  @@schema("public")
+}
+
+// ── Memberships ───────────────────────────────────────────────────────────────
+
+model UserTenantMembership {
+  id        String   @id @default(uuid())
+  userId    String
+  tenantId  String
+  roleSlug  String   @default("tenant_user")
+  createdAt DateTime @default(now())
+
+  user   GlobalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@map("user_tenant_memberships")
+  @@schema("public")
+}
+
+// ── Refresh Tokens ────────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user GlobalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@schema("public")
+}
+
+// ── Audit Logs ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  tenantId  String?
+  actorId   String?
+  action    String
+  resource  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+  @@schema("public")
+}
+
+// ── Impersonation Logs ────────────────────────────────────────────────────────
+
+model ImpersonationLog {
+  id             String    @id @default(uuid())
+  superAdminId   String
+  targetUserId   String
+  targetTenantId String
+  reason         String?
+  startedAt      DateTime  @default(now())
+  expiresAt      DateTime
+  endedAt        DateTime?
+
+  superAdmin GlobalUser @relation("SuperAdminImpersonations", fields: [superAdminId], references: [id])
+
+  @@map("impersonation_logs")
+  @@schema("public")
+}
+
+// ── Password Reset Tokens ─────────────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user GlobalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+  @@schema("public")
+}

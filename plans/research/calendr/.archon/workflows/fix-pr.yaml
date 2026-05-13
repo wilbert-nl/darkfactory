@@ -1,0 +1,64 @@
+name: fix-pr
+description: Fixes a factory:needs-fix PR. Reads validator feedback, applies fixes, re-labels factory:review. Escalates after 2 attempts. Input — pr_number.
+
+provider: claude
+model: sonnet
+
+nodes:
+  - id: fetch-context
+    bash: |
+      set -euo pipefail
+      gh pr view $PR_NUMBER --json number,title,body,headRefName,comments > pr.json
+      gh pr diff $PR_NUMBER > pr.diff
+      FIX_COUNT=$(cat pr.json | jq -r '.body' | grep -c "Fix attempt" || echo "0")
+      echo "FIX_ATTEMPT_COUNT=$FIX_COUNT" > fix_meta.txt
+      cat fix_meta.txt
+    timeout: 60000
+
+  - id: check-attempt-limit
+    bash: |
+      source fix_meta.txt
+      if [ "$FIX_ATTEMPT_COUNT" -ge 2 ]; then
+        gh pr edit $PR_NUMBER --remove-label "factory:needs-fix" --add-label "factory:needs-human"
+        ISSUE_NUM=$(cat pr.json | jq -r '.body' | grep -oP 'Closes #\K[0-9]+' | head -1)
+        [ -n "$ISSUE_NUM" ] && gh issue edit $ISSUE_NUM --add-label "factory:needs-human" || true
+        gh pr comment $PR_NUMBER --body "Factory escalated: 2 fix attempts exhausted. Human review required."
+        exit 1
+      fi
+      echo "CAN_FIX"
+    depends_on: [fetch-context]
+    timeout: 30000
+
+  - id: apply-fix
+    command: fix-pr
+    depends_on: [check-attempt-limit]
+    model: sonnet
+    maxBudgetUsd: 0.10
+    allowed_tools: [Read, Write, Edit, Bash]
+    context: fresh
+
+  - id: run-checks
+    bash: |
+      set -euo pipefail
+      cd app && pnpm lint && pnpm type-check && pnpm test:unit
+      [ -d "../api" ] && cd ../api && pnpm lint && pnpm type-check && pnpm test || true
+    depends_on: [apply-fix]
+    timeout: 300000
+
+  - id: push-and-requeue
+    bash: |
+      source fix_meta.txt
+      NEXT=$((FIX_ATTEMPT_COUNT + 1))
+      BRANCH=$(cat pr.json | jq -r '.headRefName')
+      BODY=$(cat pr.json | jq -r '.body')
+      git add -A && git commit -m "fix: attempt $NEXT — address validator feedback"
+      git push origin "$BRANCH"
+      gh pr edit $PR_NUMBER \
+        --body "$BODY
+
+---
+Fix attempt $NEXT applied by factory." \
+        --remove-label "factory:needs-fix" \
+        --add-label "factory:review"
+    depends_on: [run-checks]
+    timeout: 60000

@@ -1,0 +1,110 @@
+name: implement
+description: |
+  Takes the oldest accepted issue, moves it to in-progress, reads context,
+  and implements the code changes using Claude Code tools.
+  Processes ONE issue at a time. After implementation, moves to review/.
+
+provider: claude
+model: sonnet
+
+nodes:
+  - id: pick-issue
+    bash: |
+      set -euo pipefail
+      ISSUES_DIR="$(pwd)/issues"
+      ACCEPTED_DIR="${ISSUES_DIR}/accepted"
+
+      # Pick oldest accepted issue
+      ISSUE_FILE=$(ls -t "${ACCEPTED_DIR}"/*.md 2>/dev/null | tail -1 || true)
+
+      if [ -z "${ISSUE_FILE}" ]; then
+        echo "NO_ISSUE_FOUND"
+        exit 0
+      fi
+
+      FILENAME=$(basename "${ISSUE_FILE}")
+      echo "ISSUE_FILE=${ISSUE_FILE}"
+      echo "FILENAME=${FILENAME}"
+
+      # Move to in-progress
+      python3 -c "
+      import re
+      with open('${ISSUE_FILE}', 'r') as f:
+          content = f.read()
+      content = re.sub(r'^status: \".*\"', 'status: \"in-progress\"', content, flags=re.MULTILINE)
+      with open('${ISSUE_FILE}', 'w') as f:
+          f.write(content)
+      "
+      mv "${ISSUE_FILE}" "${ISSUES_DIR}/in-progress/${FILENAME}"
+      echo "Moved to in-progress: ${FILENAME}"
+    timeout: 15000
+
+  - id: read-context
+    bash: |
+      set -euo pipefail
+      ISSUES_DIR="$(pwd)/issues"
+      FILENAME=$(echo "$pick-issue.output" | grep "^FILENAME=" | cut -d= -f2)
+
+      if [ -z "${FILENAME}" ]; then
+        echo "No issue picked. Aborting."
+        exit 1
+      fi
+
+      ISSUE_FILE="${ISSUES_DIR}/in-progress/${FILENAME}"
+
+      echo "=== ISSUE ==="
+      cat "${ISSUE_FILE}"
+      echo ""
+      echo "=== MISSION.md ==="
+      cat "$(pwd)/MISSION.md"
+      echo ""
+      echo "=== CLAUDE.md ==="
+      cat "$(pwd)/CLAUDE.md"
+      echo ""
+      echo "=== PROJECT STRUCTURE ==="
+      find "$(pwd)/backend/src" -type f -name "*.ts" 2>/dev/null | head -60 || echo "(backend/src not found yet)"
+      find "$(pwd)/frontend/src" -type f -name "*.vue" -o -name "*.ts" 2>/dev/null | head -30 || echo "(frontend/src not found yet)"
+    depends_on: [pick-issue]
+    timeout: 15000
+
+  - id: implement
+    command: implement-task
+    depends_on: [read-context]
+    model: sonnet
+    allowed_tools: [Read, Write, Edit, Bash]
+    context: fresh
+    maxBudgetUsd: 2.00
+
+  - id: mark-review
+    bash: |
+      set -euo pipefail
+      ISSUES_DIR="$(pwd)/issues"
+      FILENAME=$(echo "$pick-issue.output" | grep "^FILENAME=" | cut -d= -f2)
+
+      if [ -z "${FILENAME}" ]; then
+        echo "No filename. Cannot mark review."
+        exit 1
+      fi
+
+      ISSUE_FILE="${ISSUES_DIR}/in-progress/${FILENAME}"
+
+      if [ ! -f "${ISSUE_FILE}" ]; then
+        echo "Issue file not found in in-progress. It may have been moved by implement agent."
+        exit 0
+      fi
+
+      # Update status
+      python3 -c "
+      import re
+      from datetime import datetime
+      with open('${ISSUE_FILE}', 'r') as f:
+          content = f.read()
+      content = re.sub(r'^status: \".*\"', 'status: \"review\"', content, flags=re.MULTILINE)
+      content += f'\n\n---\n**[implement] {datetime.now().strftime(\"%Y-%m-%d\")}:** Implementation complete. Moving to review.\n'
+      with open('${ISSUE_FILE}', 'w') as f:
+          f.write(content)
+      "
+      mv "${ISSUE_FILE}" "${ISSUES_DIR}/review/${FILENAME}"
+      echo "Moved to review: ${FILENAME}"
+    depends_on: [implement]
+    timeout: 15000
