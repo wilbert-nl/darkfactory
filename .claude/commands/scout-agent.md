@@ -4,23 +4,25 @@ You are the Dark Factory Scout. Your job is to find one portfolio-worthy project
 
 Run this entire process end-to-end without asking for input. Decide everything yourself.
 
+You are running in a cloned copy of the `darkfactory` repo. All file paths below are relative to the repo root.
+
 ---
 
 ## Step 1 — Load the registry
 
-Read `/Users/wilbertverayin/projects/darkfactory/plans/scout/registry.json`.
+Read `plans/scout/registry.json`.
 
 Extract:
 - `scouted`: list of repo slugs already processed (format: `owner-repo`)
 - `built`: list of project slugs already built
 
-Also list all existing directories under `/Users/wilbertverayin/projects/darkfactory/` — these are projects already built and must not be duplicated.
+Also list all existing directories under the repo root — note which ones look like built projects (e.g., alalarm, chefconnect, etc.) so you don't duplicate domains.
 
 ---
 
 ## Step 2 — Fetch GitHub Trending
 
-Use WebSearch with query: `github trending repositories today` and also fetch `https://github.com/trending` directly via WebFetch.
+Fetch `https://github.com/trending` via WebFetch. If blocked, use WebSearch with query: `site:github.com trending repositories today`.
 
 Collect at least 15 trending repos. For each, note:
 - owner/repo slug
@@ -56,7 +58,7 @@ Minimum to proceed: **4/5**. Skip anything below.
 
 Pick the **highest scoring** candidate. If tied, prefer simpler (fewer dependencies).
 
-If no candidate passes, write a single line to `/Users/wilbertverayin/projects/darkfactory/plans/scout/no-candidate-YYYY-MM-DD.txt` (replace date) with content: `No viable candidate found on this run.` Then stop.
+If no candidate passes, write a single line to `plans/scout/no-candidate-YYYY-MM-DD.txt` (replace date with today's date) with content: `No viable candidate found on this run.` Then go to Step 6 (commit + push) and stop.
 
 ---
 
@@ -86,7 +88,7 @@ Rules:
 
 Get today's date. Format the filename as `YYYY-MM-DD-<twist-slug>.md` where `twist-slug` is a kebab-case name for the twisted project (not the original).
 
-Write the spec to `/Users/wilbertverayin/projects/darkfactory/plans/scout/YYYY-MM-DD-<twist-slug>.md`:
+Write the spec to `plans/scout/YYYY-MM-DD-<twist-slug>.md`:
 
 ```markdown
 ---
@@ -122,15 +124,19 @@ status: pending
 - Complexity: simple enough for solo dev ✅
 ```
 
+Then update `plans/scout/registry.json` — add the original repo slug (`owner-repo` format) to the `scouted` array. Preserve the `built` array unchanged.
+
 ---
 
-## Step 6 — Update the registry
+## Step 6 — Commit and push
 
-Read `/Users/wilbertverayin/projects/darkfactory/plans/scout/registry.json`.
-
-Add the original repo slug (`owner-repo` format) to the `scouted` array.
-
-Write the updated JSON back to the same file. Preserve the `built` array unchanged.
+```bash
+git config user.email "scout@darkfactory.ai"
+git config user.name "Dark Factory Scout"
+git add plans/scout/
+git commit -m "scout: add twist spec for <twist-project-name>"
+git push origin main
+```
 
 ---
 
