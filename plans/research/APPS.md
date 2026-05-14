@@ -31,3 +31,4 @@
 | local-first | Privacy utilities suite — password generator, note vault, file hasher, unit converter | 9036 | [http://localhost:9036](http://localhost:9036) |
 | track-px | Clinic EHR — patient list, consultation log, vitals, prescriptions, JSON export | 9037 | [http://localhost:9037](http://localhost:9037) |
 | compare-table | Multi-item comparison with weighted scoring and shareable links | 9004 | [http://localhost:9004](http://localhost:9004) |
+| shelf-life | Privacy-first pantry tracker — best-before urgency list, waste/savings tiles, local-only storage | 9038 | [http://localhost:9038](http://localhost:9038) |
