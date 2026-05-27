@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Sync apiapps to public repo
 
 on:
   push:
@@ -7,32 +7,29 @@ on:
       - 'apiapps/**'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Push apiapps to wilbert-nl/apiapps
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Upload apiapps as Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: apiapps
+          # Clone the public repo
+          git clone https://x-access-token:${{ secrets.APIAPPS_DEPLOY_TOKEN }}@github.com/wilbert-nl/apiapps.git /tmp/apiapps-public
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          # Sync contents (apiapps/* → root of public repo)
+          rsync -av --delete --exclude='.git' apiapps/ /tmp/apiapps-public/
+
+          # Commit and push if there are changes
+          cd /tmp/apiapps-public
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to sync."
+          else
+            git commit -m "sync: update from darkfactory main"
+            git push
+          fi
