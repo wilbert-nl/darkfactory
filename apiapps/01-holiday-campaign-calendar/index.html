@@ -429,29 +429,33 @@
     return colors[i % colors.length];
   }
 
-  async function loadCountries() {
+  function populateSelect(sel, countries) {
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Select a country —</option>';
+    countries.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.code || c.countryCode;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+    sel.value = current || 'NL';
+  }
+
+  function loadCountries() {
     const sel = document.getElementById('countrySelect');
-    try {
-      const res = await fetch(`${NAGER}/AvailableCountries`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      sel.innerHTML = '<option value="">— Select a country —</option>';
-      data.sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.countryCode;
-        opt.textContent = c.name;
-        if (c.countryCode === 'NL') opt.selected = true;
-        sel.appendChild(opt);
-      });
-      document.getElementById('generateBtn').disabled = false;
-    } catch (e) {
-      sel.innerHTML = FALLBACK_COUNTRIES.map(c =>
-        `<option value="${c.code}"${c.code==='NL'?' selected':''}>${c.name}</option>`
-      ).join('');
-      sel.insertAdjacentHTML('afterbegin', '<option value="">— Select a country —</option>');
-      document.getElementById('generateBtn').disabled = false;
-      console.warn('Country list fetch failed, using fallback:', e.message);
-    }
+    // Show fallback immediately so the UI is never blocked
+    const sorted = [...FALLBACK_COUNTRIES].sort((a, b) => a.name.localeCompare(b.name));
+    populateSelect(sel, sorted);
+    document.getElementById('generateBtn').disabled = false;
+
+    // Try to upgrade to full list in the background
+    fetch(`${NAGER}/AvailableCountries`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(data => {
+        const full = data.sort((a, b) => a.name.localeCompare(b.name));
+        populateSelect(sel, full);
+      })
+      .catch(() => { /* keep fallback list, already shown */ });
   }
 
   async function generate() {
