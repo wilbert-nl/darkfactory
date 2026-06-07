@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV Show Release Tracker — App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep {
+  width: 1px; height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Search section */
+.sidebar-search {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  position: relative;
+}
+.search-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+.search-wrap { position: relative; }
+.search-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.search-input::placeholder { color: var(--color-ink-muted); }
+.search-spinner {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+.search-spinner.active { display: block; }
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+/* Autocomplete dropdown */
+.search-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px oklch(18% 0.04 155 / 0.14);
+  z-index: 400;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.search-dropdown.open { display: block; animation: fadeDown 0.15s ease; }
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ac-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s;
+}
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover, .ac-item:focus { background: var(--color-accent-subtle); outline: none; }
+.ac-poster {
+  width: 32px; height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--color-paper-2);
+  flex-shrink: 0;
+}
+.ac-poster-ph {
+  width: 32px; height: 44px;
+  background: var(--color-paper-2);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.ac-info { flex: 1; min-width: 0; }
+.ac-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ac-meta { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 1px; }
+.ac-add {
+  padding: var(--space-1) var(--space-2);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.ac-add:hover { opacity: 0.85; }
+.ac-add.added { background: var(--color-success); cursor: default; }
+.ac-msg { padding: var(--space-3); font-size: var(--text-sm); color: var(--color-ink-muted); text-align: center; }
+
+/* Today's schedule link */
+.sidebar-schedule-link {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.btn-schedule-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.btn-schedule-link:hover, .btn-schedule-link.active {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-color: var(--color-accent-line);
+}
+
+/* Watchlist section */
+.sidebar-wl-head {
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.sidebar-wl-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.wl-count-badge {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-family: var(--font-body);
+}
+.watchlist-rows {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-1) 0 var(--space-2);
+}
+.wl-empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+}
+.wl-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.wl-row:hover { background: oklch(90% 0.018 95); }
+.wl-row.active {
+  background: oklch(90% 0.018 95);
+  border-left-color: var(--color-accent);
+}
+.wl-poster {
+  width: 32px; height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--color-paper-2);
+  flex-shrink: 0;
+}
+.wl-poster-ph {
+  width: 32px; height: 44px;
+  background: var(--color-paper-2);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.wl-info { flex: 1; min-width: 0; }
+.wl-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wl-countdown {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 1px;
+}
+.wl-countdown.soon { color: var(--color-warn); }
+.wl-countdown.today { color: var(--color-success); font-weight: 600; }
+.wl-remove {
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+  opacity: 0;
+}
+.wl-row:hover .wl-remove { opacity: 1; }
+.wl-remove:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* Main views */
+.view { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.view.active { display: flex; }
+
+/* Empty / default */
+.main-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-16);
+  text-align: center;
+}
+.main-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.main-empty-sub {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  max-width: 320px;
+  line-height: 1.65;
+}
+
+/* ── Schedule view ── */
+.schedule-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.schedule-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-4);
+}
+.schedule-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.schedule-date {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.time-group { margin-bottom: var(--space-4); }
+.time-group-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+.ep-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s;
+}
+.ep-row:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-line);
+  transform: translateX(2px);
+}
+.ep-thumb {
+  width: 36px; height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--color-paper-2);
+  flex-shrink: 0;
+}
+.ep-thumb-ph {
+  width: 36px; height: 50px;
+  background: var(--color-paper-2);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.ep-info { flex: 1; min-width: 0; }
+.ep-show { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.ep-title-line {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ep-network { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 2px; }
+
+/* ── Show detail view ── */
+.detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Show header */
+.show-header {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+.show-poster {
+  width: 140px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 20px oklch(18% 0.04 155 / 0.15);
+}
+.show-poster-ph {
+  width: 140px;
+  height: 196px;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; flex-shrink: 0;
+}
+.show-meta { flex: 1; min-width: 0; }
+.show-name {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: var(--space-3);
+}
+.show-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.genre-chip {
+  display: inline-block;
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  color: var(--color-accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.status-chip {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.status-chip.running {
+  background: oklch(55% 0.14 155 / 0.12);
+  border: 1px solid oklch(55% 0.14 155 / 0.25);
+  color: var(--color-success);
+}
+.status-chip.ended {
+  background: oklch(46% 0.03 155 / 0.08);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+}
+.status-chip.upcoming {
+  background: oklch(62% 0.15 72 / 0.12);
+  border: 1px solid oklch(62% 0.15 72 / 0.25);
+  color: var(--color-warn);
+}
+.show-attrs {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.show-attr { display: flex; align-items: center; gap: 4px; }
+.show-track-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+}
+.show-track-btn.untracked {
+  background: var(--color-accent);
+  color: var(--color-paper);
+}
+.show-track-btn.untracked:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28);
+}
+.show-track-btn.tracked {
+  background: oklch(55% 0.20 25 / 0.08);
+  color: var(--color-danger);
+  border: 1px solid oklch(55% 0.20 25 / 0.2);
+}
+.show-track-btn.tracked:hover { background: oklch(55% 0.20 25 / 0.14); }
+
+/* Next episode card */
+.next-ep-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4) var(--space-6);
+  align-items: center;
+}
+.next-ep-countdown {
+  text-align: center;
+  flex-shrink: 0;
+}
+.countdown-num {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 300;
+  color: var(--color-accent);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.countdown-unit {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+.next-ep-info {}
+.next-ep-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-1);
+}
+.next-ep-name {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: var(--space-1);
+}
+.next-ep-meta {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.next-ep-time {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+}
+
+/* Show summary */
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+.show-summary {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  line-height: 1.7;
+}
+
+/* Season navigator */
+.season-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.season-select {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.season-select:focus { outline: none; border-color: var(--color-accent); }
+.season-label { font-size: var(--text-sm); color: var(--color-ink-muted); }
+
+/* Episodes table */
+.ep-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.ep-table th {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-ink-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.ep-table td {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  border-bottom: 1px solid oklch(87% 0.016 95 / 0.6);
+  vertical-align: middle;
+}
+.ep-table tr:last-child td { border-bottom: none; }
+.ep-table tr:hover td { background: var(--color-accent-subtle); }
+.ep-num { color: var(--color-ink-muted); font-variant-numeric: tabular-nums; font-size: var(--text-xs); }
+.ep-watched-cb { width: 16px; height: 16px; cursor: pointer; accent-color: var(--color-accent); }
+.ep-watched-row td { color: var(--color-ink-muted); }
+.ep-watched-row .ep-title-td { text-decoration: line-through; }
+
+/* Loading spinner */
+.spinner {
+  width: 32px; height: 32px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: var(--space-12) auto;
+}
+@keyframes spin2 { to { transform: rotate(360deg); } }
+
+/* Empty state */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12);
+  text-align: center;
+  color: var(--color-ink-muted);
+}
+.empty-icon { font-size: 40px; opacity: 0.5; }
+.empty-title { font-size: var(--text-base); font-weight: 600; color: var(--color-ink); }
+.empty-sub { font-size: var(--text-sm); line-height: 1.6; max-width: 280px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 45vh;
+  }
+  .main { overflow: visible; }
+  .view.active { overflow: visible; }
+  .detail-scroll, .schedule-scroll { overflow: visible; padding: var(--space-4); }
+  .show-header { flex-direction: column; }
+  .show-poster, .show-poster-ph { width: 100px; }
+  .next-ep-card { grid-template-columns: 1fr; }
+  .nav-page-label { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">TV<span>Track</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Show Release Tracker</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Search and watchlist">
+
+    <!-- Search -->
+    <div class="sidebar-search">
+      <label class="search-label" for="searchInput">Search shows</label>
+      <div class="search-wrap">
+        <input
+          type="search"
+          class="search-input"
+          id="searchInput"
+          placeholder="Breaking Bad, Succession…"
+          autocomplete="off"
+          aria-label="Search for TV shows"
+          aria-autocomplete="list"
+          aria-controls="searchDropdown"
+        />
+        <div class="search-spinner" id="searchSpinner" aria-hidden="true"></div>
+        <div class="search-dropdown" id="searchDropdown" role="listbox" aria-label="Search results"></div>
+      </div>
+    </div>
+
+    <!-- Today's schedule shortcut -->
+    <div class="sidebar-schedule-link">
+      <button class="btn-schedule-link active" id="scheduleLink" aria-pressed="true">
+        📅 Today's Schedule
+      </button>
+    </div>
+
+    <!-- Watchlist -->
+    <div class="sidebar-wl-head">
+      <span class="sidebar-wl-title">
+        Watchlist
+        <span class="wl-count-badge" id="wlCount">0</span>
+      </span>
+    </div>
+    <div class="watchlist-rows" id="watchlistRows" role="list" aria-label="Tracked shows"></div>
+
+  </aside>
+
+  <!-- ── Main panel ── -->
+  <main class="main" aria-label="Main content">
+
+    <!-- Schedule view (default) -->
+    <div class="view active" id="view-schedule">
+      <div class="schedule-scroll" id="scheduleScroll">
+        <div class="schedule-head">
+          <span class="schedule-title">Today's Schedule</span>
+          <span class="schedule-date" id="scheduleDate"></span>
+        </div>
+        <div id="scheduleContent">
+          <div class="spinner" role="status" aria-label="Loading schedule"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Show detail view -->
+    <div class="view" id="view-detail">
+      <div class="detail-scroll" id="detailScroll" aria-live="polite">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+'use strict';
+
+/* ── Constants ──────────────────────────────────────────────── */
+const BASE = 'https://api.tvmaze.com';
+const STORAGE_WL  = 'tvtrack_watchlist_v1';
+const STORAGE_EPS = 'tvtrack_watched_v1';
+
+/* ── State ──────────────────────────────────────────────────── */
+let watchlist = [];         // array of show objects
+let watchedEps = {};        // { showId: { 'S1E2': true, ... } }
+let activeShowId = null;
+let allShowEpisodes = [];   // cached episodes for current detail show
+let searchTimer = null;
+
+/* ── Storage ────────────────────────────────────────────────── */
+function loadState() {
+  try { watchlist = JSON.parse(localStorage.getItem(STORAGE_WL) || '[]'); } catch { watchlist = []; }
+  try { watchedEps = JSON.parse(localStorage.getItem(STORAGE_EPS) || '{}'); } catch { watchedEps = {}; }
+}
+function saveWatchlist() { localStorage.setItem(STORAGE_WL, JSON.stringify(watchlist)); }
+function saveWatched() { localStorage.setItem(STORAGE_EPS, JSON.stringify(watchedEps)); }
+
+function isTracked(id) { return watchlist.some(s => s.id === id); }
+
+function addToWatchlist(show) {
+  if (isTracked(show.id)) return;
+  watchlist.unshift(show);
+  saveWatchlist();
+  renderWatchlist();
+  toast(`"${show.name}" added to watchlist`, 'success');
+}
+
+function removeFromWatchlist(id) {
+  const s = watchlist.find(x => x.id === id);
+  watchlist = watchlist.filter(x => x.id !== id);
+  saveWatchlist();
+  renderWatchlist();
+  if (s) toast(`"${s.name}" removed`, '');
+  if (activeShowId === id) renderDetailView(id); // refresh track button
+}
+
+/* ── API ────────────────────────────────────────────────────── */
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+const searchShows  = q  => fetchJSON(`${BASE}/search/shows?q=${encodeURIComponent(q)}`).then(r => r.map(x => x.show));
+const fetchShow    = id => fetchJSON(`${BASE}/shows/${id}?embed[]=nextepisode&embed[]=previousepisode`);
+const fetchEpisodes= id => fetchJSON(`${BASE}/shows/${id}/episodes`);
+const fetchSchedule= d  => fetchJSON(`${BASE}/schedule?country=US&date=${d}`);
+
+/* ── Helpers ────────────────────────────────────────────────── */
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function stripHtml(html) {
+  if (!html) return '';
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return d.textContent || d.innerText || '';
+}
+
+function isoToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return 'TBA';
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function formatDateShort(dateStr) {
+  if (!dateStr) return 'TBA';
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr + 'T00:00:00'); target.setHours(0,0,0,0);
+  return Math.round((target - today) / 86400000);
+}
+
+function countdownInfo(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return null;
+  if (d === 0)  return { num: 'Tonight!', unit: '', cls: 'today', text: 'Tonight!' };
+  if (d === 1)  return { num: '1',  unit: 'day', cls: 'soon', text: 'Tomorrow' };
+  if (d < 0)   return { num: String(Math.abs(d)), unit: 'days ago', cls: '', text: `${Math.abs(d)} days ago` };
+  const h = Math.floor(((new Date(dateStr+'T00:00:00') - new Date()) / 3600000));
+  return { num: String(d), unit: d === 1 ? 'day' : 'days', cls: d <= 7 ? 'soon' : '', text: `In ${d} day${d !== 1 ? 's' : ''}` };
+}
+
+function statusCls(status) {
+  const m = { 'Running': 'running', 'Ended': 'ended', 'In Development': 'upcoming', 'To Be Determined': 'upcoming' };
+  return m[status] || 'ended';
+}
+
+function epKey(season, number) { return `S${season}E${number}`; }
+
+/* ── Toast ──────────────────────────────────────────────────── */
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+/* ── Sidebar: Watchlist ─────────────────────────────────────── */
+function renderWatchlist() {
+  const rows = document.getElementById('watchlistRows');
+  const badge = document.getElementById('wlCount');
+  badge.textContent = watchlist.length;
+
+  if (!watchlist.length) {
+    rows.innerHTML = '<div class="wl-empty">Add shows via search above to track them here.</div>';
+    return;
+  }
+
+  rows.innerHTML = watchlist.map(show => {
+    const next = show._embedded && show._embedded.nextepisode;
+    const cd = next ? countdownInfo(next.airdate) : null;
+    const posterSrc = show.image && (show.image.medium || show.image.original);
+    const imgHtml = posterSrc
+      ? `<img src="${esc(posterSrc)}" class="wl-poster" alt="" loading="lazy" />`
+      : `<div class="wl-poster-ph">📺</div>`;
+    const cdHtml = cd
+      ? `<div class="wl-countdown ${cd.cls}">${esc(cd.text)}</div>`
+      : (show.status === 'Ended' ? '<div class="wl-countdown">Ended</div>' : '');
+
+    return `<div class="wl-row${activeShowId === show.id ? ' active' : ''}" role="listitem" tabindex="0" data-id="${show.id}" aria-label="${esc(show.name)}">
+      ${imgHtml}
+      <div class="wl-info">
+        <div class="wl-name">${esc(show.name)}</div>
+        ${cdHtml}
+      </div>
+      <button class="wl-remove" data-id="${show.id}" aria-label="Remove ${esc(show.name)}" title="Remove">×</button>
+    </div>`;
+  }).join('');
+
+  rows.querySelectorAll('.wl-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.classList.contains('wl-remove')) return;
+      showDetail(parseInt(row.dataset.id, 10));
+    });
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); }
+    });
+  });
+
+  rows.querySelectorAll('.wl-remove').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      removeFromWatchlist(parseInt(btn.dataset.id, 10));
+    });
+  });
+}
+
+/* ── Search ─────────────────────────────────────────────────── */
+function initSearch() {
+  const input = document.getElementById('searchInput');
+  const dropdown = document.getElementById('searchDropdown');
+  const spinner = document.getElementById('searchSpinner');
+
+  input.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = input.value.trim();
+    if (q.length < 2) { closeDropdown(); return; }
+    spinner.classList.add('active');
+    searchTimer = setTimeout(() => doSearch(q), 400);
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeDropdown(); input.blur(); }
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.sidebar-search')) closeDropdown();
+  });
+
+  async function doSearch(q) {
+    try {
+      const shows = await searchShows(q);
+      spinner.classList.remove('active');
+      renderDropdown(shows.slice(0, 8));
+    } catch {
+      spinner.classList.remove('active');
+      toast('Search failed — check connection.', 'error');
+    }
+  }
+
+  function renderDropdown(shows) {
+    if (!shows.length) {
+      dropdown.innerHTML = '<div class="ac-msg">No results found.</div>';
+      dropdown.classList.add('open');
+      return;
+    }
+
+    dropdown.innerHTML = shows.map(s => {
+      const tracked = isTracked(s.id);
+      const posterSrc = s.image && s.image.medium;
+      const imgHtml = posterSrc
+        ? `<img src="${esc(posterSrc)}" class="ac-poster" alt="" loading="lazy" />`
+        : `<div class="ac-poster-ph">📺</div>`;
+      const genres = (s.genres || []).slice(0, 2).join(', ') || 'TV Show';
+      const year = s.premiered ? s.premiered.slice(0, 4) : '';
+      return `<div class="ac-item" role="option" tabindex="0" data-id="${s.id}">
+        ${imgHtml}
+        <div class="ac-info">
+          <div class="ac-name">${esc(s.name)}</div>
+          <div class="ac-meta">${esc(genres)}${year ? ` · ${year}` : ''} · ${esc(s.status || 'Unknown')}</div>
+        </div>
+        <button class="ac-add${tracked ? ' added' : ''}" data-id="${s.id}" aria-label="${tracked ? 'Already tracked' : 'Add ' + esc(s.name)}">
+          ${tracked ? '✓' : '+ Track'}
+        </button>
+      </div>`;
+    }).join('');
+
+    // Wire add buttons
+    dropdown.querySelectorAll('.ac-add').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (btn.classList.contains('added')) return;
+        const id = parseInt(btn.dataset.id, 10);
+        const show = shows.find(s => s.id === id);
+        if (!show) return;
+        // Fetch enriched data so we have nextepisode
+        fetchShow(id).catch(() => show).then(enriched => {
+          addToWatchlist(enriched || show);
+          btn.classList.add('added');
+          btn.textContent = '✓';
+        });
+      });
+    });
+
+    // Wire row clicks → show detail
+    dropdown.querySelectorAll('.ac-item').forEach(item => {
+      item.addEventListener('click', e => {
+        if (e.target.classList.contains('ac-add')) return;
+        closeDropdown();
+        showDetail(parseInt(item.dataset.id, 10));
+      });
+      item.addEventListener('keydown', e => {
+        if (e.key === 'Enter') item.click();
+      });
+    });
+
+    dropdown.classList.add('open');
+  }
+
+  function closeDropdown() {
+    dropdown.classList.remove('open');
+    dropdown.innerHTML = '';
+    spinner.classList.remove('active');
+  }
+}
+
+/* ── Schedule view ──────────────────────────────────────────── */
+async function loadSchedule() {
+  setView('schedule');
+  document.getElementById('scheduleLink').classList.add('active');
+  document.getElementById('scheduleLink').setAttribute('aria-pressed', 'true');
+
+  const dateStr = isoToday();
+  document.getElementById('scheduleDate').textContent = formatDate(dateStr);
+  document.getElementById('scheduleContent').innerHTML = '<div class="spinner" role="status" aria-label="Loading"></div>';
+
+  try {
+    const schedule = await fetchSchedule(dateStr);
+    renderSchedule(schedule, dateStr);
+  } catch (err) {
+    document.getElementById('scheduleContent').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load schedule</div><div class="empty-sub">${esc(err.message)}</div></div>`;
+  }
+}
+
+function renderSchedule(schedule, dateStr) {
+  const content = document.getElementById('scheduleContent');
+
+  if (!schedule.length) {
+    content.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">Nothing airing today</div><div class="empty-sub">No US schedule data available for today.</div></div>';
+    return;
+  }
+
+  // Group by time slot
+  const groups = {};
+  schedule.forEach(ep => {
+    const time = ep.airtime || 'TBA';
+    if (!groups[time]) groups[time] = [];
+    groups[time].push(ep);
+  });
+
+  const sortedTimes = Object.keys(groups).sort();
+  let html = '';
+
+  sortedTimes.forEach(time => {
+    html += `<div class="time-group">
+      <div class="time-group-label">${esc(time || 'Time TBA')}</div>`;
+    groups[time].forEach(ep => {
+      const show = ep.show || {};
+      const posterSrc = show.image && show.image.medium;
+      const imgHtml = posterSrc
+        ? `<img src="${esc(posterSrc)}" class="ep-thumb" alt="" loading="lazy" />`
+        : `<div class="ep-thumb-ph">📺</div>`;
+      const epNum = ep.season && ep.number
+        ? `S${String(ep.season).padStart(2,'0')}E${String(ep.number).padStart(2,'0')}`
+        : '';
+      const network = show.network && show.network.name ? show.network.name : (show.webChannel && show.webChannel.name ? show.webChannel.name : '');
+      html += `<div class="ep-row" tabindex="0" role="button" data-show-id="${show.id}" aria-label="View ${esc(show.name || 'show')} details">
+        ${imgHtml}
+        <div class="ep-info">
+          <div class="ep-show">${esc(show.name || 'Unknown')}</div>
+          <div class="ep-title-line">${epNum ? `${epNum} · ` : ''}${esc(ep.name || 'New Episode')}</div>
+          ${network ? `<div class="ep-network">${esc(network)}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  content.innerHTML = html;
+
+  // Wire row clicks
+  content.querySelectorAll('.ep-row[data-show-id]').forEach(row => {
+    const id = parseInt(row.dataset.showId, 10);
+    if (!id) return;
+    row.addEventListener('click', () => showDetail(id));
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); }
+    });
+  });
+}
+
+/* ── Show detail ────────────────────────────────────────────── */
+async function showDetail(id) {
+  setView('detail');
+  activeShowId = id;
+
+  // Mark schedule link as not active
+  document.getElementById('scheduleLink').classList.remove('active');
+  document.getElementById('scheduleLink').setAttribute('aria-pressed', 'false');
+
+  // Mark watchlist row active
+  renderWatchlist();
+
+  const scroll = document.getElementById('detailScroll');
+  scroll.innerHTML = '<div class="spinner" role="status" aria-label="Loading show details"></div>';
+
+  try {
+    const show = await fetchShow(id);
+    allShowEpisodes = [];
+    renderDetailView(show);
+    // Load episodes in background
+    fetchEpisodes(id).then(eps => {
+      allShowEpisodes = eps;
+      renderSeasonNavigator(show, eps);
+    }).catch(() => {});
+  } catch (err) {
+    scroll.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load</div><div class="empty-sub">${esc(err.message)}</div></div>`;
+  }
+}
+
+function renderDetailView(show) {
+  const scroll = document.getElementById('detailScroll');
+  const tracked = isTracked(show.id);
+
+  const posterSrc = show.image && (show.image.medium || show.image.original);
+  const imgHtml = posterSrc
+    ? `<img src="${esc(posterSrc)}" class="show-poster" alt="${esc(show.name)} poster" loading="lazy" />`
+    : `<div class="show-poster-ph">📺</div>`;
+
+  const genres = (show.genres || []).slice(0, 4);
+  const status = show.status || 'Unknown';
+  const network = show.network && show.network.name ? show.network.name : (show.webChannel && show.webChannel.name ? show.webChannel.name : '');
+  const year = show.premiered ? show.premiered.slice(0, 4) : '';
+  const runtime = show.runtime ? `${show.runtime} min` : '';
+
+  const genreChips = genres.map(g => `<span class="genre-chip">${esc(g)}</span>`).join('');
+  const statusChip = `<span class="status-chip ${statusCls(status)}">${esc(status)}</span>`;
+
+  const nextEp = show._embedded && show._embedded.nextepisode;
+  const prevEp = show._embedded && show._embedded.previousepisode;
+
+  // Next episode card
+  let nextEpHtml = '';
+  if (nextEp) {
+    const cd = countdownInfo(nextEp.airdate);
+    const epLabel = `S${String(nextEp.season).padStart(2,'0')}E${String(nextEp.number).padStart(2,'0')}`;
+    nextEpHtml = `<div class="next-ep-card" aria-label="Next episode info">
+      <div class="next-ep-countdown">
+        <div class="countdown-num">${esc(cd ? cd.num : '?')}</div>
+        <div class="countdown-unit">${esc(cd ? cd.unit : '')}</div>
+      </div>
+      <div class="next-ep-info">
+        <div class="next-ep-label">Next Episode</div>
+        <div class="next-ep-name">${esc(nextEp.name || 'New Episode')}</div>
+        <div class="next-ep-meta">${esc(epLabel)} · ${esc(formatDate(nextEp.airdate))}</div>
+        ${nextEp.airtime ? `<div class="next-ep-time">Airs at ${esc(nextEp.airtime)}${network ? ` on ${esc(network)}` : ''}</div>` : ''}
+      </div>
+    </div>`;
+  } else if (status === 'Ended' && prevEp) {
+    const epLabel = `S${String(prevEp.season).padStart(2,'0')}E${String(prevEp.number).padStart(2,'0')}`;
+    nextEpHtml = `<div class="next-ep-card">
+      <div class="next-ep-info" style="grid-column:1/-1;">
+        <div class="next-ep-label">Series Finale</div>
+        <div class="next-ep-name">${esc(prevEp.name || 'Finale')}</div>
+        <div class="next-ep-meta">${esc(epLabel)} · ${esc(formatDate(prevEp.airdate))}</div>
+      </div>
+    </div>`;
+  }
+
+  const summary = stripHtml(show.summary) || 'No synopsis available.';
+
+  scroll.innerHTML = `
+    <!-- Show header -->
+    <div class="show-header">
+      ${imgHtml}
+      <div class="show-meta">
+        <h1 class="show-name">${esc(show.name)}</h1>
+        <div class="show-tags">
+          ${statusChip}
+          ${genreChips}
+        </div>
+        <div class="show-attrs">
+          ${year ? `<span class="show-attr">📅 ${esc(year)}</span>` : ''}
+          ${network ? `<span class="show-attr">📡 ${esc(network)}</span>` : ''}
+          ${runtime ? `<span class="show-attr">⏱ ${esc(runtime)}</span>` : ''}
+          ${show.language ? `<span class="show-attr">🌐 ${esc(show.language)}</span>` : ''}
+          ${show.rating && show.rating.average ? `<span class="show-attr">⭐ ${show.rating.average}</span>` : ''}
+        </div>
+        <button class="show-track-btn ${tracked ? 'tracked' : 'untracked'}" id="trackBtn" aria-pressed="${tracked}" aria-label="${tracked ? 'Remove from watchlist' : 'Add to watchlist'}">
+          ${tracked ? '✓ Tracking' : '+ Track this show'}
+        </button>
+      </div>
+    </div>
+
+    <!-- Next episode / finale -->
+    ${nextEpHtml}
+
+    <!-- Summary -->
+    <div>
+      <div class="section-label">Synopsis</div>
+      <p class="show-summary">${esc(summary)}</p>
+    </div>
+
+    <!-- Season navigator (populated after episodes load) -->
+    <div id="seasonSection">
+      <div class="spinner" role="status" aria-label="Loading episodes" style="width:20px;height:20px;margin:0;"></div>
+    </div>
+  `;
+
+  // Wire track button
+  document.getElementById('trackBtn').addEventListener('click', () => {
+    if (isTracked(show.id)) {
+      removeFromWatchlist(show.id);
+    } else {
+      addToWatchlist(show);
+    }
+    // Refresh detail view
+    renderDetailView(show);
+    // Re-attach season nav if already loaded
+    if (allShowEpisodes.length) renderSeasonNavigator(show, allShowEpisodes);
+  });
+}
+
+function renderSeasonNavigator(show, episodes) {
+  const section = document.getElementById('seasonSection');
+  if (!section) return;
+
+  if (!episodes || !episodes.length) {
+    section.innerHTML = '<div class="empty-sub" style="color:var(--color-ink-muted);font-size:var(--text-sm);">No episode data available.</div>';
+    return;
+  }
+
+  // Group by season
+  const seasons = {};
+  episodes.forEach(ep => {
+    const s = ep.season || 0;
+    if (!seasons[s]) seasons[s] = [];
+    seasons[s].push(ep);
+  });
+  const seasonNums = Object.keys(seasons).map(Number).sort((a,b) => a-b);
+  const latestSeason = seasonNums[seasonNums.length - 1];
+
+  section.innerHTML = `
+    <div class="section-label">Episodes</div>
+    <div class="season-nav">
+      <span class="season-label">Season:</span>
+      <select class="season-select" id="seasonSelect" aria-label="Select season">
+        ${seasonNums.map(n => `<option value="${n}"${n === latestSeason ? ' selected' : ''}>${n}</option>`).join('')}
+      </select>
+    </div>
+    <div id="episodeTableWrap" style="margin-top:var(--space-3);"></div>
+  `;
+
+  function renderSeasonEps(seasonNum) {
+    const eps = seasons[seasonNum] || [];
+    const wrap = document.getElementById('episodeTableWrap');
+    const showId = show.id;
+    const watched = watchedEps[showId] || {};
+
+    wrap.innerHTML = `<table class="ep-table" aria-label="Season ${seasonNum} episodes">
+      <thead>
+        <tr>
+          <th style="width:36px;">Ep</th>
+          <th>Title</th>
+          <th>Air Date</th>
+          <th style="width:60px;text-align:center;">Watched</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${eps.map(ep => {
+          const key = epKey(ep.season, ep.number);
+          const isWatched = !!watched[key];
+          return `<tr class="${isWatched ? 'ep-watched-row' : ''}">
+            <td class="ep-num">${ep.number != null ? String(ep.number).padStart(2,'0') : '—'}</td>
+            <td class="${isWatched ? 'ep-title-td' : ''}">${esc(ep.name || 'Episode ' + ep.number)}</td>
+            <td>${esc(formatDateShort(ep.airdate))}</td>
+            <td style="text-align:center;">
+              <input type="checkbox" class="ep-watched-cb" data-key="${esc(key)}" data-show="${showId}" ${isWatched ? 'checked' : ''} aria-label="Mark episode ${ep.number} as watched" />
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+    // Wire checkboxes
+    wrap.querySelectorAll('.ep-watched-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const sid = parseInt(cb.dataset.show, 10);
+        const key = cb.dataset.key;
+        if (!watchedEps[sid]) watchedEps[sid] = {};
+        if (cb.checked) {
+          watchedEps[sid][key] = true;
+        } else {
+          delete watchedEps[sid][key];
+        }
+        saveWatched();
+        // Toggle row style
+        const row = cb.closest('tr');
+        if (row) {
+          row.classList.toggle('ep-watched-row', cb.checked);
+          const titleTd = row.querySelector('td:nth-child(2)');
+          if (titleTd) titleTd.classList.toggle('ep-title-td', cb.checked);
+        }
+      });
+    });
+  }
+
+  renderSeasonEps(latestSeason);
+
+  document.getElementById('seasonSelect').addEventListener('change', e => {
+    renderSeasonEps(Number(e.target.value));
+  });
+}
+
+/* ── View switching ─────────────────────────────────────────── */
+function setView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(`view-${name}`);
+  if (el) el.classList.add('active');
+}
+
+/* ── Enrich watchlist ───────────────────────────────────────── */
+async function enrichWatchlist() {
+  if (!watchlist.length) return;
+  const enriched = await Promise.all(
+    watchlist.map(s => fetchShow(s.id).catch(() => s))
+  );
+  watchlist = enriched;
+  saveWatchlist();
+  renderWatchlist();
+}
+
+/* ── Init ───────────────────────────────────────────────────── */
+function init() {
+  loadState();
+  renderWatchlist();
+  initSearch();
+
+  // Today's schedule button
+  document.getElementById('scheduleLink').addEventListener('click', () => {
+    activeShowId = null;
+    renderWatchlist();
+    loadSchedule();
+  });
+
+  // Load schedule on start
+  loadSchedule();
+
+  // Enrich watchlist in background
+  enrichWatchlist();
+
+  // Demo: pre-populate if empty
+  if (!watchlist.length) {
+    const demoIds = [82, 169, 1371]; // Breaking Bad, Game of Thrones, Stranger Things
+    Promise.all(demoIds.map(id => fetchShow(id).catch(() => null)))
+      .then(shows => {
+        shows.filter(Boolean).forEach(s => { if (!isTracked(s.id)) watchlist.push(s); });
+        saveWatchlist();
+        renderWatchlist();
+      })
+      .catch(() => {});
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

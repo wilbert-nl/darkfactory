@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PullList — Comic Book Release Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: var(--font-body); }
+input, select, textarea { font-family: var(--font-body); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep { width: 1px; height: 16px; background: var(--color-border); flex-shrink: 0; }
+.nav-page-label { font-size: var(--text-sm); color: var(--color-ink-muted); font-weight: 500; white-space: nowrap; }
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sidebar-section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+
+/* Customer search */
+.input-search {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 0.15s ease;
+}
+.input-search:focus { outline: none; border-color: var(--color-accent); }
+.input-search::placeholder { color: var(--color-ink-muted); }
+
+/* Publisher filter chips */
+.chip-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 99px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.chip:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.chip.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+}
+
+/* Date filter */
+.select-filter {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  padding-right: var(--space-8);
+  transition: border-color 0.15s ease;
+}
+.select-filter:focus { outline: none; border-color: var(--color-accent); }
+
+/* Customer list */
+.customer-list { display: flex; flex-direction: column; gap: var(--space-1); }
+.customer-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.customer-item:hover { background: oklch(90% 0.018 95); }
+.customer-item.active { background: oklch(90% 0.018 95); border-color: var(--color-accent-line); }
+.customer-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.customer-info { flex: 1; min-width: 0; }
+.customer-name { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.customer-meta { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+/* Sidebar add customer form */
+.add-customer-form { display: flex; flex-direction: column; gap: var(--space-2); }
+.input-field {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 0.15s ease;
+}
+.input-field:focus { outline: none; border-color: var(--color-accent); }
+.input-field::placeholder { color: var(--color-ink-muted); }
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.btn-ghost:hover { background: oklch(90% 0.018 95); color: var(--color-ink); border-color: var(--color-accent-line); }
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-danger);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: 1px solid oklch(55% 0.20 25 / 0.25);
+  border-radius: var(--radius-md);
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn-danger:hover { background: oklch(55% 0.20 25 / 0.06); border-color: var(--color-danger); }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* ── Tab bar ── */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-6);
+  flex-shrink: 0;
+  background: var(--color-paper);
+}
+.tab {
+  padding: var(--space-4) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--color-ink); }
+.tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+.tab-spacer { flex: 1; }
+
+.btn-add-release {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  transition: opacity 0.15s;
+}
+.btn-add-release:hover { opacity: 0.88; }
+
+/* ── Tab panels ── */
+.tab-panel { display: none; flex: 1; overflow-y: auto; }
+.tab-panel.active { display: flex; flex-direction: column; }
+
+/* ── Upcoming Releases ── */
+.panel-upcoming {
+  padding: var(--space-6);
+  gap: var(--space-6);
+}
+
+.week-group { display: flex; flex-direction: column; gap: var(--space-4); }
+.week-label {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.week-label span { font-family: var(--font-body); font-size: var(--text-xs); font-weight: 500; color: var(--color-ink-muted); margin-left: var(--space-2); }
+
+.release-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.release-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.release-card:hover { box-shadow: 0 4px 20px oklch(18% 0.04 155 / 0.10); transform: translateY(-2px); }
+
+.card-cover {
+  width: 100%;
+  aspect-ratio: 2/3;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.card-cover svg { width: 100%; height: 100%; }
+
+.card-body {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.publisher-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px var(--space-2);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.pub-marvel  { background: oklch(55% 0.20 25 / 0.12); color: oklch(45% 0.22 25); }
+.pub-dc      { background: oklch(55% 0.18 245 / 0.14); color: oklch(38% 0.20 245); }
+.pub-image   { background: oklch(62% 0.16 60 / 0.14); color: oklch(44% 0.16 60); }
+.pub-indie   { background: oklch(55% 0.14 155 / 0.14); color: oklch(40% 0.14 155); }
+
+.card-date { font-size: var(--text-xs); color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
+.card-crew { font-size: var(--text-xs); color: var(--color-ink-muted); line-height: 1.4; }
+.card-price { font-size: var(--text-xs); font-weight: 600; color: var(--color-ink); }
+.card-variants { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.card-footer {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  flex-shrink: 0;
+}
+
+.btn-add-pull {
+  width: 100%;
+  padding: var(--space-2);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: 1px dashed var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  transition: background 0.12s, border-style 0.12s;
+}
+.btn-add-pull:hover { background: oklch(88% 0.04 155); border-style: solid; }
+.btn-add-pull.subscribed {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border-style: solid;
+  border-color: var(--color-accent);
+}
+.btn-add-pull.subscribed:hover { opacity: 0.85; }
+
+/* No results */
+.empty-state {
+  padding: var(--space-16);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-ink-muted);
+}
+.empty-state-title { font-family: var(--font-display); font-size: var(--text-2xl); color: var(--color-ink); font-weight: 400; }
+.empty-state-sub { font-size: var(--text-sm); max-width: 300px; line-height: 1.65; }
+
+/* ── Pull Lists tab ── */
+.panel-pulls {
+  padding: var(--space-6);
+  gap: var(--space-6);
+}
+
+.pull-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.pull-header-info {}
+.pull-customer-name {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.pull-customer-detail { font-size: var(--text-sm); color: var(--color-ink-muted); margin-top: 2px; }
+
+.pull-stats {
+  display: flex;
+  gap: var(--space-6);
+  flex-shrink: 0;
+}
+.pull-stat { text-align: right; }
+.pull-stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.pull-stat-label { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 2px; }
+
+.pull-divider { border: none; border-top: 1px solid var(--color-border); margin: 0; }
+
+.pull-series-section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.series-sub-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.series-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.series-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s;
+}
+.series-row:last-child { border-bottom: none; }
+.series-row:hover { background: oklch(96% 0.008 95); }
+.series-row-header { background: var(--color-paper-2); font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-ink-muted); }
+
+.series-title { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.series-upcoming { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.upcoming-issues-section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.upcoming-issue-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: box-shadow 0.1s;
+}
+.upcoming-issue-row:hover { box-shadow: 0 2px 8px oklch(18% 0.04 155 / 0.06); }
+
+.issue-cover-mini {
+  width: 36px;
+  height: 54px;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.issue-cover-mini svg { width: 100%; height: 100%; }
+
+.issue-info { flex: 1; min-width: 0; }
+.issue-series { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.issue-sub { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 1px; }
+.issue-date-chip {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  white-space: nowrap;
+}
+.issue-price { font-size: var(--text-xs); font-weight: 600; color: var(--color-ink); white-space: nowrap; }
+
+.btn-generate-notif {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.btn-generate-notif:hover { opacity: 0.88; transform: translateY(-1px); }
+
+.pull-no-customer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  text-align: center;
+  gap: var(--space-3);
+}
+
+/* ── Notifications tab ── */
+.panel-notifications {
+  padding: var(--space-6);
+  gap: var(--space-6);
+}
+
+.notif-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.notif-blocks { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.notif-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.notif-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.notif-card-name { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.notif-card-meta { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.notif-body {
+  padding: var(--space-4);
+  background: var(--color-paper);
+}
+.notif-template {
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-ink);
+  white-space: pre-wrap;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.notif-actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
+
+.btn-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn-copy:hover { background: oklch(90% 0.018 95); border-color: var(--color-accent-line); }
+.btn-copy.copied { color: var(--color-success); border-color: var(--color-success); }
+
+.template-editor-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.template-editor {
+  width: 100%;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  min-height: 140px;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+.template-editor:focus { outline: none; border-color: var(--color-accent); }
+
+.template-vars {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.8;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+.template-vars code {
+  font-family: monospace;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+}
+
+/* ── Modal ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: oklch(18% 0.04 155 / 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px oklch(18% 0.04 155 / 0.25);
+  width: 100%;
+  max-width: 440px;
+  transform: translateY(8px);
+  transition: transform 0.2s ease;
+  overflow: hidden;
+}
+.modal-backdrop.open .modal { transform: translateY(0); }
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+.modal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.btn-modal-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  transition: color 0.12s, background 0.12s;
+}
+.btn-modal-close:hover { color: var(--color-ink); background: var(--color-paper-2); }
+
+.modal-body { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); }
+
+.modal-issue-info {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.modal-issue-title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 500; color: var(--color-ink); }
+.modal-issue-meta { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 4px; }
+
+.customer-picker { display: flex; flex-direction: column; gap: var(--space-2); max-height: 240px; overflow-y: auto; }
+.customer-pick-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.customer-pick-item:hover { background: var(--color-paper-2); border-color: var(--color-accent-line); }
+.customer-pick-item.subscribed { border-color: var(--color-accent); background: var(--color-accent-subtle); }
+.customer-pick-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 2px solid var(--color-border);
+  background: var(--color-paper);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--color-accent);
+  transition: border-color 0.12s, background 0.12s;
+}
+.customer-pick-item.subscribed .customer-pick-checkbox {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-paper);
+}
+.customer-pick-name { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.customer-pick-meta { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.modal-footer { padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: var(--space-3); }
+
+/* ── Add Release Modal ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.form-grid .full { grid-column: 1 / -1; }
+.field-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+.field-group { display: flex; flex-direction: column; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Notification log ── */
+.log-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.log-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+.log-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); flex-shrink: 0; }
+.log-text { flex: 1; color: var(--color-ink); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--color-border); max-height: 50vh; overflow-y: auto; }
+  .main { overflow: visible; }
+  .tab-panel.active { overflow: visible; }
+  .release-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .form-grid { grid-template-columns: 1fr; }
+  .pull-stats { flex-direction: column; gap: var(--space-2); }
+  .series-row { grid-template-columns: 1fr auto auto; }
+  .series-row > :nth-child(4), .series-row > :nth-child(5) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release-card:hover { transform: none; }
+  .btn-primary:hover { transform: none; }
+  .btn-generate-notif:hover { transform: none; }
+  .modal, .modal-backdrop { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Pull<span>List</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Comic Book Release Tracker</span>
+  <a href="../index.html" class="nav-back" aria-label="Back to home">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Sidebar controls">
+    <div class="sidebar-scroll">
+
+      <!-- Customer search -->
+      <div>
+        <p class="sidebar-section-label">Customer Search</p>
+        <input type="text" class="input-search" id="customer-search" placeholder="Name or email…" aria-label="Search customers">
+      </div>
+
+      <!-- Publisher filter -->
+      <div>
+        <p class="sidebar-section-label">Publisher</p>
+        <div class="chip-row" id="publisher-chips">
+          <button class="chip active" data-pub="all">All</button>
+          <button class="chip" data-pub="marvel">Marvel</button>
+          <button class="chip" data-pub="dc">DC</button>
+          <button class="chip" data-pub="image">Image</button>
+          <button class="chip" data-pub="indie">Indie</button>
+        </div>
+      </div>
+
+      <!-- Date filter -->
+      <div>
+        <p class="sidebar-section-label">Release Date</p>
+        <select class="select-filter" id="date-filter" aria-label="Filter by release date">
+          <option value="all">All upcoming</option>
+          <option value="week">This week</option>
+          <option value="month">This month</option>
+          <option value="3months">Next 3 months</option>
+        </select>
+      </div>
+
+      <!-- Series search -->
+      <div>
+        <p class="sidebar-section-label">Series Search</p>
+        <input type="text" class="input-search" id="series-search" placeholder="e.g. Batman…" aria-label="Search series">
+      </div>
+
+      <!-- Customer list -->
+      <div>
+        <p class="sidebar-section-label">Customers</p>
+        <div class="customer-list" id="customer-list" role="list"></div>
+      </div>
+
+      <!-- Add customer form -->
+      <div>
+        <p class="sidebar-section-label">Add Customer</p>
+        <div class="add-customer-form">
+          <input type="text" class="input-field" id="new-cust-name" placeholder="Full name" aria-label="Customer name">
+          <input type="email" class="input-field" id="new-cust-email" placeholder="Email address" aria-label="Customer email">
+          <input type="tel" class="input-field" id="new-cust-phone" placeholder="Phone (optional)" aria-label="Customer phone">
+          <button class="btn-primary" id="btn-add-customer" style="width:100%">Add Customer</button>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Main content">
+
+    <!-- Tab bar -->
+    <div class="tab-bar" role="tablist">
+      <button class="tab active" data-tab="upcoming" role="tab" aria-selected="true">Upcoming Releases</button>
+      <button class="tab" data-tab="pulls" role="tab" aria-selected="false">Pull Lists</button>
+      <button class="tab" data-tab="notifications" role="tab" aria-selected="false">Notifications</button>
+      <span class="tab-spacer"></span>
+      <button class="btn-add-release" id="btn-add-release" aria-label="Add manual release">+ Add Release</button>
+    </div>
+
+    <!-- Tab: Upcoming Releases -->
+    <div class="tab-panel active panel-upcoming" id="tab-upcoming" role="tabpanel">
+      <div id="upcoming-content"></div>
+    </div>
+
+    <!-- Tab: Pull Lists -->
+    <div class="tab-panel panel-pulls" id="tab-pulls" role="tabpanel">
+      <div id="pulls-content"></div>
+    </div>
+
+    <!-- Tab: Notifications -->
+    <div class="tab-panel panel-notifications" id="tab-notifications" role="tabpanel">
+      <div id="notifications-content"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Pull List Modal (customer picker) -->
+<div class="modal-backdrop" id="modal-pull" role="dialog" aria-modal="true" aria-labelledby="modal-pull-title">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-pull-title">Add to Pull List</span>
+      <button class="btn-modal-close" id="modal-pull-close" aria-label="Close modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-issue-info">
+        <div class="modal-issue-title" id="modal-issue-title"></div>
+        <div class="modal-issue-meta" id="modal-issue-meta"></div>
+      </div>
+      <div>
+        <p class="sidebar-section-label" style="margin-bottom:var(--space-2)">Select customers to add this series:</p>
+        <div class="customer-picker" id="customer-picker"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="modal-pull-cancel">Cancel</button>
+      <button class="btn-primary" id="modal-pull-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Release Modal -->
+<div class="modal-backdrop" id="modal-release" role="dialog" aria-modal="true" aria-labelledby="modal-release-title">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-release-title">Add Release</span>
+      <button class="btn-modal-close" id="modal-release-close" aria-label="Close modal">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field-group full">
+          <label class="field-label" for="rel-title">Series title</label>
+          <input type="text" class="input-field" id="rel-title" placeholder="e.g. Amazing Spider-Man">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="rel-issue">Issue #</label>
+          <input type="number" class="input-field" id="rel-issue" placeholder="1" min="1">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="rel-publisher">Publisher</label>
+          <select class="select-filter" id="rel-publisher">
+            <option value="marvel">Marvel</option>
+            <option value="dc">DC</option>
+            <option value="image">Image</option>
+            <option value="indie">Indie</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="rel-date">Release date</label>
+          <input type="date" class="input-field" id="rel-date">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="rel-price">Price</label>
+          <select class="select-filter" id="rel-price">
+            <option value="$4.99">$4.99</option>
+            <option value="$5.99">$5.99</option>
+            <option value="$3.99">$3.99</option>
+            <option value="$6.99">$6.99</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="rel-writer">Writer</label>
+          <input type="text" class="input-field" id="rel-writer" placeholder="Writer name">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="rel-artist">Artist</label>
+          <input type="text" class="input-field" id="rel-artist" placeholder="Artist name">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="rel-variants">Cover variants</label>
+          <input type="number" class="input-field" id="rel-variants" placeholder="1" min="1" value="1">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="modal-release-cancel">Cancel</button>
+      <button class="btn-primary" id="modal-release-save">Add Release</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+// ── Hallmark Workbench · Comic Book Release Tracker ─────────────
+
+// ── Utilities ─────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const parseDate = (s) => new Date(s + 'T00:00:00');
+const fmtDate = (s) => {
+  const d = parseDate(s);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+// ── Publisher colors & labels ──────────────────────────────────
+const PUB_CLASS = { marvel: 'pub-marvel', dc: 'pub-dc', image: 'pub-image', indie: 'pub-indie' };
+const PUB_LABEL = { marvel: 'Marvel', dc: 'DC', image: 'Image', indie: 'Indie' };
+const PUB_FILL  = {
+  marvel: 'oklch(55% 0.22 25)',
+  dc:     'oklch(45% 0.20 245)',
+  image:  'oklch(55% 0.18 60)',
+  indie:  'oklch(48% 0.14 155)',
+};
+
+// ── Cover SVG generator ────────────────────────────────────────
+function makeCoverSVG(title, publisher, issue, mini = false) {
+  const fill = PUB_FILL[publisher] || 'oklch(40% 0.10 155)';
+  const bg2  = publisher === 'marvel' ? 'oklch(38% 0.20 25)' :
+               publisher === 'dc'     ? 'oklch(30% 0.18 245)' :
+               publisher === 'image'  ? 'oklch(38% 0.16 60)' :
+                                        'oklch(32% 0.12 155)';
+  const short = title.length > 14 ? title.slice(0, 13) + '…' : title;
+  if (mini) {
+    return `<svg viewBox="0 0 36 54" xmlns="http://www.w3.org/2000/svg">
+      <rect width="36" height="54" fill="${fill}"/>
+      <rect y="38" width="36" height="16" fill="${bg2}"/>
+      <text x="18" y="25" text-anchor="middle" font-size="6" font-family="sans-serif" fill="white" font-weight="bold">#${esc(String(issue))}</text>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="300" fill="${fill}"/>
+    <rect y="0" width="200" height="6" fill="${bg2}"/>
+    <rect y="220" width="200" height="80" fill="${bg2}"/>
+    <circle cx="100" cy="120" r="55" fill="oklch(100% 0 0 / 0.08)"/>
+    <circle cx="100" cy="120" r="38" fill="oklch(100% 0 0 / 0.10)"/>
+    <text x="100" y="128" text-anchor="middle" font-size="32" font-family="sans-serif" fill="white" font-weight="900">#${esc(String(issue))}</text>
+    <text x="100" y="248" text-anchor="middle" font-size="13" font-family="sans-serif" fill="white" font-weight="700">${esc(PUB_LABEL[publisher] || 'COMICS')}</text>
+    <text x="100" y="268" text-anchor="middle" font-size="11" font-family="sans-serif" fill="rgba(255,255,255,0.8)">${esc(short)}</text>
+  </svg>`;
+}
+
+// ── Embedded release database ──────────────────────────────────
+const BASE_RELEASES = [
+  // MARVEL
+  { id:'r01', title:'Amazing Spider-Man', issue:47, publisher:'marvel', date:'2026-06-04', writer:'Zeb Wells', artist:'John Romita Jr.', price:'$4.99', variants:4 },
+  { id:'r02', title:'Amazing Spider-Man', issue:48, publisher:'marvel', date:'2026-06-18', writer:'Zeb Wells', artist:'John Romita Jr.', price:'$4.99', variants:3 },
+  { id:'r03', title:'X-Men', issue:32, publisher:'marvel', date:'2026-06-04', writer:'Gerry Duggan', artist:'Joshua Cassara', price:'$4.99', variants:5 },
+  { id:'r04', title:'X-Men', issue:33, publisher:'marvel', date:'2026-07-02', writer:'Gerry Duggan', artist:'Joshua Cassara', price:'$4.99', variants:4 },
+  { id:'r05', title:'Avengers', issue:19, publisher:'marvel', date:'2026-06-11', writer:'Jason Aaron', artist:'Javier Garrón', price:'$4.99', variants:3 },
+  { id:'r06', title:'Avengers', issue:20, publisher:'marvel', date:'2026-07-09', writer:'Jason Aaron', artist:'Javier Garrón', price:'$4.99', variants:2 },
+  { id:'r07', title:'Thor', issue:28, publisher:'marvel', date:'2026-06-04', writer:'Donny Cates', artist:'Nic Klein', price:'$4.99', variants:3 },
+  { id:'r08', title:'Thor', issue:29, publisher:'marvel', date:'2026-07-02', writer:'Donny Cates', artist:'Nic Klein', price:'$4.99', variants:2 },
+  { id:'r09', title:'Iron Man', issue:22, publisher:'marvel', date:'2026-06-11', writer:'Christopher Cantwell', artist:'Angel Unzueta', price:'$4.99', variants:3 },
+  { id:'r10', title:'Iron Man', issue:23, publisher:'marvel', date:'2026-07-09', writer:'Christopher Cantwell', artist:'Angel Unzueta', price:'$4.99', variants:2 },
+  { id:'r11', title:'Captain America', issue:15, publisher:'marvel', date:'2026-06-18', writer:'Ta-Nehisi Coates', artist:'Leinil Francis Yu', price:'$4.99', variants:3 },
+  { id:'r12', title:'Captain America', issue:16, publisher:'marvel', date:'2026-07-16', writer:'Ta-Nehisi Coates', artist:'Leinil Francis Yu', price:'$4.99', variants:2 },
+  { id:'r13', title:'Black Panther', issue:11, publisher:'marvel', date:'2026-06-25', writer:'John Ridley', artist:'Juann Cabal', price:'$4.99', variants:2 },
+  { id:'r14', title:'Daredevil', issue:8, publisher:'marvel', date:'2026-06-11', writer:'Chip Kidd', artist:'Marco Checchetto', price:'$4.99', variants:2 },
+  { id:'r15', title:'Daredevil', issue:9, publisher:'marvel', date:'2026-07-09', writer:'Chip Kidd', artist:'Marco Checchetto', price:'$4.99', variants:2 },
+  { id:'r16', title:'Wolverine', issue:41, publisher:'marvel', date:'2026-06-04', writer:'Benjamin Percy', artist:'Adam Kubert', price:'$4.99', variants:4 },
+  { id:'r17', title:'Wolverine', issue:42, publisher:'marvel', date:'2026-07-02', writer:'Benjamin Percy', artist:'Adam Kubert', price:'$4.99', variants:3 },
+  { id:'r18', title:'Ms. Marvel', issue:5, publisher:'marvel', date:'2026-06-18', writer:'Iman Vellani', artist:'Sara Pichelli', price:'$4.99', variants:2 },
+  { id:'r19', title:'Miles Morales: Spider-Man', issue:26, publisher:'marvel', date:'2026-06-25', writer:'Saladin Ahmed', artist:'Carmen Carnero', price:'$4.99', variants:3 },
+  { id:'r20', title:'Miles Morales: Spider-Man', issue:27, publisher:'marvel', date:'2026-07-23', writer:'Saladin Ahmed', artist:'Carmen Carnero', price:'$4.99', variants:2 },
+
+  // DC
+  { id:'r21', title:'Batman', issue:153, publisher:'dc', date:'2026-06-03', writer:'Chip Kidd', artist:'Jorge Jiménez', price:'$4.99', variants:6 },
+  { id:'r22', title:'Batman', issue:154, publisher:'dc', date:'2026-06-17', writer:'Chip Kidd', artist:'Jorge Jiménez', price:'$4.99', variants:5 },
+  { id:'r23', title:'Batman', issue:155, publisher:'dc', date:'2026-07-01', writer:'Chip Kidd', artist:'Jorge Jiménez', price:'$4.99', variants:4 },
+  { id:'r24', title:'Superman', issue:22, publisher:'dc', date:'2026-06-10', writer:'Joshua Williamson', artist:'Jamal Campbell', price:'$4.99', variants:4 },
+  { id:'r25', title:'Superman', issue:23, publisher:'dc', date:'2026-07-08', writer:'Joshua Williamson', artist:'Jamal Campbell', price:'$4.99', variants:3 },
+  { id:'r26', title:'Wonder Woman', issue:18, publisher:'dc', date:'2026-06-03', writer:'Tom King', artist:'Daniel Sampere', price:'$4.99', variants:3 },
+  { id:'r27', title:'Wonder Woman', issue:19, publisher:'dc', date:'2026-07-01', writer:'Tom King', artist:'Daniel Sampere', price:'$4.99', variants:2 },
+  { id:'r28', title:'The Flash', issue:14, publisher:'dc', date:'2026-06-10', writer:'Simon Spurrier', artist:'Mike Deodato Jr.', price:'$4.99', variants:2 },
+  { id:'r29', title:'Green Lantern', issue:9, publisher:'dc', date:'2026-06-17', writer:'Jeremy Adams', artist:'Xermanico', price:'$4.99', variants:2 },
+  { id:'r30', title:'Justice League', issue:5, publisher:'dc', date:'2026-06-24', writer:'Mark Waid', artist:'Dan Mora', price:'$5.99', variants:4 },
+  { id:'r31', title:'Justice League', issue:6, publisher:'dc', date:'2026-07-22', writer:'Mark Waid', artist:'Dan Mora', price:'$5.99', variants:3 },
+  { id:'r32', title:'Nightwing', issue:121, publisher:'dc', date:'2026-06-03', writer:'Tom Taylor', artist:'Bruno Redondo', price:'$4.99', variants:2 },
+  { id:'r33', title:'Nightwing', issue:122, publisher:'dc', date:'2026-07-01', writer:'Tom Taylor', artist:'Bruno Redondo', price:'$4.99', variants:2 },
+  { id:'r34', title:'Harley Quinn', issue:44, publisher:'dc', date:'2026-06-10', writer:'Tini Howard', artist:'Sweeney Boo', price:'$4.99', variants:3 },
+  { id:'r35', title:'Aquaman', issue:8, publisher:'dc', date:'2026-06-24', writer:'Brandon Thomas', artist:'Sami Basri', price:'$4.99', variants:2 },
+  { id:'r36', title:'Green Arrow', issue:12, publisher:'dc', date:'2026-07-15', writer:'Joshua Williamson', artist:'Sean Izaakse', price:'$4.99', variants:2 },
+  { id:'r37', title:'Detective Comics', issue:1094, publisher:'dc', date:'2026-06-17', writer:'Ram V', artist:'Simon Spurrier', price:'$4.99', variants:4 },
+  { id:'r38', title:'Detective Comics', issue:1095, publisher:'dc', date:'2026-07-15', writer:'Ram V', artist:'Simon Spurrier', price:'$4.99', variants:3 },
+
+  // Image
+  { id:'r39', title:'Invincible', issue:150, publisher:'image', date:'2026-06-04', writer:'Robert Kirkman', artist:'Ryan Ottley', price:'$5.99', variants:5 },
+  { id:'r40', title:'Invincible', issue:151, publisher:'image', date:'2026-07-02', writer:'Robert Kirkman', artist:'Ryan Ottley', price:'$4.99', variants:3 },
+  { id:'r41', title:'The Walking Dead Omnibus', issue:7, publisher:'image', date:'2026-06-11', writer:'Robert Kirkman', artist:'Charlie Adlard', price:'$5.99', variants:2 },
+  { id:'r42', title:'Saga', issue:67, publisher:'image', date:'2026-06-18', writer:'Brian K. Vaughan', artist:'Fiona Staples', price:'$4.99', variants:3 },
+  { id:'r43', title:'Saga', issue:68, publisher:'image', date:'2026-07-16', writer:'Brian K. Vaughan', artist:'Fiona Staples', price:'$4.99', variants:2 },
+  { id:'r44', title:'Spawn', issue:361, publisher:'image', date:'2026-06-04', writer:'Todd McFarlane', artist:'Carlo Barberi', price:'$4.99', variants:4 },
+  { id:'r45', title:'Spawn', issue:362, publisher:'image', date:'2026-07-02', writer:'Todd McFarlane', artist:'Carlo Barberi', price:'$4.99', variants:3 },
+  { id:'r46', title:'Deadly Class', issue:58, publisher:'image', date:'2026-06-25', writer:'Rick Remender', artist:'Wes Craig', price:'$4.99', variants:2 },
+
+  // Indie
+  { id:'r47', title:'Something is Killing the Children', issue:38, publisher:'indie', date:'2026-06-04', writer:'James Tynion IV', artist:'Werther Dell\'Edera', price:'$4.99', variants:3 },
+  { id:'r48', title:'Something is Killing the Children', issue:39, publisher:'indie', date:'2026-07-02', writer:'James Tynion IV', artist:'Werther Dell\'Edera', price:'$4.99', variants:2 },
+  { id:'r49', title:'Hellboy and the BPRD', issue:16, publisher:'indie', date:'2026-06-11', writer:'Mike Mignola', artist:'Adam Hughes', price:'$4.99', variants:2 },
+  { id:'r50', title:'Star Wars: High Republic', issue:9, publisher:'indie', date:'2026-06-18', writer:'Cavan Scott', artist:'Ario Anindito', price:'$4.99', variants:3 },
+  { id:'r51', title:'Star Wars: High Republic', issue:10, publisher:'indie', date:'2026-07-16', writer:'Cavan Scott', artist:'Ario Anindito', price:'$4.99', variants:2 },
+  { id:'r52', title:'Mighty Morphin Power Rangers', issue:126, publisher:'indie', date:'2026-06-11', writer:'Mat Groom', artist:'Moises Hidalgo', price:'$4.99', variants:3 },
+  { id:'r53', title:'Teenage Mutant Ninja Turtles', issue:155, publisher:'indie', date:'2026-06-18', writer:'Sophie Campbell', artist:'Pablo Tunica', price:'$4.99', variants:4 },
+  { id:'r54', title:'Teenage Mutant Ninja Turtles', issue:156, publisher:'indie', date:'2026-07-16', writer:'Sophie Campbell', artist:'Pablo Tunica', price:'$4.99', variants:3 },
+  { id:'r55', title:'The Orville', issue:6, publisher:'indie', date:'2026-06-25', writer:'David A. Goodman', artist:'David Cabeza', price:'$4.99', variants:1 },
+  { id:'r56', title:'Godzilla: Here There Be Dragons II', issue:4, publisher:'indie', date:'2026-07-09', writer:'Frank Tieri', artist:'Alberto Ponticelli', price:'$4.99', variants:2 },
+  { id:'r57', title:'Critical Role: Vox Machina Origins', issue:11, publisher:'indie', date:'2026-06-25', writer:'Jody Houser', artist:'Olivia Samson', price:'$4.99', variants:2 },
+  { id:'r58', title:'Planet of the Apes', issue:8, publisher:'indie', date:'2026-07-23', writer:'David F. Walker', artist:'Dave Wachter', price:'$4.99', variants:2 },
+  { id:'r59', title:'Earthdivers', issue:13, publisher:'indie', date:'2026-07-09', writer:'Stephen Graham Jones', artist:'Davide Gianfelice', price:'$4.99', variants:1 },
+  { id:'r60', title:'Black Hammer: Reborn', issue:5, publisher:'indie', date:'2026-07-23', writer:'Jeff Lemire', artist:'Caitlin Yarsky', price:'$4.99', variants:2 },
+];
+
+// ── Demo customers ─────────────────────────────────────────────
+const DEMO_CUSTOMERS = [
+  {
+    id: 'c-demo1', name: 'Alex Rivera', email: 'alex.rivera@email.com', phone: '(555) 201-4433',
+    pulls: ['Amazing Spider-Man', 'Batman', 'Saga', 'X-Men'],
+    createdAt: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'c-demo2', name: 'Jordan Patel', email: 'jpatel@comics.net', phone: '(555) 389-7701',
+    pulls: ['Invincible', 'Daredevil', 'Thor', 'Saga', 'Batman'],
+    createdAt: '2025-03-22T14:30:00Z'
+  },
+  {
+    id: 'c-demo3', name: 'Morgan Chen', email: 'morgan.chen@mail.com', phone: '(555) 512-8820',
+    pulls: ['Miles Morales: Spider-Man', 'Ms. Marvel', 'Wonder Woman', 'Nightwing', 'Something is Killing the Children'],
+    createdAt: '2025-06-08T09:15:00Z'
+  },
+];
+
+// ── Storage ───────────────────────────────────────────────────
+const storage = {
+  customers: {
+    get: () => { try { return JSON.parse(localStorage.getItem('pulllist_customers') || 'null'); } catch { return null; } },
+    save: (d) => localStorage.setItem('pulllist_customers', JSON.stringify(d)),
+  },
+  releases: {
+    get: () => { try { return JSON.parse(localStorage.getItem('pulllist_releases') || 'null'); } catch { return null; } },
+    save: (d) => localStorage.setItem('pulllist_releases', JSON.stringify(d)),
+  },
+  notifLog: {
+    get: () => { try { return JSON.parse(localStorage.getItem('pulllist_notiflog') || '[]'); } catch { return []; } },
+    save: (d) => localStorage.setItem('pulllist_notiflog', JSON.stringify(d)),
+  },
+  template: {
+    get: () => localStorage.getItem('pulllist_template') || DEFAULT_TEMPLATE,
+    save: (t) => localStorage.setItem('pulllist_template', t),
+  },
+};
+
+const DEFAULT_TEMPLATE = `Hi {{customer_name}},
+
+Your pull list at our shop has new issues arriving this week!
+
+{{issue_list}}
+
+Total estimated spend: {{total_spend}}
+
+Stop by or call to confirm your copies. See you soon!
+
+— The Pull List Team`;
+
+// ── App State ─────────────────────────────────────────────────
+let customers = storage.customers.get() || JSON.parse(JSON.stringify(DEMO_CUSTOMERS));
+let releases  = storage.releases.get()  || JSON.parse(JSON.stringify(BASE_RELEASES));
+let notifLog  = storage.notifLog.get();
+
+let activeTab        = 'upcoming';
+let activePublisher  = 'all';
+let activeDateFilter = 'all';
+let seriesSearchTerm = '';
+let custSearchTerm   = '';
+let selectedCustomer = null;
+let pendingIssueId   = null;
+let pendingPullSubs  = {};
+
+// Persist on changes
+function persistAll() {
+  storage.customers.save(customers);
+  storage.releases.save(releases);
+}
+
+// ── Date helpers ──────────────────────────────────────────────
+function getWeekBounds(offset = 0) {
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1) + offset * 7);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  return { monday, sunday };
+}
+
+function filterReleases() {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const threeMonths = new Date(now); threeMonths.setMonth(now.getMonth() + 3);
+
+  return releases.filter(r => {
+    const d = parseDate(r.date);
+    // Publisher
+    if (activePublisher !== 'all' && r.publisher !== activePublisher) return false;
+    // Date
+    if (activeDateFilter === 'week') {
+      const { monday, sunday } = getWeekBounds(0);
+      if (d < monday || d > sunday) return false;
+    } else if (activeDateFilter === 'month') {
+      if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+    } else if (activeDateFilter === '3months') {
+      if (d < now || d > threeMonths) return false;
+    }
+    // Series search
+    if (seriesSearchTerm && !r.title.toLowerCase().includes(seriesSearchTerm.toLowerCase())) return false;
+    return true;
+  }).sort((a, b) => parseDate(a.date) - parseDate(b.date));
+}
+
+function groupByWeek(releases) {
+  const groups = {};
+  releases.forEach(r => {
+    const d = parseDate(r.date);
+    const day = d.getDay();
+    const wednesday = new Date(d);
+    wednesday.setDate(d.getDate() + (3 - day + 7) % 7);
+    const key = wednesday.toISOString().slice(0, 10);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+  return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+}
+
+function getWeekLabel(dateStr) {
+  const d = parseDate(dateStr);
+  const now = new Date(); now.setHours(0,0,0,0);
+  const { monday, sunday } = getWeekBounds(0);
+  const inThisWeek = d >= monday && d <= sunday;
+  const label = inThisWeek ? 'This Week' :
+    d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const count = label;
+  return label;
+}
+
+// ── Customer helpers ──────────────────────────────────────────
+function filteredCustomers() {
+  if (!custSearchTerm) return customers;
+  const q = custSearchTerm.toLowerCase();
+  return customers.filter(c =>
+    c.name.toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q)
+  );
+}
+
+function customerUpcomingIssues(customer) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  return releases.filter(r => {
+    const d = parseDate(r.date);
+    return d >= now && customer.pulls.includes(r.title);
+  }).sort((a, b) => parseDate(a.date) - parseDate(b.date));
+}
+
+function customerMonthlyCost(customer) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const end = new Date(now); end.setDate(now.getDate() + 30);
+  const monthly = releases.filter(r => {
+    const d = parseDate(r.date);
+    return d >= now && d <= end && customer.pulls.includes(r.title);
+  });
+  return monthly.reduce((sum, r) => sum + parseFloat(r.price.replace('$', '')), 0);
+}
+
+// ── Renders ───────────────────────────────────────────────────
+function renderCustomerList() {
+  const list = document.getElementById('customer-list');
+  const custs = filteredCustomers();
+  if (!custs.length) {
+    list.innerHTML = `<div style="font-size:var(--text-xs);color:var(--color-ink-muted);padding:var(--space-2)">No customers found.</div>`;
+    return;
+  }
+  list.innerHTML = custs.map(c => `
+    <div class="customer-item${selectedCustomer?.id === c.id ? ' active' : ''}"
+         data-cid="${esc(c.id)}" role="listitem" tabindex="0" aria-label="${esc(c.name)}">
+      <div class="customer-avatar" style="background:${avatarColor(c.id)}">${esc(initials(c.name))}</div>
+      <div class="customer-info">
+        <div class="customer-name">${esc(c.name)}</div>
+        <div class="customer-meta">${c.pulls.length} series · $${customerMonthlyCost(c).toFixed(2)}/mo est.</div>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.customer-item').forEach(el => {
+    el.addEventListener('click', () => selectCustomer(el.dataset.cid));
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') selectCustomer(el.dataset.cid); });
+  });
+}
+
+function avatarColor(id) {
+  const colors = [
+    'oklch(52% 0.14 155)',
+    'oklch(48% 0.20 25)',
+    'oklch(48% 0.18 245)',
+    'oklch(52% 0.16 60)',
+    'oklch(46% 0.14 300)',
+  ];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function selectCustomer(id) {
+  selectedCustomer = customers.find(c => c.id === id) || null;
+  renderCustomerList();
+  if (activeTab === 'pulls') renderPullsTab();
+}
+
+// ── Tab: Upcoming Releases ─────────────────────────────────────
+function renderUpcomingTab() {
+  const container = document.getElementById('upcoming-content');
+  const filtered = filterReleases();
+  if (!filtered.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-title">No releases found</div>
+        <div class="empty-state-sub">Try adjusting your publisher or date filters.</div>
+      </div>`;
+    return;
+  }
+  const groups = groupByWeek(filtered);
+  container.innerHTML = groups.map(([weekDate, issues]) => {
+    const label = getWeekLabel(weekDate);
+    const fmtWed = fmtDate(weekDate);
+    return `
+      <div class="week-group">
+        <div class="week-label">${esc(label)}<span>New Comic Book Day: Wed ${esc(fmtWed)} · ${issues.length} issue${issues.length !== 1 ? 's' : ''}</span></div>
+        <div class="release-grid">
+          ${issues.map(r => renderReleaseCard(r)).join('')}
+        </div>
+      </div>`;
+  }).join('');
+
+  // Wire "Add to Pull List" buttons
+  container.querySelectorAll('.btn-add-pull').forEach(btn => {
+    btn.addEventListener('click', () => openPullModal(btn.dataset.rid));
+  });
+}
+
+function renderReleaseCard(r) {
+  const isSubbed = selectedCustomer && selectedCustomer.pulls.includes(r.title);
+  return `
+    <div class="release-card">
+      <div class="card-cover">
+        ${makeCoverSVG(r.title, r.publisher, r.issue)}
+      </div>
+      <div class="card-body">
+        <div class="card-title">${esc(r.title)}</div>
+        <div class="card-meta-row">
+          <span class="publisher-badge ${PUB_CLASS[r.publisher] || ''}">${esc(PUB_LABEL[r.publisher] || r.publisher)}</span>
+          <span class="card-date">${esc(fmtDate(r.date))}</span>
+        </div>
+        <div class="card-crew">W: ${esc(r.writer)}<br>A: ${esc(r.artist)}</div>
+        <div class="card-meta-row">
+          <span class="card-price">${esc(r.price)}</span>
+          <span class="card-variants">${r.variants} cover${r.variants > 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn-add-pull${isSubbed ? ' subscribed' : ''}" data-rid="${esc(r.id)}">
+          ${isSubbed ? '✓ On Pull Lists' : '+ Add to Pull List'}
+        </button>
+      </div>
+    </div>`;
+}
+
+// ── Pull Modal ─────────────────────────────────────────────────
+function openPullModal(releaseId) {
+  const release = releases.find(r => r.id === releaseId);
+  if (!release) return;
+  pendingIssueId = releaseId;
+  pendingPullSubs = {};
+
+  document.getElementById('modal-issue-title').textContent = `${release.title} #${release.issue}`;
+  document.getElementById('modal-issue-meta').textContent = `${PUB_LABEL[release.publisher]} · ${fmtDate(release.date)} · ${release.price}`;
+
+  const picker = document.getElementById('customer-picker');
+  if (!customers.length) {
+    picker.innerHTML = `<div style="font-size:var(--text-sm);color:var(--color-ink-muted)">No customers yet. Add one in the sidebar.</div>`;
+  } else {
+    picker.innerHTML = customers.map(c => {
+      const subbed = c.pulls.includes(release.title);
+      return `
+        <div class="customer-pick-item${subbed ? ' subscribed' : ''}" data-cid="${esc(c.id)}" tabindex="0" role="checkbox" aria-checked="${subbed}">
+          <div class="customer-pick-checkbox">${subbed ? '✓' : ''}</div>
+          <div>
+            <div class="customer-pick-name">${esc(c.name)}</div>
+            <div class="customer-pick-meta">${c.pulls.length} series on list · ${esc(c.email || '')}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  picker.querySelectorAll('.customer-pick-item').forEach(el => {
+    const cid = el.dataset.cid;
+    const cust = customers.find(c => c.id === cid);
+    pendingPullSubs[cid] = cust ? cust.pulls.includes(release.title) : false;
+
+    el.addEventListener('click', () => {
+      pendingPullSubs[cid] = !pendingPullSubs[cid];
+      el.classList.toggle('subscribed', pendingPullSubs[cid]);
+      el.setAttribute('aria-checked', pendingPullSubs[cid]);
+      el.querySelector('.customer-pick-checkbox').textContent = pendingPullSubs[cid] ? '✓' : '';
+    });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') el.click(); });
+  });
+
+  document.getElementById('modal-pull').classList.add('open');
+}
+
+function closePullModal() {
+  document.getElementById('modal-pull').classList.remove('open');
+  pendingIssueId = null;
+  pendingPullSubs = {};
+}
+
+function savePullModal() {
+  if (!pendingIssueId) return;
+  const release = releases.find(r => r.id === pendingIssueId);
+  if (!release) return;
+
+  Object.entries(pendingPullSubs).forEach(([cid, subbed]) => {
+    const cust = customers.find(c => c.id === cid);
+    if (!cust) return;
+    if (subbed && !cust.pulls.includes(release.title)) {
+      cust.pulls.push(release.title);
+    } else if (!subbed && cust.pulls.includes(release.title)) {
+      cust.pulls = cust.pulls.filter(s => s !== release.title);
+    }
+  });
+
+  persistAll();
+  closePullModal();
+  renderUpcomingTab();
+  if (activeTab === 'pulls') renderPullsTab();
+  renderCustomerList();
+  toast('Pull lists updated', 'success');
+}
+
+// ── Tab: Pull Lists ────────────────────────────────────────────
+function renderPullsTab() {
+  const container = document.getElementById('pulls-content');
+  if (!selectedCustomer) {
+    container.innerHTML = `
+      <div class="pull-no-customer">
+        <div class="empty-state-title">No customer selected</div>
+        <div class="empty-state-sub">Click a customer in the sidebar to view their pull list and upcoming issues.</div>
+      </div>`;
+    return;
+  }
+
+  const cust = customers.find(c => c.id === selectedCustomer.id);
+  if (!cust) return;
+
+  const upcoming = customerUpcomingIssues(cust);
+  const monthCost = customerMonthlyCost(cust);
+
+  container.innerHTML = `
+    <div class="pull-header">
+      <div class="pull-header-info">
+        <div class="pull-customer-name">${esc(cust.name)}</div>
+        <div class="pull-customer-detail">${esc(cust.email || '')}${cust.phone ? ' · ' + esc(cust.phone) : ''}</div>
+      </div>
+      <div class="pull-stats">
+        <div class="pull-stat">
+          <div class="pull-stat-value">${cust.pulls.length}</div>
+          <div class="pull-stat-label">Active series</div>
+        </div>
+        <div class="pull-stat">
+          <div class="pull-stat-value">$${monthCost.toFixed(2)}</div>
+          <div class="pull-stat-label">Est. 30-day spend</div>
+        </div>
+        <div class="pull-stat">
+          <div class="pull-stat-value">${upcoming.length}</div>
+          <div class="pull-stat-label">Upcoming issues</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="pull-divider">
+
+    <div class="pull-series-section">
+      <div class="series-sub-label">Subscribed Series</div>
+      ${cust.pulls.length ? `
+      <div class="series-table">
+        <div class="series-row series-row-header">
+          <span>Series</span>
+          <span>Publisher</span>
+          <span>Upcoming</span>
+          <span>Price ea.</span>
+          <span></span>
+        </div>
+        ${cust.pulls.map(series => {
+          const rel = releases.find(r => r.title === series);
+          const upcomingCount = releases.filter(r => r.title === series && parseDate(r.date) >= new Date()).length;
+          return `<div class="series-row">
+            <span class="series-title">${esc(series)}</span>
+            <span>${rel ? `<span class="publisher-badge ${PUB_CLASS[rel.publisher]}">${PUB_LABEL[rel.publisher]}</span>` : '—'}</span>
+            <span class="series-upcoming">${upcomingCount} issue${upcomingCount !== 1 ? 's' : ''}</span>
+            <span style="font-size:var(--text-xs);font-weight:600">${rel ? esc(rel.price) : '—'}</span>
+            <button class="btn-danger" data-remove-series="${esc(series)}" data-cid="${esc(cust.id)}" aria-label="Remove ${esc(series)} from pull list">Remove</button>
+          </div>`;
+        }).join('')}
+      </div>` : `<div style="font-size:var(--text-sm);color:var(--color-ink-muted)">No series subscribed yet. Add them from the Upcoming Releases tab.</div>`}
+    </div>
+
+    <hr class="pull-divider">
+
+    <div class="upcoming-issues-section">
+      <div class="series-sub-label">Upcoming Issues (next 90 days)</div>
+      ${upcoming.length ? upcoming.map(r => `
+        <div class="upcoming-issue-row">
+          <div class="issue-cover-mini">${makeCoverSVG(r.title, r.publisher, r.issue, true)}</div>
+          <div class="issue-info">
+            <div class="issue-series">${esc(r.title)} #${esc(String(r.issue))}</div>
+            <div class="issue-sub">${esc(r.writer)} · ${esc(r.artist)}</div>
+          </div>
+          <span class="publisher-badge ${PUB_CLASS[r.publisher]}">${PUB_LABEL[r.publisher]}</span>
+          <span class="issue-date-chip">${esc(fmtDate(r.date))}</span>
+          <span class="issue-price">${esc(r.price)}</span>
+        </div>
+      `).join('') : `<div style="font-size:var(--text-sm);color:var(--color-ink-muted)">No upcoming issues in the next 90 days for current subscriptions.</div>`}
+    </div>
+
+    <div style="display:flex;gap:var(--space-3);padding-top:var(--space-2)">
+      <button class="btn-generate-notif" id="btn-gen-notif">Generate Notification</button>
+      <button class="btn-ghost" id="btn-delete-customer" style="color:var(--color-danger);border-color:oklch(55% 0.20 25 / 0.25)">Delete Customer</button>
+    </div>
+  `;
+
+  // Remove series buttons
+  container.querySelectorAll('[data-remove-series]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const series = btn.dataset.removeSeries;
+      const c = customers.find(x => x.id === btn.dataset.cid);
+      if (!c) return;
+      c.pulls = c.pulls.filter(s => s !== series);
+      persistAll();
+      renderPullsTab();
+      renderCustomerList();
+      renderUpcomingTab();
+      toast(`Removed ${series} from pull list`);
+    });
+  });
+
+  // Generate notification
+  const genBtn = document.getElementById('btn-gen-notif');
+  if (genBtn) genBtn.addEventListener('click', () => {
+    generateNotificationForCustomer(cust);
+    switchTab('notifications');
+  });
+
+  // Delete customer
+  const delBtn = document.getElementById('btn-delete-customer');
+  if (delBtn) delBtn.addEventListener('click', () => {
+    if (!confirm(`Delete ${cust.name}? This cannot be undone.`)) return;
+    customers = customers.filter(c => c.id !== cust.id);
+    selectedCustomer = null;
+    persistAll();
+    renderCustomerList();
+    renderPullsTab();
+    toast('Customer deleted');
+  });
+}
+
+// ── Tab: Notifications ─────────────────────────────────────────
+let generatedNotifications = [];
+
+function generateNotificationForCustomer(cust) {
+  const upcoming = customerUpcomingIssues(cust);
+  if (!upcoming.length) {
+    toast('No upcoming issues for ' + cust.name, 'error');
+    return;
+  }
+  const template = storage.template.get();
+  const issueList = upcoming.map(r => `  • ${r.title} #${r.issue} — ${fmtDate(r.date)} — ${r.price}`).join('\n');
+  const totalSpend = '$' + upcoming.reduce((sum, r) => sum + parseFloat(r.price.replace('$','')), 0).toFixed(2);
+
+  const text = template
+    .replace('{{customer_name}}', cust.name)
+    .replace('{{issue_list}}', issueList)
+    .replace('{{total_spend}}', totalSpend);
+
+  // Check if already in generated list
+  const existing = generatedNotifications.findIndex(n => n.custId === cust.id);
+  if (existing >= 0) {
+    generatedNotifications[existing] = { custId: cust.id, custName: cust.name, custEmail: cust.email, text, count: upcoming.length, spend: totalSpend };
+  } else {
+    generatedNotifications.unshift({ custId: cust.id, custName: cust.name, custEmail: cust.email, text, count: upcoming.length, spend: totalSpend });
+  }
+
+  renderNotificationsTab();
+}
+
+function renderNotificationsTab() {
+  const container = document.getElementById('notifications-content');
+
+  const template = storage.template.get();
+
+  container.innerHTML = `
+    <div class="notif-controls">
+      <div style="flex:1">
+        <span style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:400;letter-spacing:-0.02em;color:var(--color-ink)">Notifications</span>
+        <span style="font-size:var(--text-sm);color:var(--color-ink-muted);margin-left:var(--space-3)">${generatedNotifications.length} generated</span>
+      </div>
+      <button class="btn-primary" id="btn-gen-all">Generate All Customers</button>
+      ${generatedNotifications.length ? `<button class="btn-ghost" id="btn-copy-all">Copy All</button>` : ''}
+    </div>
+
+    ${generatedNotifications.length ? `
+    <div class="notif-blocks">
+      ${generatedNotifications.map((n, i) => `
+        <div class="notif-card">
+          <div class="notif-card-head">
+            <div>
+              <div class="notif-card-name">${esc(n.custName)}</div>
+              <div class="notif-card-meta">${esc(n.custEmail)} · ${n.count} issue${n.count !== 1 ? 's' : ''} · ${esc(n.spend)}</div>
+            </div>
+            <div style="display:flex;gap:var(--space-2)">
+              <button class="btn-copy" data-notif-idx="${i}">Copy</button>
+              <button class="btn-danger" data-remove-notif="${i}" aria-label="Remove notification">×</button>
+            </div>
+          </div>
+          <div class="notif-body">
+            <div class="notif-template">${esc(n.text)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>` : `
+    <div class="empty-state">
+      <div class="empty-state-title">No notifications yet</div>
+      <div class="empty-state-sub">Select a customer in Pull Lists and click "Generate Notification", or use "Generate All" to batch-create for all customers.</div>
+    </div>`}
+
+    <hr class="pull-divider">
+
+    <div class="template-editor-section">
+      <div class="series-sub-label">Notification Template</div>
+      <textarea class="template-editor" id="template-editor" aria-label="Notification template">${esc(template)}</textarea>
+      <div class="template-vars">
+        Available variables: <code>{{customer_name}}</code> — full name, <code>{{issue_list}}</code> — formatted list of upcoming issues, <code>{{total_spend}}</code> — total estimated cost
+      </div>
+      <div style="display:flex;gap:var(--space-3)">
+        <button class="btn-primary" id="btn-save-template">Save Template</button>
+        <button class="btn-ghost" id="btn-reset-template">Reset to Default</button>
+      </div>
+    </div>
+
+    ${notifLog.length ? `
+    <div class="log-section">
+      <div class="series-sub-label">Notification Log</div>
+      ${notifLog.slice(0, 10).map(l => `
+        <div class="log-item">
+          <div class="log-dot"></div>
+          <div class="log-text">${esc(l.text)}</div>
+          <div style="font-size:var(--text-xs);color:var(--color-ink-muted);white-space:nowrap">${esc(l.time)}</div>
+        </div>
+      `).join('')}
+    </div>` : ''}
+  `;
+
+  // Copy individual
+  container.querySelectorAll('.btn-copy[data-notif-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const n = generatedNotifications[parseInt(btn.dataset.notifIdx)];
+      if (!n) return;
+      navigator.clipboard.writeText(n.text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        logNotification(`Copied notification for ${n.custName}`);
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+  });
+
+  // Remove notification
+  container.querySelectorAll('[data-remove-notif]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.removeNotif);
+      generatedNotifications.splice(idx, 1);
+      renderNotificationsTab();
+    });
+  });
+
+  // Generate all
+  const genAll = document.getElementById('btn-gen-all');
+  if (genAll) genAll.addEventListener('click', () => {
+    generatedNotifications = [];
+    customers.forEach(c => {
+      const upcoming = customerUpcomingIssues(c);
+      if (!upcoming.length) return;
+      const template = storage.template.get();
+      const issueList = upcoming.map(r => `  • ${r.title} #${r.issue} — ${fmtDate(r.date)} — ${r.price}`).join('\n');
+      const totalSpend = '$' + upcoming.reduce((sum, r) => sum + parseFloat(r.price.replace('$','')), 0).toFixed(2);
+      const text = template
+        .replace('{{customer_name}}', c.name)
+        .replace('{{issue_list}}', issueList)
+        .replace('{{total_spend}}', totalSpend);
+      generatedNotifications.push({ custId: c.id, custName: c.name, custEmail: c.email, text, count: upcoming.length, spend: totalSpend });
+    });
+    renderNotificationsTab();
+    toast(`Generated ${generatedNotifications.length} notifications`, 'success');
+  });
+
+  // Copy all
+  const copyAll = document.getElementById('btn-copy-all');
+  if (copyAll) copyAll.addEventListener('click', () => {
+    const allText = generatedNotifications.map(n => `--- ${n.custName} ---\n${n.text}`).join('\n\n');
+    navigator.clipboard.writeText(allText).then(() => {
+      toast('All notifications copied to clipboard', 'success');
+      logNotification(`Copied bulk notifications (${generatedNotifications.length} customers)`);
+    });
+  });
+
+  // Save template
+  const saveTempl = document.getElementById('btn-save-template');
+  if (saveTempl) saveTempl.addEventListener('click', () => {
+    const val = document.getElementById('template-editor').value;
+    storage.template.save(val);
+    toast('Template saved', 'success');
+  });
+
+  // Reset template
+  const resetTempl = document.getElementById('btn-reset-template');
+  if (resetTempl) resetTempl.addEventListener('click', () => {
+    document.getElementById('template-editor').value = DEFAULT_TEMPLATE;
+    storage.template.save(DEFAULT_TEMPLATE);
+    toast('Template reset to default');
+  });
+}
+
+function logNotification(text) {
+  notifLog.unshift({ text, time: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) });
+  if (notifLog.length > 50) notifLog = notifLog.slice(0, 50);
+  storage.notifLog.save(notifLog);
+}
+
+// ── Add Release Modal ──────────────────────────────────────────
+function openReleaseModal() {
+  // default date to next Wednesday
+  const now = new Date();
+  const day = now.getDay();
+  const diff = (3 - day + 7) % 7 || 7;
+  const nextWed = new Date(now);
+  nextWed.setDate(now.getDate() + diff);
+  document.getElementById('rel-date').value = nextWed.toISOString().slice(0, 10);
+  document.getElementById('rel-title').value = '';
+  document.getElementById('rel-issue').value = '';
+  document.getElementById('rel-writer').value = '';
+  document.getElementById('rel-artist').value = '';
+  document.getElementById('rel-variants').value = '1';
+  document.getElementById('modal-release').classList.add('open');
+}
+
+function closeReleaseModal() {
+  document.getElementById('modal-release').classList.remove('open');
+}
+
+function saveRelease() {
+  const title    = document.getElementById('rel-title').value.trim();
+  const issue    = parseInt(document.getElementById('rel-issue').value) || 1;
+  const publisher= document.getElementById('rel-publisher').value;
+  const date     = document.getElementById('rel-date').value;
+  const price    = document.getElementById('rel-price').value;
+  const writer   = document.getElementById('rel-writer').value.trim();
+  const artist   = document.getElementById('rel-artist').value.trim();
+  const variants = parseInt(document.getElementById('rel-variants').value) || 1;
+
+  if (!title || !date) { toast('Title and date are required', 'error'); return; }
+
+  const release = { id: uid(), title, issue, publisher, date, writer: writer || 'TBA', artist: artist || 'TBA', price, variants };
+  releases.push(release);
+  persistAll();
+  closeReleaseModal();
+  renderUpcomingTab();
+  toast('Release added', 'success');
+}
+
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(el => {
+    const active = el.dataset.tab === tab;
+    el.classList.toggle('active', active);
+    el.setAttribute('aria-selected', active);
+  });
+  document.querySelectorAll('.tab-panel').forEach(el => {
+    el.classList.toggle('active', el.id === 'tab-' + tab);
+  });
+  if (tab === 'upcoming') renderUpcomingTab();
+  if (tab === 'pulls') renderPullsTab();
+  if (tab === 'notifications') renderNotificationsTab();
+}
+
+// ── Event wiring ──────────────────────────────────────────────
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+
+// Publisher chips
+document.querySelectorAll('.chip[data-pub]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip[data-pub]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activePublisher = chip.dataset.pub;
+    renderUpcomingTab();
+  });
+});
+
+// Date filter
+document.getElementById('date-filter').addEventListener('change', e => {
+  activeDateFilter = e.target.value;
+  renderUpcomingTab();
+});
+
+// Series search
+document.getElementById('series-search').addEventListener('input', e => {
+  seriesSearchTerm = e.target.value.trim();
+  renderUpcomingTab();
+});
+
+// Customer search
+document.getElementById('customer-search').addEventListener('input', e => {
+  custSearchTerm = e.target.value.trim();
+  renderCustomerList();
+});
+
+// Add customer
+document.getElementById('btn-add-customer').addEventListener('click', () => {
+  const name  = document.getElementById('new-cust-name').value.trim();
+  const email = document.getElementById('new-cust-email').value.trim();
+  const phone = document.getElementById('new-cust-phone').value.trim();
+  if (!name) { toast('Name is required', 'error'); return; }
+  if (customers.length >= 50) { toast('Customer limit (50) reached', 'error'); return; }
+  const c = { id: uid(), name, email, phone, pulls: [], createdAt: new Date().toISOString() };
+  customers.push(c);
+  persistAll();
+  renderCustomerList();
+  document.getElementById('new-cust-name').value = '';
+  document.getElementById('new-cust-email').value = '';
+  document.getElementById('new-cust-phone').value = '';
+  toast(`Added ${name}`, 'success');
+});
+
+// Add release button
+document.getElementById('btn-add-release').addEventListener('click', openReleaseModal);
+
+// Pull modal
+document.getElementById('modal-pull-close').addEventListener('click', closePullModal);
+document.getElementById('modal-pull-cancel').addEventListener('click', closePullModal);
+document.getElementById('modal-pull-save').addEventListener('click', savePullModal);
+document.getElementById('modal-pull').addEventListener('click', e => { if (e.target === e.currentTarget) closePullModal(); });
+
+// Release modal
+document.getElementById('modal-release-close').addEventListener('click', closeReleaseModal);
+document.getElementById('modal-release-cancel').addEventListener('click', closeReleaseModal);
+document.getElementById('modal-release-save').addEventListener('click', saveRelease);
+document.getElementById('modal-release').addEventListener('click', e => { if (e.target === e.currentTarget) closeReleaseModal(); });
+
+// Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closePullModal();
+    closeReleaseModal();
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────
+persistAll(); // seed demo data on first run
+renderCustomerList();
+renderUpcomingTab();
+</script>
+</body>
+</html>

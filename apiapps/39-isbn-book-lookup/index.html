@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISBN Book Lookup — Dark Factory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --border: rgba(255,255,255,0.08);
+      --accent: #ffffff;
+      --accent2: #3b82f6;
+      --text: #ededed;
+      --muted: #6b7280;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .logo-text h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .logo-text p {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* MAIN */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    /* TABS */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* LOOKUP SECTION */
+    .lookup-hero {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .lookup-hero h2 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .lookup-hero p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* SEARCH BOX */
+    .search-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .input-wrap {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 16px;
+      padding: 12px 16px 12px 44px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255, 0.15);
+    }
+
+    .input-wrap input::placeholder { color: var(--muted); }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 18px;
+      pointer-events: none;
+    }
+
+    .isbn-badge {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .isbn-badge.valid {
+      background: rgba(67, 217, 173, 0.15);
+      color: var(--green);
+      display: block;
+    }
+
+    .isbn-badge.invalid {
+      background: rgba(124,58,237, 0.15);
+      color: var(--accent2);
+      display: block;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn:hover { background: #5a52d5; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.05); }
+
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 12px;
+    }
+
+    .btn-danger { background: var(--accent2); }
+    .btn-danger:hover { background: #e05070; }
+
+    .btn-green { background: var(--green); color: #0f1117; }
+    .btn-green:hover { background: #38c49a; }
+
+    /* ISBN validator hint */
+    .validator-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .validator-msg {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .validator-msg.ok { color: var(--green); }
+    .validator-msg.err { color: var(--accent2); }
+
+    /* SPINNER */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    @keyframes fadeInUp {
+      from { opacity:0; transform: translateY(16px); }
+      to { opacity:1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity:0; transform: translateX(-10px); }
+      to { opacity:1; transform: translateX(0); }
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(0,229,255,0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    /* RESULT CARD */
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      animation: fadeInUp 0.3s ease;
+      margin-bottom: 24px;
+    }
+
+    .book-layout {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .book-layout { grid-template-columns: 1fr; }
+    }
+
+    .book-cover {
+      width: 100%;
+      aspect-ratio: 2/3;
+      background: var(--surface2);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      flex-shrink: 0;
+    }
+
+    .book-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .book-info h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .book-author {
+      font-size: 15px;
+      color: var(--accent);
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
+    .book-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .meta-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .meta-chip span { color: var(--text); font-weight: 500; }
+
+    .book-description {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 16px;
+      max-height: 100px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .book-description.expanded { max-height: none; }
+
+    .book-description::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      background: linear-gradient(transparent, var(--surface));
+    }
+
+    .book-description.expanded::after { display: none; }
+
+    .desc-toggle {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 16px;
+      text-decoration: underline;
+    }
+
+    .subjects-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .subject-tag {
+      background: rgba(0,229,255,0.1);
+      border: 1px solid rgba(0,229,255,0.25);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .book-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* CONDITION & SHELF SELECTORS */
+    .assign-row {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .assign-row h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .assign-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 480px) {
+      .assign-grid { grid-template-columns: 1fr; }
+    }
+
+    .assign-field label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .assign-field select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 8px 10px;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .assign-field select:focus { border-color: var(--accent); }
+
+    /* ERROR STATE */
+    .error-card {
+      background: rgba(124,58,237, 0.05);
+      border: 1px solid rgba(124,58,237, 0.25);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    .error-icon { font-size: 24px; flex-shrink: 0; }
+
+    .error-content h3 { color: var(--accent2); font-size: 15px; margin-bottom: 4px; }
+    .error-content p { color: var(--muted); font-size: 13px; }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+
+    .empty-state .empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-state h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; max-width: 340px; margin: 0 auto; }
+
+    /* BULK LOOKUP */
+    .bulk-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .bulk-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+
+    .bulk-card textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 12px 14px;
+      outline: none;
+      resize: vertical;
+      min-height: 120px;
+      font-family: 'Courier New', monospace;
+      transition: border-color 0.2s;
+      line-height: 1.7;
+    }
+
+    .bulk-card textarea:focus { border-color: var(--accent); }
+    .bulk-card textarea::placeholder { color: var(--muted); }
+
+    .bulk-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .bulk-hint { font-size: 12px; color: var(--muted); }
+
+    /* BULK RESULTS */
+    .bulk-results-grid {
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .bulk-result-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      animation: slideIn 0.3s ease both;
+      transition: border-color 0.2s;
+    }
+
+    .bulk-result-item:hover { border-color: var(--accent); }
+
+    .bulk-cover {
+      width: 44px;
+      height: 60px;
+      background: var(--surface2);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .bulk-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .bulk-info { flex: 1; min-width: 0; }
+    .bulk-info .bulk-title {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bulk-info .bulk-author { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .bulk-info .bulk-isbn { font-size: 11px; color: var(--accent); margin-top: 2px; font-family: monospace; }
+
+    .bulk-status {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .bulk-status.found { background: rgba(67,217,173,0.1); color: var(--green); }
+    .bulk-status.not-found { background: rgba(124,58,237,0.1); color: var(--accent2); }
+    .bulk-status.loading { background: rgba(0,229,255,0.1); color: var(--accent); animation: pulse 1s infinite; }
+
+    /* INVENTORY TABLE */
+    .inventory-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .inventory-header h2 { font-size: 20px; font-weight: 700; }
+
+    .inventory-count {
+      font-size: 13px;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .inventory-table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 600px;
+    }
+
+    thead {
+      background: var(--surface2);
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .condition-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .condition-badge.like-new { background: rgba(67,217,173,0.15); color: var(--green); }
+    .condition-badge.good { background: rgba(0,229,255,0.15); color: var(--accent); }
+    .condition-badge.fair { background: rgba(247,201,72,0.15); color: var(--yellow); }
+    .condition-badge.poor { background: rgba(124,58,237,0.15); color: var(--accent2); }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color 0.2s;
+      line-height: 1;
+    }
+
+    .remove-btn:hover { color: var(--accent2); }
+
+    /* TOAST */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 240px;
+      max-width: 360px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .toast.success { border-color: rgba(67,217,173,0.4); }
+    .toast.error { border-color: rgba(124,58,237,0.4); }
+    .toast.info { border-color: rgba(0,229,255,0.4); }
+    .toast.fading { opacity: 0; transform: translateX(20px); }
+
+    /* READING LIST ACTIONS */
+    .reading-list-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    /* SECTION DIVIDER */
+    .section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* RECENT LOOKUPS */
+    .recent-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .recent-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: monospace;
+      color: var(--accent);
+    }
+
+    .recent-chip:hover {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.1);
+    }
+
+    /* PROGRESS BAR */
+    .progress-bar-wrap {
+      background: var(--surface2);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* SKELETON */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+      from { background-position: 200% 0; }
+      to { background-position: -200% 0; }
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* === Dev Tools v2 Design System === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.6;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+
+.container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.card, .result, .item, .output, .barcode-result, .vin-result, .isbn-result, .rhyme, .synonym,
+[class*="card"], [class*="result"], [class*="item"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  animation: toolsFade 0.25s ease both;
+}
+
+.code, .value, pre, code, .mono, .barcode, .isbn, .vin, .word {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  color: var(--text);
+  word-break: break-all;
+}
+
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.65rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.3);
+}
+
+button, .btn, input[type="submit"], input[type="button"] {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.5rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+button:hover { opacity: 0.9; }
+button:active { transform: scale(0.97); }
+
+.tag, .badge, .status, .label, .part-of-speech, .section-header {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+}
+
+.valid, .found, .success { color: var(--green); }
+.invalid, .not-found, .error { color: var(--red); }
+.warning { color: var(--yellow); }
+
+/* Word list / rhyme list */
+.word-list, .rhyme-list, .synonym-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+}
+.word-list li, .rhyme-list li, .synonym-list li {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.word-list li:hover, .rhyme-list li:hover, .synonym-list li:hover { border-color: rgba(255,255,255,0.3); }
+
+table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-weight: 600; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+@keyframes toolsFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">📚</div>
+    <div class="logo-text">
+      <h1>ISBN Book Lookup</h1>
+      <p>Instant bibliographic data for any book</p>
+    </div>
+  </div>
+  <nav class="tab-nav" role="tablist" aria-label="App sections">
+    <button class="tab-btn active" role="tab" aria-selected="true" data-tab="lookup" id="tab-lookup">Lookup</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-tab="bulk" id="tab-bulk">Bulk</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-tab="inventory" id="tab-inventory">Inventory</button>
+  </nav>
+</header>
+
+<main>
+  <!-- LOOKUP TAB -->
+  <section class="tab-panel active" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup">
+    <div class="lookup-hero">
+      <h2>Find Any Book by ISBN</h2>
+      <p>Enter an ISBN-10 or ISBN-13 to retrieve full book details from Open Library</p>
+    </div>
+
+    <div class="search-card">
+      <div class="search-row">
+        <div class="input-wrap">
+          <span class="input-icon" aria-hidden="true">🔍</span>
+          <input
+            type="text"
+            id="isbn-input"
+            placeholder="e.g. 9780140449136 or 0140449132"
+            aria-label="ISBN number"
+            maxlength="17"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <span class="isbn-badge" id="isbn-badge" aria-live="polite"></span>
+        </div>
+        <button class="btn" id="lookup-btn" aria-label="Look up book">
+          <span id="lookup-btn-icon">🔎</span>
+          <span id="lookup-btn-text">Look Up</span>
+        </button>
+      </div>
+      <div class="validator-row">
+        <p class="validator-msg" id="validator-msg" aria-live="polite">Enter an ISBN-10 or ISBN-13</p>
+      </div>
+    </div>
+
+    <div id="recent-section" style="display:none;">
+      <p class="section-label">Recent lookups</p>
+      <div class="recent-grid" id="recent-grid" role="list" aria-label="Recent ISBN lookups"></div>
+    </div>
+
+    <div id="result-area" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- BULK TAB -->
+  <section class="tab-panel" id="panel-bulk" role="tabpanel" aria-labelledby="tab-bulk">
+    <div class="bulk-card">
+      <h3>Bulk ISBN Lookup</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Paste a list of ISBNs (one per line, or comma-separated). Up to 20 at once.</p>
+      <textarea
+        id="bulk-textarea"
+        placeholder="9780140449136&#10;0062316095&#10;9780679720201&#10;0451524935"
+        aria-label="Bulk ISBN list"
+      ></textarea>
+      <div class="bulk-controls">
+        <p class="bulk-hint" id="bulk-hint">0 ISBNs detected</p>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" id="bulk-clear-btn">Clear</button>
+          <button class="btn btn-sm" id="bulk-run-btn" disabled>
+            <span id="bulk-btn-icon">▶</span>
+            <span id="bulk-btn-text">Run Lookup</span>
+          </button>
+        </div>
+      </div>
+      <div id="bulk-progress" style="display:none;">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="bulk-progress-fill" style="width:0%"></div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);text-align:center;" id="bulk-progress-text">0 / 0 done</p>
+      </div>
+    </div>
+
+    <div id="bulk-results" aria-live="polite" aria-atomic="false"></div>
+
+    <div id="bulk-export-row" style="display:none;margin-top:16px;">
+      <button class="btn btn-green" id="bulk-export-btn">
+        ⬇ Export Results to CSV
+      </button>
+    </div>
+  </section>
+
+  <!-- INVENTORY TAB -->
+  <section class="tab-panel" id="panel-inventory" role="tabpanel" aria-labelledby="tab-inventory">
+    <div class="inventory-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <h2>Inventory</h2>
+        <span class="inventory-count" id="inventory-count">0 books</span>
+      </div>
+    </div>
+
+    <div class="reading-list-actions">
+      <button class="btn btn-green btn-sm" id="export-csv-btn">⬇ Export CSV</button>
+      <button class="btn btn-outline btn-sm" id="clear-inventory-btn">🗑 Clear All</button>
+    </div>
+
+    <div id="inventory-area" aria-live="polite"></div>
+  </section>
+</main>
+
+<footer>
+  Data provided by <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a> &amp;
+  <a href="https://books.google.com" target="_blank" rel="noopener">Google Books</a>.
+  No API key required. Inventory saved in your browser.
+</footer>
+
+<div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+  'use strict';
+
+  // ── STATE ──────────────────────────────────────────────────────────────────
+  let currentBook = null;
+  let bulkResultsData = [];
+  let isBulkRunning = false;
+
+  // ── STORAGE ────────────────────────────────────────────────────────────────
+  function loadInventory() {
+    try {
+      return JSON.parse(localStorage.getItem('isbn-inventory') || '[]');
+    } catch { return []; }
+  }
+
+  function saveInventory(items) {
+    localStorage.setItem('isbn-inventory', JSON.stringify(items));
+  }
+
+  function loadRecentISBNs() {
+    try {
+      return JSON.parse(localStorage.getItem('isbn-recent') || '[]');
+    } catch { return []; }
+  }
+
+  function saveRecentISBN(isbn) {
+    let list = loadRecentISBNs();
+    list = [isbn, ...list.filter(i => i !== isbn)].slice(0, 8);
+    localStorage.setItem('isbn-recent', JSON.stringify(list));
+  }
+
+  // ── ISBN VALIDATION ────────────────────────────────────────────────────────
+  function cleanISBN(raw) {
+    return raw.replace(/[\s\-]/g, '');
+  }
+
+  function validateISBN10(isbn) {
+    if (isbn.length !== 10) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      const d = parseInt(isbn[i], 10);
+      if (isNaN(d)) return false;
+      sum += d * (10 - i);
+    }
+    const check = isbn[9].toUpperCase();
+    const checkVal = check === 'X' ? 10 : parseInt(check, 10);
+    if (isNaN(checkVal)) return false;
+    sum += checkVal;
+    return sum % 11 === 0;
+  }
+
+  function validateISBN13(isbn) {
+    if (isbn.length !== 13) return false;
+    let sum = 0;
+    for (let i = 0; i < 13; i++) {
+      const d = parseInt(isbn[i], 10);
+      if (isNaN(d)) return false;
+      sum += d * (i % 2 === 0 ? 1 : 3);
+    }
+    return sum % 10 === 0;
+  }
+
+  function validateISBN(raw) {
+    const isbn = cleanISBN(raw);
+    if (isbn.length === 10) return { valid: validateISBN10(isbn), type: 'ISBN-10', clean: isbn };
+    if (isbn.length === 13) return { valid: validateISBN13(isbn), type: 'ISBN-13', clean: isbn };
+    return { valid: false, type: null, clean: isbn };
+  }
+
+  // ── API ────────────────────────────────────────────────────────────────────
+  async function fetchOpenLibrary(isbn) {
+    const url = `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) throw new Error(`Open Library responded with ${res.status}`);
+    const data = await res.json();
+    const key = `ISBN:${isbn}`;
+    if (!data[key]) return null;
+    return data[key];
+  }
+
+  async function fetchGoogleBooks(isbn) {
+    const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) throw new Error(`Google Books responded with ${res.status}`);
+    const data = await res.json();
+    if (!data.items || data.items.length === 0) return null;
+    return data.items[0].volumeInfo;
+  }
+
+  function normalizeOpenLibrary(raw, isbn) {
+    const authors = (raw.authors || []).map(a => a.name).filter(Boolean);
+    const subjects = (raw.subjects || []).map(s => s.name || s).slice(0, 8).filter(s => typeof s === 'string');
+    const publishers = (raw.publishers || []).map(p => p.name).filter(Boolean);
+    return {
+      isbn,
+      title: raw.title || 'Unknown Title',
+      authors,
+      publisher: publishers[0] || null,
+      year: raw.publish_date || null,
+      pages: raw.number_of_pages || null,
+      description: raw.notes ? (typeof raw.notes === 'string' ? raw.notes : raw.notes.value || '') : '',
+      subjects,
+      coverUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
+      olKey: raw.key || null,
+      source: 'Open Library',
+    };
+  }
+
+  function normalizeGoogleBooks(raw, isbn) {
+    const authors = raw.authors || [];
+    const subjects = (raw.categories || []).slice(0, 8);
+    const description = raw.description || '';
+    const coverUrl = raw.imageLinks
+      ? (raw.imageLinks.thumbnail || raw.imageLinks.smallThumbnail || '').replace('http://', 'https://')
+      : null;
+    return {
+      isbn,
+      title: raw.title || 'Unknown Title',
+      authors,
+      publisher: raw.publisher || null,
+      year: raw.publishedDate ? raw.publishedDate.slice(0, 4) : null,
+      pages: raw.pageCount || null,
+      description,
+      subjects,
+      coverUrl: coverUrl || `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
+      source: 'Google Books',
+    };
+  }
+
+  async function lookupISBN(isbn) {
+    // Try Open Library first
+    try {
+      const raw = await fetchOpenLibrary(isbn);
+      if (raw) return normalizeOpenLibrary(raw, isbn);
+    } catch (e) {
+      console.warn(`Open Library failed for ${isbn}:`, e.message);
+    }
+    // Fallback to Google Books
+    try {
+      const raw = await fetchGoogleBooks(isbn);
+      if (raw) return normalizeGoogleBooks(raw, isbn);
+    } catch (e) {
+      console.warn(`Google Books failed for ${isbn}:`, e.message);
+    }
+    return null;
+  }
+
+  // ── TOAST ──────────────────────────────────────────────────────────────────
+  function showToast(msg, type = 'info', duration = 3000) {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+    const container = document.getElementById('toast-container');
+    container.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('fading');
+      setTimeout(() => el.remove(), 350);
+    }, duration);
+  }
+
+  // ── RENDER HELPERS ─────────────────────────────────────────────────────────
+  function renderConditionBadge(condition) {
+    const map = {
+      'like-new': 'Like New',
+      'good': 'Good',
+      'fair': 'Fair',
+      'poor': 'Poor',
+    };
+    const label = map[condition] || condition;
+    return `<span class="condition-badge ${condition}">${label}</span>`;
+  }
+
+  function renderBookCard(book) {
+    const authorsStr = book.authors.length > 0 ? book.authors.join(', ') : 'Unknown Author';
+    const subjectsHtml = book.subjects.length > 0
+      ? `<div class="subjects-list" aria-label="Subjects">${book.subjects.map(s => `<span class="subject-tag">${s}</span>`).join('')}</div>`
+      : '';
+    const metaChips = [
+      book.publisher ? `<span class="meta-chip">🏢 <span>${escHtml(book.publisher)}</span></span>` : '',
+      book.year ? `<span class="meta-chip">📅 <span>${escHtml(String(book.year))}</span></span>` : '',
+      book.pages ? `<span class="meta-chip">📄 <span>${book.pages} pages</span></span>` : '',
+      `<span class="meta-chip">🔖 <span>${escHtml(book.isbn)}</span></span>`,
+      `<span class="meta-chip">🌐 <span>${escHtml(book.source)}</span></span>`,
+    ].filter(Boolean).join('');
+
+    const descHtml = book.description
+      ? `<p class="book-description" id="book-desc" aria-label="Description">${escHtml(book.description)}</p>
+         <button class="desc-toggle" id="desc-toggle-btn" aria-expanded="false">Show more</button>`
+      : '';
+
+    return `
+      <div class="result-card" id="book-result-card">
+        <div class="book-layout">
+          <div>
+            <div class="book-cover" id="cover-wrap">
+              <img
+                id="cover-img"
+                src="${escHtml(book.coverUrl)}"
+                alt="Cover of ${escHtml(book.title)}"
+                onerror="this.parentElement.innerHTML='📖'"
+              />
+            </div>
+          </div>
+          <div class="book-info">
+            <h2>${escHtml(book.title)}</h2>
+            <p class="book-author">${escHtml(authorsStr)}</p>
+            <div class="book-meta">${metaChips}</div>
+            ${descHtml}
+            ${subjectsHtml}
+            <div class="book-actions">
+              <button class="btn" id="add-to-inventory-btn" aria-label="Add to inventory">
+                + Add to Inventory
+              </button>
+            </div>
+            <div class="assign-row">
+              <h4>Assign Details</h4>
+              <div class="assign-grid">
+                <div class="assign-field">
+                  <label for="condition-select">Condition</label>
+                  <select id="condition-select" aria-label="Condition">
+                    <option value="like-new">Like New</option>
+                    <option value="good" selected>Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="poor">Poor</option>
+                  </select>
+                </div>
+                <div class="assign-field">
+                  <label for="shelf-select">Shelf Category</label>
+                  <select id="shelf-select" aria-label="Shelf category">
+                    <option value="Fiction">Fiction</option>
+                    <option value="Non-Fiction">Non-Fiction</option>
+                    <option value="Children">Children</option>
+                    <option value="Science">Science</option>
+                    <option value="History">History</option>
+                    <option value="Biography">Biography</option>
+                    <option value="Self-Help">Self-Help</option>
+                    <option value="Mystery">Mystery</option>
+                    <option value="Sci-Fi">Sci-Fi</option>
+                    <option value="Fantasy">Fantasy</option>
+                    <option value="Reference">Reference</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ── LOOKUP TAB LOGIC ───────────────────────────────────────────────────────
+  const isbnInput = document.getElementById('isbn-input');
+  const lookupBtn = document.getElementById('lookup-btn');
+  const resultArea = document.getElementById('result-area');
+  const validatorMsg = document.getElementById('validator-msg');
+  const isbnBadge = document.getElementById('isbn-badge');
+  const recentSection = document.getElementById('recent-section');
+  const recentGrid = document.getElementById('recent-grid');
+
+  function updateISBNUI(raw) {
+    const result = validateISBN(raw);
+    if (raw === '') {
+      validatorMsg.textContent = 'Enter an ISBN-10 or ISBN-13';
+      validatorMsg.className = 'validator-msg';
+      isbnBadge.className = 'isbn-badge';
+      isbnBadge.textContent = '';
+      lookupBtn.disabled = false;
+      return;
+    }
+    const clean = result.clean;
+    if (clean.length < 10) {
+      validatorMsg.textContent = `${clean.length} / 10 or 13 digits`;
+      validatorMsg.className = 'validator-msg';
+      isbnBadge.className = 'isbn-badge';
+      lookupBtn.disabled = true;
+      return;
+    }
+    if (result.valid) {
+      validatorMsg.textContent = `Valid ${result.type}`;
+      validatorMsg.className = 'validator-msg ok';
+      isbnBadge.textContent = result.type;
+      isbnBadge.className = 'isbn-badge valid';
+      lookupBtn.disabled = false;
+    } else {
+      validatorMsg.textContent = `Invalid checksum — double-check the number`;
+      validatorMsg.className = 'validator-msg err';
+      isbnBadge.textContent = 'Invalid';
+      isbnBadge.className = 'isbn-badge invalid';
+      lookupBtn.disabled = false; // allow lookup anyway
+    }
+  }
+
+  isbnInput.addEventListener('input', () => updateISBNUI(isbnInput.value));
+
+  isbnInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doLookup();
+  });
+
+  lookupBtn.addEventListener('click', doLookup);
+
+  async function doLookup() {
+    const raw = isbnInput.value.trim();
+    if (!raw) {
+      showToast('Please enter an ISBN', 'error');
+      isbnInput.focus();
+      return;
+    }
+    const isbn = cleanISBN(raw);
+    if (isbn.length < 10) {
+      showToast('ISBN is too short', 'error');
+      return;
+    }
+
+    // Loading state
+    lookupBtn.disabled = true;
+    document.getElementById('lookup-btn-icon').textContent = '';
+    document.getElementById('lookup-btn-text').textContent = 'Searching…';
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner';
+    spinner.style.width = '16px';
+    spinner.style.height = '16px';
+    document.getElementById('lookup-btn-icon').replaceWith(spinner);
+
+    resultArea.innerHTML = `
+      <div class="result-card">
+        <div class="book-layout">
+          <div class="book-cover"><div class="skeleton" style="width:100%;height:100%;border-radius:8px;"></div></div>
+          <div class="book-info">
+            <div class="skeleton" style="height:24px;width:70%;margin-bottom:10px;"></div>
+            <div class="skeleton" style="height:16px;width:40%;margin-bottom:16px;"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+              <div class="skeleton" style="height:26px;width:90px;border-radius:6px;"></div>
+              <div class="skeleton" style="height:26px;width:70px;border-radius:6px;"></div>
+              <div class="skeleton" style="height:26px;width:110px;border-radius:6px;"></div>
+            </div>
+            <div class="skeleton" style="height:14px;width:100%;margin-bottom:6px;"></div>
+            <div class="skeleton" style="height:14px;width:85%;margin-bottom:6px;"></div>
+            <div class="skeleton" style="height:14px;width:60%;"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const book = await lookupISBN(isbn);
+      if (!book) {
+        resultArea.innerHTML = `
+          <div class="error-card" role="alert">
+            <span class="error-icon">😔</span>
+            <div class="error-content">
+              <h3>Book Not Found</h3>
+              <p>No results for ISBN <strong>${escHtml(isbn)}</strong>. Try checking the number or searching Google Books directly.</p>
+            </div>
+          </div>
+        `;
+        showToast('No book found for this ISBN', 'error');
+      } else {
+        currentBook = book;
+        resultArea.innerHTML = renderBookCard(book);
+        saveRecentISBN(isbn);
+        renderRecentISBNs();
+
+        // Attach events
+        document.getElementById('add-to-inventory-btn').addEventListener('click', () => {
+          const condition = document.getElementById('condition-select').value;
+          const shelf = document.getElementById('shelf-select').value;
+          addToInventory(book, condition, shelf);
+        });
+
+        const descEl = document.getElementById('book-desc');
+        const toggleBtn = document.getElementById('desc-toggle-btn');
+        if (descEl && toggleBtn) {
+          toggleBtn.addEventListener('click', () => {
+            const expanded = descEl.classList.toggle('expanded');
+            toggleBtn.textContent = expanded ? 'Show less' : 'Show more';
+            toggleBtn.setAttribute('aria-expanded', String(expanded));
+          });
+        }
+
+        showToast(`Found: ${book.title}`, 'success');
+      }
+    } catch (err) {
+      resultArea.innerHTML = `
+        <div class="error-card" role="alert">
+          <span class="error-icon">⚠️</span>
+          <div class="error-content">
+            <h3>Lookup Failed</h3>
+            <p>${escHtml(err.message)}</p>
+          </div>
+        </div>
+      `;
+      showToast('Lookup failed — check your connection', 'error');
+    } finally {
+      lookupBtn.disabled = false;
+      const iconSpan = document.createElement('span');
+      iconSpan.id = 'lookup-btn-icon';
+      iconSpan.textContent = '🔎';
+      document.querySelector('.spinner')?.replaceWith(iconSpan);
+      document.getElementById('lookup-btn-text').textContent = 'Look Up';
+    }
+  }
+
+  function renderRecentISBNs() {
+    const list = loadRecentISBNs();
+    if (list.length === 0) {
+      recentSection.style.display = 'none';
+      return;
+    }
+    recentSection.style.display = 'block';
+    recentGrid.innerHTML = list.map(isbn =>
+      `<button class="recent-chip" role="listitem" data-isbn="${escHtml(isbn)}" aria-label="Look up ${isbn}">${escHtml(isbn)}</button>`
+    ).join('');
+    recentGrid.querySelectorAll('.recent-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        isbnInput.value = chip.dataset.isbn;
+        updateISBNUI(chip.dataset.isbn);
+        doLookup();
+      });
+    });
+  }
+
+  // ── INVENTORY ──────────────────────────────────────────────────────────────
+  function addToInventory(book, condition, shelf) {
+    const inventory = loadInventory();
+    const existing = inventory.find(i => i.isbn === book.isbn);
+    if (existing) {
+      showToast(`${book.title} is already in inventory`, 'info');
+      return;
+    }
+    const entry = {
+      id: Date.now(),
+      isbn: book.isbn,
+      title: book.title,
+      authors: book.authors,
+      publisher: book.publisher,
+      year: book.year,
+      pages: book.pages,
+      condition,
+      shelf,
+      addedAt: new Date().toISOString(),
+      coverUrl: book.coverUrl,
+    };
+    inventory.push(entry);
+    saveInventory(inventory);
+    renderInventory();
+    showToast(`Added "${book.title}" to inventory`, 'success');
+  }
+
+  function removeFromInventory(id) {
+    let inventory = loadInventory();
+    inventory = inventory.filter(i => i.id !== id);
+    saveInventory(inventory);
+    renderInventory();
+    showToast('Book removed from inventory', 'info');
+  }
+
+  function renderInventory() {
+    const inventory = loadInventory();
+    const countEl = document.getElementById('inventory-count');
+    countEl.textContent = `${inventory.length} book${inventory.length !== 1 ? 's' : ''}`;
+
+    const area = document.getElementById('inventory-area');
+    if (inventory.length === 0) {
+      area.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📦</div>
+          <h3>No books yet</h3>
+          <p>Look up an ISBN and click "Add to Inventory" to start building your list.</p>
+        </div>
+      `;
+      return;
+    }
+
+    area.innerHTML = `
+      <div class="inventory-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Author(s)</th>
+              <th scope="col">ISBN</th>
+              <th scope="col">Year</th>
+              <th scope="col">Condition</th>
+              <th scope="col">Shelf</th>
+              <th scope="col">Pages</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${inventory.map(item => `
+              <tr>
+                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(item.title)}">
+                  <strong>${escHtml(item.title)}</strong>
+                </td>
+                <td style="color:var(--muted);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  ${escHtml((item.authors || []).join(', ') || 'Unknown')}
+                </td>
+                <td style="font-family:monospace;font-size:11px;color:var(--accent);">${escHtml(item.isbn)}</td>
+                <td style="color:var(--muted);">${escHtml(String(item.year || '—'))}</td>
+                <td>${renderConditionBadge(item.condition)}</td>
+                <td style="color:var(--muted);">${escHtml(item.shelf || '—')}</td>
+                <td style="color:var(--muted);">${item.pages || '—'}</td>
+                <td>
+                  <button class="remove-btn" data-id="${item.id}" aria-label="Remove ${escHtml(item.title)} from inventory" title="Remove">✕</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    area.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => removeFromInventory(Number(btn.dataset.id)));
+    });
+  }
+
+  document.getElementById('export-csv-btn').addEventListener('click', () => {
+    const inventory = loadInventory();
+    if (inventory.length === 0) {
+      showToast('Nothing to export', 'info');
+      return;
+    }
+    exportInventoryCSV(inventory);
+  });
+
+  document.getElementById('clear-inventory-btn').addEventListener('click', () => {
+    const inventory = loadInventory();
+    if (inventory.length === 0) { showToast('Inventory is already empty', 'info'); return; }
+    if (!confirm(`Remove all ${inventory.length} book(s) from inventory?`)) return;
+    saveInventory([]);
+    renderInventory();
+    showToast('Inventory cleared', 'info');
+  });
+
+  function exportInventoryCSV(inventory) {
+    const headers = ['ISBN', 'Title', 'Authors', 'Publisher', 'Year', 'Pages', 'Condition', 'Shelf', 'Added At'];
+    const rows = inventory.map(item => [
+      item.isbn,
+      item.title,
+      (item.authors || []).join('; '),
+      item.publisher || '',
+      item.year || '',
+      item.pages || '',
+      item.condition,
+      item.shelf || '',
+      item.addedAt ? item.addedAt.slice(0, 10) : '',
+    ]);
+    downloadCSV('isbn-inventory.csv', [headers, ...rows]);
+  }
+
+  function downloadCSV(filename, rows) {
+    const csv = rows.map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`${filename} downloaded`, 'success');
+  }
+
+  // ── BULK LOGIC ─────────────────────────────────────────────────────────────
+  const bulkTextarea = document.getElementById('bulk-textarea');
+  const bulkRunBtn = document.getElementById('bulk-run-btn');
+  const bulkHint = document.getElementById('bulk-hint');
+  const bulkResults = document.getElementById('bulk-results');
+
+  function parseBulkISBNs(text) {
+    const tokens = text.split(/[\n,;\s]+/).map(t => t.trim()).filter(Boolean);
+    return [...new Set(tokens.map(t => cleanISBN(t)).filter(t => t.length >= 10))].slice(0, 20);
+  }
+
+  bulkTextarea.addEventListener('input', () => {
+    const isbns = parseBulkISBNs(bulkTextarea.value);
+    bulkHint.textContent = `${isbns.length} ISBN${isbns.length !== 1 ? 's' : ''} detected`;
+    bulkRunBtn.disabled = isbns.length === 0;
+  });
+
+  document.getElementById('bulk-clear-btn').addEventListener('click', () => {
+    bulkTextarea.value = '';
+    bulkHint.textContent = '0 ISBNs detected';
+    bulkRunBtn.disabled = true;
+    bulkResults.innerHTML = '';
+    document.getElementById('bulk-export-row').style.display = 'none';
+    bulkResultsData = [];
+  });
+
+  bulkRunBtn.addEventListener('click', async () => {
+    if (isBulkRunning) return;
+    const isbns = parseBulkISBNs(bulkTextarea.value);
+    if (isbns.length === 0) return;
+
+    isBulkRunning = true;
+    bulkResultsData = [];
+    bulkRunBtn.disabled = true;
+    document.getElementById('bulk-btn-icon').textContent = '';
+    document.getElementById('bulk-btn-text').textContent = 'Running…';
+
+    const progress = document.getElementById('bulk-progress');
+    const progressFill = document.getElementById('bulk-progress-fill');
+    const progressText = document.getElementById('bulk-progress-text');
+    progress.style.display = 'block';
+
+    // Render placeholder rows
+    bulkResults.innerHTML = `<div class="bulk-results-grid" id="bulk-grid">
+      ${isbns.map((isbn, i) => `
+        <div class="bulk-result-item" id="bulk-row-${i}" style="animation-delay:${i * 30}ms">
+          <div class="bulk-cover">📖</div>
+          <div class="bulk-info">
+            <div class="bulk-title">${escHtml(isbn)}</div>
+            <div class="bulk-author">Fetching…</div>
+          </div>
+          <span class="bulk-status loading">Pending</span>
+        </div>
+      `).join('')}
+    </div>`;
+
+    for (let i = 0; i < isbns.length; i++) {
+      const isbn = isbns[i];
+      const row = document.getElementById(`bulk-row-${i}`);
+      const statusEl = row ? row.querySelector('.bulk-status') : null;
+      if (statusEl) { statusEl.textContent = 'Loading'; statusEl.className = 'bulk-status loading'; }
+
+      try {
+        const book = await lookupISBN(isbn);
+        if (book) {
+          bulkResultsData.push({ isbn, found: true, book });
+          if (row) {
+            row.innerHTML = `
+              <div class="bulk-cover">
+                <img src="${escHtml(book.coverUrl)}" alt="" onerror="this.parentElement.innerHTML='📖'" />
+              </div>
+              <div class="bulk-info">
+                <div class="bulk-title" title="${escHtml(book.title)}">${escHtml(book.title)}</div>
+                <div class="bulk-author">${escHtml((book.authors || []).join(', ') || 'Unknown')}</div>
+                <div class="bulk-isbn">${escHtml(isbn)}</div>
+              </div>
+              <span class="bulk-status found">Found</span>
+            `;
+          }
+        } else {
+          bulkResultsData.push({ isbn, found: false, book: null });
+          if (row) {
+            row.innerHTML = `
+              <div class="bulk-cover">❓</div>
+              <div class="bulk-info">
+                <div class="bulk-title">${escHtml(isbn)}</div>
+                <div class="bulk-author">Not found in any database</div>
+              </div>
+              <span class="bulk-status not-found">Not Found</span>
+            `;
+          }
+        }
+      } catch {
+        bulkResultsData.push({ isbn, found: false, book: null });
+        if (row) {
+          const statusEl2 = row.querySelector('.bulk-status');
+          if (statusEl2) { statusEl2.textContent = 'Error'; statusEl2.className = 'bulk-status not-found'; }
+        }
+      }
+
+      const pct = Math.round(((i + 1) / isbns.length) * 100);
+      progressFill.style.width = `${pct}%`;
+      progressText.textContent = `${i + 1} / ${isbns.length} done`;
+
+      // Small delay to avoid rate-limiting
+      if (i < isbns.length - 1) {
+        await new Promise(r => setTimeout(r, 400));
+      }
+    }
+
+    isBulkRunning = false;
+    bulkRunBtn.disabled = false;
+    document.getElementById('bulk-btn-icon').textContent = '▶';
+    document.getElementById('bulk-btn-text').textContent = 'Run Lookup';
+
+    const foundCount = bulkResultsData.filter(r => r.found).length;
+    showToast(`Done: ${foundCount} of ${isbns.length} found`, foundCount > 0 ? 'success' : 'info');
+    document.getElementById('bulk-export-row').style.display = bulkResultsData.length > 0 ? 'block' : 'none';
+  });
+
+  document.getElementById('bulk-export-btn').addEventListener('click', () => {
+    if (bulkResultsData.length === 0) { showToast('No results to export', 'info'); return; }
+    const headers = ['ISBN', 'Status', 'Title', 'Authors', 'Publisher', 'Year', 'Pages'];
+    const rows = bulkResultsData.map(r => [
+      r.isbn,
+      r.found ? 'Found' : 'Not Found',
+      r.book ? r.book.title : '',
+      r.book ? (r.book.authors || []).join('; ') : '',
+      r.book ? (r.book.publisher || '') : '',
+      r.book ? (r.book.year || '') : '',
+      r.book ? (r.book.pages || '') : '',
+    ]);
+    downloadCSV('isbn-bulk-results.csv', [headers, ...rows]);
+  });
+
+  // ── TAB NAVIGATION ─────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      document.getElementById(`panel-${tabId}`).classList.add('active');
+      if (tabId === 'inventory') renderInventory();
+    });
+  });
+
+  // Keyboard nav for tab buttons
+  document.querySelector('.tab-nav').addEventListener('keydown', (e) => {
+    const tabs = [...document.querySelectorAll('.tab-btn')];
+    const idx = tabs.indexOf(document.activeElement);
+    if (idx === -1) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); tabs[(idx + 1) % tabs.length].focus(); tabs[(idx + 1) % tabs.length].click(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); tabs[(idx - 1 + tabs.length) % tabs.length].focus(); tabs[(idx - 1 + tabs.length) % tabs.length].click(); }
+  });
+
+  // ── INIT ───────────────────────────────────────────────────────────────────
+  renderRecentISBNs();
+  renderInventory();
+</script>
+
+</body>
+</html>

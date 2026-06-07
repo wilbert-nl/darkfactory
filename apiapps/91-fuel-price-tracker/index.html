@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fuel Price Tracker — Global Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    :root {
+      --bg: #080c10;
+      --surface: #0e1318;
+      --surface2: #141a21;
+      --border: rgba(255,255,255,0.08);
+      --accent: #00d4aa;
+      --accent2: #f59e0b;
+      --text: #e6edf3;
+      --muted: #6b7280;
+      --green: #26a69a;
+      --yellow: #f59e0b;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--accent), #9b59b6);
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(67, 217, 173, 0.1);
+      border: 1px solid rgba(67, 217, 173, 0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .last-updated {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* ─── NAV TABS ─── */
+    .nav-tabs {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+    }
+
+    .nav-tab {
+      padding: 14px 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+      user-select: none;
+    }
+
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ─── MAIN ─── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    /* ─── PANELS ─── */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── STATS ROW ─── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .stat-delta {
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .delta-up { color: var(--accent2); }
+    .delta-down { color: var(--green); }
+
+    /* ─── SECTION HEADER ─── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ─── CONTROLS ─── */
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input, select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    button:hover { opacity: 0.85; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-success { background: var(--green); color: #0f1117; }
+    .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+
+    /* ─── TABLE ─── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead th {
+      background: var(--surface2);
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s;
+    }
+
+    thead th:hover { color: var(--text); }
+    thead th.sort-asc::after { content: ' ↑'; color: var(--accent); }
+    thead th.sort-desc::after { content: ' ↓'; color: var(--accent); }
+
+    tbody tr {
+      border-top: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover { background: var(--surface2); }
+
+    td {
+      padding: 12px 14px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .flag { font-size: 1.3rem; margin-right: 6px; }
+
+    .price-cell { font-weight: 600; font-family: 'Courier New', monospace; }
+    .price-cell.petrol { color: var(--yellow); }
+    .price-cell.diesel { color: var(--green); }
+    .price-cell.lpg { color: var(--accent); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .badge-cheap { background: rgba(67, 217, 173, 0.15); color: var(--green); border: 1px solid rgba(67, 217, 173, 0.3); }
+    .badge-mid { background: rgba(247, 201, 72, 0.15); color: var(--yellow); border: 1px solid rgba(247, 201, 72, 0.3); }
+    .badge-exp { background: rgba(255, 101, 132, 0.15); color: var(--accent2); border: 1px solid rgba(255, 101, 132, 0.3); }
+
+    /* ─── REGION FILTER PILLS ─── */
+    .pill-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .pill {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      background: var(--surface2);
+      transition: all 0.2s;
+    }
+
+    .pill:hover { border-color: var(--accent); color: var(--text); }
+    .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ─── CARD GRID ─── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .card + .card { margin-top: 20px; }
+
+    .card h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    /* ─── FORM GRID ─── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+    }
+
+    /* ─── RESULT BOX ─── */
+    .result-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .result-box.show { animation: slideIn 0.3s ease; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+
+    .result-row:last-child { border-bottom: none; }
+    .result-row span:first-child { color: var(--muted); }
+    .result-row strong { color: var(--text); font-size: 1rem; }
+    .result-highlight { color: var(--accent); font-size: 1.2rem !important; font-weight: 700; }
+
+    /* ─── CHART ─── */
+    .chart-wrap {
+      position: relative;
+      height: 220px;
+      margin-top: 8px;
+    }
+
+    .chart-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .chart-line {
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .chart-area {
+      opacity: 0.15;
+    }
+
+    .chart-dot {
+      transition: r 0.2s;
+      cursor: pointer;
+    }
+
+    .chart-dot:hover { r: 5; }
+
+    .chart-grid-line {
+      stroke: var(--border);
+      stroke-width: 1;
+      stroke-dasharray: 4 4;
+    }
+
+    .chart-label {
+      fill: var(--muted);
+      font-size: 10px;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+      min-width: 120px;
+    }
+
+    .chart-tooltip.show { display: block; }
+
+    /* ─── CURRENCY CONVERTER ─── */
+    .converter-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: end;
+      gap: 12px;
+    }
+
+    .swap-btn {
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .swap-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ─── ROAD TRIP ─── */
+    .trip-stops {
+      margin: 16px 0;
+    }
+
+    .trip-stop {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .stop-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .stop-dot.last { background: var(--accent2); }
+
+    .stop-line-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-left: 4px;
+    }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      font-size: 0.85rem;
+      color: var(--text);
+      z-index: 999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      max-width: 320px;
+    }
+
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    .empty-state .icon { font-size: 2rem; margin-bottom: 10px; }
+
+    /* ─── HIGHLIGHT ROWS ─── */
+    .row-cheapest { background: rgba(67, 217, 173, 0.05); }
+    .row-most-exp { background: rgba(255, 101, 132, 0.05); }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 600px) {
+      header h1 { font-size: 1rem; }
+      .stat-value { font-size: 1.3rem; }
+      .nav-tab { padding: 12px 14px; font-size: 0.8rem; }
+    }
+
+    /* ── Finance design system v2 ── */
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(0,212,170,.065) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,.9) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    h1, h2 {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    [class*="price"],[class*="value"],[class*="amount"],[class*="rate"],
+    [class*="stat"],[class*="metric"],[class*="kpi"],td,code,.number {
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+      font-variant-numeric: tabular-nums slashed-zero;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+    .card,[class*="card"],[class*="metric-card"],[class*="stat-card"] {
+      border-left: 3px solid var(--accent) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    table { border-collapse: collapse; width: 100%; }
+    thead th {
+      font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: right; white-space: nowrap; position: sticky; top: 0; background: var(--bg);
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background 120ms; }
+    tbody tr:hover { background: rgba(255,255,255,.04); }
+    td { padding: 6px 12px; text-align: right; vertical-align: middle; white-space: nowrap; font-size: 13px; }
+    td:first-child { text-align: left; color: var(--text); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.5);} 50%{box-shadow:0 0 0 6px rgba(0,212,170,0);} }
+    .card,[class*="card"],[class*="result"],[class*="item"] { animation: slideUp .35s ease both; }
+    .card:nth-child(2),[class*="item"]:nth-child(2){animation-delay:.05s}
+    .card:nth-child(3),[class*="item"]:nth-child(3){animation-delay:.1s}
+    .card:nth-child(4){animation-delay:.15s}
+    tbody tr { animation: slideUp .2s ease both; }
+    tbody tr:nth-child(2){animation-delay:.03s} tbody tr:nth-child(3){animation-delay:.06s}
+    tbody tr:nth-child(4){animation-delay:.09s}
+    button,[class*="btn"] { transition: all .15s; }
+    button:hover,[class*="btn"]:hover {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0,212,170,.15) !important;
+    }
+    input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 2px rgba(0,212,170,.2); }
+    [class*="live"],[class*="dot"],[class*="indicator"] { animation: livePulse 2s ease-in-out infinite; }
+    [class*="positive"],[class*="gain"],[class*="up"] { color:var(--green)!important; }
+    [class*="negative"],[class*="loss"],[class*="down"] { color:#ef5350!important; }
+
+    /* ─── SURCHARGE TABLE ─── */
+    .surcharge-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .surcharge-result {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--surface2);
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+
+    .surcharge-pct {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .surcharge-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .alert-box {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .alert-box.warning {
+      background: rgba(247, 201, 72, 0.1);
+      border: 1px solid rgba(247, 201, 72, 0.3);
+      color: var(--yellow);
+    }
+
+    .alert-box.success {
+      background: rgba(67, 217, 173, 0.1);
+      border: 1px solid rgba(67, 217, 173, 0.3);
+      color: var(--green);
+    }
+
+    .alert-box.danger {
+      background: rgba(255, 101, 132, 0.1);
+      border: 1px solid rgba(255, 101, 132, 0.3);
+      color: var(--accent2);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span class="logo-badge">Fuel</span>
+    <h1>Global Fuel Price Tracker</h1>
+  </div>
+  <div class="header-meta">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      Live Prices
+    </div>
+    <span class="last-updated" id="lastUpdated">Loading…</span>
+  </div>
+</header>
+
+<nav class="nav-tabs" role="tablist" aria-label="Main navigation">
+  <div class="nav-tab active" role="tab" aria-selected="true" data-panel="dashboard" tabindex="0">Dashboard</div>
+  <div class="nav-tab" role="tab" aria-selected="false" data-panel="comparison" tabindex="0">Country Compare</div>
+  <div class="nav-tab" role="tab" aria-selected="false" data-panel="calculator" tabindex="0">Cost Calculator</div>
+  <div class="nav-tab" role="tab" aria-selected="false" data-panel="roadtrip" tabindex="0">Road Trip</div>
+  <div class="nav-tab" role="tab" aria-selected="false" data-panel="trends" tabindex="0">Price Trends</div>
+  <div class="nav-tab" role="tab" aria-selected="false" data-panel="converter" tabindex="0">Currency</div>
+  <div class="nav-tab" role="tab" aria-selected="false" data-panel="surcharge" tabindex="0">Surcharge</div>
+</nav>
+
+<main>
+
+  <!-- ═══════════════ DASHBOARD ═══════════════ -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="stats-row" id="statsRow"></div>
+
+    <div class="section-header">
+      <span class="section-title">Global Fuel Prices — Petrol (USD/L)</span>
+      <div class="controls">
+        <input type="text" id="searchInput" placeholder="Search country…" aria-label="Search country" style="width:180px" />
+        <select id="regionFilter" aria-label="Filter by region">
+          <option value="all">All Regions</option>
+          <option value="Europe">Europe</option>
+          <option value="Americas">Americas</option>
+          <option value="Asia">Asia</option>
+          <option value="Middle East">Middle East</option>
+          <option value="Africa">Africa</option>
+          <option value="Oceania">Oceania</option>
+        </select>
+        <select id="fuelTypeFilter" aria-label="Filter by fuel type">
+          <option value="petrol">Petrol</option>
+          <option value="diesel">Diesel</option>
+          <option value="lpg">LPG</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-col="country">Country</th>
+            <th data-col="region">Region</th>
+            <th data-col="petrol_usd" class="sort-desc">Petrol (USD/L)</th>
+            <th data-col="diesel_usd">Diesel (USD/L)</th>
+            <th data-col="lpg_usd">LPG (USD/L)</th>
+            <th data-col="local">Local Price</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody id="priceTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════ COMPARISON ═══════════════ -->
+  <div class="panel" id="panel-comparison">
+    <div class="section-header">
+      <span class="section-title">Country Price Comparison</span>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <h3>Select up to 6 countries to compare</h3>
+      <div class="controls" style="margin-bottom:16px">
+        <select id="compareSelect" aria-label="Select country to compare" style="width:220px">
+          <option value="">— Pick a country —</option>
+        </select>
+        <button class="btn-primary" onclick="addComparison()">Add</button>
+        <button class="btn-outline" onclick="clearComparison()">Clear All</button>
+      </div>
+      <div class="pill-row" id="comparePills"></div>
+    </div>
+
+    <div id="comparisonTable"></div>
+  </div>
+
+  <!-- ═══════════════ CALCULATOR ═══════════════ -->
+  <div class="panel" id="panel-calculator">
+    <div class="section-header">
+      <span class="section-title">Monthly Fuel Cost Calculator</span>
+    </div>
+
+    <div class="card">
+      <h3>Vehicle Parameters</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="calcCountry">Country</label>
+          <select id="calcCountry" aria-label="Select country for calculation"></select>
+        </div>
+        <div class="form-group">
+          <label for="calcFuelType">Fuel Type</label>
+          <select id="calcFuelType" aria-label="Select fuel type">
+            <option value="petrol">Petrol</option>
+            <option value="diesel">Diesel</option>
+            <option value="lpg">LPG</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="calcEfficiency">Consumption (L/100km)</label>
+          <input type="number" id="calcEfficiency" value="8.5" min="1" max="40" step="0.1" aria-label="Fuel consumption" />
+        </div>
+        <div class="form-group">
+          <label for="calcMonthlyKm">Monthly Distance (km)</label>
+          <input type="number" id="calcMonthlyKm" value="1500" min="100" max="50000" step="100" aria-label="Monthly kilometers" />
+        </div>
+        <div class="form-group">
+          <label for="calcVehicles">Number of Vehicles</label>
+          <input type="number" id="calcVehicles" value="1" min="1" max="500" step="1" aria-label="Number of vehicles" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="calculateFuelCost()">Calculate Cost</button>
+
+      <div class="result-box" id="calcResult" style="display:none">
+        <div class="result-row"><span>Fuel price used</span><strong id="calcPriceUsed">—</strong></div>
+        <div class="result-row"><span>Liters needed / vehicle / month</span><strong id="calcLiters">—</strong></div>
+        <div class="result-row"><span>Cost per vehicle / month</span><strong id="calcPerVehicle">—</strong></div>
+        <div class="result-row"><span>Total fleet cost / month</span><strong id="calcFleetMonth" class="result-highlight">—</strong></div>
+        <div class="result-row"><span>Total fleet cost / year</span><strong id="calcFleetYear">—</strong></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <h3>Compare Cost Across Countries</h3>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">Same vehicle in different countries — using values above</p>
+      <div id="crossCountryTable"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ ROAD TRIP ═══════════════ -->
+  <div class="panel" id="panel-roadtrip">
+    <div class="section-header">
+      <span class="section-title">Road Trip Fuel Planner</span>
+    </div>
+
+    <div class="card">
+      <h3>Route Details</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="tripFrom">From Country</label>
+          <select id="tripFrom" aria-label="Departure country"></select>
+        </div>
+        <div class="form-group">
+          <label for="tripTo">To Country</label>
+          <select id="tripTo" aria-label="Destination country"></select>
+        </div>
+        <div class="form-group">
+          <label for="tripDistance">Total Distance (km)</label>
+          <input type="number" id="tripDistance" value="500" min="10" max="50000" step="10" aria-label="Trip distance" />
+        </div>
+        <div class="form-group">
+          <label for="tripEfficiency">Consumption (L/100km)</label>
+          <input type="number" id="tripEfficiency" value="7.5" min="1" max="40" step="0.5" aria-label="Fuel efficiency" />
+        </div>
+        <div class="form-group">
+          <label for="tripFuelType">Fuel Type</label>
+          <select id="tripFuelType" aria-label="Fuel type for trip">
+            <option value="petrol">Petrol</option>
+            <option value="diesel">Diesel</option>
+            <option value="lpg">LPG</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="tripSplit">Fuel Split (%)</label>
+          <input type="number" id="tripSplit" value="50" min="0" max="100" step="5" title="% of fuel bought in origin country" aria-label="Percentage of fuel bought in origin country" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="calculateTrip()">Plan Trip</button>
+
+      <div class="result-box" id="tripResult" style="display:none">
+        <div class="result-row"><span>Total fuel needed</span><strong id="tripLiters">—</strong></div>
+        <div class="result-row"><span>Fuel cost in <span id="tripFromLabel">—</span></span><strong id="tripCostFrom">—</strong></div>
+        <div class="result-row"><span>Fuel cost in <span id="tripToLabel">—</span></span><strong id="tripCostTo">—</strong></div>
+        <div class="result-row"><span>Blended total cost</span><strong id="tripCostTotal" class="result-highlight">—</strong></div>
+        <div class="result-row"><span>Recommended strategy</span><strong id="tripStrategy">—</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TRENDS ═══════════════ -->
+  <div class="panel" id="panel-trends">
+    <div class="section-header">
+      <span class="section-title">Historical Price Trends</span>
+      <div class="controls">
+        <select id="trendCountry" aria-label="Select country for trend" style="width:200px"></select>
+        <select id="trendFuel" aria-label="Select fuel type for trend">
+          <option value="petrol">Petrol</option>
+          <option value="diesel">Diesel</option>
+          <option value="lpg">LPG</option>
+        </select>
+        <select id="trendPeriod" aria-label="Select trend period">
+          <option value="6">6 Months</option>
+          <option value="12" selected>12 Months</option>
+          <option value="24">24 Months</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="chart-legend" id="trendLegend"></div>
+      <div class="chart-wrap">
+        <svg class="chart-svg" id="trendChart" aria-label="Fuel price trend chart"></svg>
+        <div class="chart-tooltip" id="chartTooltip"></div>
+      </div>
+    </div>
+
+    <div class="stats-row" style="margin-top:20px" id="trendStats"></div>
+  </div>
+
+  <!-- ═══════════════ CURRENCY ═══════════════ -->
+  <div class="panel" id="panel-converter">
+    <div class="section-header">
+      <span class="section-title">Currency Converter</span>
+    </div>
+
+    <div class="card">
+      <h3>Convert fuel prices between currencies</h3>
+      <div class="converter-row" style="margin-bottom:16px">
+        <div class="form-group">
+          <label for="convAmount">Amount</label>
+          <input type="number" id="convAmount" value="1" min="0.01" step="0.01" style="width:100%" aria-label="Amount to convert" />
+        </div>
+        <button class="swap-btn" onclick="swapCurrencies()" title="Swap currencies" aria-label="Swap currencies">⇄</button>
+        <div class="form-group">
+          <label>&nbsp;</label>
+          <button class="btn-primary" onclick="convertCurrency()" style="width:100%">Convert</button>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="convFrom">From Currency</label>
+          <select id="convFrom" aria-label="From currency" style="width:100%"></select>
+        </div>
+        <div class="form-group">
+          <label for="convTo">To Currency</label>
+          <select id="convTo" aria-label="To currency" style="width:100%"></select>
+        </div>
+      </div>
+
+      <div class="result-box" id="convResult" style="display:none">
+        <div class="result-row"><span>Exchange Rate</span><strong id="convRate">—</strong></div>
+        <div class="result-row"><span>Converted Amount</span><strong id="convOutput" class="result-highlight">—</strong></div>
+        <div class="result-row"><span>Rate Source</span><strong id="convSource" style="font-size:0.8rem;color:var(--muted)">—</strong></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <h3>Fuel Price in Your Currency</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="fuelPriceCountry">Country</label>
+          <select id="fuelPriceCountry" aria-label="Select country" style="width:100%"></select>
+        </div>
+        <div class="form-group">
+          <label for="fuelPriceCurrency">Your Currency</label>
+          <select id="fuelPriceCurrency" aria-label="Your currency" style="width:100%"></select>
+        </div>
+        <div class="form-group">
+          <label for="fuelPriceType">Fuel Type</label>
+          <select id="fuelPriceType" aria-label="Fuel type" style="width:100%">
+            <option value="petrol">Petrol</option>
+            <option value="diesel">Diesel</option>
+            <option value="lpg">LPG</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="showFuelInCurrency()">Show Price</button>
+      <div class="result-box" id="fuelCurrResult" style="display:none">
+        <div class="result-row"><span>USD Price</span><strong id="fcrUSD">—</strong></div>
+        <div class="result-row"><span>In your currency</span><strong id="fcrLocal" class="result-highlight">—</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SURCHARGE ═══════════════ -->
+  <div class="panel" id="panel-surcharge">
+    <div class="section-header">
+      <span class="section-title">Freight Fuel Surcharge Calculator</span>
+    </div>
+
+    <div class="surcharge-card">
+      <h3 style="margin-bottom:16px">Contract Parameters</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="scCountry">Region / Country</label>
+          <select id="scCountry" aria-label="Select country for surcharge"></select>
+        </div>
+        <div class="form-group">
+          <label for="scBasePrice">Base Diesel Price (USD/L)</label>
+          <input type="number" id="scBasePrice" value="1.20" min="0.01" max="5" step="0.01" aria-label="Contract base diesel price" />
+        </div>
+        <div class="form-group">
+          <label for="scThreshold">Surcharge Threshold (%)</label>
+          <input type="number" id="scThreshold" value="5" min="1" max="50" step="0.5" title="% change before surcharge kicks in" aria-label="Surcharge threshold percentage" />
+        </div>
+        <div class="form-group">
+          <label for="scRate">Surcharge Rate (% per 10c rise)</label>
+          <input type="number" id="scRate" value="1.5" min="0.1" max="20" step="0.1" aria-label="Surcharge rate" />
+        </div>
+        <div class="form-group">
+          <label for="scFreight">Base Freight Value (USD)</label>
+          <input type="number" id="scFreight" value="5000" min="100" max="1000000" step="100" aria-label="Base freight value" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="calculateSurcharge()">Calculate Surcharge</button>
+
+      <div id="surchargeResult" style="display:none; margin-top:16px">
+        <div class="surcharge-result">
+          <div>
+            <div class="surcharge-pct" id="scPct">0%</div>
+            <div class="surcharge-label">Fuel Surcharge</div>
+          </div>
+          <div style="flex:1">
+            <div class="result-row"><span>Current diesel price</span><strong id="scCurrentPrice">—</strong></div>
+            <div class="result-row"><span>Change from base</span><strong id="scChange">—</strong></div>
+            <div class="result-row"><span>Surcharge amount</span><strong id="scAmount">—</strong></div>
+            <div class="result-row"><span>Adjusted freight total</span><strong id="scTotal" class="result-highlight">—</strong></div>
+          </div>
+        </div>
+        <div class="alert-box" id="scAlert"></div>
+      </div>
+    </div>
+
+    <div class="surcharge-card">
+      <h3>Weekly Monitoring — Top Diesel Prices</h3>
+      <div id="surchargeMonitor"></div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast" role="alert" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ─── DATA ───
+  const RAW_COUNTRIES = [
+    // [country, flag, region, currency, petrol_local, diesel_local, lpg_local, usd_rate]
+    ['United States',    '🇺🇸', 'Americas',    'USD', 1.02, 0.95, 0.52,   1.00 ],
+    ['Canada',           '🇨🇦', 'Americas',    'CAD', 1.68, 1.79, 0.82,   0.74 ],
+    ['Mexico',           '🇲🇽', 'Americas',    'MXN', 22.80, 23.50, 11.20, 0.051],
+    ['Brazil',           '🇧🇷', 'Americas',    'BRL', 6.20, 6.80, 4.10,   0.195],
+    ['Argentina',        '🇦🇷', 'Americas',    'ARS', 1150, 1080, 540,    0.00085],
+    ['Colombia',         '🇨🇴', 'Americas',    'COP', 10200, 9800, 4200,  0.00024],
+    ['Venezuela',        '🇻🇪', 'Americas',    'USD', 0.02, 0.01, 0.01,   1.00 ],
+    ['United Kingdom',   '🇬🇧', 'Europe',      'GBP', 1.55, 1.61, 0.78,  1.27 ],
+    ['Germany',          '🇩🇪', 'Europe',      'EUR', 1.78, 1.69, 0.89,  1.09 ],
+    ['France',           '🇫🇷', 'Europe',      'EUR', 1.92, 1.85, 0.88,  1.09 ],
+    ['Netherlands',      '🇳🇱', 'Europe',      'EUR', 2.15, 1.78, 0.94,  1.09 ],
+    ['Belgium',          '🇧🇪', 'Europe',      'EUR', 1.89, 1.72, 0.82,  1.09 ],
+    ['Norway',           '🇳🇴', 'Europe',      'NOK', 21.50, 19.80, 9.50, 0.093],
+    ['Sweden',           '🇸🇪', 'Europe',      'SEK', 22.80, 20.60, 8.20, 0.093],
+    ['Denmark',          '🇩🇰', 'Europe',      'DKK', 15.10, 14.20, 6.80, 0.145],
+    ['Finland',          '🇫🇮', 'Europe',      'EUR', 1.98, 1.82, 0.90,  1.09 ],
+    ['Switzerland',      '🇨🇭', 'Europe',      'CHF', 1.85, 1.92, 0.88,  1.11 ],
+    ['Italy',            '🇮🇹', 'Europe',      'EUR', 1.90, 1.80, 0.80,  1.09 ],
+    ['Spain',            '🇪🇸', 'Europe',      'EUR', 1.65, 1.55, 0.78,  1.09 ],
+    ['Portugal',         '🇵🇹', 'Europe',      'EUR', 1.82, 1.70, 0.82,  1.09 ],
+    ['Poland',           '🇵🇱', 'Europe',      'PLN', 6.80, 6.50, 2.90,  0.248],
+    ['Turkey',           '🇹🇷', 'Europe',      'TRY', 50.20, 48.80, 15.30, 0.030],
+    ['Russia',           '🇷🇺', 'Europe',      'RUB', 59.50, 62.80, 27.40, 0.011],
+    ['Japan',            '🇯🇵', 'Asia',        'JPY', 172, 158, 72,    0.0065],
+    ['China',            '🇨🇳', 'Asia',        'CNY', 8.50, 7.90, 5.20, 0.138],
+    ['South Korea',      '🇰🇷', 'Asia',        'KRW', 1720, 1580, 840, 0.00074],
+    ['India',            '🇮🇳', 'Asia',        'INR', 105, 92, 62,    0.012],
+    ['Pakistan',         '🇵🇰', 'Asia',        'PKR', 295, 280, 155,  0.0036],
+    ['Indonesia',        '🇮🇩', 'Asia',        'IDR', 13900, 12500, 5800, 0.000063],
+    ['Thailand',         '🇹🇭', 'Asia',        'THB', 42.50, 30.20, 18.80, 0.028],
+    ['Vietnam',          '🇻🇳', 'Asia',        'VND', 25800, 22400, 18200, 0.000040],
+    ['Malaysia',         '🇲🇾', 'Asia',        'MYR', 2.05, 2.15, 1.68, 0.225],
+    ['Singapore',        '🇸🇬', 'Asia',        'SGD', 3.08, 2.92, 1.62, 0.75],
+    ['Australia',        '🇦🇺', 'Oceania',     'AUD', 1.98, 1.88, 0.72, 0.645],
+    ['New Zealand',      '🇳🇿', 'Oceania',     'NZD', 2.58, 2.42, 0.92, 0.61],
+    ['Saudi Arabia',     '🇸🇦', 'Middle East', 'SAR', 0.74, 0.66, 0.38, 0.267],
+    ['UAE',              '🇦🇪', 'Middle East', 'AED', 3.12, 2.82, 0.72, 0.272],
+    ['Iran',             '🇮🇷', 'Middle East', 'IRR', 28000, 22000, 6500, 0.000024],
+    ['Kuwait',           '🇰🇼', 'Middle East', 'KWD', 0.095, 0.085, 0.041, 3.25],
+    ['South Africa',     '🇿🇦', 'Africa',      'ZAR', 23.80, 22.60, 10.20, 0.055],
+    ['Nigeria',          '🇳🇬', 'Africa',      'NGN', 700, 680, 320,  0.00063],
+    ['Egypt',            '🇪🇬', 'Africa',      'EGP', 15.50, 13.75, 8.50, 0.020],
+    ['Kenya',            '🇰🇪', 'Africa',      'KES', 215, 203, 128, 0.0077],
+    ['Ethiopia',         '🇪🇹', 'Africa',      'ETB', 82, 75, 38,    0.0088],
+  ];
+
+  // apply ±2% random variation to simulate live prices
+  const jitter = () => 1 + (Math.random() * 0.04 - 0.02);
+
+  const COUNTRIES = RAW_COUNTRIES.map(([country, flag, region, currency, p_loc, d_loc, l_loc, rate]) => {
+    const pj = jitter(), dj = jitter(), lj = jitter();
+    return {
+      country, flag, region, currency,
+      petrol_local:  +(p_loc * pj).toFixed(2),
+      diesel_local:  +(d_loc * dj).toFixed(2),
+      lpg_local:     +(l_loc * lj).toFixed(2),
+      petrol_usd:    +(p_loc * pj * rate).toFixed(4),
+      diesel_usd:    +(d_loc * dj * rate).toFixed(4),
+      lpg_usd:       +(l_loc * lj * rate).toFixed(4),
+      rate,
+    };
+  });
+
+  const CURRENCIES = [...new Set(COUNTRIES.map(c => c.currency))].sort();
+
+  // ─── STATE ───
+  let sortCol = 'petrol_usd';
+  let sortDir = -1; // -1 = desc, 1 = asc
+  let activeRegion = 'all';
+  let activeFuelType = 'petrol';
+  let searchQuery = '';
+  let compareList = [];
+  let exchangeRates = {};
+  let ratesLoaded = false;
+
+  // ─── UTILITY ───
+  function $(id) { return document.getElementById(id); }
+
+  function toast(msg, duration) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), duration || 2800);
+  }
+
+  function fmt(n, decimals) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: decimals || 2, maximumFractionDigits: decimals || 4 });
+  }
+
+  function fmtUSD(n) { return `$${fmt(n, 4)}`; }
+  function fmtCurr(n, curr) { return `${curr} ${fmt(n, 2)}`; }
+
+  function getCategory(usd) {
+    if (usd < 0.80) return { label: 'Cheap', cls: 'badge-cheap' };
+    if (usd < 1.80) return { label: 'Mid', cls: 'badge-mid' };
+    return { label: 'Expensive', cls: 'badge-exp' };
+  }
+
+  function getFilteredCountries() {
+    return COUNTRIES.filter(c => {
+      const regionOk = activeRegion === 'all' || c.region === activeRegion;
+      const searchOk = !searchQuery || c.country.toLowerCase().includes(searchQuery.toLowerCase());
+      return regionOk && searchOk;
+    });
+  }
+
+  function getSorted(arr) {
+    return [...arr].sort((a, b) => {
+      const av = a[sortCol];
+      const bv = b[sortCol];
+      if (typeof av === 'string') return sortDir * av.localeCompare(bv);
+      return sortDir * ((av || 0) - (bv || 0));
+    });
+  }
+
+  // ─── INIT ───
+  function init() {
+    populateStats();
+    renderTable();
+    populateSelects();
+    setupTabs();
+    setupTableSort();
+    setupSearch();
+    renderSurchargeMonitor();
+    renderTrend();
+    populateCurrencySelects();
+    $('lastUpdated').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+    $('regionFilter').addEventListener('change', e => { activeRegion = e.target.value; renderTable(); });
+    $('fuelTypeFilter').addEventListener('change', e => { activeFuelType = e.target.value; updateTableHeader(); renderTable(); });
+    fetchExchangeRates();
+  }
+
+  // ─── STATS ───
+  function populateStats() {
+    const usdPrices = COUNTRIES.map(c => c.petrol_usd);
+    const avg = usdPrices.reduce((a, b) => a + b, 0) / usdPrices.length;
+    const cheapest = COUNTRIES.reduce((a, b) => a.petrol_usd < b.petrol_usd ? a : b);
+    const priciest = COUNTRIES.reduce((a, b) => a.petrol_usd > b.petrol_usd ? a : b);
+    const avgDiesel = COUNTRIES.map(c => c.diesel_usd).reduce((a, b) => a + b, 0) / COUNTRIES.length;
+
+    $('statsRow').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Global Avg Petrol</div>
+        <div class="stat-value">${fmtUSD(avg)}</div>
+        <div class="stat-sub">per litre</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Global Avg Diesel</div>
+        <div class="stat-value">${fmtUSD(avgDiesel)}</div>
+        <div class="stat-sub">per litre</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Cheapest Petrol</div>
+        <div class="stat-value" style="font-size:1.1rem">${cheapest.flag} ${cheapest.country}</div>
+        <div class="stat-sub" style="color:var(--green);font-weight:600">${fmtUSD(cheapest.petrol_usd)}/L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Most Expensive</div>
+        <div class="stat-value" style="font-size:1.1rem">${priciest.flag} ${priciest.country}</div>
+        <div class="stat-sub" style="color:var(--accent2);font-weight:600">${fmtUSD(priciest.petrol_usd)}/L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Countries Tracked</div>
+        <div class="stat-value">${COUNTRIES.length}</div>
+        <div class="stat-sub">across 6 regions</div>
+      </div>
+    `;
+  }
+
+  // ─── TABLE ───
+  function updateTableHeader() {
+    const fuelLabel = { petrol: 'Petrol', diesel: 'Diesel', lpg: 'LPG' }[activeFuelType];
+    document.querySelector('.section-title').textContent = `Global Fuel Prices — ${fuelLabel} (USD/L)`;
+  }
+
+  function renderTable() {
+    const data = getSorted(getFilteredCountries());
+    const usdKey = `${activeFuelType}_usd`;
+    const usdPrices = data.map(c => c[usdKey]);
+    const minPrice = Math.min(...usdPrices);
+    const maxPrice = Math.max(...usdPrices);
+
+    const tbody = $('priceTableBody');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">🔍</div>No countries match your filter.</div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(c => {
+      const cat = getCategory(c[usdKey]);
+      const rowCls = c[usdKey] === minPrice ? 'row-cheapest' : c[usdKey] === maxPrice ? 'row-most-exp' : '';
+      return `<tr class="${rowCls}">
+        <td><span class="flag">${c.flag}</span>${c.country}</td>
+        <td style="color:var(--muted)">${c.region}</td>
+        <td class="price-cell petrol">${fmtUSD(c.petrol_usd)}</td>
+        <td class="price-cell diesel">${fmtUSD(c.diesel_usd)}</td>
+        <td class="price-cell lpg">${fmtUSD(c.lpg_usd)}</td>
+        <td style="color:var(--muted);font-size:0.8rem">${fmtCurr(c[`${activeFuelType === 'lpg' ? 'lpg' : activeFuelType}_local`], c.currency)}</td>
+        <td><span class="badge ${cat.cls}">${cat.label}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function setupTableSort() {
+    document.querySelectorAll('thead th[data-col]').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        if (sortCol === col) { sortDir *= -1; }
+        else { sortCol = col; sortDir = col === 'country' || col === 'region' ? 1 : -1; }
+        document.querySelectorAll('thead th').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+        th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+        renderTable();
+      });
+    });
+  }
+
+  function setupSearch() {
+    $('searchInput').addEventListener('input', e => {
+      searchQuery = e.target.value;
+      renderTable();
+    });
+  }
+
+  // ─── SELECTS ───
+  function populateSelects() {
+    const options = COUNTRIES.map(c => `<option value="${c.country}">${c.flag} ${c.country}</option>`).join('');
+    ['calcCountry', 'tripFrom', 'tripTo', 'trendCountry', 'scCountry', 'compareSelect', 'fuelPriceCountry'].forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      if (id === 'compareSelect') {
+        el.innerHTML = `<option value="">— Pick a country —</option>${options}`;
+      } else {
+        el.innerHTML = options;
+      }
+    });
+    // Set some defaults
+    const usIdx = COUNTRIES.findIndex(c => c.country === 'United States');
+    const deIdx = COUNTRIES.findIndex(c => c.country === 'Germany');
+    if ($('tripFrom')) $('tripFrom').selectedIndex = usIdx;
+    if ($('tripTo')) $('tripTo').selectedIndex = deIdx;
+    if ($('trendCountry')) $('trendCountry').selectedIndex = usIdx;
+    $('trendCountry').addEventListener('change', renderTrend);
+    $('trendFuel').addEventListener('change', renderTrend);
+    $('trendPeriod').addEventListener('change', renderTrend);
+    renderCrossCountryTable();
+    $('calcCountry').addEventListener('change', renderCrossCountryTable);
+    $('calcFuelType').addEventListener('change', renderCrossCountryTable);
+  }
+
+  function populateCurrencySelects() {
+    const opts = CURRENCIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    ['convFrom', 'convTo', 'fuelPriceCurrency'].forEach(id => {
+      if ($(id)) $(id).innerHTML = opts;
+    });
+    const usdIdx = CURRENCIES.indexOf('USD');
+    const eurIdx = CURRENCIES.indexOf('EUR');
+    if ($('convFrom')) $('convFrom').selectedIndex = usdIdx >= 0 ? usdIdx : 0;
+    if ($('convTo')) $('convTo').selectedIndex = eurIdx >= 0 ? eurIdx : 1;
+  }
+
+  // ─── TABS ───
+  function setupTabs() {
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.panel));
+      tab.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchTab(tab.dataset.panel); }
+      });
+    });
+  }
+
+  function switchTab(panel) {
+    document.querySelectorAll('.nav-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.panel === panel);
+      t.setAttribute('aria-selected', t.dataset.panel === panel ? 'true' : 'false');
+    });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    $(`panel-${panel}`).classList.add('active');
+    if (panel === 'trends') renderTrend();
+  }
+
+  // ─── COMPARISON ───
+  function addComparison() {
+    const val = $('compareSelect').value;
+    if (!val) { toast('Please select a country first.'); return; }
+    if (compareList.includes(val)) { toast(`${val} is already in the comparison.`); return; }
+    if (compareList.length >= 6) { toast('Max 6 countries for comparison.'); return; }
+    compareList.push(val);
+    renderCompare();
+  }
+
+  function clearComparison() { compareList = []; renderCompare(); }
+
+  function renderCompare() {
+    const pillsEl = $('comparePills');
+    pillsEl.innerHTML = compareList.map(c => {
+      const cd = COUNTRIES.find(x => x.country === c);
+      return `<span class="pill active" onclick="removeCompare('${c}')" title="Click to remove" role="button" tabindex="0">${cd ? cd.flag : ''} ${c} ✕</span>`;
+    }).join('');
+
+    pillsEl.querySelectorAll('.pill').forEach(p => {
+      p.addEventListener('keydown', e => {
+        if (e.key === 'Enter') p.click();
+      });
+    });
+
+    const el = $('comparisonTable');
+    if (!compareList.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">🌍</div>Add countries above to compare prices.</div>`;
+      return;
+    }
+
+    const data = compareList.map(name => COUNTRIES.find(c => c.country === name)).filter(Boolean);
+    el.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr>
+        <th>Country</th>
+        <th>Petrol (USD/L)</th>
+        <th>Diesel (USD/L)</th>
+        <th>LPG (USD/L)</th>
+        <th>Local Currency</th>
+        <th>Cheapest Fuel</th>
+      </tr></thead>
+      <tbody>${data.map(c => {
+        const cheapestFuel = [['Petrol', c.petrol_usd], ['Diesel', c.diesel_usd], ['LPG', c.lpg_usd]]
+          .sort((a, b) => a[1] - b[1])[0];
+        return `<tr>
+          <td><span class="flag">${c.flag}</span>${c.country}</td>
+          <td class="price-cell petrol">${fmtUSD(c.petrol_usd)}</td>
+          <td class="price-cell diesel">${fmtUSD(c.diesel_usd)}</td>
+          <td class="price-cell lpg">${fmtUSD(c.lpg_usd)}</td>
+          <td style="color:var(--muted)">${c.currency}</td>
+          <td><span class="badge badge-cheap">${cheapestFuel[0]}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  window.removeCompare = function(name) {
+    compareList = compareList.filter(c => c !== name);
+    renderCompare();
+  };
+
+  window.addComparison = addComparison;
+  window.clearComparison = clearComparison;
+
+  // ─── COST CALCULATOR ───
+  window.calculateFuelCost = function() {
+    const country = COUNTRIES.find(c => c.country === $('calcCountry').value);
+    if (!country) return;
+    const fuelType = $('calcFuelType').value;
+    const efficiency = parseFloat($('calcEfficiency').value) || 8.5;
+    const monthlyKm = parseFloat($('calcMonthlyKm').value) || 1500;
+    const vehicles = parseInt($('calcVehicles').value) || 1;
+
+    const priceUSD = country[`${fuelType}_usd`];
+    const liters = (monthlyKm / 100) * efficiency;
+    const costPerVehicle = liters * priceUSD;
+    const fleetMonth = costPerVehicle * vehicles;
+    const fleetYear = fleetMonth * 12;
+
+    $('calcPriceUsed').textContent = `${fmtUSD(priceUSD)} / L (${fuelType})`;
+    $('calcLiters').textContent = `${fmt(liters, 1)} L`;
+    $('calcPerVehicle').textContent = fmtUSD(costPerVehicle);
+    $('calcFleetMonth').textContent = fmtUSD(fleetMonth);
+    $('calcFleetYear').textContent = fmtUSD(fleetYear);
+
+    const r = $('calcResult');
+    r.style.display = 'block';
+    r.classList.remove('show');
+    requestAnimationFrame(() => r.classList.add('show'));
+    toast(`Cost calculated for ${country.flag} ${country.country}`);
+  };
+
+  function renderCrossCountryTable() {
+    const fuelType = $('calcFuelType').value;
+    const efficiency = parseFloat($('calcEfficiency').value) || 8.5;
+    const monthlyKm = parseFloat($('calcMonthlyKm').value) || 1500;
+    const sorted = [...COUNTRIES].sort((a, b) => a[`${fuelType}_usd`] - b[`${fuelType}_usd`]);
+    const sample = [...sorted.slice(0, 5), ...sorted.slice(-3)];
+
+    $('crossCountryTable').innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Country</th><th>Price/L</th><th>Monthly Cost (${fmt(monthlyKm)}km)</th></tr></thead>
+      <tbody>${sample.map((c, i) => {
+        const liters = (monthlyKm / 100) * efficiency;
+        const cost = liters * c[`${fuelType}_usd`];
+        return `<tr class="${i < 5 ? 'row-cheapest' : 'row-most-exp'}">
+          <td>${c.flag} ${c.country}</td>
+          <td class="price-cell ${fuelType}">${fmtUSD(c[`${fuelType}_usd`])}</td>
+          <td style="font-weight:600">${fmtUSD(cost)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  // ─── ROAD TRIP ───
+  window.calculateTrip = function() {
+    const fromName = $('tripFrom').value;
+    const toName = $('tripTo').value;
+    const fromC = COUNTRIES.find(c => c.country === fromName);
+    const toC = COUNTRIES.find(c => c.country === toName);
+    if (!fromC || !toC) return;
+
+    const dist = parseFloat($('tripDistance').value) || 500;
+    const eff = parseFloat($('tripEfficiency').value) || 7.5;
+    const fuelType = $('tripFuelType').value;
+    const split = parseFloat($('tripSplit').value) / 100 || 0.5;
+
+    const totalLiters = (dist / 100) * eff;
+    const litersFrom = totalLiters * split;
+    const litersTo = totalLiters * (1 - split);
+    const costFrom = litersFrom * fromC[`${fuelType}_usd`];
+    const costTo = litersTo * toC[`${fuelType}_usd`];
+    const total = costFrom + costTo;
+
+    $('tripFromLabel').textContent = fromName;
+    $('tripToLabel').textContent = toName;
+    $('tripLiters').textContent = `${fmt(totalLiters, 1)} L`;
+    $('tripCostFrom').textContent = `${fmtUSD(costFrom)} (${fmt(litersFrom, 1)}L)`;
+    $('tripCostTo').textContent = `${fmtUSD(costTo)} (${fmt(litersTo, 1)}L)`;
+    $('tripCostTotal').textContent = fmtUSD(total);
+
+    const fromUSD = fromC[`${fuelType}_usd`];
+    const toUSD = toC[`${fuelType}_usd`];
+    let strategy;
+    if (fromUSD < toUSD * 0.9) strategy = `Fill up in ${fromName} — saves ~${fmtUSD((toUSD - fromUSD) * totalLiters)}`;
+    else if (toUSD < fromUSD * 0.9) strategy = `Fill up in ${toName} — saves ~${fmtUSD((fromUSD - toUSD) * totalLiters)}`;
+    else strategy = `Prices similar — fill where convenient`;
+    $('tripStrategy').textContent = strategy;
+
+    const r = $('tripResult');
+    r.style.display = 'block';
+    r.classList.remove('show');
+    requestAnimationFrame(() => r.classList.add('show'));
+    toast(`Route planned: ${fromName} → ${toName}`);
+  };
+
+  // ─── TREND CHART ───
+  function generateTrendData(basePrice, months) {
+    const data = [];
+    let price = basePrice;
+    const now = new Date();
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setMonth(d.getMonth() - i);
+      price = price * (1 + (Math.random() * 0.08 - 0.04));
+      price = Math.max(price * 0.5, price);
+      data.push({ month: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), price: +price.toFixed(4) });
+    }
+    return data;
+  }
+
+  function renderTrend() {
+    const countryName = $('trendCountry') ? $('trendCountry').value : COUNTRIES[0].country;
+    const fuelType = $('trendFuel') ? $('trendFuel').value : 'petrol';
+    const months = parseInt($('trendPeriod') ? $('trendPeriod').value : '12');
+    const country = COUNTRIES.find(c => c.country === countryName) || COUNTRIES[0];
+    const basePrice = country[`${fuelType}_usd`];
+
+    const seriesPetrol = generateTrendData(basePrice, months);
+    const seriesDiesel = generateTrendData(country.diesel_usd, months);
+
+    const fuelColor = { petrol: '#f7c948', diesel: '#43d9ad', lpg: '#6c63ff' };
+    const activeColor = fuelColor[fuelType];
+
+    $('trendLegend').innerHTML = `
+      <div class="legend-item"><div class="legend-dot" style="background:${fuelColor[fuelType]}"></div>${fuelType.charAt(0).toUpperCase() + fuelType.slice(1)} Price (USD/L)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2e3350;border:2px solid var(--border)"></div>Diesel Ref.</div>
+    `;
+
+    const svg = $('trendChart');
+    const W = svg.clientWidth || 700;
+    const H = 220;
+    const pad = { top: 20, right: 20, bottom: 30, left: 55 };
+
+    const allPrices = [...seriesPetrol.map(d => d.price), ...seriesDiesel.map(d => d.price)];
+    const minP = Math.min(...allPrices) * 0.92;
+    const maxP = Math.max(...allPrices) * 1.05;
+
+    const xScale = (i) => pad.left + (i / (seriesPetrol.length - 1)) * (W - pad.left - pad.right);
+    const yScale = (p) => pad.top + (1 - (p - minP) / (maxP - minP)) * (H - pad.top - pad.bottom);
+
+    const gridLines = 5;
+    let svgContent = '';
+
+    // Grid
+    for (let g = 0; g <= gridLines; g++) {
+      const y = pad.top + (g / gridLines) * (H - pad.top - pad.bottom);
+      const val = maxP - (g / gridLines) * (maxP - minP);
+      svgContent += `<line class="chart-grid-line" x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="var(--border)" />`;
+      svgContent += `<text class="chart-label" x="${pad.left - 6}" y="${y + 4}" text-anchor="end">$${val.toFixed(3)}</text>`;
+    }
+
+    // X labels
+    const step = Math.max(1, Math.floor(seriesPetrol.length / 6));
+    seriesPetrol.forEach((d, i) => {
+      if (i % step === 0 || i === seriesPetrol.length - 1) {
+        svgContent += `<text class="chart-label" x="${xScale(i)}" y="${H - 2}" text-anchor="middle">${d.month}</text>`;
+      }
+    });
+
+    // Diesel reference line (dashed, subtle)
+    const dPath = seriesDiesel.map((d, i) => `${i === 0 ? 'M' : 'L'}${xScale(i)},${yScale(d.price)}`).join(' ');
+    svgContent += `<path d="${dPath}" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="4 4" />`;
+
+    // Main fuel area
+    const pPath = seriesPetrol.map((d, i) => `${i === 0 ? 'M' : 'L'}${xScale(i)},${yScale(d.price)}`).join(' ');
+    const areaPath = `${pPath} L${xScale(seriesPetrol.length - 1)},${H - pad.bottom} L${xScale(0)},${H - pad.bottom} Z`;
+    svgContent += `<path d="${areaPath}" fill="${activeColor}" class="chart-area" />`;
+    svgContent += `<path d="${pPath}" class="chart-line" stroke="${activeColor}" />`;
+
+    // Dots
+    seriesPetrol.forEach((d, i) => {
+      if (i % step === 0 || i === seriesPetrol.length - 1) {
+        svgContent += `<circle class="chart-dot" cx="${xScale(i)}" cy="${yScale(d.price)}" r="4" fill="${activeColor}" stroke="var(--bg)" stroke-width="2"
+          data-label="${d.month}" data-price="${d.price}" />`;
+      }
+    });
+
+    svg.innerHTML = svgContent;
+
+    // Tooltip interactivity
+    const tooltip = $('chartTooltip');
+    svg.querySelectorAll('.chart-dot').forEach(dot => {
+      dot.addEventListener('mouseenter', (e) => {
+        const rect = svg.getBoundingClientRect();
+        const wrapRect = svg.parentElement.getBoundingClientRect();
+        tooltip.innerHTML = `<strong>${dot.dataset.label}</strong><br>${fuelType}: $${parseFloat(dot.dataset.price).toFixed(4)}/L`;
+        tooltip.style.left = `${e.clientX - wrapRect.left + 10}px`;
+        tooltip.style.top = `${e.clientY - wrapRect.top - 40}px`;
+        tooltip.classList.add('show');
+      });
+      dot.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+    });
+
+    // Trend stats
+    const first = seriesPetrol[0].price;
+    const last = seriesPetrol[seriesPetrol.length - 1].price;
+    const change = ((last - first) / first * 100);
+    const maxV = Math.max(...seriesPetrol.map(d => d.price));
+    const minV = Math.min(...seriesPetrol.map(d => d.price));
+
+    $('trendStats').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Current Price</div>
+        <div class="stat-value">${fmtUSD(last)}</div>
+        <div class="stat-sub">${fuelType} per litre</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">${months}M Change</div>
+        <div class="stat-value ${change >= 0 ? 'delta-up' : 'delta-down'}" style="font-size:1.3rem">${change >= 0 ? '+' : ''}${change.toFixed(1)}%</div>
+        <div class="stat-sub">vs ${months} months ago</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Period High</div>
+        <div class="stat-value" style="color:var(--accent2)">${fmtUSD(maxV)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Period Low</div>
+        <div class="stat-value" style="color:var(--green)">${fmtUSD(minV)}</div>
+      </div>
+    `;
+  }
+
+  // ─── CURRENCY ───
+  async function fetchExchangeRates() {
+    try {
+      const resp = await fetch('https://open.er-api.com/v6/latest/USD');
+      const json = await resp.json();
+      if (json && json.rates) {
+        exchangeRates = json.rates;
+        ratesLoaded = true;
+        $('lastUpdated').textContent = `Updated: ${new Date().toLocaleTimeString()} | Rates: live`;
+        toast('Live exchange rates loaded!');
+      }
+    } catch {
+      // fallback to approximate rates from COUNTRIES data
+      COUNTRIES.forEach(c => { exchangeRates[c.currency] = 1 / c.rate; });
+      $('lastUpdated').textContent = `Updated: ${new Date().toLocaleTimeString()} | Rates: estimated`;
+    }
+  }
+
+  function getRate(from, to) {
+    if (from === to) return 1;
+    if (!Object.keys(exchangeRates).length) {
+      COUNTRIES.forEach(c => { exchangeRates[c.currency] = 1 / c.rate; });
+    }
+    const fromRate = exchangeRates[from] || 1;
+    const toRate = exchangeRates[to] || 1;
+    return toRate / fromRate;
+  }
+
+  window.convertCurrency = function() {
+    const amount = parseFloat($('convAmount').value) || 1;
+    const from = $('convFrom').value;
+    const to = $('convTo').value;
+    const rate = getRate(from, to);
+    const result = amount * rate;
+
+    $('convRate').textContent = `1 ${from} = ${rate.toFixed(6)} ${to}`;
+    $('convOutput').textContent = `${to} ${fmt(result, 4)}`;
+    $('convSource').textContent = ratesLoaded ? 'open.er-api.com (live)' : 'Estimated (offline)';
+
+    const r = $('convResult');
+    r.style.display = 'block';
+    r.classList.remove('show');
+    requestAnimationFrame(() => r.classList.add('show'));
+  };
+
+  window.swapCurrencies = function() {
+    const from = $('convFrom').value;
+    const to = $('convTo').value;
+    $('convFrom').value = to;
+    $('convTo').value = from;
+    toast('Currencies swapped');
+  };
+
+  window.showFuelInCurrency = function() {
+    const country = COUNTRIES.find(c => c.country === $('fuelPriceCountry').value);
+    if (!country) return;
+    const fuelType = $('fuelPriceType').value;
+    const toCurr = $('fuelPriceCurrency').value;
+    const usdPrice = country[`${fuelType}_usd`];
+    const rate = getRate('USD', toCurr);
+    const localPrice = usdPrice * rate;
+
+    $('fcrUSD').textContent = `$${usdPrice.toFixed(4)} / L`;
+    $('fcrLocal').textContent = `${toCurr} ${localPrice.toFixed(4)} / L`;
+
+    const r = $('fuelCurrResult');
+    r.style.display = 'block';
+    r.classList.remove('show');
+    requestAnimationFrame(() => r.classList.add('show'));
+  };
+
+  // ─── SURCHARGE ───
+  window.calculateSurcharge = function() {
+    const country = COUNTRIES.find(c => c.country === $('scCountry').value);
+    if (!country) return;
+    const basePrice = parseFloat($('scBasePrice').value) || 1.20;
+    const threshold = parseFloat($('scThreshold').value) / 100 || 0.05;
+    const ratePerTenCents = parseFloat($('scRate').value) || 1.5;
+    const freight = parseFloat($('scFreight').value) || 5000;
+    const currentPrice = country.diesel_usd;
+
+    const changePct = (currentPrice - basePrice) / basePrice;
+    const riseAboveBase = currentPrice - basePrice;
+    const surchargeBlocks = Math.max(0, Math.floor(riseAboveBase / 0.10));
+    const surchargePct = changePct > threshold ? surchargeBlocks * ratePerTenCents : 0;
+    const surchargeAmt = freight * (surchargePct / 100);
+    const total = freight + surchargeAmt;
+
+    $('scCurrentPrice').textContent = fmtUSD(currentPrice);
+    $('scChange').textContent = `${changePct >= 0 ? '+' : ''}${(changePct * 100).toFixed(1)}% (${fmtUSD(riseAboveBase > 0 ? riseAboveBase : currentPrice - basePrice)})`;
+    $('scPct').textContent = `${surchargePct.toFixed(1)}%`;
+    $('scAmount').textContent = fmtUSD(surchargeAmt);
+    $('scTotal').textContent = fmtUSD(total);
+
+    let alertHTML = '';
+    if (surchargePct > 10) {
+      alertHTML = `<span>⚠️</span> High surcharge alert: ${surchargePct.toFixed(1)}% surcharge is due. Notify your client immediately.`;
+      $('scAlert').className = 'alert-box danger';
+    } else if (surchargePct > 0) {
+      alertHTML = `<span>📢</span> Surcharge triggered: ${surchargePct.toFixed(1)}% surcharge applies. Threshold exceeded by ${((changePct - threshold) * 100).toFixed(1)}%.`;
+      $('scAlert').className = 'alert-box warning';
+    } else {
+      alertHTML = `<span>✅</span> No surcharge needed. Price is within the ${(threshold * 100).toFixed(0)}% threshold of base price.`;
+      $('scAlert').className = 'alert-box success';
+    }
+    $('scAlert').innerHTML = alertHTML;
+    $('surchargeResult').style.display = 'block';
+    toast('Surcharge calculated');
+  };
+
+  function renderSurchargeMonitor() {
+    const topDiesel = [...COUNTRIES].sort((a, b) => b.diesel_usd - a.diesel_usd).slice(0, 8);
+    $('surchargeMonitor').innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Country</th><th>Region</th><th>Diesel (USD/L)</th><th>vs World Avg</th><th>Impact</th></tr></thead>
+      <tbody>${topDiesel.map(c => {
+        const avg = COUNTRIES.reduce((s, x) => s + x.diesel_usd, 0) / COUNTRIES.length;
+        const diff = ((c.diesel_usd - avg) / avg * 100);
+        const impact = diff > 20 ? 'High' : diff > 5 ? 'Medium' : 'Low';
+        const impactCls = diff > 20 ? 'badge-exp' : diff > 5 ? 'badge-mid' : 'badge-cheap';
+        return `<tr>
+          <td>${c.flag} ${c.country}</td>
+          <td style="color:var(--muted)">${c.region}</td>
+          <td class="price-cell diesel">${fmtUSD(c.diesel_usd)}</td>
+          <td class="${diff >= 0 ? 'delta-up' : 'delta-down'}" style="font-weight:600">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%</td>
+          <td><span class="badge ${impactCls}">${impact}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  // ─── KEYBOARD NAV ───
+  document.addEventListener('keydown', e => {
+    if (e.target.classList.contains('nav-tab') && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+      const tabs = [...document.querySelectorAll('.nav-tab')];
+      const idx = tabs.indexOf(e.target);
+      const next = tabs[(idx + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+      next.focus();
+      switchTab(next.dataset.panel);
+    }
+  });
+
+  // ─── BOOT ───
+  init();
+})();
+</script>
+</body>
+</html>

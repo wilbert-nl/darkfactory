@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glossa — Language Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar sections */
+.sb-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sb-section-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* Min-length warning */
+.min-len-note {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+.min-len-note.warn {
+  border-color: var(--color-warn);
+  color: var(--color-warn);
+  background: oklch(96% 0.012 72);
+}
+
+/* Threshold slider */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.slider-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+  display: block;
+}
+.slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  border: 2px solid var(--color-paper);
+  box-shadow: 0 1px 4px oklch(18% 0.04 155 / 0.2);
+}
+.slider-val {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* Whitelist/blacklist */
+.wb-tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+.wb-tab {
+  flex: 1;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  text-align: center;
+}
+.wb-tab.active {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border-color: var(--color-accent);
+}
+
+.wb-input-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.wb-input {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  transition: border-color 0.15s ease;
+  text-transform: uppercase;
+}
+.wb-input:focus { outline: none; border-color: var(--color-accent); }
+.wb-input::placeholder { color: var(--color-ink-muted); text-transform: none; }
+
+.btn-wb-add {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+.btn-wb-add:hover { opacity: 0.85; }
+
+.wb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  min-height: 24px;
+}
+
+.wb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.wb-chip.white {
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  color: var(--color-accent);
+}
+.wb-chip.black {
+  background: oklch(55% 0.20 25 / 0.08);
+  border: 1px solid oklch(55% 0.20 25 / 0.25);
+  color: var(--color-danger);
+}
+.wb-chip-remove {
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 12px;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+}
+.wb-chip-remove:hover { opacity: 1; }
+
+/* History */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.history-item:hover {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+.history-flag { font-size: var(--text-base); flex-shrink: 0; }
+.history-lang {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink);
+  flex: 1;
+  min-width: 0;
+}
+.history-snippet {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+.history-ts {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+.history-empty {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-4) 0;
+}
+
+/* Routing rules */
+.rule-input-row {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.rule-input {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  transition: border-color 0.15s ease;
+}
+.rule-input:focus { outline: none; border-color: var(--color-accent); }
+.rule-input::placeholder { color: var(--color-ink-muted); }
+.rule-input.code { text-transform: uppercase; letter-spacing: 0.05em; }
+
+.btn-add-rule {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px dashed var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: background 0.12s ease, border-style 0.12s ease;
+}
+.btn-add-rule:hover { background: var(--color-accent-subtle); border-style: solid; }
+
+.rule-chips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.rule-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+.rule-chip-code {
+  font-weight: 700;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.rule-chip-arrow { color: var(--color-ink-muted); }
+.rule-chip-team { flex: 1; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rule-chip-remove {
+  cursor: pointer;
+  color: var(--color-ink-muted);
+  background: none;
+  border: none;
+  font-size: var(--text-base);
+  line-height: 1;
+  padding: 0;
+  transition: color 0.12s ease;
+}
+.rule-chip-remove:hover { color: var(--color-danger); }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Textarea */
+.textarea-wrap {
+  position: relative;
+}
+
+.text-input {
+  width: 100%;
+  min-height: 200px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.text-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.text-input::placeholder { color: var(--color-ink-muted); }
+
+.char-count {
+  position: absolute;
+  bottom: var(--space-2);
+  right: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+.char-count.warn { color: var(--color-warn); }
+
+/* Section headings */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* ── Primary result ── */
+.result-hero {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  min-height: 160px;
+  justify-content: center;
+  transition: border-color 0.2s ease;
+}
+.result-hero.detected {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+
+.result-empty-msg {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+
+.result-flag {
+  font-size: 2.5rem;
+  line-height: 1;
+  animation: fadeInUp 0.3s ease;
+}
+.result-lang-name {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  animation: fadeInUp 0.3s ease 0.05s both;
+}
+.result-native {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  animation: fadeInUp 0.3s ease 0.1s both;
+}
+.result-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeInUp 0.3s ease 0.15s both;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: 1px solid;
+}
+.badge-conf-high { background: var(--color-accent-subtle); border-color: var(--color-accent-line); color: var(--color-accent); }
+.badge-conf-med  { background: oklch(96% 0.012 72); border-color: oklch(80% 0.1 72); color: var(--color-warn); }
+.badge-conf-low  { background: oklch(55% 0.20 25 / 0.07); border-color: oklch(55% 0.20 25 / 0.25); color: var(--color-danger); }
+.badge-dir       { background: var(--color-paper); border-color: var(--color-border); color: var(--color-ink-muted); }
+
+/* Script info row */
+.script-info-row {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.script-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.script-stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+}
+.script-stat-value {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* Routing suggestion */
+.routing-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+}
+.routing-card.active {
+  display: flex;
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+.routing-arrow-icon { font-size: var(--text-lg); }
+.routing-text { flex: 1; }
+.routing-title { font-size: var(--text-xs); color: var(--color-ink-muted); font-weight: 500; }
+.routing-team { font-size: var(--text-sm); font-weight: 600; color: var(--color-accent); }
+
+/* Copy button */
+.btn-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-copy:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+
+/* Language info card */
+.lang-info-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.lang-info-card.active { display: flex; }
+
+.lang-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+.lang-info-stat { display: flex; flex-direction: column; gap: 2px; }
+.lang-info-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+}
+.lang-info-value {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* ── Candidates ── */
+.candidates-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.candidate-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  animation: fadeInUp 0.25s ease both;
+}
+.candidate-rank {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+}
+.candidate-rank.top {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+}
+.candidate-flag { font-size: var(--text-lg); flex-shrink: 0; }
+.candidate-name { flex: 1; min-width: 0; }
+.candidate-lang { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.candidate-iso { font-size: var(--text-xs); color: var(--color-ink-muted); }
+.candidate-bar-wrap {
+  flex: 1;
+  max-width: 100px;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.candidate-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-accent);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.candidate-bar.r2 { background: var(--color-success); }
+.candidate-bar.r3 { background: var(--color-warn); }
+.candidate-bar.r4 { background: oklch(52% 0.12 220); }
+.candidate-bar.r5 { background: var(--color-border); }
+.candidate-pct {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  width: 32px;
+  text-align: right;
+}
+
+/* ── Bulk detection ── */
+.bulk-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.bulk-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.toggle-btn.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+}
+.toggle-hint { font-size: var(--text-xs); color: var(--color-ink-muted); line-height: 1.4; }
+
+.bulk-textarea {
+  width: 100%;
+  min-height: 120px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  resize: vertical;
+  transition: border-color 0.15s ease;
+}
+.bulk-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+
+.btn-bulk-run {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-bulk-run:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28); }
+.btn-bulk-run:active { transform: translateY(0); box-shadow: none; }
+
+.bulk-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: none;
+}
+.bulk-table-wrap.active { display: block; }
+
+.bulk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.bulk-table th {
+  background: var(--color-paper-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.bulk-table td {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.bulk-table tr:last-child td { border-bottom: none; }
+.bulk-table tr:hover td { background: oklch(96% 0.010 95); }
+.bt-snippet { color: var(--color-ink-muted); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bt-lang { font-weight: 600; white-space: nowrap; }
+.bt-conf { font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error   { background: var(--color-danger); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+  .lang-info-grid { grid-template-columns: 1fr 1fr; }
+  .script-info-row { gap: var(--space-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-flag, .result-lang-name, .result-native, .result-badges,
+  .candidate-row { animation: none; }
+  .btn-bulk-run:hover { transform: none; box-shadow: none; }
+  .toast { transition: opacity 0.15s ease; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Glossa<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Language Detector</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Detection settings">
+    <div class="sidebar-scroll">
+
+      <!-- Min length warning -->
+      <div class="sb-section">
+        <div class="sb-section-title">Text Quality</div>
+        <div class="min-len-note" id="minLenNote">
+          franc needs ≥ 10 characters for accurate detection. Longer texts yield better results.
+        </div>
+      </div>
+
+      <!-- Confidence threshold -->
+      <div class="sb-section">
+        <div class="sb-section-title">Confidence Threshold</div>
+        <label class="slider-label" for="thresholdSlider">
+          Hide candidates below this score
+        </label>
+        <div class="slider-row">
+          <input
+            type="range"
+            class="slider"
+            id="thresholdSlider"
+            min="0.1"
+            max="1.0"
+            step="0.05"
+            value="0.1"
+            aria-label="Confidence threshold"
+          >
+          <span class="slider-val" id="thresholdVal">10%</span>
+        </div>
+      </div>
+
+      <!-- Whitelist / Blacklist -->
+      <div class="sb-section">
+        <div class="sb-section-title">Language Filter</div>
+        <div class="wb-tabs" role="tablist">
+          <button class="wb-tab active" id="tab-white" role="tab" aria-selected="true">Whitelist</button>
+          <button class="wb-tab" id="tab-black" role="tab" aria-selected="false">Blacklist</button>
+        </div>
+        <div class="wb-input-row">
+          <input
+            type="text"
+            class="wb-input"
+            id="wbInput"
+            placeholder="ISO 639-3 code…"
+            maxlength="3"
+            aria-label="Language ISO code to add to filter"
+          >
+          <button class="btn-wb-add" id="wbAddBtn" aria-label="Add to filter">Add</button>
+        </div>
+        <div class="wb-chips" id="wbChips" aria-label="Filter list" role="list"></div>
+      </div>
+
+      <!-- Routing rules -->
+      <div class="sb-section">
+        <div class="sb-section-title">Routing Rules</div>
+        <div class="rule-input-row">
+          <input
+            type="text"
+            class="rule-input code"
+            id="ruleCode"
+            placeholder="eng"
+            maxlength="3"
+            aria-label="Language ISO code for routing rule"
+          >
+          <input
+            type="text"
+            class="rule-input"
+            id="ruleTeam"
+            placeholder="Team name or queue…"
+            aria-label="Team name or queue to route to"
+          >
+        </div>
+        <button class="btn-add-rule" id="addRuleBtn">+ Add routing rule</button>
+        <div class="rule-chips" id="ruleChips" aria-label="Routing rules" role="list"></div>
+      </div>
+
+      <!-- Detection history -->
+      <div class="sb-section" style="flex: 1;">
+        <div class="sb-section-title">Recent Detections (last 10)</div>
+        <div class="history-list" id="historyList" aria-label="Detection history" role="list">
+          <div class="history-empty">No detections yet.</div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Language detection workspace">
+    <div class="main-scroll">
+
+      <!-- Text input -->
+      <div>
+        <div class="section-head">
+          <span class="section-label">Input Text</span>
+          <button class="btn-copy" id="btnCopyResult" aria-label="Copy detected language result" style="display:none">Copy result</button>
+        </div>
+        <div class="textarea-wrap">
+          <textarea
+            class="text-input"
+            id="textInput"
+            rows="8"
+            placeholder="Paste any text here — detection runs automatically as you type…"
+            aria-label="Text to detect language from"
+            spellcheck="false"
+          ></textarea>
+          <span class="char-count" id="charCount">0 chars</span>
+        </div>
+      </div>
+
+      <!-- Primary result -->
+      <div>
+        <div class="section-head">
+          <span class="section-label">Detected Language</span>
+        </div>
+        <div class="result-hero" id="resultHero" aria-live="polite">
+          <p class="result-empty-msg">Start typing above — detection runs automatically after 300ms.</p>
+        </div>
+      </div>
+
+      <!-- Script info + routing -->
+      <div id="scriptInfoBlock" style="display:none">
+        <div class="section-head"><span class="section-label">Script &amp; Direction</span></div>
+        <div class="script-info-row" id="scriptInfoRow" aria-live="polite"></div>
+      </div>
+
+      <div class="routing-card" id="routingCard" aria-live="polite">
+        <span class="routing-arrow-icon">→</span>
+        <div class="routing-text">
+          <div class="routing-title">Routing Suggestion</div>
+          <div class="routing-team" id="routingTeam"></div>
+        </div>
+      </div>
+
+      <!-- Language info card -->
+      <div class="lang-info-card" id="langInfoCard" aria-live="polite">
+        <div class="section-label">Language Info</div>
+        <div class="lang-info-grid" id="langInfoGrid"></div>
+      </div>
+
+      <!-- Top 5 candidates -->
+      <div>
+        <div class="section-head"><span class="section-label">Top Candidates</span></div>
+        <div class="candidates-list" id="candidatesList" aria-live="polite" aria-label="Top language candidates">
+          <div style="font-size:var(--text-xs); color:var(--color-ink-muted); padding:var(--space-4) 0; text-align:center;">
+            Detection results will appear here.
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk detection -->
+      <div class="bulk-section">
+        <div class="section-head"><span class="section-label">Bulk Detection</span></div>
+        <div class="bulk-toggle">
+          <button class="toggle-btn" id="bulkToggle" aria-pressed="false">Bulk mode</button>
+          <span class="toggle-hint">Separate texts with a blank line. Each block is detected independently.</span>
+        </div>
+        <div id="bulkPanel" style="display:none; flex-direction:column; gap:var(--space-3);">
+          <textarea
+            class="bulk-textarea"
+            id="bulkInput"
+            placeholder="First paragraph goes here.&#10;&#10;Second paragraph here.&#10;&#10;Third paragraph here."
+            aria-label="Texts for bulk detection, separated by blank lines"
+          ></textarea>
+          <button class="btn-bulk-run" id="bulkRunBtn">Run bulk detection</button>
+          <div class="bulk-table-wrap" id="bulkTableWrap">
+            <table class="bulk-table" aria-label="Bulk detection results">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Snippet</th>
+                  <th>Language</th>
+                  <th>ISO</th>
+                  <th>Confidence</th>
+                </tr>
+              </thead>
+              <tbody id="bulkTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script type="module">
+// ── Load franc via esm.sh ──────────────────────────────────────
+let franc, francAll;
+try {
+  const mod = await import('https://esm.sh/franc@6');
+  franc    = mod.franc;
+  francAll = mod.francAll;
+} catch (e) {
+  // Fallback: show error but still run with minimal detection
+  console.warn('Could not load franc:', e);
+}
+
+// ── Language data ──────────────────────────────────────────────
+// iso639-3 → { name, native, flag, dir, script, iso1, family, speakers }
+const LANG_DB = {
+  eng: { name:'English',    native:'English',          flag:'🇬🇧', dir:'ltr', script:'Latin',      iso1:'en', family:'Indo-European › Germanic',       speakers:'1.5B' },
+  spa: { name:'Spanish',    native:'Español',          flag:'🇪🇸', dir:'ltr', script:'Latin',      iso1:'es', family:'Indo-European › Romance',         speakers:'560M' },
+  fra: { name:'French',     native:'Français',         flag:'🇫🇷', dir:'ltr', script:'Latin',      iso1:'fr', family:'Indo-European › Romance',         speakers:'310M' },
+  deu: { name:'German',     native:'Deutsch',          flag:'🇩🇪', dir:'ltr', script:'Latin',      iso1:'de', family:'Indo-European › Germanic',         speakers:'135M' },
+  por: { name:'Portuguese', native:'Português',        flag:'🇵🇹', dir:'ltr', script:'Latin',      iso1:'pt', family:'Indo-European › Romance',         speakers:'260M' },
+  ita: { name:'Italian',    native:'Italiano',         flag:'🇮🇹', dir:'ltr', script:'Latin',      iso1:'it', family:'Indo-European › Romance',         speakers:'68M'  },
+  rus: { name:'Russian',    native:'Русский',          flag:'🇷🇺', dir:'ltr', script:'Cyrillic',   iso1:'ru', family:'Indo-European › Slavic',           speakers:'258M' },
+  zho: { name:'Chinese',    native:'中文',              flag:'🇨🇳', dir:'ltr', script:'CJK',         iso1:'zh', family:'Sino-Tibetan',                     speakers:'1.1B' },
+  jpn: { name:'Japanese',   native:'日本語',             flag:'🇯🇵', dir:'ltr', script:'CJK',         iso1:'ja', family:'Japonic',                          speakers:'125M' },
+  kor: { name:'Korean',     native:'한국어',             flag:'🇰🇷', dir:'ltr', script:'Hangul',     iso1:'ko', family:'Koreanic',                         speakers:'77M'  },
+  ara: { name:'Arabic',     native:'العربية',          flag:'🇸🇦', dir:'rtl', script:'Arabic',     iso1:'ar', family:'Afro-Asiatic › Semitic',           speakers:'422M' },
+  hin: { name:'Hindi',      native:'हिन्दी',           flag:'🇮🇳', dir:'ltr', script:'Devanagari', iso1:'hi', family:'Indo-European › Indo-Aryan',       speakers:'615M' },
+  nld: { name:'Dutch',      native:'Nederlands',       flag:'🇳🇱', dir:'ltr', script:'Latin',      iso1:'nl', family:'Indo-European › Germanic',         speakers:'24M'  },
+  pol: { name:'Polish',     native:'Polski',           flag:'🇵🇱', dir:'ltr', script:'Latin',      iso1:'pl', family:'Indo-European › Slavic',           speakers:'45M'  },
+  tur: { name:'Turkish',    native:'Türkçe',           flag:'🇹🇷', dir:'ltr', script:'Latin',      iso1:'tr', family:'Turkic',                           speakers:'88M'  },
+  swe: { name:'Swedish',    native:'Svenska',          flag:'🇸🇪', dir:'ltr', script:'Latin',      iso1:'sv', family:'Indo-European › Germanic',         speakers:'13M'  },
+  nor: { name:'Norwegian',  native:'Norsk',            flag:'🇳🇴', dir:'ltr', script:'Latin',      iso1:'no', family:'Indo-European › Germanic',         speakers:'5M'   },
+  dan: { name:'Danish',     native:'Dansk',            flag:'🇩🇰', dir:'ltr', script:'Latin',      iso1:'da', family:'Indo-European › Germanic',         speakers:'6M'   },
+  fin: { name:'Finnish',    native:'Suomi',            flag:'🇫🇮', dir:'ltr', script:'Latin',      iso1:'fi', family:'Uralic › Finnic',                  speakers:'5M'   },
+  ces: { name:'Czech',      native:'Čeština',          flag:'🇨🇿', dir:'ltr', script:'Latin',      iso1:'cs', family:'Indo-European › Slavic',           speakers:'13M'  },
+  ron: { name:'Romanian',   native:'Română',           flag:'🇷🇴', dir:'ltr', script:'Latin',      iso1:'ro', family:'Indo-European › Romance',         speakers:'26M'  },
+  hun: { name:'Hungarian',  native:'Magyar',           flag:'🇭🇺', dir:'ltr', script:'Latin',      iso1:'hu', family:'Uralic › Ugric',                  speakers:'13M'  },
+  vie: { name:'Vietnamese', native:'Tiếng Việt',       flag:'🇻🇳', dir:'ltr', script:'Latin',      iso1:'vi', family:'Austroasiatic',                    speakers:'95M'  },
+  tha: { name:'Thai',       native:'ภาษาไทย',          flag:'🇹🇭', dir:'ltr', script:'Thai',       iso1:'th', family:'Tai-Kadai',                        speakers:'60M'  },
+  ind: { name:'Indonesian', native:'Bahasa Indonesia', flag:'🇮🇩', dir:'ltr', script:'Latin',      iso1:'id', family:'Austronesian',                     speakers:'199M' },
+  msa: { name:'Malay',      native:'Bahasa Melayu',    flag:'🇲🇾', dir:'ltr', script:'Latin',      iso1:'ms', family:'Austronesian',                     speakers:'33M'  },
+  ell: { name:'Greek',      native:'Ελληνικά',         flag:'🇬🇷', dir:'ltr', script:'Greek',      iso1:'el', family:'Indo-European › Hellenic',         speakers:'13M'  },
+  heb: { name:'Hebrew',     native:'עברית',            flag:'🇮🇱', dir:'rtl', script:'Hebrew',     iso1:'he', family:'Afro-Asiatic › Semitic',           speakers:'9M'   },
+  cat: { name:'Catalan',    native:'Català',           flag:'🏳️', dir:'ltr', script:'Latin',      iso1:'ca', family:'Indo-European › Romance',         speakers:'9M'   },
+  ukr: { name:'Ukrainian',  native:'Українська',       flag:'🇺🇦', dir:'ltr', script:'Cyrillic',   iso1:'uk', family:'Indo-European › Slavic',           speakers:'40M'  },
+  bul: { name:'Bulgarian',  native:'Български',        flag:'🇧🇬', dir:'ltr', script:'Cyrillic',   iso1:'bg', family:'Indo-European › Slavic',           speakers:'9M'   },
+  hrv: { name:'Croatian',   native:'Hrvatski',         flag:'🇭🇷', dir:'ltr', script:'Latin',      iso1:'hr', family:'Indo-European › Slavic',           speakers:'7M'   },
+  slk: { name:'Slovak',     native:'Slovenčina',       flag:'🇸🇰', dir:'ltr', script:'Latin',      iso1:'sk', family:'Indo-European › Slavic',           speakers:'5M'   },
+  lit: { name:'Lithuanian', native:'Lietuvių',         flag:'🇱🇹', dir:'ltr', script:'Latin',      iso1:'lt', family:'Indo-European › Baltic',           speakers:'3M'   },
+  lav: { name:'Latvian',    native:'Latviešu',         flag:'🇱🇻', dir:'ltr', script:'Latin',      iso1:'lv', family:'Indo-European › Baltic',           speakers:'1.7M' },
+  est: { name:'Estonian',   native:'Eesti',            flag:'🇪🇪', dir:'ltr', script:'Latin',      iso1:'et', family:'Uralic › Finnic',                  speakers:'1.1M' },
+  ben: { name:'Bengali',    native:'বাংলা',            flag:'🇧🇩', dir:'ltr', script:'Bengali',    iso1:'bn', family:'Indo-European › Indo-Aryan',       speakers:'265M' },
+  urd: { name:'Urdu',       native:'اردو',             flag:'🇵🇰', dir:'rtl', script:'Arabic',     iso1:'ur', family:'Indo-European › Indo-Aryan',       speakers:'170M' },
+  fas: { name:'Persian',    native:'فارسی',            flag:'🇮🇷', dir:'rtl', script:'Arabic',     iso1:'fa', family:'Indo-European › Iranian',          speakers:'110M' },
+  tam: { name:'Tamil',      native:'தமிழ்',            flag:'🇮🇳', dir:'ltr', script:'Tamil',      iso1:'ta', family:'Dravidian',                        speakers:'83M'  },
+  tel: { name:'Telugu',     native:'తెలుగు',           flag:'🇮🇳', dir:'ltr', script:'Telugu',     iso1:'te', family:'Dravidian',                        speakers:'96M'  },
+  mar: { name:'Marathi',    native:'मराठी',            flag:'🇮🇳', dir:'ltr', script:'Devanagari', iso1:'mr', family:'Indo-European › Indo-Aryan',       speakers:'83M'  },
+  pan: { name:'Punjabi',    native:'ਪੰਜਾਬੀ',           flag:'🇮🇳', dir:'ltr', script:'Gurmukhi',   iso1:'pa', family:'Indo-European › Indo-Aryan',       speakers:'113M' },
+  jav: { name:'Javanese',   native:'Basa Jawa',        flag:'🇮🇩', dir:'ltr', script:'Latin',      iso1:'jv', family:'Austronesian',                     speakers:'68M'  },
+  hat: { name:'Haitian Creole', native:'Kreyòl ayisyen', flag:'🇭🇹', dir:'ltr', script:'Latin',   iso1:'ht', family:'Creole',                            speakers:'12M'  },
+  swa: { name:'Swahili',    native:'Kiswahili',        flag:'🇰🇪', dir:'ltr', script:'Latin',      iso1:'sw', family:'Niger-Congo',                      speakers:'200M' },
+  afr: { name:'Afrikaans',  native:'Afrikaans',        flag:'🇿🇦', dir:'ltr', script:'Latin',      iso1:'af', family:'Indo-European › Germanic',         speakers:'7M'   },
+  slv: { name:'Slovenian',  native:'Slovenščina',      flag:'🇸🇮', dir:'ltr', script:'Latin',      iso1:'sl', family:'Indo-European › Slavic',           speakers:'2.5M' },
+  srp: { name:'Serbian',    native:'Српски',           flag:'🇷🇸', dir:'ltr', script:'Cyrillic',   iso1:'sr', family:'Indo-European › Slavic',           speakers:'12M'  },
+  bel: { name:'Belarusian', native:'Беларуская',       flag:'🇧🇾', dir:'ltr', script:'Cyrillic',   iso1:'be', family:'Indo-European › Slavic',           speakers:'6M'   },
+  mkd: { name:'Macedonian', native:'Македонски',       flag:'🇲🇰', dir:'ltr', script:'Cyrillic',   iso1:'mk', family:'Indo-European › Slavic',           speakers:'2M'   },
+  isl: { name:'Icelandic',  native:'Íslenska',         flag:'🇮🇸', dir:'ltr', script:'Latin',      iso1:'is', family:'Indo-European › Germanic',         speakers:'0.4M' },
+  glg: { name:'Galician',   native:'Galego',           flag:'🇪🇸', dir:'ltr', script:'Latin',      iso1:'gl', family:'Indo-European › Romance',         speakers:'2.4M' },
+  eus: { name:'Basque',     native:'Euskara',          flag:'🏳️', dir:'ltr', script:'Latin',      iso1:'eu', family:'Language isolate',                 speakers:'0.75M'},
+  bre: { name:'Breton',     native:'Brezhoneg',        flag:'🏳️', dir:'ltr', script:'Latin',      iso1:'br', family:'Indo-European › Celtic',           speakers:'0.2M' },
+  cym: { name:'Welsh',      native:'Cymraeg',          flag:'🏴󠁧󠁢󠁷󠁬󠁳󠁿', dir:'ltr', script:'Latin', iso1:'cy', family:'Indo-European › Celtic',           speakers:'0.9M' },
+  gle: { name:'Irish',      native:'Gaeilge',          flag:'🇮🇪', dir:'ltr', script:'Latin',      iso1:'ga', family:'Indo-European › Celtic',           speakers:'1.8M' },
+  lat: { name:'Latin',      native:'Latina',           flag:'🇻🇦', dir:'ltr', script:'Latin',      iso1:'la', family:'Indo-European › Italic',           speakers:'0' },
+  aze: { name:'Azerbaijani',native:'Azərbaycan',       flag:'🇦🇿', dir:'ltr', script:'Latin',      iso1:'az', family:'Turkic',                           speakers:'32M'  },
+  kaz: { name:'Kazakh',     native:'Қазақ',            flag:'🇰🇿', dir:'ltr', script:'Cyrillic',   iso1:'kk', family:'Turkic',                           speakers:'18M'  },
+  uzb: { name:'Uzbek',      native:'Oʻzbek',           flag:'🇺🇿', dir:'ltr', script:'Latin',      iso1:'uz', family:'Turkic',                           speakers:'27M'  },
+  mon: { name:'Mongolian',  native:'Монгол',           flag:'🇲🇳', dir:'ltr', script:'Cyrillic',   iso1:'mn', family:'Mongolic',                         speakers:'5M'   },
+  tgl: { name:'Filipino',   native:'Filipino',         flag:'🇵🇭', dir:'ltr', script:'Latin',      iso1:'tl', family:'Austronesian',                     speakers:'45M'  },
+  mya: { name:'Burmese',    native:'မြန်မာ',           flag:'🇲🇲', dir:'ltr', script:'Burmese',    iso1:'my', family:'Sino-Tibetan',                     speakers:'38M'  },
+  khm: { name:'Khmer',      native:'ខ្មែរ',            flag:'🇰🇭', dir:'ltr', script:'Khmer',      iso1:'km', family:'Austroasiatic',                    speakers:'16M'  },
+  lao: { name:'Lao',        native:'ລາວ',              flag:'🇱🇦', dir:'ltr', script:'Lao',        iso1:'lo', family:'Tai-Kadai',                        speakers:'7M'   },
+  sin: { name:'Sinhala',    native:'සිංහල',            flag:'🇱🇰', dir:'ltr', script:'Sinhala',    iso1:'si', family:'Indo-European › Indo-Aryan',       speakers:'16M'  },
+  nep: { name:'Nepali',     native:'नेपाली',           flag:'🇳🇵', dir:'ltr', script:'Devanagari', iso1:'ne', family:'Indo-European › Indo-Aryan',       speakers:'17M'  },
+  som: { name:'Somali',     native:'Soomaali',         flag:'🇸🇴', dir:'ltr', script:'Latin',      iso1:'so', family:'Afro-Asiatic › Cushitic',          speakers:'21M'  },
+  hau: { name:'Hausa',      native:'Hausa',            flag:'🇳🇬', dir:'ltr', script:'Latin',      iso1:'ha', family:'Afro-Asiatic › Chadic',            speakers:'85M'  },
+  yor: { name:'Yoruba',     native:'Yorùbá',           flag:'🇳🇬', dir:'ltr', script:'Latin',      iso1:'yo', family:'Niger-Congo',                      speakers:'46M'  },
+  ibo: { name:'Igbo',       native:'Igbo',             flag:'🇳🇬', dir:'ltr', script:'Latin',      iso1:'ig', family:'Niger-Congo',                      speakers:'44M'  },
+  amh: { name:'Amharic',    native:'አማርኛ',            flag:'🇪🇹', dir:'ltr', script:'Ethiopic',   iso1:'am', family:'Afro-Asiatic › Semitic',           speakers:'57M'  },
+};
+
+// ── State ─────────────────────────────────────────────────────
+let debounceTimer = null;
+let currentResult = null;
+let wbMode = 'white'; // 'white' | 'black'
+let whitelist = [];
+let blacklist = [];
+let routingRules = [];
+let detectionHistory = [];
+let bulkActive = false;
+let confidenceThreshold = 0.1;
+
+// Load from localStorage
+function loadState() {
+  try {
+    whitelist       = JSON.parse(localStorage.getItem('glossa_whitelist') || '[]');
+    blacklist       = JSON.parse(localStorage.getItem('glossa_blacklist') || '[]');
+    routingRules    = JSON.parse(localStorage.getItem('glossa_rules') || '[]');
+    detectionHistory = JSON.parse(localStorage.getItem('glossa_history') || '[]');
+    confidenceThreshold = parseFloat(localStorage.getItem('glossa_threshold') || '0.1');
+  } catch {}
+}
+
+function saveState() {
+  localStorage.setItem('glossa_whitelist', JSON.stringify(whitelist));
+  localStorage.setItem('glossa_blacklist', JSON.stringify(blacklist));
+  localStorage.setItem('glossa_rules', JSON.stringify(routingRules));
+  localStorage.setItem('glossa_history', JSON.stringify(detectionHistory));
+  localStorage.setItem('glossa_threshold', String(confidenceThreshold));
+}
+
+// ── franc wrapper ─────────────────────────────────────────────
+function detect(text) {
+  if (!francAll) return [];
+  try {
+    const opts = { minLength: 10 };
+    // Whitelist / blacklist
+    if (whitelist.length > 0) opts.only = whitelist;
+    if (blacklist.length > 0) opts.ignore = blacklist;
+    const results = francAll(text, opts);
+    // filter out 'und' (undetermined)
+    return results.filter(([code]) => code !== 'und');
+  } catch (e) {
+    console.warn('franc error:', e);
+    return [];
+  }
+}
+
+// ── Detection pipeline ────────────────────────────────────────
+function runDetection(text) {
+  if (!franc) { toast('franc library not loaded — check network', 'error'); return; }
+  const results = detect(text);
+  if (!results.length) { clearResult(); return; }
+
+  // Convert scores to confidence %
+  const total = results.slice(0, 10).reduce((s, [, score]) => s + score, 0) || 1;
+  const candidates = results.slice(0, 5).map(([code, score], i) => ({
+    rank: i + 1,
+    code,
+    score,
+    confidence: total > 0 ? score / total : 0,
+    info: LANG_DB[code] || null,
+  })).filter(c => c.confidence >= confidenceThreshold);
+
+  if (!candidates.length) { clearResult(); return; }
+
+  currentResult = { candidates, text };
+  renderResult(candidates);
+  saveToHistory(text, candidates[0]);
+  saveState();
+}
+
+// ── Render ────────────────────────────────────────────────────
+function renderResult(candidates) {
+  const top = candidates[0];
+  const info = top.info;
+  const pct = Math.round(top.confidence * 100);
+
+  // Hero
+  const hero = document.getElementById('resultHero');
+  hero.className = 'result-hero detected';
+  const confClass = pct >= 60 ? 'badge-conf-high' : pct >= 30 ? 'badge-conf-med' : 'badge-conf-low';
+  const confLabel = pct >= 60 ? 'High confidence' : pct >= 30 ? 'Medium' : 'Low';
+  hero.innerHTML = `
+    <div class="result-flag">${info ? info.flag : '🌐'}</div>
+    <div class="result-lang-name">${info ? info.name : top.code}</div>
+    <div class="result-native">${info ? info.native : ''}</div>
+    <div class="result-badges">
+      <span class="badge ${confClass}">${pct}% — ${confLabel}</span>
+      ${info ? `<span class="badge badge-dir">${info.dir === 'rtl' ? 'RTL' : 'LTR'}</span>` : ''}
+    </div>
+  `;
+
+  // Script info
+  if (info) {
+    document.getElementById('scriptInfoBlock').style.display = 'block';
+    document.getElementById('scriptInfoRow').innerHTML = `
+      <div class="script-stat"><span class="script-stat-label">Writing system</span><span class="script-stat-value">${info.script}</span></div>
+      <div class="script-stat"><span class="script-stat-label">Direction</span><span class="script-stat-value">${info.dir === 'rtl' ? 'Right-to-Left' : 'Left-to-Right'}</span></div>
+      <div class="script-stat"><span class="script-stat-label">Native name</span><span class="script-stat-value">${info.native}</span></div>
+    `;
+  } else {
+    document.getElementById('scriptInfoBlock').style.display = 'none';
+  }
+
+  // Routing
+  const matchedRule = routingRules.find(r => r.code.toLowerCase() === top.code.toLowerCase());
+  const routingCard = document.getElementById('routingCard');
+  if (matchedRule) {
+    routingCard.classList.add('active');
+    document.getElementById('routingTeam').textContent = `→ Route to: ${matchedRule.team}`;
+  } else {
+    routingCard.classList.remove('active');
+  }
+
+  // Language info card
+  if (info) {
+    const card = document.getElementById('langInfoCard');
+    card.classList.add('active');
+    document.getElementById('langInfoGrid').innerHTML = `
+      <div class="lang-info-stat"><span class="lang-info-label">Family</span><span class="lang-info-value">${info.family}</span></div>
+      <div class="lang-info-stat"><span class="lang-info-label">Speakers</span><span class="lang-info-value">${info.speakers}</span></div>
+      <div class="lang-info-stat"><span class="lang-info-label">ISO 639-1</span><span class="lang-info-value">${info.iso1 || '—'}</span></div>
+      <div class="lang-info-stat"><span class="lang-info-label">ISO 639-3</span><span class="lang-info-value">${top.code}</span></div>
+      <div class="lang-info-stat"><span class="lang-info-label">Script</span><span class="lang-info-value">${info.script}</span></div>
+      <div class="lang-info-stat"><span class="lang-info-label">Direction</span><span class="lang-info-value">${info.dir.toUpperCase()}</span></div>
+    `;
+  } else {
+    document.getElementById('langInfoCard').classList.remove('active');
+  }
+
+  // Copy button
+  document.getElementById('btnCopyResult').style.display = 'inline-flex';
+
+  // Candidates
+  renderCandidates(candidates);
+}
+
+function clearResult() {
+  const hero = document.getElementById('resultHero');
+  hero.className = 'result-hero';
+  hero.innerHTML = '<p class="result-empty-msg">Start typing above — detection runs automatically after 300ms.</p>';
+  document.getElementById('scriptInfoBlock').style.display = 'none';
+  document.getElementById('routingCard').classList.remove('active');
+  document.getElementById('langInfoCard').classList.remove('active');
+  document.getElementById('btnCopyResult').style.display = 'none';
+  document.getElementById('candidatesList').innerHTML =
+    '<div style="font-size:var(--text-xs); color:var(--color-ink-muted); padding:var(--space-4) 0; text-align:center;">Detection results will appear here.</div>';
+  currentResult = null;
+}
+
+function renderCandidates(candidates) {
+  const el = document.getElementById('candidatesList');
+  el.innerHTML = '';
+  candidates.forEach((c, i) => {
+    const pct = Math.round(c.confidence * 100);
+    const barClass = `r${Math.min(i + 1, 5)}`;
+    const row = document.createElement('div');
+    row.className = 'candidate-row';
+    row.style.animationDelay = `${i * 0.05}s`;
+    row.innerHTML = `
+      <div class="candidate-rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
+      <span class="candidate-flag">${c.info ? c.info.flag : '🌐'}</span>
+      <div class="candidate-name">
+        <div class="candidate-lang">${c.info ? c.info.name : c.code}</div>
+        <div class="candidate-iso">${c.code}${c.info && c.info.iso1 ? ' · ' + c.info.iso1 : ''}</div>
+      </div>
+      <div class="candidate-bar-wrap">
+        <div class="candidate-bar ${barClass}" style="width:0" data-w="${pct}%"></div>
+      </div>
+      <div class="candidate-pct">${pct}%</div>
+    `;
+    el.appendChild(row);
+  });
+  // Animate bars after paint
+  requestAnimationFrame(() => {
+    el.querySelectorAll('.candidate-bar').forEach(bar => {
+      bar.style.width = bar.dataset.w;
+    });
+  });
+}
+
+// ── History ───────────────────────────────────────────────────
+function saveToHistory(text, top) {
+  const entry = {
+    flag: top.info ? top.info.flag : '🌐',
+    name: top.info ? top.info.name : top.code,
+    snippet: text.trim().slice(0, 50).replace(/\n/g, ' '),
+    confidence: Math.round(top.confidence * 100),
+    ts: Date.now(),
+  };
+  detectionHistory.unshift(entry);
+  if (detectionHistory.length > 10) detectionHistory = detectionHistory.slice(0, 10);
+  renderHistory();
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (!detectionHistory.length) {
+    el.innerHTML = '<div class="history-empty">No detections yet.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  detectionHistory.forEach(h => {
+    const ts = new Date(h.ts);
+    const timeStr = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.role = 'listitem';
+    item.tabIndex = 0;
+    item.setAttribute('aria-label', `${h.name}, ${h.confidence}% confidence`);
+    item.innerHTML = `
+      <span class="history-flag">${h.flag}</span>
+      <span class="history-lang">${h.name}</span>
+      <span class="history-snippet">${esc(h.snippet)}</span>
+      <span class="history-ts">${timeStr}</span>
+    `;
+    item.addEventListener('click', () => {
+      document.getElementById('textInput').value = h.snippet;
+      updateCharCount(h.snippet);
+      runDetection(h.snippet);
+    });
+    item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') item.click(); });
+    el.appendChild(item);
+  });
+}
+
+// ── Whitelist / Blacklist ─────────────────────────────────────
+function renderWBChips() {
+  const el = document.getElementById('wbChips');
+  el.innerHTML = '';
+  const list = wbMode === 'white' ? whitelist : blacklist;
+  list.forEach(code => {
+    const chip = document.createElement('span');
+    chip.className = `wb-chip ${wbMode}`;
+    chip.role = 'listitem';
+    const info = LANG_DB[code];
+    chip.innerHTML = `${info ? info.flag + ' ' : ''}${code.toUpperCase()} <button class="wb-chip-remove" aria-label="Remove ${code}" data-code="${code}">×</button>`;
+    el.appendChild(chip);
+  });
+  el.querySelectorAll('.wb-chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const code = btn.dataset.code;
+      if (wbMode === 'white') whitelist = whitelist.filter(c => c !== code);
+      else blacklist = blacklist.filter(c => c !== code);
+      saveState();
+      renderWBChips();
+    });
+  });
+}
+
+document.getElementById('tab-white').addEventListener('click', () => {
+  wbMode = 'white';
+  document.getElementById('tab-white').classList.add('active');
+  document.getElementById('tab-black').classList.remove('active');
+  document.getElementById('tab-white').setAttribute('aria-selected', 'true');
+  document.getElementById('tab-black').setAttribute('aria-selected', 'false');
+  renderWBChips();
+});
+
+document.getElementById('tab-black').addEventListener('click', () => {
+  wbMode = 'black';
+  document.getElementById('tab-black').classList.add('active');
+  document.getElementById('tab-white').classList.remove('active');
+  document.getElementById('tab-black').setAttribute('aria-selected', 'true');
+  document.getElementById('tab-white').setAttribute('aria-selected', 'false');
+  renderWBChips();
+});
+
+document.getElementById('wbAddBtn').addEventListener('click', () => {
+  const code = document.getElementById('wbInput').value.trim().toLowerCase().slice(0, 3);
+  if (!code || code.length < 2) return;
+  if (wbMode === 'white' && !whitelist.includes(code)) { whitelist.push(code); }
+  if (wbMode === 'black' && !blacklist.includes(code)) { blacklist.push(code); }
+  document.getElementById('wbInput').value = '';
+  saveState();
+  renderWBChips();
+});
+
+document.getElementById('wbInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('wbAddBtn').click();
+});
+
+// ── Routing rules ─────────────────────────────────────────────
+function renderRuleChips() {
+  const el = document.getElementById('ruleChips');
+  el.innerHTML = '';
+  routingRules.forEach((r, i) => {
+    const info = LANG_DB[r.code];
+    const chip = document.createElement('div');
+    chip.className = 'rule-chip';
+    chip.role = 'listitem';
+    chip.innerHTML = `
+      <span class="rule-chip-code">${info ? info.flag + ' ' : ''}${r.code}</span>
+      <span class="rule-chip-arrow">→</span>
+      <span class="rule-chip-team">${esc(r.team)}</span>
+      <button class="rule-chip-remove" aria-label="Remove rule for ${r.code}" data-i="${i}">×</button>
+    `;
+    el.appendChild(chip);
+  });
+  el.querySelectorAll('.rule-chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      routingRules.splice(Number(btn.dataset.i), 1);
+      saveState();
+      renderRuleChips();
+    });
+  });
+}
+
+document.getElementById('addRuleBtn').addEventListener('click', () => {
+  const code = document.getElementById('ruleCode').value.trim().toLowerCase().slice(0, 3);
+  const team = document.getElementById('ruleTeam').value.trim();
+  if (!code || !team) { toast('Enter a language code and team name', 'error'); return; }
+  if (!routingRules.find(r => r.code === code)) {
+    routingRules.push({ code, team });
+  }
+  document.getElementById('ruleCode').value = '';
+  document.getElementById('ruleTeam').value = '';
+  saveState();
+  renderRuleChips();
+  toast(`Rule added: ${code.toUpperCase()} → ${team}`, 'success');
+});
+
+document.getElementById('ruleTeam').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addRuleBtn').click();
+});
+
+// ── Threshold slider ──────────────────────────────────────────
+const slider = document.getElementById('thresholdSlider');
+slider.value = String(confidenceThreshold);
+document.getElementById('thresholdVal').textContent = Math.round(confidenceThreshold * 100) + '%';
+
+slider.addEventListener('input', () => {
+  confidenceThreshold = parseFloat(slider.value);
+  document.getElementById('thresholdVal').textContent = Math.round(confidenceThreshold * 100) + '%';
+  saveState();
+  const text = document.getElementById('textInput').value;
+  if (text.trim().length >= 10) runDetection(text);
+});
+
+// ── Text input ────────────────────────────────────────────────
+function updateCharCount(text) {
+  const el = document.getElementById('charCount');
+  el.textContent = text.length + ' chars';
+  el.className = 'char-count' + (text.length > 0 && text.length < 10 ? ' warn' : '');
+
+  const note = document.getElementById('minLenNote');
+  note.className = 'min-len-note' + (text.length > 0 && text.length < 10 ? ' warn' : '');
+  note.textContent = text.length > 0 && text.length < 10
+    ? `⚠ Only ${text.length} chars — franc needs ≥ 10 for accuracy.`
+    : 'franc needs ≥ 10 characters for accurate detection. Longer texts yield better results.';
+}
+
+document.getElementById('textInput').addEventListener('input', e => {
+  const text = e.target.value;
+  updateCharCount(text);
+  clearTimeout(debounceTimer);
+  if (text.trim().length >= 10) {
+    debounceTimer = setTimeout(() => runDetection(text), 300);
+  } else if (!text.trim()) {
+    clearResult();
+  }
+});
+
+// ── Copy result ───────────────────────────────────────────────
+document.getElementById('btnCopyResult').addEventListener('click', () => {
+  if (!currentResult) return;
+  const top = currentResult.candidates[0];
+  const info = top.info;
+  const pct = Math.round(top.confidence * 100);
+  const text = [
+    info ? info.name : top.code,
+    `ISO 639-3: ${top.code}`,
+    info ? `ISO 639-1: ${info.iso1}` : '',
+    `Confidence: ${pct}%`,
+  ].filter(Boolean).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    toast('Result copied to clipboard', 'success');
+  }).catch(() => {
+    toast('Copy failed — try manually', 'error');
+  });
+});
+
+// ── Bulk detection ────────────────────────────────────────────
+document.getElementById('bulkToggle').addEventListener('click', () => {
+  bulkActive = !bulkActive;
+  const btn = document.getElementById('bulkToggle');
+  const panel = document.getElementById('bulkPanel');
+  btn.classList.toggle('active', bulkActive);
+  btn.setAttribute('aria-pressed', String(bulkActive));
+  panel.style.display = bulkActive ? 'flex' : 'none';
+  document.getElementById('bulkTableWrap').classList.remove('active');
+});
+
+document.getElementById('bulkRunBtn').addEventListener('click', () => {
+  const raw = document.getElementById('bulkInput').value;
+  const blocks = raw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  if (!blocks.length) { toast('Enter at least one text block', 'error'); return; }
+
+  const tbody = document.getElementById('bulkTableBody');
+  tbody.innerHTML = '';
+  blocks.forEach((block, i) => {
+    const results = detect(block);
+    const top = results[0];
+    const code = top ? top[0] : 'und';
+    const score = top ? top[1] : 0;
+    const info = LANG_DB[code];
+    const total = results.slice(0, 5).reduce((s, [, sc]) => s + sc, 0) || 1;
+    const pct = top ? Math.round((score / total) * 100) : 0;
+    const snippet = block.slice(0, 60) + (block.length > 60 ? '…' : '');
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td class="bt-snippet">${esc(snippet)}</td>
+      <td class="bt-lang">${info ? info.flag + ' ' + info.name : (code === 'und' ? '—' : code)}</td>
+      <td><code>${code}</code></td>
+      <td class="bt-conf">${code !== 'und' ? pct + '%' : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('bulkTableWrap').classList.add('active');
+  toast(`Detected ${blocks.length} text${blocks.length > 1 ? 's' : ''}`, 'success');
+});
+
+// ── Utilities ─────────────────────────────────────────────────
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+loadState();
+slider.value = String(confidenceThreshold);
+document.getElementById('thresholdVal').textContent = Math.round(confidenceThreshold * 100) + '%';
+renderWBChips();
+renderRuleChips();
+renderHistory();
+</script>
+</body>
+</html>

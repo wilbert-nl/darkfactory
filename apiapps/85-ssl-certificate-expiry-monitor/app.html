@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CertWatch — SSL Certificate Expiry Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sidebar-section {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4);
+}
+
+.sidebar-section:last-child { border-bottom: none; }
+
+.sidebar-section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* Quick stats in sidebar */
+.quick-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.qs-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qs-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.qs-value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.qs-value.green { color: var(--color-success); }
+.qs-value.amber { color: var(--color-warn); }
+.qs-value.red   { color: var(--color-danger); }
+
+/* Form fields */
+.field-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.input-field {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  margin-bottom: var(--space-3);
+}
+.input-field:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.input-field::placeholder { color: var(--color-ink-muted); }
+.input-field[type="date"] { cursor: pointer; }
+
+textarea.input-field {
+  resize: vertical;
+  min-height: 60px;
+  font-size: var(--text-xs);
+}
+
+/* Thresholds */
+.threshold-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.threshold-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper);
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  user-select: none;
+}
+.threshold-chip input { display: none; }
+.threshold-chip.checked {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-line);
+  color: var(--color-accent);
+}
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28);
+}
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  white-space: nowrap;
+}
+.btn-ghost:hover {
+  color: var(--color-ink);
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+
+.btn-row {
+  display: flex;
+  gap: var(--space-2);
+}
+.btn-row .btn-ghost { flex: 1; }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Status cards */
+.status-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.status-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.status-card.red   { border-left: 3px solid var(--color-danger); }
+.status-card.amber { border-left: 3px solid var(--color-warn); }
+.status-card.green { border-left: 3px solid var(--color-success); }
+
+.sc-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.sc-value {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.sc-value.red   { color: var(--color-danger); }
+.sc-value.amber { color: var(--color-warn); }
+.sc-value.green { color: var(--color-success); }
+
+.sc-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* Section header */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Cert table */
+.cert-table-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cert-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.cert-table th {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.cert-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  color: var(--color-ink);
+}
+
+.cert-table tbody tr:last-child td { border-bottom: none; }
+
+.cert-table tbody tr {
+  transition: background 0.1s ease;
+  animation: row-in 0.18s ease;
+}
+.cert-table tbody tr:hover { background: oklch(95% 0.010 95); }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.domain-cell {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+}
+
+.client-cell {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.days-cell {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.days-cell.red   { color: var(--color-danger); }
+.days-cell.amber { color: var(--color-warn); }
+.days-cell.orange { color: oklch(62% 0.18 50); }
+.days-cell.green { color: var(--color-success); }
+
+/* Status badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge-expired { background: oklch(55% 0.20 25 / 0.12); color: var(--color-danger); border: 1px solid oklch(55% 0.20 25 / 0.25); }
+.badge-critical { background: oklch(55% 0.20 25 / 0.10); color: var(--color-danger); border: 1px solid oklch(55% 0.20 25 / 0.2); }
+.badge-warning { background: oklch(62% 0.18 50 / 0.10); color: oklch(62% 0.18 50); border: 1px solid oklch(62% 0.18 50 / 0.2); }
+.badge-notice  { background: oklch(62% 0.15 72 / 0.10); color: var(--color-warn); border: 1px solid oklch(62% 0.15 72 / 0.2); }
+.badge-healthy { background: oklch(55% 0.14 155 / 0.10); color: var(--color-success); border: 1px solid oklch(55% 0.14 155 / 0.2); }
+
+/* Grade badge */
+.grade-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border: 1px solid;
+}
+.grade-Aplus { background: oklch(55% 0.14 155 / 0.12); color: var(--color-success); border-color: oklch(55% 0.14 155 / 0.25); }
+.grade-A     { background: oklch(55% 0.14 155 / 0.08); color: var(--color-success); border-color: oklch(55% 0.14 155 / 0.18); }
+.grade-B     { background: oklch(62% 0.15 72 / 0.10); color: var(--color-warn); border-color: oklch(62% 0.15 72 / 0.20); }
+.grade-C     { background: oklch(62% 0.18 50 / 0.10); color: oklch(62% 0.18 50); border-color: oklch(62% 0.18 50 / 0.20); }
+.grade-F     { background: oklch(55% 0.20 25 / 0.10); color: var(--color-danger); border-color: oklch(55% 0.20 25 / 0.20); }
+.grade-none  { background: var(--color-paper-2); color: var(--color-ink-muted); border-color: var(--color-border); }
+
+/* Row action buttons */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.btn-row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.btn-row-action:hover {
+  color: var(--color-ink);
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+.btn-row-action:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-row-action.danger:hover {
+  color: var(--color-danger);
+  border-color: oklch(55% 0.20 25 / 0.35);
+  background: oklch(55% 0.20 25 / 0.06);
+}
+
+.spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Table empty state */
+.table-empty {
+  padding: var(--space-16) var(--space-8);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.table-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.table-empty-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  max-width: 280px;
+  line-height: 1.65;
+}
+
+/* ── Timeline ── */
+.timeline-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-paper-2);
+}
+
+.timeline-head {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+}
+
+.timeline-svg-wrap {
+  padding: var(--space-4);
+  overflow-x: auto;
+}
+
+#timeline-svg {
+  display: block;
+  min-width: 100%;
+}
+
+/* ── Report textarea ── */
+.report-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.report-textarea {
+  width: 100%;
+  min-height: 180px;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  resize: vertical;
+  line-height: 1.6;
+}
+.report-textarea:focus { outline: none; border-color: var(--color-accent); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  max-width: 340px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error   { background: var(--color-danger); }
+.toast.warn    { background: var(--color-warn); color: var(--color-ink); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+  }
+  .sidebar-scroll { overflow: visible; }
+
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+
+  .status-cards { grid-template-columns: 1fr; }
+
+  .cert-table-wrap { overflow-x: auto; }
+  .cert-table { min-width: 700px; }
+
+  .nav-page-label { display: none; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .cert-table tbody tr { animation: none; }
+  .btn-primary:hover { transform: none; box-shadow: none; }
+  .toast { transition: opacity 0.1s ease; transform: translateY(0); }
+  .spinner { animation: none; border-top-color: var(--color-accent); }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">CertWatch<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">SSL Certificate Expiry Monitor</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Controls and settings">
+    <div class="sidebar-scroll">
+
+      <!-- Quick stats -->
+      <div class="sidebar-section">
+        <p class="sidebar-section-label">Quick Stats</p>
+        <div class="quick-stats">
+          <div class="qs-card">
+            <span class="qs-label">Total</span>
+            <span class="qs-value" id="qs-total">0</span>
+          </div>
+          <div class="qs-card">
+            <span class="qs-label">Healthy</span>
+            <span class="qs-value green" id="qs-healthy">0</span>
+          </div>
+          <div class="qs-card">
+            <span class="qs-label">≤30 days</span>
+            <span class="qs-value amber" id="qs-soon">0</span>
+          </div>
+          <div class="qs-card">
+            <span class="qs-label">Expired</span>
+            <span class="qs-value red" id="qs-expired">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add cert form -->
+      <div class="sidebar-section">
+        <p class="sidebar-section-label">Add Certificate</p>
+        <form id="add-cert-form" novalidate>
+          <label class="field-label" for="f-domain">Domain</label>
+          <input class="input-field" type="text" id="f-domain" placeholder="client-site.com" autocomplete="off" spellcheck="false" required>
+
+          <label class="field-label" for="f-client">Client Name</label>
+          <input class="input-field" type="text" id="f-client" placeholder="Acme Corp" autocomplete="off">
+
+          <label class="field-label" for="f-expiry">Expiry Date</label>
+          <input class="input-field" type="date" id="f-expiry" required>
+
+          <label class="field-label" for="f-notes">Notes</label>
+          <textarea class="input-field" id="f-notes" placeholder="Optional — renewal contact, ticket #…"></textarea>
+
+          <button type="submit" class="btn-primary">Add Certificate</button>
+        </form>
+      </div>
+
+      <!-- Alert thresholds -->
+      <div class="sidebar-section">
+        <p class="sidebar-section-label">Alert Thresholds</p>
+        <p style="font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:var(--space-2);">Highlight certificates expiring within:</p>
+        <div class="threshold-row">
+          <label class="threshold-chip" id="chip-7">
+            <input type="checkbox" value="7" onchange="saveThresholds()"> 7 days
+          </label>
+          <label class="threshold-chip" id="chip-14">
+            <input type="checkbox" value="14" onchange="saveThresholds()"> 14 days
+          </label>
+          <label class="threshold-chip" id="chip-30">
+            <input type="checkbox" value="30" onchange="saveThresholds()"> 30 days
+          </label>
+          <label class="threshold-chip" id="chip-60">
+            <input type="checkbox" value="60" onchange="saveThresholds()"> 60 days
+          </label>
+        </div>
+      </div>
+
+      <!-- Agency name -->
+      <div class="sidebar-section">
+        <p class="sidebar-section-label">Agency Settings</p>
+        <label class="field-label" for="f-agency">Agency Name</label>
+        <input class="input-field" type="text" id="f-agency" placeholder="Your Agency Name" autocomplete="off">
+        <button class="btn-ghost" style="width:100%" onclick="saveAgency()">Save Agency Name</button>
+      </div>
+
+      <!-- Import / Export -->
+      <div class="sidebar-section">
+        <p class="sidebar-section-label">Import / Export</p>
+        <div class="btn-row">
+          <button class="btn-ghost" id="btn-import-csv">Import CSV</button>
+          <button class="btn-ghost" id="btn-export-csv">Export CSV</button>
+        </div>
+        <p style="font-size:10px;color:var(--color-ink-muted);margin-top:var(--space-2);">CSV columns: domain, client, expiry (YYYY-MM-DD)</p>
+        <input type="file" id="csv-file-input" accept=".csv,text/csv" style="display:none">
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ── Main Panel ── -->
+  <main class="main" aria-label="Certificate dashboard">
+    <div class="main-scroll">
+
+      <!-- Status overview cards -->
+      <div class="status-cards" role="region" aria-label="Status overview" aria-live="polite">
+        <div class="status-card red">
+          <span class="sc-label">Expired</span>
+          <span class="sc-value red" id="sc-expired">0</span>
+          <span class="sc-sub">certificates past due</span>
+        </div>
+        <div class="status-card amber">
+          <span class="sc-label">Expiring Soon</span>
+          <span class="sc-value amber" id="sc-soon">0</span>
+          <span class="sc-sub">within 30 days</span>
+        </div>
+        <div class="status-card green">
+          <span class="sc-label">Healthy</span>
+          <span class="sc-value green" id="sc-healthy">0</span>
+          <span class="sc-sub">more than 30 days remaining</span>
+        </div>
+      </div>
+
+      <!-- Certificate table -->
+      <div>
+        <div class="section-head" style="margin-bottom:var(--space-3)">
+          <h2 class="section-title">Certificates</h2>
+          <div class="section-actions">
+            <button class="btn-ghost" id="btn-check-all">Check All Grades</button>
+            <button class="btn-ghost" id="btn-export-report">Export Report</button>
+          </div>
+        </div>
+
+        <div class="cert-table-wrap">
+          <table class="cert-table" aria-label="Certificate list">
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>Client</th>
+                <th>Expiry Date</th>
+                <th>Days Remaining</th>
+                <th>SSL Grade</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cert-tbody">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+          <div id="cert-empty" class="table-empty" style="display:none">
+            <p class="table-empty-title">No certificates yet</p>
+            <p class="table-empty-sub">Add your first domain using the form on the left to start monitoring SSL expiry dates.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expiry Timeline -->
+      <div>
+        <div class="section-head" style="margin-bottom:var(--space-3)">
+          <h2 class="section-title">Expiry Timeline</h2>
+        </div>
+        <div class="timeline-wrap">
+          <div class="timeline-head">
+            <p style="font-size:var(--text-xs);color:var(--color-ink-muted)">Horizontal bars show time from today to certificate expiry, sorted by urgency. Red = expired/critical, amber = expiring, green = healthy.</p>
+          </div>
+          <div class="timeline-svg-wrap">
+            <svg id="timeline-svg" height="20" aria-label="Certificate expiry timeline">
+              <!-- populated by JS -->
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report Generator -->
+      <div>
+        <div class="section-head" style="margin-bottom:var(--space-3)">
+          <h2 class="section-title">Report Generator</h2>
+          <div class="section-actions">
+            <button class="btn-ghost" id="btn-gen-report">Generate Client Report</button>
+            <button class="btn-ghost" id="btn-copy-report">Copy to Clipboard</button>
+          </div>
+        </div>
+        <div class="report-wrap">
+          <p style="font-size:var(--text-xs);color:var(--color-ink-muted)">Generates a client-facing email draft for all certificates expiring within 30 days.</p>
+          <textarea class="report-textarea" id="report-output" readonly placeholder="Click 'Generate Client Report' to build an email draft for certificates expiring soon…"></textarea>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+// ── Helpers ───────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function daysUntil(dateStr) {
+  const exp = new Date(dateStr);
+  exp.setHours(0, 0, 0, 0);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((exp - now) / 864e5);
+}
+
+function fmtDate(str) {
+  if (!str) return '—';
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function statusOf(days) {
+  if (days < 0) return 'expired';
+  if (days <= 7) return 'critical';
+  if (days <= 30) return 'warning';
+  if (days <= 60) return 'notice';
+  return 'healthy';
+}
+
+function daysColor(days) {
+  if (days < 0) return 'red';
+  if (days <= 7) return 'red';
+  if (days <= 30) return 'amber';
+  if (days <= 60) return 'orange';
+  return 'green';
+}
+
+function gradeClass(g) {
+  const map = { 'A+': 'grade-Aplus', 'A': 'grade-A', 'B': 'grade-B', 'C': 'grade-C', 'F': 'grade-F' };
+  return map[g] || 'grade-none';
+}
+
+function badgeClass(status) {
+  return { expired: 'badge-expired', critical: 'badge-critical', warning: 'badge-warning', notice: 'badge-notice', healthy: 'badge-healthy' }[status] || 'badge-healthy';
+}
+
+function badgeLabel(status) {
+  return { expired: 'Expired', critical: 'Critical', warning: 'Warning', notice: 'Notice', healthy: 'Healthy' }[status] || status;
+}
+
+// ── Storage ───────────────────────────────────────────────
+const STORAGE_KEY = 'certwatch_v1';
+const SETTINGS_KEY = 'certwatch_settings_v1';
+
+function loadCerts() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveCerts() { localStorage.setItem(STORAGE_KEY, JSON.stringify(certs)); }
+
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+
+// ── State ─────────────────────────────────────────────────
+let certs = loadCerts();
+let settings = loadSettings();
+
+// Seed sample data
+if (certs.length === 0) {
+  const addDays = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d.toISOString().split('T')[0];
+  };
+  certs = [
+    { id: uid(), domain: 'acmecorp.com', client: 'Acme Corp', expiry: addDays(4), notes: 'Auto-renewal failed — manual action needed', grade: null, addedAt: Date.now() },
+    { id: uid(), domain: 'shop.acmecorp.com', client: 'Acme Corp', expiry: addDays(19), notes: '', grade: 'A', addedAt: Date.now() },
+    { id: uid(), domain: 'beta.startupxyz.io', client: 'StartupXYZ', expiry: addDays(47), notes: '', grade: 'B', addedAt: Date.now() },
+    { id: uid(), domain: 'portal.designco.nl', client: 'DesignCo', expiry: addDays(92), notes: 'Wildcard cert', grade: 'A+', addedAt: Date.now() },
+    { id: uid(), domain: 'legacy.oldsite.com', client: 'Old Client', expiry: addDays(-5), notes: 'Site being decommissioned', grade: 'C', addedAt: Date.now() },
+  ];
+  saveCerts();
+}
+
+// ── Init thresholds ───────────────────────────────────────
+const defaultThresholds = settings.thresholds || [7, 30];
+const chips = document.querySelectorAll('.threshold-chip input');
+chips.forEach(cb => {
+  if (defaultThresholds.includes(Number(cb.value))) {
+    cb.checked = true;
+    cb.closest('.threshold-chip').classList.add('checked');
+  }
+  cb.addEventListener('change', () => {
+    cb.closest('.threshold-chip').classList.toggle('checked', cb.checked);
+  });
+});
+
+function saveThresholds() {
+  const vals = [...chips].filter(c => c.checked).map(c => Number(c.value));
+  settings.thresholds = vals;
+  saveSettings(settings);
+  renderAll();
+}
+
+// ── Agency name ───────────────────────────────────────────
+const agencyInput = document.getElementById('f-agency');
+agencyInput.value = settings.agency || '';
+
+function saveAgency() {
+  settings.agency = agencyInput.value.trim();
+  saveSettings(settings);
+  toast('Agency name saved', 'success');
+}
+
+// ── Add cert form ─────────────────────────────────────────
+document.getElementById('add-cert-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const domain = document.getElementById('f-domain').value.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+  const client = document.getElementById('f-client').value.trim();
+  const expiry = document.getElementById('f-expiry').value;
+  const notes  = document.getElementById('f-notes').value.trim();
+
+  if (!domain || !expiry) { toast('Domain and expiry date are required', 'error'); return; }
+
+  certs.push({ id: uid(), domain, client, expiry, notes, grade: null, addedAt: Date.now() });
+  saveCerts();
+  renderAll();
+  e.target.reset();
+  toast(`${domain} added`, 'success');
+});
+
+// ── Stats ─────────────────────────────────────────────────
+function updateStats() {
+  const all = certs.map(c => ({ ...c, days: daysUntil(c.expiry), status: statusOf(daysUntil(c.expiry)) }));
+  const expired = all.filter(c => c.status === 'expired').length;
+  const soon = all.filter(c => c.days >= 0 && c.days <= 30).length;
+  const healthy = all.filter(c => c.days > 30).length;
+
+  document.getElementById('qs-total').textContent = certs.length;
+  document.getElementById('qs-healthy').textContent = healthy;
+  document.getElementById('qs-soon').textContent = soon;
+  document.getElementById('qs-expired').textContent = expired;
+
+  document.getElementById('sc-expired').textContent = expired;
+  document.getElementById('sc-soon').textContent = soon;
+  document.getElementById('sc-healthy').textContent = healthy;
+}
+
+// ── Certificate table ─────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('cert-tbody');
+  const empty = document.getElementById('cert-empty');
+  const thresholds = settings.thresholds || [];
+
+  if (certs.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const sorted = [...certs].map(c => ({
+    ...c,
+    days: daysUntil(c.expiry),
+    status: statusOf(daysUntil(c.expiry))
+  })).sort((a, b) => a.days - b.days);
+
+  tbody.innerHTML = sorted.map(c => {
+    const gradeHtml = c.grade
+      ? `<span class="grade-badge ${gradeClass(c.grade)}">${esc(c.grade)}</span>`
+      : `<span class="grade-badge grade-none">—</span>`;
+
+    const daysLabel = c.days < 0
+      ? `Expired ${Math.abs(c.days)}d ago`
+      : c.days === 0 ? 'Today!'
+      : `${c.days}d`;
+
+    const isThresholdHit = thresholds.some(t => c.days >= 0 && c.days <= t);
+    const rowStyle = isThresholdHit && c.status !== 'healthy' ? 'background:oklch(62% 0.15 72 / 0.04)' : '';
+
+    return `<tr style="${rowStyle}">
+      <td class="domain-cell">${esc(c.domain)}</td>
+      <td class="client-cell">${esc(c.client || '—')}</td>
+      <td style="font-size:var(--text-sm);white-space:nowrap">${esc(fmtDate(c.expiry))}</td>
+      <td class="days-cell ${daysColor(c.days)}">${esc(daysLabel)}</td>
+      <td id="grade-cell-${c.id}">${gradeHtml}</td>
+      <td><span class="status-badge ${badgeClass(c.status)}">${esc(badgeLabel(c.status))}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-row-action" id="check-btn-${c.id}" onclick="checkGrade('${c.id}')" title="Check SSL grade via SSL Labs">Check Grade</button>
+          <button class="btn-row-action" onclick="copyRenewalReminder('${c.id}')" title="Copy renewal reminder email">Remind</button>
+          <button class="btn-row-action danger" onclick="deleteCert('${c.id}')" title="Remove certificate">×</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Timeline SVG ──────────────────────────────────────────
+function renderTimeline() {
+  const svg = document.getElementById('timeline-svg');
+  if (certs.length === 0) {
+    svg.innerHTML = '<text x="16" y="20" font-family="system-ui" font-size="12" fill="oklch(46% 0.03 155)">No certificates to display.</text>';
+    svg.setAttribute('height', '30');
+    return;
+  }
+
+  const sorted = [...certs].map(c => ({
+    ...c,
+    days: daysUntil(c.expiry),
+    status: statusOf(daysUntil(c.expiry))
+  })).sort((a, b) => a.days - b.days);
+
+  const BAR_H = 20;
+  const ROW_H = 32;
+  const LABEL_W = 180;
+  const PAD = 16;
+  const maxDays = Math.max(180, ...sorted.map(c => Math.max(0, c.days)));
+  const svgW = Math.max(500, LABEL_W + 300);
+  const TRACK_W = svgW - LABEL_W - PAD * 2;
+  const totalH = sorted.length * ROW_H + PAD * 2;
+
+  const colorFor = (status) => ({
+    expired: 'oklch(55% 0.20 25)',
+    critical: 'oklch(55% 0.20 25)',
+    warning: 'oklch(62% 0.18 50)',
+    notice: 'oklch(62% 0.15 72)',
+    healthy: 'oklch(52% 0.14 155)'
+  })[status] || 'oklch(52% 0.14 155)';
+
+  let rows = '';
+  sorted.forEach((c, i) => {
+    const y = PAD + i * ROW_H;
+    const barW = c.days <= 0 ? 4 : Math.max(4, (c.days / maxDays) * TRACK_W);
+    const barColor = colorFor(c.status);
+    const label = (c.domain.length > 22 ? c.domain.slice(0, 21) + '…' : c.domain);
+    rows += `
+      <text x="${PAD}" y="${y + BAR_H - 5}" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="11" fill="oklch(46% 0.03 155)" aria-hidden="true">${esc(label)}</text>
+      <rect x="${LABEL_W}" y="${y}" width="${TRACK_W}" height="${BAR_H}" rx="3" fill="oklch(93% 0.012 95)" />
+      <rect x="${LABEL_W}" y="${y}" width="${barW}" height="${BAR_H}" rx="3" fill="${barColor}" opacity="0.75"/>
+      <title>${esc(c.domain)} — ${c.days < 0 ? 'Expired ' + Math.abs(c.days) + 'd ago' : c.days + 'd remaining'}</title>`;
+  });
+
+  svg.setAttribute('width', svgW);
+  svg.setAttribute('height', totalH);
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${totalH}`);
+  svg.innerHTML = rows;
+}
+
+// ── SSL Labs grade check ──────────────────────────────────
+async function checkGrade(id) {
+  const cert = certs.find(c => c.id === id);
+  if (!cert) return;
+
+  const btn = document.getElementById(`check-btn-${id}`);
+  const cell = document.getElementById(`grade-cell-${id}`);
+  if (!btn || !cell) return;
+
+  btn.disabled = true;
+  cell.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;font-size:var(--text-xs);color:var(--color-ink-muted)"><span class="spinner"></span> Checking…</span>`;
+
+  try {
+    const url = `https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(cert.domain)}&publish=off&startNew=off&fromCache=on&maxAge=24`;
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      cell.innerHTML = `<span class="grade-badge grade-none">Error</span>`;
+      toast('SSL Labs API error — try again later', 'error');
+      return;
+    }
+
+    const data = await res.json();
+    const apiStatus = data.status;
+
+    if (apiStatus === 'DNS' || apiStatus === 'IN_PROGRESS' || apiStatus === 'ERROR') {
+      const label = apiStatus === 'ERROR' ? 'Error' : apiStatus === 'DNS' ? 'DNS…' : 'In Progress';
+      cell.innerHTML = `<span class="grade-badge grade-none" title="SSL Labs status: ${esc(apiStatus)}">${esc(label)}</span>`;
+      toast(`SSL Labs: ${apiStatus === 'IN_PROGRESS' ? 'analysis in progress — try again in a minute' : apiStatus.toLowerCase()}`, 'warn');
+      return;
+    }
+
+    if (apiStatus === 'READY' && data.endpoints && data.endpoints.length > 0) {
+      // Use worst grade across endpoints
+      const grades = data.endpoints.map(ep => ep.grade).filter(Boolean);
+      const order = ['A+','A','A-','B','C','D','E','F','T','M'];
+      grades.sort((a, b) => {
+        const ai = order.indexOf(a); const bi = order.indexOf(b);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+      // Pick worst (last) grade
+      const worst = grades[grades.length - 1] || grades[0];
+      const display = worst === 'A-' ? 'A' : worst;
+
+      cert.grade = display;
+      saveCerts();
+      cell.innerHTML = `<span class="grade-badge ${gradeClass(display)}">${esc(display)}</span>`;
+      toast(`${cert.domain} — Grade: ${display}`, 'success');
+    } else {
+      cell.innerHTML = `<span class="grade-badge grade-none">—</span>`;
+      toast(`No grade available for ${cert.domain}`, 'warn');
+    }
+  } catch (err) {
+    cell.innerHTML = `<span class="grade-badge grade-none">—</span>`;
+    toast('Network error — check your connection', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Check all grades (sequential with 3s delay) ───────────
+let checkAllRunning = false;
+document.getElementById('btn-check-all').addEventListener('click', async () => {
+  if (checkAllRunning) { toast('Grade check already running…', 'warn'); return; }
+  if (certs.length === 0) { toast('No certificates to check', 'warn'); return; }
+  checkAllRunning = true;
+  const btn = document.getElementById('btn-check-all');
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+
+  for (let i = 0; i < certs.length; i++) {
+    toast(`Checking ${certs[i].domain} (${i + 1}/${certs.length})…`);
+    await checkGrade(certs[i].id);
+    if (i < certs.length - 1) await new Promise(r => setTimeout(r, 3000));
+  }
+
+  checkAllRunning = false;
+  btn.disabled = false;
+  btn.textContent = 'Check All Grades';
+  toast('All grades checked', 'success');
+});
+
+// ── Renewal reminder ──────────────────────────────────────
+async function copyRenewalReminder(id) {
+  const cert = certs.find(c => c.id === id);
+  if (!cert) return;
+  const days = daysUntil(cert.expiry);
+  const agency = settings.agency || 'Your Web Agency';
+  const draft = [
+    `Subject: Action Required — SSL Certificate for ${cert.domain} expires in ${days} day${days !== 1 ? 's' : ''}`,
+    '',
+    `Hi${cert.client ? ' ' + cert.client : ''},`,
+    '',
+    `This is a reminder that the SSL certificate for ${cert.domain} is scheduled to expire on ${fmtDate(cert.expiry)} (${days < 0 ? 'EXPIRED' : days + ' day' + (days !== 1 ? 's' : '') + ' remaining'}).`,
+    '',
+    'To ensure uninterrupted HTTPS for your visitors, please take the following steps:',
+    '',
+    '1. Log in to your hosting control panel (cPanel / WHM / Plesk)',
+    '2. Navigate to SSL/TLS > Certificates',
+    '3. Renew or re-issue the certificate for this domain',
+    '4. If using Let\'s Encrypt, run: certbot renew --force-renewal',
+    '5. Verify the renewed certificate using https://www.ssllabs.com/ssltest/',
+    '',
+    'If you need assistance, please don\'t hesitate to contact us.',
+    '',
+    `Best regards,`,
+    agency,
+  ].join('\n');
+
+  try {
+    await navigator.clipboard.writeText(draft);
+    toast('Renewal reminder copied to clipboard', 'success');
+  } catch {
+    const ta = document.getElementById('report-output');
+    ta.value = draft;
+    ta.select();
+    document.execCommand('copy');
+    toast('Copied to report area (clipboard unavailable)', 'warn');
+  }
+}
+
+// ── Delete cert ───────────────────────────────────────────
+function deleteCert(id) {
+  const cert = certs.find(c => c.id === id);
+  if (!cert) return;
+  if (!confirm(`Remove "${cert.domain}" from monitoring?`)) return;
+  certs = certs.filter(c => c.id !== id);
+  saveCerts();
+  renderAll();
+  toast(`${cert.domain} removed`, 'success');
+}
+window.deleteCert = deleteCert;
+window.checkGrade = checkGrade;
+window.copyRenewalReminder = copyRenewalReminder;
+
+// ── Export CSV ────────────────────────────────────────────
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+  if (certs.length === 0) { toast('No certificates to export', 'warn'); return; }
+  const header = ['domain', 'client', 'expiry'];
+  const rows = certs.map(c => [c.domain, c.client || '', c.expiry]);
+  const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ssl-certs-${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${certs.length} certificate${certs.length !== 1 ? 's' : ''}`, 'success');
+});
+
+// ── Import CSV ────────────────────────────────────────────
+document.getElementById('btn-import-csv').addEventListener('click', () => {
+  document.getElementById('csv-file-input').click();
+});
+
+document.getElementById('csv-file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const lines = ev.target.result.trim().split('\n').slice(1); // skip header
+    let added = 0; let skipped = 0;
+    lines.forEach(line => {
+      const cols = parseCsvLine(line.trim());
+      const domain = (cols[0] || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+      const client = (cols[1] || '').trim();
+      const expiry = (cols[2] || '').trim();
+      if (!domain || !expiry || !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) { skipped++; return; }
+      if (certs.find(c => c.domain === domain)) { skipped++; return; }
+      certs.push({ id: uid(), domain, client, expiry, notes: '', grade: null, addedAt: Date.now() });
+      added++;
+    });
+    saveCerts();
+    renderAll();
+    if (added > 0) toast(`Imported ${added}${skipped ? `, ${skipped} skipped` : ''}`, 'success');
+    else toast(`Nothing imported${skipped ? ` (${skipped} skipped/duplicate)` : ''}`, 'warn');
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function parseCsvLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else { inQ = !inQ; } }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── Export agency report ──────────────────────────────────
+document.getElementById('btn-export-report').addEventListener('click', () => {
+  const soon = certs.filter(c => daysUntil(c.expiry) <= 30).sort((a, b) => daysUntil(a.expiry) - daysUntil(b.expiry));
+  if (soon.length === 0) { toast('No certificates expiring within 30 days', 'warn'); return; }
+  const agency = settings.agency || 'Your Web Agency';
+  const lines = [
+    `SSL Certificate Status Report — ${agency}`,
+    `Generated: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+    `─────────────────────────────────────────────`,
+    '',
+    `URGENT — Certificates expiring within 30 days (${soon.length} found):`,
+    '',
+    ...soon.map(c => {
+      const d = daysUntil(c.expiry);
+      const status = d < 0 ? `EXPIRED ${Math.abs(d)}d ago` : d === 0 ? 'EXPIRES TODAY' : `${d} day${d !== 1 ? 's' : ''} remaining`;
+      return [
+        `Domain:  ${c.domain}`,
+        `Client:  ${c.client || 'N/A'}`,
+        `Expiry:  ${fmtDate(c.expiry)} (${status})`,
+        c.grade ? `Grade:   ${c.grade}` : '',
+        c.notes ? `Notes:   ${c.notes}` : '',
+        '',
+      ].filter(l => l !== null && (l !== '' || true)).join('\n');
+    }),
+    `─────────────────────────────────────────────`,
+    `Total certificates monitored: ${certs.length}`,
+    `Healthy (>30d): ${certs.filter(c => daysUntil(c.expiry) > 30).length}`,
+    `Expired: ${certs.filter(c => daysUntil(c.expiry) < 0).length}`,
+  ];
+
+  const report = lines.join('\n');
+  const blob = new Blob([report], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ssl-report-${new Date().toISOString().split('T')[0]}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('Report downloaded', 'success');
+});
+
+// ── Generate client report ────────────────────────────────
+document.getElementById('btn-gen-report').addEventListener('click', () => {
+  const agency = settings.agency || 'Your Web Agency';
+  const soon = certs.filter(c => daysUntil(c.expiry) <= 30).sort((a, b) => daysUntil(a.expiry) - daysUntil(b.expiry));
+
+  if (soon.length === 0) {
+    document.getElementById('report-output').value = 'No certificates expiring within 30 days. All good!';
+    toast('No urgent certificates found', 'success');
+    return;
+  }
+
+  const certLines = soon.map(c => {
+    const d = daysUntil(c.expiry);
+    const urgency = d < 0 ? 'EXPIRED' : d === 0 ? 'EXPIRES TODAY' : `expires in ${d} day${d !== 1 ? 's' : ''}`;
+    return `  • ${c.domain}${c.client ? ' (' + c.client + ')' : ''} — ${urgency} (${fmtDate(c.expiry)})`;
+  }).join('\n');
+
+  const report = [
+    `Subject: Urgent — SSL Certificate Renewal Required`,
+    '',
+    `Dear Client,`,
+    '',
+    `We are writing to inform you that the following SSL certificates require immediate renewal:`,
+    '',
+    certLines,
+    '',
+    `An expired or missing SSL certificate will cause browser security warnings, damage visitor trust, and may impact SEO rankings.`,
+    '',
+    `To renew your certificate(s), please:`,
+    `1. Log in to your hosting control panel`,
+    `2. Navigate to SSL/TLS settings`,
+    `3. Renew or re-issue each certificate listed above`,
+    `4. Contact us if you would like us to handle the renewal on your behalf`,
+    '',
+    `Best regards,`,
+    agency,
+  ].join('\n');
+
+  document.getElementById('report-output').value = report;
+  toast('Client report generated', 'success');
+});
+
+// ── Copy report ───────────────────────────────────────────
+document.getElementById('btn-copy-report').addEventListener('click', async () => {
+  const ta = document.getElementById('report-output');
+  if (!ta.value) { toast('Generate a report first', 'warn'); return; }
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    toast('Report copied to clipboard', 'success');
+  } catch {
+    ta.select();
+    document.execCommand('copy');
+    toast('Copied (fallback)', 'success');
+  }
+});
+
+// ── Toast ─────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+// ── Render all ────────────────────────────────────────────
+function renderAll() {
+  updateStats();
+  renderTable();
+  renderTimeline();
+}
+
+// ── Init ──────────────────────────────────────────────────
+renderAll();
+// Refresh every 60s in case day changes
+setInterval(renderAll, 60000);
+</script>
+</body>
+</html>

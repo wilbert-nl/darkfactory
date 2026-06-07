@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BreachGuard — SMB Breach Alert Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar section */
+.sb-section {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4);
+}
+.sb-section:last-child { border-bottom: none; }
+
+.sb-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+  display: block;
+}
+
+/* Company name */
+.input-field {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-field:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.input-field::placeholder { color: var(--color-ink-muted); }
+
+/* Add email row */
+.add-email-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.add-email-row .input-field { flex: 1; min-width: 0; }
+
+/* Quick stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.stat-pill {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-pill-value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-pill-value.danger { color: var(--color-danger); }
+.stat-pill-value.success { color: var(--color-success); }
+
+.stat-pill-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* Schedule select */
+.select-field {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.select-field:focus { outline: none; border-color: var(--color-accent); }
+
+/* Email list */
+.email-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.email-item {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.email-item.flagged { border-color: oklch(55% 0.20 25 / 0.4); background: oklch(55% 0.20 25 / 0.03); }
+.email-item.cleared { border-color: oklch(55% 0.14 155 / 0.3); }
+
+.email-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.email-masked {
+  font-size: var(--text-xs);
+  font-family: monospace;
+  color: var(--color-ink);
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.status-badge.clean   { background: oklch(55% 0.14 155 / 0.12); color: var(--color-success); }
+.status-badge.flagged { background: oklch(55% 0.20 25 / 0.10); color: var(--color-danger); }
+.status-badge.unknown { background: oklch(46% 0.03 155 / 0.10); color: var(--color-ink-muted); }
+
+.email-item-meta {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+}
+
+.email-item-actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: 2px;
+}
+
+.btn-xs {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  white-space: nowrap;
+}
+.btn-xs:hover { color: var(--color-ink); border-color: var(--color-ink-muted); }
+.btn-xs.danger:hover { color: var(--color-danger); border-color: var(--color-danger); background: oklch(55% 0.20 25 / 0.06); }
+.btn-xs.success:hover { color: var(--color-success); border-color: var(--color-success); background: oklch(55% 0.14 155 / 0.08); }
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28); }
+.btn-primary:active { transform: none; box-shadow: none; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.btn-ghost:hover { color: var(--color-ink); border-color: var(--color-ink-muted); }
+
+.sidebar-empty {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-4) 0;
+  line-height: 1.6;
+}
+
+/* Due-for-review badge */
+.review-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: oklch(62% 0.15 72 / 0.10);
+  border: 1px solid oklch(62% 0.15 72 / 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-warn);
+  font-weight: 500;
+  width: 100%;
+}
+.review-badge-count {
+  background: var(--color-warn);
+  color: var(--color-paper);
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Section */
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.section-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+/* ── Password checker ── */
+.pw-checker-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.privacy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: oklch(55% 0.14 155 / 0.08);
+  border: 1px solid oklch(55% 0.14 155 / 0.25);
+  border-radius: 99px;
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-success);
+  font-weight: 500;
+  width: fit-content;
+}
+
+.pw-input-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.pw-input-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.pw-input {
+  font-family: monospace;
+  font-size: var(--text-base);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) 2.5rem var(--space-3) var(--space-4);
+  width: 100%;
+  letter-spacing: 0.05em;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.pw-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.pw-input::placeholder { color: var(--color-ink-muted); letter-spacing: 0; }
+
+.eye-btn {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  font-size: var(--text-lg);
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+.eye-btn:hover { color: var(--color-ink); }
+
+/* Result banner */
+.result-banner {
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  animation: banner-in 0.22s ease;
+}
+
+@keyframes banner-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-banner.safe    { background: oklch(55% 0.14 155 / 0.07); border: 1px solid oklch(55% 0.14 155 / 0.25); }
+.result-banner.pwned   { background: oklch(55% 0.20 25 / 0.06); border: 1px solid oklch(55% 0.20 25 / 0.25); }
+.result-banner.loading { background: var(--color-paper-2); border: 1px solid var(--color-border); }
+.result-banner.error   { background: oklch(62% 0.15 72 / 0.07); border: 1px solid oklch(62% 0.15 72 / 0.25); }
+
+.result-icon { font-size: 1.5rem; line-height: 1; flex-shrink: 0; margin-top: 2px; }
+
+.result-body { flex: 1; min-width: 0; }
+
+.result-body h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: var(--space-1);
+}
+
+.result-body p {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+}
+
+.result-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+}
+
+.breach-count-pill {
+  display: inline-block;
+  background: oklch(55% 0.20 25 / 0.10);
+  color: var(--color-danger);
+  border-radius: 99px;
+  padding: 2px 10px;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  margin-left: var(--space-2);
+}
+
+/* Spinner */
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* How it works */
+.how-it-works {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+}
+
+.hiw-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: var(--space-3);
+}
+
+.hiw-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.hiw-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hiw-num {
+  width: 24px; height: 24px;
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border-radius: 50%;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hiw-text {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+}
+
+/* ── Email monitoring table ── */
+.monitor-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.monitor-table-head {
+  display: grid;
+  grid-template-columns: 1fr 100px 130px 120px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.th {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.monitor-rows { display: flex; flex-direction: column; }
+
+.monitor-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 130px 120px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+  animation: row-in 0.18s ease;
+}
+.monitor-row:last-child { border-bottom: none; }
+.monitor-row:hover { background: oklch(93% 0.012 95); }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.monitor-email-cell {
+  font-size: var(--text-sm);
+  font-family: monospace;
+  color: var(--color-ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.monitor-empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.7;
+}
+
+/* Remediation checklist */
+.remediation-box {
+  background: oklch(55% 0.20 25 / 0.04);
+  border: 1px solid oklch(55% 0.20 25 / 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  animation: banner-in 0.22s ease;
+}
+
+.remediation-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-danger);
+  margin-bottom: var(--space-1);
+}
+
+.rem-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  line-height: 1.5;
+}
+
+.rem-icon {
+  font-size: var(--text-base);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Notable breach cards ── */
+.breach-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.breach-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.breach-card:hover {
+  border-color: var(--color-accent-line);
+  transform: translateY(-2px);
+}
+
+.breach-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.breach-logo {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.breach-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.3;
+}
+
+.breach-date {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+
+.breach-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.breach-count {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-danger);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.breach-count-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.breach-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+  flex: 1;
+}
+
+.breach-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.breach-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+.breach-tag.pw    { background: oklch(55% 0.20 25 / 0.10); color: var(--color-danger); }
+.breach-tag.email { background: oklch(52% 0.14 155 / 0.10); color: var(--color-accent); }
+.breach-tag.data  { background: oklch(62% 0.15 72 / 0.12); color: var(--color-warn); }
+.breach-tag.med   { background: oklch(55% 0.20 25 / 0.07); color: var(--color-danger); }
+.breach-tag.fin   { background: oklch(62% 0.15 72 / 0.10); color: var(--color-warn); }
+
+/* ── Security checklist ── */
+.checklist { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-body);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.check-item:hover:not(.done) { border-color: var(--color-accent-line); background: var(--color-accent-subtle); }
+.check-item.done { opacity: 0.55; background: oklch(55% 0.14 155 / 0.04); border-color: oklch(55% 0.14 155 / 0.3); }
+
+.check-box {
+  width: 20px; height: 20px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: transparent;
+  transition: all 0.15s ease;
+}
+.check-item.done .check-box {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: var(--color-paper);
+}
+
+.check-content { flex: 1; min-width: 0; }
+
+.check-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.check-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+}
+
+.prio-chip {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.prio-critical { background: oklch(55% 0.20 25 / 0.10); color: var(--color-danger); }
+.prio-high     { background: oklch(62% 0.15 72 / 0.12); color: var(--color-warn); }
+.prio-medium   { background: oklch(52% 0.14 155 / 0.10); color: var(--color-accent); }
+.prio-low      { background: oklch(46% 0.03 155 / 0.10); color: var(--color-ink-muted); }
+
+/* Progress bar */
+.progress-wrap {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.progress-track {
+  flex: 1;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-success);
+  border-radius: 99px;
+  transition: width 0.35s ease;
+}
+
+.progress-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  max-width: 360px;
+}
+.toast.show   { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error   { background: var(--color-danger); }
+.toast.warn    { background: var(--color-warn); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+
+  .breach-grid { grid-template-columns: 1fr; }
+  .hiw-steps   { grid-template-columns: 1fr 1fr; }
+  .monitor-table-head { display: none; }
+  .monitor-row { grid-template-columns: 1fr auto; }
+  .monitor-row > :nth-child(3) { display: none; }
+}
+
+@media (max-width: 480px) {
+  .hiw-steps { grid-template-columns: 1fr; }
+  .breach-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .monitor-row { animation: none; }
+  .result-banner { animation: none; }
+  .btn-primary:hover { transform: none; box-shadow: none; }
+  .breach-card:hover { transform: none; }
+  .spinner { animation-duration: 1.2s; }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Breach<span>Guard</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">SMB Breach Alert Monitor</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Company settings and email list">
+    <div class="sidebar-scroll">
+
+      <!-- Company name -->
+      <div class="sb-section">
+        <label class="sb-label" for="company-name">Company</label>
+        <input
+          type="text"
+          class="input-field"
+          id="company-name"
+          placeholder="Acme Corp"
+          maxlength="80"
+          aria-label="Company name"
+        >
+      </div>
+
+      <!-- Quick stats -->
+      <div class="sb-section">
+        <span class="sb-label">Overview</span>
+        <div class="stats-grid">
+          <div class="stat-pill">
+            <span class="stat-pill-value" id="stat-total">0</span>
+            <span class="stat-pill-label">Monitored</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-value danger" id="stat-flagged">0</span>
+            <span class="stat-pill-label">Flagged</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-value success" id="stat-clear">0</span>
+            <span class="stat-pill-label">Clear</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-value" id="stat-review-date" style="font-size: var(--text-sm);">—</span>
+            <span class="stat-pill-label">Last Review</span>
+          </div>
+        </div>
+
+        <div id="review-reminder" class="review-badge" style="display:none; margin-top: var(--space-3);">
+          <span class="review-badge-count" id="review-count">0</span>
+          <span>email(s) due for review</span>
+        </div>
+      </div>
+
+      <!-- Monitoring schedule -->
+      <div class="sb-section">
+        <label class="sb-label" for="schedule-select">Check Reminder</label>
+        <select class="select-field" id="schedule-select" aria-label="Check reminder frequency">
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="never">Off</option>
+        </select>
+      </div>
+
+      <!-- Add email -->
+      <div class="sb-section">
+        <span class="sb-label">Add Email</span>
+        <div class="add-email-row">
+          <input
+            type="email"
+            class="input-field"
+            id="add-email-input"
+            placeholder="employee@company.com"
+            autocomplete="off"
+            aria-label="Email address to add"
+          >
+          <button class="btn-primary" id="btn-add-email" aria-label="Add email to monitor" style="padding: var(--space-2) var(--space-3);">+</button>
+        </div>
+        <textarea
+          class="input-field"
+          id="bulk-email-input"
+          placeholder="Paste comma-separated emails…"
+          rows="2"
+          aria-label="Paste multiple emails separated by commas"
+          style="resize: vertical; font-size: var(--text-xs);"
+        ></textarea>
+        <button class="btn-ghost" id="btn-bulk-add" style="width:100%; margin-top: var(--space-2); font-size: var(--text-xs);">Add bulk list</button>
+      </div>
+
+      <!-- Email list -->
+      <div class="sb-section" style="flex: 1;">
+        <span class="sb-label">Monitored Emails</span>
+        <div class="email-list" id="email-list">
+          <p class="sidebar-empty">No emails added yet.<br>Add employee emails above to start monitoring.</p>
+        </div>
+      </div>
+
+    </div><!-- /sidebar-scroll -->
+  </aside>
+
+  <!-- ── Main panel ── -->
+  <main class="main" aria-label="Breach monitor dashboard">
+    <div class="main-scroll" id="main-scroll">
+
+      <!-- Password Breach Checker -->
+      <section class="panel-section" aria-label="Password breach checker">
+        <div class="section-header">
+          <h2 class="section-title">Password Breach Checker</h2>
+          <span class="section-sub">k-Anonymity — your password never leaves your browser</span>
+        </div>
+
+        <div class="pw-checker-card">
+          <div class="privacy-chip" role="status">
+            <span aria-hidden="true">&#x1F512;</span>
+            <span>Only the first 5 characters of your hashed password are sent — never the actual password</span>
+          </div>
+
+          <div class="pw-input-row">
+            <div class="pw-input-wrap">
+              <input
+                type="password"
+                class="pw-input"
+                id="pw-input"
+                placeholder="Enter a password to check…"
+                autocomplete="off"
+                spellcheck="false"
+                aria-label="Password to check for breaches"
+              >
+              <button class="eye-btn" id="eye-btn" aria-label="Toggle password visibility" title="Show/hide">&#x1F441;&#xFE0F;</button>
+            </div>
+            <button class="btn-primary" id="check-btn" style="padding: var(--space-3) var(--space-6);">Check Password</button>
+          </div>
+
+          <div id="pw-result" aria-live="polite" aria-atomic="true"></div>
+        </div>
+
+        <!-- How it works -->
+        <div class="how-it-works">
+          <p class="hiw-title">How k-Anonymity Protects You</p>
+          <div class="hiw-steps">
+            <div class="hiw-step">
+              <div class="hiw-num">1</div>
+              <p class="hiw-text">Your password is SHA-1 hashed entirely in your browser using the Web Crypto API — it never leaves your device.</p>
+            </div>
+            <div class="hiw-step">
+              <div class="hiw-num">2</div>
+              <p class="hiw-text">Only the first 5 characters of the 40-character hash are sent to the HaveIBeenPwned API.</p>
+            </div>
+            <div class="hiw-step">
+              <div class="hiw-num">3</div>
+              <p class="hiw-text">The API returns hundreds of hash suffixes that start with those 5 chars — masking which one is yours.</p>
+            </div>
+            <div class="hiw-step">
+              <div class="hiw-num">4</div>
+              <p class="hiw-text">Your browser checks locally if your full hash appears in the list. The server never knows your password.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Employee Email Monitoring -->
+      <section class="panel-section" aria-label="Employee email monitoring">
+        <div class="section-header">
+          <h2 class="section-title">Employee Email Monitoring</h2>
+          <span class="section-sub">Track breach status — stored locally, never sent to any server</span>
+        </div>
+
+        <div id="remediation-container"></div>
+
+        <div class="monitor-table" role="region" aria-label="Employee email status table">
+          <div class="monitor-table-head" aria-hidden="true">
+            <span class="th">Email (masked)</span>
+            <span class="th">Status</span>
+            <span class="th">Last Checked</span>
+            <span class="th">Actions</span>
+          </div>
+          <div class="monitor-rows" id="monitor-rows" role="list" aria-label="Employee email list">
+            <div class="monitor-empty">No emails in the monitor yet. Add employee emails using the sidebar.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Notable Breaches in 2024 -->
+      <section class="panel-section" aria-label="Notable 2024 data breaches">
+        <div class="section-header">
+          <h2 class="section-title">Notable Breaches — 2024</h2>
+          <span class="section-sub">Major incidents your employees may have been affected by</span>
+        </div>
+
+        <div class="breach-grid" role="list">
+
+          <article class="breach-card" role="listitem">
+            <div class="breach-card-header">
+              <div class="breach-logo">&#x1F4BC;</div>
+              <div>
+                <div class="breach-name">LinkedIn</div>
+                <div class="breach-date">Aug 2024</div>
+              </div>
+            </div>
+            <div class="breach-stat">
+              <span class="breach-count">2.8B</span>
+              <span class="breach-count-label">records scraped</span>
+            </div>
+            <p class="breach-desc">A massive scraping operation exposed over 2.8 billion LinkedIn member profiles including email addresses, employment history, and professional details — making it one of the largest data exposures of 2024.</p>
+            <div class="breach-tags">
+              <span class="breach-tag email">Emails</span>
+              <span class="breach-tag data">Employment</span>
+              <span class="breach-tag data">Names</span>
+            </div>
+          </article>
+
+          <article class="breach-card" role="listitem">
+            <div class="breach-card-header">
+              <div class="breach-logo">&#x1F3DF;&#xFE0F;</div>
+              <div>
+                <div class="breach-name">Ticketmaster</div>
+                <div class="breach-date">May 2024</div>
+              </div>
+            </div>
+            <div class="breach-stat">
+              <span class="breach-count">560M</span>
+              <span class="breach-count-label">accounts exposed</span>
+            </div>
+            <p class="breach-desc">ShinyHunters claimed to have stolen 1.3 TB of data from Ticketmaster's Snowflake-hosted database, exposing names, addresses, phone numbers, and partial payment card data for 560 million customers.</p>
+            <div class="breach-tags">
+              <span class="breach-tag email">Emails</span>
+              <span class="breach-tag fin">Payment Cards</span>
+              <span class="breach-tag data">Names</span>
+            </div>
+          </article>
+
+          <article class="breach-card" role="listitem">
+            <div class="breach-card-header">
+              <div class="breach-logo">&#x1F3E5;</div>
+              <div>
+                <div class="breach-name">Change Healthcare</div>
+                <div class="breach-date">Feb 2024</div>
+              </div>
+            </div>
+            <div class="breach-stat">
+              <span class="breach-count">100M</span>
+              <span class="breach-count-label">Americans affected</span>
+            </div>
+            <p class="breach-desc">A ransomware attack by ALPHV/BlackCat on UnitedHealth's Change Healthcare subsidiary disrupted US pharmacy operations for months and exposed medical records, SSNs, and insurance data for 100 million people.</p>
+            <div class="breach-tags">
+              <span class="breach-tag med">Medical</span>
+              <span class="breach-tag data">SSN</span>
+              <span class="breach-tag fin">Insurance</span>
+            </div>
+          </article>
+
+          <article class="breach-card" role="listitem">
+            <div class="breach-card-header">
+              <div class="breach-logo">&#x1F4E1;</div>
+              <div>
+                <div class="breach-name">AT&amp;T</div>
+                <div class="breach-date">Apr 2024</div>
+              </div>
+            </div>
+            <div class="breach-stat">
+              <span class="breach-count">73M</span>
+              <span class="breach-count-label">customers affected</span>
+            </div>
+            <p class="breach-desc">AT&amp;T confirmed a breach of a 2021 dataset containing SSNs, full names, email addresses, dates of birth, and account passcodes for 73 million current and former customers — published on the dark web in 2024.</p>
+            <div class="breach-tags">
+              <span class="breach-tag data">SSN</span>
+              <span class="breach-tag email">Emails</span>
+              <span class="breach-tag pw">Passcodes</span>
+            </div>
+          </article>
+
+          <article class="breach-card" role="listitem">
+            <div class="breach-card-header">
+              <div class="breach-logo">&#x1F4CB;</div>
+              <div>
+                <div class="breach-name">National Public Data</div>
+                <div class="breach-date">Aug 2024</div>
+              </div>
+            </div>
+            <div class="breach-stat">
+              <span class="breach-count">2.9B</span>
+              <span class="breach-count-label">records leaked</span>
+            </div>
+            <p class="breach-desc">Background check company National Public Data suffered one of the largest breaches in history — 2.9 billion records containing SSNs, names, addresses, and family relationships were leaked on a hacking forum.</p>
+            <div class="breach-tags">
+              <span class="breach-tag data">SSN</span>
+              <span class="breach-tag data">Addresses</span>
+              <span class="breach-tag data">Family Data</span>
+            </div>
+          </article>
+
+          <article class="breach-card" role="listitem">
+            <div class="breach-card-header">
+              <div class="breach-logo">&#x2744;&#xFE0F;</div>
+              <div>
+                <div class="breach-name">Snowflake (Wave)</div>
+                <div class="breach-date">May–Jun 2024</div>
+              </div>
+            </div>
+            <div class="breach-stat">
+              <span class="breach-count">165+</span>
+              <span class="breach-count-label">organizations hit</span>
+            </div>
+            <p class="breach-desc">Threat actors used stolen credentials to access Snowflake cloud instances of over 165 organizations — including Santander Bank, Ticketmaster, and others — by exploiting accounts without MFA enforcement.</p>
+            <div class="breach-tags">
+              <span class="breach-tag data">Credentials</span>
+              <span class="breach-tag email">Emails</span>
+              <span class="breach-tag fin">Financial</span>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- Security Checklist -->
+      <section class="panel-section" aria-label="Company security hygiene checklist">
+        <div class="section-header">
+          <h2 class="section-title">Security Checklist</h2>
+          <span class="section-sub">Company hygiene — click each item to mark complete</span>
+        </div>
+
+        <div class="progress-wrap" role="status" aria-live="polite">
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+          </div>
+          <span class="progress-label" id="progress-label">0 of 8 complete</span>
+          <button class="btn-ghost" id="reset-checklist" style="font-size: var(--text-xs); padding: var(--space-1) var(--space-3);">Reset</button>
+        </div>
+
+        <div class="checklist" id="checklist" role="list"></div>
+      </section>
+
+    </div><!-- /main-scroll -->
+  </main>
+
+</div><!-- /app-shell -->
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+'use strict';
+
+/* ── Helpers ── */
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+function maskEmail(email) {
+  const at = email.indexOf('@');
+  if (at < 1) return email.slice(0, 3) + '***';
+  const local = email.slice(0, at);
+  const domain = email.slice(at);
+  return local.slice(0, Math.min(3, local.length)) + '***' + domain;
+}
+
+/* ── Storage ── */
+const db = {
+  company: {
+    get: () => localStorage.getItem('bg_company') ?? '',
+    set: (v) => localStorage.setItem('bg_company', v),
+  },
+  schedule: {
+    get: () => localStorage.getItem('bg_schedule') ?? 'weekly',
+    set: (v) => localStorage.setItem('bg_schedule', v),
+  },
+  emails: {
+    get: () => { try { return JSON.parse(localStorage.getItem('bg_emails') || '[]'); } catch { return []; } },
+    save: (list) => localStorage.setItem('bg_emails', JSON.stringify(list)),
+  },
+  checklist: {
+    get: () => { try { return JSON.parse(localStorage.getItem('bg_checklist') || '{}'); } catch { return {}; } },
+    save: (obj) => localStorage.setItem('bg_checklist', JSON.stringify(obj)),
+  },
+  lastReview: {
+    get: () => localStorage.getItem('bg_last_review') ?? '',
+    set: (v) => localStorage.setItem('bg_last_review', v),
+  },
+};
+
+/* ── State ── */
+let emails = db.emails.get();
+let checklistState = db.checklist.get();
+
+/* ── SHA-1 via Web Crypto ── */
+async function sha1Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+/* ── Toast ── */
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
+}
+
+/* ── Sidebar: company & schedule ── */
+const companyInput = document.getElementById('company-name');
+const scheduleSelect = document.getElementById('schedule-select');
+
+companyInput.value = db.company.get();
+scheduleSelect.value = db.schedule.get();
+
+companyInput.addEventListener('input', () => db.company.set(companyInput.value.trim()));
+scheduleSelect.addEventListener('change', () => {
+  db.schedule.set(scheduleSelect.value);
+  toast('Reminder schedule saved.', 'success');
+});
+
+/* ── Password Checker ── */
+const pwInput  = document.getElementById('pw-input');
+const checkBtn = document.getElementById('check-btn');
+const eyeBtn   = document.getElementById('eye-btn');
+const pwResult = document.getElementById('pw-result');
+
+eyeBtn.addEventListener('click', () => {
+  const isPass = pwInput.type === 'password';
+  pwInput.type = isPass ? 'text' : 'password';
+  eyeBtn.innerHTML = isPass ? '&#x1F648;' : '&#x1F441;&#xFE0F;';
+  pwInput.focus();
+});
+
+async function checkPassword() {
+  const pw = pwInput.value;
+  if (!pw) {
+    toast('Enter a password to check.', 'error');
+    pwInput.focus();
+    return;
+  }
+
+  checkBtn.disabled = true;
+  pwResult.innerHTML = `
+    <div class="result-banner loading" role="status">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="result-body">
+        <h3>Checking…</h3>
+        <p>Hashing locally with SHA-1, querying HIBP k-anonymity endpoint.</p>
+      </div>
+    </div>`;
+
+  const t0 = Date.now();
+
+  try {
+    const hash   = await sha1Hex(pw);
+    const prefix = hash.slice(0, 5);
+    const suffix = hash.slice(5);
+
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      headers: { 'Add-Padding': 'true' }
+    });
+
+    if (!res.ok) throw new Error(`API returned ${res.status}`);
+
+    const text  = await res.text();
+    const ms    = Date.now() - t0;
+    let count   = 0;
+
+    for (const line of text.split('\r\n')) {
+      const [h, c] = line.split(':');
+      if (h === suffix) { count = parseInt(c, 10) || 0; break; }
+    }
+
+    if (count > 0) {
+      pwResult.innerHTML = `
+        <div class="result-banner pwned" role="alert">
+          <div class="result-icon" aria-hidden="true">&#x26A0;&#xFE0F;</div>
+          <div class="result-body">
+            <h3 style="color:var(--color-danger)">
+              Password Compromised
+              <span class="breach-count-pill">${count.toLocaleString()}× seen in breaches</span>
+            </h3>
+            <p>This password has appeared in <strong>${count.toLocaleString()}</strong> known data breaches.
+            Do not use it on any account. Change it immediately wherever it is in use.</p>
+            <p class="result-meta">Response time: ${ms}ms &nbsp;·&nbsp; Only the first 5 hash chars were transmitted</p>
+          </div>
+        </div>`;
+      toast('Password found in breach database!', 'error');
+    } else {
+      pwResult.innerHTML = `
+        <div class="result-banner safe" role="status">
+          <div class="result-icon" aria-hidden="true">&#x2705;</div>
+          <div class="result-body">
+            <h3 style="color:var(--color-success)">Password Not Found in Breaches</h3>
+            <p>This password has not appeared in any known breach in the HIBP database.
+            Continue using unique, long passwords and enable MFA wherever possible.</p>
+            <p class="result-meta">Response time: ${ms}ms &nbsp;·&nbsp; Only the first 5 hash chars were transmitted</p>
+          </div>
+        </div>`;
+      toast('Password not found in known breaches.', 'success');
+    }
+  } catch (err) {
+    pwResult.innerHTML = `
+      <div class="result-banner error" role="alert">
+        <div class="result-icon" aria-hidden="true">&#x1F6AB;</div>
+        <div class="result-body">
+          <h3>Could Not Reach API</h3>
+          <p>Unable to connect to HaveIBeenPwned. Check your internet connection and try again.</p>
+          <p class="result-meta">${esc(err.message)}</p>
+        </div>
+      </div>`;
+    toast('API request failed. Check your connection.', 'error');
+  } finally {
+    checkBtn.disabled = false;
+  }
+}
+
+checkBtn.addEventListener('click', checkPassword);
+pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkPassword(); });
+
+/* ── Email management ── */
+function addEmail(raw) {
+  const email = raw.trim().toLowerCase();
+  if (!email) return false;
+  // Basic validation
+  if (!email.includes('@') || !email.includes('.')) {
+    toast(`"${email}" does not look like a valid email.`, 'error');
+    return false;
+  }
+  if (emails.some(e => e.email === email)) {
+    toast(`${maskEmail(email)} is already in the list.`, 'warn');
+    return false;
+  }
+  emails.push({
+    id: uid(),
+    email,
+    status: 'unknown',    // 'unknown' | 'flagged' | 'cleared'
+    addedAt: new Date().toISOString(),
+    lastChecked: null,
+  });
+  return true;
+}
+
+function saveEmails() {
+  db.emails.save(emails);
+  renderEmailList();
+  renderMonitorTable();
+  updateStats();
+}
+
+function renderEmailList() {
+  const container = document.getElementById('email-list');
+  if (!emails.length) {
+    container.innerHTML = '<p class="sidebar-empty">No emails added yet.<br>Add employee emails above to start monitoring.</p>';
+    return;
+  }
+
+  container.innerHTML = '';
+  for (const entry of emails) {
+    const item = document.createElement('div');
+    item.className = `email-item ${entry.status === 'flagged' ? 'flagged' : entry.status === 'cleared' ? 'cleared' : ''}`;
+    item.dataset.id = entry.id;
+
+    const badgeClass = entry.status === 'flagged' ? 'flagged' : entry.status === 'cleared' ? 'clean' : 'unknown';
+    const badgeText  = entry.status === 'flagged' ? 'Flagged' : entry.status === 'cleared' ? 'Clear' : 'Unknown';
+
+    item.innerHTML = `
+      <div class="email-item-top">
+        <span class="email-masked" title="${esc(maskEmail(entry.email))}">${esc(maskEmail(entry.email))}</span>
+        <span class="status-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="email-item-meta">${entry.lastChecked ? 'Checked ' + fmtDate(entry.lastChecked) : 'Not yet checked'}</div>
+      <div class="email-item-actions">
+        ${entry.status !== 'flagged' ? `<button class="btn-xs danger" data-action="flag" data-id="${entry.id}" aria-label="Mark as compromised">Mark Compromised</button>` : ''}
+        ${entry.status !== 'cleared' ? `<button class="btn-xs success" data-action="clear" data-id="${entry.id}" aria-label="Mark as cleared">Mark Cleared</button>` : ''}
+        <button class="btn-xs danger" data-action="remove" data-id="${entry.id}" aria-label="Remove email" style="margin-left:auto;">×</button>
+      </div>`;
+
+    container.appendChild(item);
+  }
+
+  container.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => handleEmailAction(btn.dataset.action, btn.dataset.id));
+  });
+}
+
+function handleEmailAction(action, id) {
+  const entry = emails.find(e => e.id === id);
+  if (!entry) return;
+
+  if (action === 'flag') {
+    entry.status = 'flagged';
+    entry.lastChecked = new Date().toISOString();
+    saveEmails();
+    showRemediation(entry);
+    toast(`${maskEmail(entry.email)} marked as compromised.`, 'error');
+  } else if (action === 'clear') {
+    entry.status = 'cleared';
+    entry.lastChecked = new Date().toISOString();
+    saveEmails();
+    clearRemediation();
+    toast(`${maskEmail(entry.email)} marked as cleared.`, 'success');
+    // Update last review date
+    db.lastReview.set(new Date().toISOString());
+    updateStats();
+  } else if (action === 'remove') {
+    if (!confirm(`Remove ${maskEmail(entry.email)} from the monitor list?`)) return;
+    emails = emails.filter(e => e.id !== id);
+    saveEmails();
+    toast('Email removed from monitor.', '');
+  }
+}
+
+function renderMonitorTable() {
+  const container = document.getElementById('monitor-rows');
+
+  if (!emails.length) {
+    container.innerHTML = '<div class="monitor-empty">No emails in the monitor yet. Add employee emails using the sidebar.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  for (const entry of emails) {
+    const row = document.createElement('div');
+    row.className = 'monitor-row';
+    row.role = 'listitem';
+    row.dataset.id = entry.id;
+
+    const badgeClass = entry.status === 'flagged' ? 'flagged' : entry.status === 'cleared' ? 'clean' : 'unknown';
+    const badgeText  = entry.status === 'flagged' ? 'Flagged' : entry.status === 'cleared' ? 'Clear' : 'Unknown';
+
+    row.innerHTML = `
+      <span class="monitor-email-cell" title="${esc(maskEmail(entry.email))}">${esc(maskEmail(entry.email))}</span>
+      <span class="status-badge ${badgeClass}">${badgeText}</span>
+      <span style="font-size:var(--text-xs);color:var(--color-ink-muted);">${entry.lastChecked ? fmtDate(entry.lastChecked) : 'Never'}</span>
+      <div class="monitor-actions">
+        ${entry.status !== 'flagged' ? `<button class="btn-xs danger" data-action="flag" data-id="${entry.id}" title="Mark compromised">Compromised</button>` : ''}
+        ${entry.status !== 'cleared' ? `<button class="btn-xs success" data-action="clear" data-id="${entry.id}" title="Mark cleared">Cleared</button>` : ''}
+        <button class="btn-xs danger" data-action="remove" data-id="${entry.id}" title="Remove" style="padding:3px 6px;">×</button>
+      </div>`;
+
+    container.appendChild(row);
+  }
+
+  container.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => handleEmailAction(btn.dataset.action, btn.dataset.id));
+  });
+}
+
+function updateStats() {
+  const total   = emails.length;
+  const flagged = emails.filter(e => e.status === 'flagged').length;
+  const cleared = emails.filter(e => e.status === 'cleared').length;
+
+  document.getElementById('stat-total').textContent   = total;
+  document.getElementById('stat-flagged').textContent = flagged;
+  document.getElementById('stat-clear').textContent   = cleared;
+  document.getElementById('stat-review-date').textContent = fmtDate(db.lastReview.get()) || '—';
+
+  // Due for review: not checked in > 30 days
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const dueCount = emails.filter(e => !e.lastChecked || new Date(e.lastChecked).getTime() < cutoff).length;
+  const badge = document.getElementById('review-reminder');
+  const countEl = document.getElementById('review-count');
+  if (dueCount > 0) {
+    badge.style.display = 'inline-flex';
+    countEl.textContent = dueCount;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+/* Remediation panel */
+const REMEDIATION_STEPS = [
+  { icon: '&#x1F511;', text: 'Have the employee change their password on this account immediately, and any account where they reuse it.' },
+  { icon: '&#x1F4F1;', text: 'Enable multi-factor authentication (MFA) on the affected account and all company-critical services.' },
+  { icon: '&#x1F4DE;', text: 'Notify your IT department and log the incident in your security incident register.' },
+  { icon: '&#x1F50D;', text: 'Review account activity and access logs for unauthorized access in the past 90 days.' },
+];
+
+function showRemediation(entry) {
+  const container = document.getElementById('remediation-container');
+  container.innerHTML = `
+    <div class="remediation-box" role="region" aria-label="Remediation steps for compromised account">
+      <p class="remediation-title">&#x26A0;&#xFE0F; Breach Response Checklist for ${esc(maskEmail(entry.email))}</p>
+      ${REMEDIATION_STEPS.map(s => `
+        <div class="rem-item">
+          <span class="rem-icon" aria-hidden="true">${s.icon}</span>
+          <span>${s.text}</span>
+        </div>
+      `).join('')}
+      <button class="btn-ghost" id="dismiss-remediation" style="width:100%;margin-top:var(--space-2);font-size:var(--text-xs);">Dismiss</button>
+    </div>`;
+
+  document.getElementById('dismiss-remediation').addEventListener('click', clearRemediation);
+}
+
+function clearRemediation() {
+  document.getElementById('remediation-container').innerHTML = '';
+}
+
+/* ── Add email controls ── */
+document.getElementById('btn-add-email').addEventListener('click', () => {
+  const input = document.getElementById('add-email-input');
+  const val   = input.value.trim();
+  if (!val) { input.focus(); return; }
+  if (addEmail(val)) {
+    input.value = '';
+    saveEmails();
+    toast(`${maskEmail(val)} added to monitor.`, 'success');
+  }
+});
+
+document.getElementById('add-email-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-add-email').click();
+});
+
+document.getElementById('btn-bulk-add').addEventListener('click', () => {
+  const textarea = document.getElementById('bulk-email-input');
+  const raw = textarea.value;
+  if (!raw.trim()) { textarea.focus(); return; }
+
+  const parts = raw.split(/[,\n\s]+/).map(s => s.trim()).filter(Boolean);
+  let added = 0;
+  for (const p of parts) {
+    if (addEmail(p)) added++;
+  }
+
+  if (added > 0) {
+    textarea.value = '';
+    saveEmails();
+    toast(`${added} email(s) added to monitor.`, 'success');
+  } else {
+    toast('No new valid emails found in the list.', 'error');
+  }
+});
+
+/* ── Security Checklist ── */
+const CHECKLIST_ITEMS = [
+  { id: 'mfa',       prio: 'critical', title: 'MFA enabled on all company accounts',          desc: 'Require authenticator-app MFA (not SMS) on email, cloud services, and SSO. No exceptions for admins.' },
+  { id: 'pw-mgr',    prio: 'critical', title: 'Password manager policy in place',             desc: 'Mandate use of a company password manager (Bitwarden, 1Password, etc.) for all employees.' },
+  { id: 'breach-plan', prio: 'high',  title: 'Breach notification and response plan',        desc: 'Written plan covering detection, containment, notification (GDPR/CCPA 72-hour window), and post-incident review.' },
+  { id: 'pw-audit',  prio: 'high',    title: 'Regular password hygiene audits',              desc: 'Quarterly review of shared credentials, service accounts, and any passwords flagged by the manager.' },
+  { id: 'email-sec', prio: 'high',    title: 'Email security: SPF, DKIM, DMARC configured',  desc: 'Prevents spoofing of your company domain. Use a tool like MXToolbox to verify records are correct.' },
+  { id: 'phishing',  prio: 'medium',  title: 'Phishing awareness training for all staff',    desc: 'Annual training plus simulated phishing campaigns. Breached credentials are the #1 phishing enabler.' },
+  { id: 'inventory', prio: 'medium',  title: 'Asset inventory and offboarding checklist',    desc: 'Maintain a live list of all SaaS accounts. Disable access within 24 hours of employee departure.' },
+  { id: 'monitor',   prio: 'low',     title: 'Set up ongoing breach monitoring',             desc: 'Subscribe to HIBP Enterprise or use a SIEM to get alerts when company emails appear in new breaches.' },
+];
+
+function renderChecklist() {
+  const container = document.getElementById('checklist');
+  container.innerHTML = CHECKLIST_ITEMS.map(item => {
+    const done = !!checklistState[item.id];
+    return `
+      <button class="check-item${done ? ' done' : ''}" data-id="${item.id}" role="listitem" aria-pressed="${done}" aria-label="${item.title}">
+        <div class="check-box" aria-hidden="true">${done ? '&#x2713;' : ''}</div>
+        <div class="check-content">
+          <div class="check-title">
+            ${esc(item.title)}
+            <span class="prio-chip prio-${item.prio}">${item.prio}</span>
+          </div>
+          <p class="check-desc">${esc(item.desc)}</p>
+        </div>
+      </button>`;
+  }).join('');
+
+  container.querySelectorAll('.check-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      checklistState[id] = !checklistState[id];
+      db.checklist.save(checklistState);
+      renderChecklist();
+      updateProgress();
+      if (checklistState[id]) toast('Security task completed.', 'success');
+    });
+  });
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = CHECKLIST_ITEMS.length;
+  const done  = Object.values(checklistState).filter(Boolean).length;
+  const pct   = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progress-fill').style.width  = `${pct}%`;
+  document.getElementById('progress-label').textContent = `${done} of ${total} complete`;
+}
+
+document.getElementById('reset-checklist').addEventListener('click', () => {
+  if (!confirm('Reset security checklist? All progress will be lost.')) return;
+  checklistState = {};
+  db.checklist.save(checklistState);
+  renderChecklist();
+  toast('Checklist reset.', '');
+});
+
+/* ── Init ── */
+renderEmailList();
+renderMonitorTable();
+updateStats();
+renderChecklist();
+</script>
+</body>
+</html>

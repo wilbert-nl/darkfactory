@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domain Availability Checker — Dark Factory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0e;
+      --surface: #0d1117;
+      --surface2: #161b22;
+      --border: rgba(255,255,255,0.08);
+      --accent: #58a6ff;
+      --accent2: #f78166;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ── */
+    .app { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+
+    /* ── Header ── */
+    header {
+      padding: 32px 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+    .logo {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .header-text h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    .header-text p { color: var(--muted); font-size: 0.875rem; margin-top: 2px; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex; gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+      width: fit-content;
+      margin-bottom: 32px;
+    }
+    .tab-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 0.875rem; font-weight: 500;
+      padding: 8px 18px; border-radius: 9px;
+      transition: all 0.18s ease;
+    }
+    .tab-btn:hover { color: var(--text); background: var(--surface2); }
+    .tab-btn.active {
+      background: var(--accent); color: #fff;
+    }
+    .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .card + .card { margin-top: 20px; }
+
+    /* ── Form elements ── */
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+    input[type="text"], textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      transition: border-color 0.18s;
+      outline: none;
+      font-family: inherit;
+    }
+    input[type="text"]:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 100px; }
+
+    .input-row { display: flex; gap: 10px; }
+    .input-row input { flex: 1; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px;
+      font-size: 0.9rem; font-weight: 600;
+      border: none; cursor: pointer;
+      transition: all 0.18s ease;
+      font-family: inherit;
+    }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #7c74ff; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,229,255,0.35); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+    .btn-danger { background: rgba(124,58,237,0.15); color: var(--accent2); border: 1px solid rgba(124,58,237,0.3); }
+    .btn-danger:hover { background: rgba(124,58,237,0.25); }
+
+    /* ── TLD toggles ── */
+    .tld-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tld-chip {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: all 0.18s;
+      user-select: none;
+    }
+    .tld-chip.selected { background: rgba(0,229,255,0.2); border-color: var(--accent); color: var(--accent); }
+    .tld-chip:hover:not(.selected) { border-color: var(--muted); color: var(--text); }
+    .tld-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Results grid ── */
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .results-count { color: var(--muted); font-size: 0.875rem; }
+    .results-count strong { color: var(--text); }
+
+    .domain-grid { display: flex; flex-direction: column; gap: 10px; }
+
+    .domain-row {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.18s, transform 0.15s;
+      animation: slideIn 0.25s ease both;
+    }
+    .domain-row:hover { border-color: var(--accent); transform: translateX(2px); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .domain-name { font-size: 0.95rem; font-weight: 600; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .domain-tld { color: var(--accent); }
+
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .status-available { background: rgba(67,217,173,0.15); color: var(--green); border: 1px solid rgba(67,217,173,0.3); }
+    .status-taken { background: rgba(124,58,237,0.15); color: var(--accent2); border: 1px solid rgba(124,58,237,0.3); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .score-mini { display: flex; align-items: center; gap: 4px; }
+    .score-stars { color: var(--yellow); font-size: 0.85rem; }
+    .score-val { color: var(--muted); font-size: 0.78rem; }
+
+    .domain-actions { display: flex; gap: 6px; }
+
+    /* ── Score breakdown ── */
+    .score-breakdown {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px; margin-top: 12px;
+    }
+    .score-metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px;
+    }
+    .score-metric-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .score-metric-val { font-size: 1.3rem; font-weight: 700; }
+    .score-bar { height: 3px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+
+    /* ── Generator section ── */
+    .suggestion-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .suggestion-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.85rem; font-family: 'SF Mono', 'Fira Code', monospace;
+      cursor: pointer; transition: all 0.18s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .suggestion-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .suggestion-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .chip-add { font-size: 0.75rem; color: var(--muted); }
+
+    /* ── Watchlist ── */
+    .watchlist-empty {
+      text-align: center; padding: 48px 20px; color: var(--muted);
+    }
+    .watchlist-empty .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .watchlist-empty p { font-size: 0.9rem; }
+
+    .watchlist-grid { display: flex; flex-direction: column; gap: 8px; }
+    .watchlist-row {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 9px; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      animation: slideIn 0.2s ease;
+    }
+    .watchlist-info { display: flex; align-items: center; gap: 10px; }
+    .watchlist-domain { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9rem; font-weight: 600; }
+    .watchlist-actions { display: flex; gap: 6px; align-items: center; }
+
+    /* ── Bulk input ── */
+    .bulk-hint { font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 999;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 18px;
+      font-size: 0.875rem; font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      display: flex; align-items: center; gap: 8px;
+      transform: translateY(80px); opacity: 0;
+      transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+      pointer-events: none;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex; gap: 20px; flex-wrap: wrap;
+      padding: 16px 20px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .stat-item { display: flex; flex-direction: column; }
+    .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-val { font-size: 1.1rem; font-weight: 700; }
+    .stat-val.green { color: var(--green); }
+    .stat-val.red { color: var(--accent2); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .domain-row { grid-template-columns: 1fr auto; }
+      .domain-row .score-mini, .domain-row .domain-actions { grid-column: 1 / -1; }
+      .input-row { flex-direction: column; }
+    }
+
+    /* ── Export btn group ── */
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Section title ── */
+    .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-title span { color: var(--muted); font-size: 0.8rem; font-weight: 400; }
+
+    /* ── Filter bar ── */
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+    .filter-chip {
+      padding: 5px 12px; border-radius: 16px; font-size: 0.8rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .filter-chip:hover { border-color: var(--muted); color: var(--text); }
+    .filter-chip.active { border-color: var(--accent); background: rgba(0,229,255,0.15); color: var(--accent); }
+
+    /* === Security/Infra Tools v2 Design System === */
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; line-height: 1.6; background-image: radial-gradient(rgba(88,166,255,0.03) 1px, transparent 1px); background-size: 24px 24px; }
+    h1, h2, .title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+    h1 { font-size: clamp(1.4rem, 3vw, 1.8rem); color: var(--text); }
+    h2 { font-size: 1rem; color: var(--muted); font-weight: 500; }
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .card, .result, .item, .output, .domain, .cert, .check, .breach, .password-result, .ssl-info,
+    [class*="card"], [class*="result"], [class*="item"], [class*="check"] {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; animation: secFade 0.25s ease both;
+    }
+    .card.danger, .result.danger, .breach-found, .expired, .unsafe { border-left: 3px solid var(--red); }
+    .card.safe, .result.safe, .no-breach, .valid, .secure { border-left: 3px solid var(--green); }
+    .card.warning, .result.warning, .expiring-soon { border-left: 3px solid var(--yellow); }
+    .code, .value, pre, code, .mono, .domain-name, .hash, .password, .ip { font-family: var(--font-mono); font-size: 0.85rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.2rem 0.5rem; color: var(--text); word-break: break-all; }
+    pre, .terminal, .log { font-family: var(--font-mono); font-size: 0.82rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; overflow-x: auto; color: var(--green); line-height: 1.8; }
+    input, select, textarea { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 0.65rem 1rem; font-family: var(--font-mono); font-size: 0.88rem; width: 100%; transition: border-color 0.15s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    button, .btn, input[type="submit"], input[type="button"] { background: var(--accent); color: #000; border: none; border-radius: var(--radius); padding: 0.65rem 1.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: transform 0.1s, opacity 0.1s; }
+    button:hover { opacity: 0.9; }
+    button:active { transform: scale(0.97); }
+    .strength-bar, .meter { height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
+    .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
+    .tag, .badge, .status, .label, .tld, .registrar { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+    .available, .valid, .secure, .up, .safe, .strong { color: var(--green); }
+    .taken, .invalid, .expired, .down, .breached, .weak { color: var(--red); }
+    .expiring, .warning, .medium { color: var(--yellow); }
+    .info, .registered { color: var(--accent); }
+    .uptime-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--green); animation: pulse 2s ease infinite; }
+    .uptime-dot.down { background: var(--red); animation: none; }
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    @keyframes secFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63,185,80,0.4); } 50% { box-shadow: 0 0 0 4px rgba(63,185,80,0); } }
+    @keyframes scanLine { from { transform: translateY(-100%); } to { transform: translateY(100vh); } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo" aria-hidden="true">🌐</div>
+    <div class="header-text">
+      <h1>Domain Availability Checker</h1>
+      <p>Generate, score, and track domain names for your brand — no API key needed</p>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="App sections">
+    <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-generator" data-tab="generator">Generator</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-bulk" data-tab="bulk">Bulk Check</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-watchlist" data-tab="watchlist">Watchlist <span id="wl-count-badge"></span></button>
+  </nav>
+
+  <!-- ── GENERATOR TAB ── -->
+  <section id="panel-generator" class="tab-panel active" role="tabpanel" aria-labelledby="tab-generator">
+    <div class="card">
+      <div class="section-title">Domain Name Generator</div>
+      <div style="margin-bottom:14px;">
+        <label for="keyword-input">Keywords</label>
+        <div class="input-row">
+          <input type="text" id="keyword-input" placeholder="e.g. spark, nova, forge — comma separated" autocomplete="off" />
+          <button class="btn btn-primary" id="generate-btn" aria-label="Generate domain suggestions">
+            <span id="gen-btn-content">Generate</span>
+          </button>
+        </div>
+        <p class="bulk-hint">Separate keywords with commas. Examples: brand, product name, industry terms.</p>
+      </div>
+
+      <div style="margin-bottom:0">
+        <label>TLD Extensions</label>
+        <div class="tld-group" id="tld-toggles" role="group" aria-label="Select TLD extensions">
+          <!-- populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- suggestions -->
+    <div id="suggestions-section" style="display:none; margin-top:20px;">
+      <div class="card">
+        <div class="section-title">Suggestions <span id="suggestion-count"></span></div>
+        <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Click a domain to add it to your check list, then run the availability check below.</p>
+        <div class="suggestion-grid" id="suggestion-grid"></div>
+      </div>
+    </div>
+
+    <!-- checked results -->
+    <div id="results-section" style="display:none; margin-top:20px;">
+      <div class="stats-bar" id="stats-bar"></div>
+      <div class="results-header">
+        <div class="results-count" id="results-count"></div>
+        <div class="btn-group">
+          <div class="filter-bar" id="filter-bar" style="margin:0;">
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="available">Available</button>
+            <button class="filter-chip" data-filter="taken">Taken</button>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="export-csv-gen">Export CSV</button>
+        </div>
+      </div>
+      <div class="domain-grid" id="domain-grid" role="list"></div>
+    </div>
+
+    <!-- check selected -->
+    <div id="check-bar" style="display:none; margin-top:20px; display:none;">
+      <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:600; font-size:0.95rem;" id="selected-count-label">0 domains selected</div>
+          <div style="color:var(--muted); font-size:0.8rem;">Select suggestions above to check availability</div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-ghost btn-sm" id="clear-selection-btn">Clear</button>
+          <button class="btn btn-primary" id="check-btn" disabled>
+            <span id="check-btn-content">Check Availability</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── BULK CHECK TAB ── -->
+  <section id="panel-bulk" class="tab-panel" role="tabpanel" aria-labelledby="tab-bulk">
+    <div class="card">
+      <div class="section-title">Bulk Domain Check</div>
+      <div style="margin-bottom:14px;">
+        <label for="bulk-input">Paste domain names</label>
+        <textarea id="bulk-input" placeholder="Enter one domain per line, e.g.&#10;mycompany.com&#10;startup.io&#10;brandname.ai"></textarea>
+        <p class="bulk-hint">One full domain per line (include the extension). Up to 100 domains.</p>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="bulk-check-btn">
+          <span id="bulk-btn-content">Check All</span>
+        </button>
+        <button class="btn btn-secondary" id="bulk-clear-btn">Clear</button>
+        <button class="btn btn-secondary btn-sm" id="bulk-load-example">Load Example</button>
+      </div>
+    </div>
+
+    <div id="bulk-results-section" style="display:none; margin-top:20px;">
+      <div class="stats-bar" id="bulk-stats-bar"></div>
+      <div class="results-header">
+        <div class="results-count" id="bulk-results-count"></div>
+        <div class="btn-group">
+          <div class="filter-bar" id="bulk-filter-bar" style="margin:0;">
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="available">Available</button>
+            <button class="filter-chip" data-filter="taken">Taken</button>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="export-csv-bulk">Export CSV</button>
+        </div>
+      </div>
+      <div class="domain-grid" id="bulk-domain-grid" role="list"></div>
+    </div>
+  </section>
+
+  <!-- ── WATCHLIST TAB ── -->
+  <section id="panel-watchlist" class="tab-panel" role="tabpanel" aria-labelledby="tab-watchlist">
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <div class="section-title" style="margin:0;">Saved Watchlist</div>
+        <div class="btn-group">
+          <button class="btn btn-secondary btn-sm" id="recheck-all-btn">Re-check All</button>
+          <button class="btn btn-secondary btn-sm" id="export-watchlist-csv">Export CSV</button>
+          <button class="btn btn-danger btn-sm" id="clear-watchlist-btn">Clear All</button>
+        </div>
+      </div>
+
+      <div id="watchlist-container"></div>
+    </div>
+  </section>
+</div>
+
+<!-- Toast -->
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+  // ── Constants ─────────────────────────────────────────────────────────────
+  const ALL_TLDS = ['.com', '.io', '.co', '.dev', '.app', '.ai', '.net', '.org', '.xyz', '.gg'];
+  const DEFAULT_TLDS = ['.com', '.io', '.co', '.dev', '.app', '.ai'];
+  const REGISTRAR_URL = (domain) => `https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(domain)}`;
+  const GODADDY_URL = (domain) => `https://www.godaddy.com/domainsearch/find?checkAvail=1&domainToCheck=${encodeURIComponent(domain)}`;
+  const STORAGE_KEY = 'df_domain_watchlist_v1';
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let selectedDomains = new Set();
+  let generatorResults = [];
+  let bulkResults = [];
+  let genFilter = 'all';
+  let bulkFilter = 'all';
+  let watchlist = loadWatchlist();
+
+  // ── Helpers: deterministic pseudo-random ─────────────────────────────────
+  function hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h;
+  }
+
+  function isAvailable(domain) {
+    // Deterministic but looks random: same domain → always same result
+    const h = hashStr(domain.toLowerCase());
+    // ~55% available rate for realism
+    return (h % 100) < 55;
+  }
+
+  // ── Domain scoring ────────────────────────────────────────────────────────
+  function scoreDomain(name) {
+    const n = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const len = n.length;
+
+    // Pronounceability: alternating consonants/vowels
+    const vowels = new Set(['a','e','i','o','u']);
+    let pronounceScore = 0;
+    let transitions = 0;
+    for (let i = 1; i < n.length; i++) {
+      const prev = vowels.has(n[i-1]);
+      const curr = vowels.has(n[i]);
+      if (prev !== curr) transitions++;
+    }
+    pronounceScore = n.length > 1 ? Math.min(100, Math.round((transitions / (n.length - 1)) * 120)) : 50;
+
+    // Length: ideal 5-9 chars
+    let lengthScore = 100;
+    if (len < 4) lengthScore = 40;
+    else if (len <= 5) lengthScore = 85;
+    else if (len <= 9) lengthScore = 100;
+    else if (len <= 12) lengthScore = 75;
+    else lengthScore = Math.max(20, 100 - (len - 12) * 8);
+
+    // Memorability: no numbers, not too long, no hyphens
+    let memorabilityScore = 100;
+    if (/\d/.test(n)) memorabilityScore -= 25;
+    if (/-/.test(name)) memorabilityScore -= 20;
+    if (len > 10) memorabilityScore -= 15;
+    if (len > 15) memorabilityScore -= 20;
+    memorabilityScore = Math.max(10, memorabilityScore);
+
+    // Brandability: starts with consonant, no repeated chars, sounds unique
+    let brandScore = 70;
+    if (!vowels.has(n[0])) brandScore += 10;
+    if (len >= 4 && len <= 8) brandScore += 15;
+    const uniqueChars = new Set(n).size;
+    if (uniqueChars / n.length > 0.6) brandScore += 10;
+    brandScore = Math.min(100, brandScore);
+
+    const overall = Math.round((pronounceScore + lengthScore + memorabilityScore + brandScore) / 4);
+
+    return { pronounce: pronounceScore, length: lengthScore, memorability: memorabilityScore, brand: brandScore, overall };
+  }
+
+  function scoreColor(v) {
+    if (v >= 75) return 'var(--green)';
+    if (v >= 50) return 'var(--yellow)';
+    return 'var(--accent2)';
+  }
+
+  function starsForScore(v) {
+    const stars = Math.round(v / 20); // 0-5 stars
+    return '★'.repeat(stars) + '☆'.repeat(5 - stars);
+  }
+
+  // ── Domain generation ─────────────────────────────────────────────────────
+  const PREFIXES = ['get', 'go', 'use', 'try', 'my', 'the', 'pro', 'super', 'ultra', 'smart', 'fast', 'ez'];
+  const SUFFIXES = ['app', 'hub', 'labs', 'hq', 'io', 'co', 'ly', 'ify', 'flow', 'kit', 'base', 'spot', 'vault', 'zone'];
+  const PATTERNS = ['double', 'prefix', 'suffix', 'portmanteau', 'abbreviated'];
+
+  function generateNames(keywords) {
+    const words = keywords.map(k => k.trim().toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean);
+    if (!words.length) return [];
+
+    const names = new Set();
+
+    // Raw keywords
+    words.forEach(w => names.add(w));
+
+    // Keyword combinations
+    for (let i = 0; i < words.length; i++) {
+      for (let j = 0; j < words.length; j++) {
+        if (i !== j) {
+          names.add(`${words[i]}${words[j]}`);
+          names.add(`${words[i]}-${words[j]}`);
+        }
+      }
+    }
+
+    // Prefix combos
+    PREFIXES.forEach(p => words.forEach(w => names.add(`${p}${w}`)));
+
+    // Suffix combos
+    SUFFIXES.forEach(s => words.forEach(w => names.add(`${w}${s}`)));
+
+    // Abbreviations of multi-word
+    if (words.length >= 2) {
+      names.add(words.map(w => w[0]).join(''));
+      names.add(words.map(w => w.substring(0, 2)).join(''));
+      names.add(words.map(w => w.substring(0, 3)).join(''));
+    }
+
+    // Portmanteau (blend first half of word1 + second half of word2)
+    if (words.length >= 2) {
+      const w1 = words[0], w2 = words[1];
+      names.add(w1.substring(0, Math.ceil(w1.length / 2)) + w2.substring(Math.floor(w2.length / 2)));
+      names.add(w2.substring(0, Math.ceil(w2.length / 2)) + w1.substring(Math.floor(w1.length / 2)));
+    }
+
+    // Filter: min 3 chars, max 20
+    return [...names].filter(n => n.length >= 3 && n.length <= 20 && /^[a-z0-9-]+$/.test(n)).slice(0, 40);
+  }
+
+  function buildDomainList(names, tlds) {
+    const results = [];
+    names.forEach(name => {
+      tlds.forEach(tld => {
+        const domain = `${name}${tld}`;
+        const available = isAvailable(domain);
+        const score = scoreDomain(name);
+        results.push({ domain, name, tld, available, score });
+      });
+    });
+    return results;
+  }
+
+  // ── Watchlist ─────────────────────────────────────────────────────────────
+  function loadWatchlist() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function saveWatchlist() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist)); } catch {}
+  }
+
+  function addToWatchlist(item) {
+    if (watchlist.some(w => w.domain === item.domain)) {
+      showToast(`Already in watchlist: ${item.domain}`, '⚠️');
+      return;
+    }
+    watchlist.unshift(item);
+    saveWatchlist();
+    renderWatchlist();
+    updateWatchlistBadge();
+    showToast(`Added ${item.domain} to watchlist`, '🔖');
+  }
+
+  function removeFromWatchlist(domain) {
+    watchlist = watchlist.filter(w => w.domain !== domain);
+    saveWatchlist();
+    renderWatchlist();
+    updateWatchlistBadge();
+    showToast(`Removed ${domain}`, '🗑️');
+  }
+
+  function updateWatchlistBadge() {
+    const badge = document.getElementById('wl-count-badge');
+    badge.textContent = watchlist.length > 0 ? `(${watchlist.length})` : '';
+  }
+
+  // ── TLD toggle setup ──────────────────────────────────────────────────────
+  function initTLDToggles() {
+    const container = document.getElementById('tld-toggles');
+    ALL_TLDS.forEach(tld => {
+      const chip = document.createElement('button');
+      chip.className = `tld-chip${DEFAULT_TLDS.includes(tld) ? ' selected' : ''}`;
+      chip.textContent = tld;
+      chip.setAttribute('aria-pressed', DEFAULT_TLDS.includes(tld) ? 'true' : 'false');
+      chip.addEventListener('click', () => {
+        chip.classList.toggle('selected');
+        chip.setAttribute('aria-pressed', chip.classList.contains('selected') ? 'true' : 'false');
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  function getSelectedTLDs() {
+    return [...document.querySelectorAll('#tld-toggles .tld-chip.selected')].map(c => c.textContent);
+  }
+
+  // ── Rendering ─────────────────────────────────────────────────────────────
+  function renderDomainRow(item, actions = {}) {
+    const { domain, name, tld, available, score } = item;
+    const statusClass = available ? 'status-available' : 'status-taken';
+    const statusText = available ? 'Available' : 'Taken';
+
+    const div = document.createElement('div');
+    div.className = 'domain-row';
+    div.setAttribute('role', 'listitem');
+    div.innerHTML = `
+      <div class="domain-name">
+        <span>${escHtml(name)}</span><span class="domain-tld">${escHtml(tld)}</span>
+      </div>
+      <div class="status-badge ${statusClass}">
+        <span class="status-dot" aria-hidden="true"></span>
+        ${statusText}
+      </div>
+      <div class="score-mini" title="Overall score: ${score.overall}/100">
+        <span class="score-stars" aria-label="Score: ${score.overall} out of 100">${starsForScore(score.overall)}</span>
+        <span class="score-val">${score.overall}</span>
+      </div>
+      <div class="domain-actions"></div>
+    `;
+
+    const actionsDiv = div.querySelector('.domain-actions');
+
+    // Register link
+    const regLink = document.createElement('a');
+    regLink.href = REGISTRAR_URL(domain);
+    regLink.target = '_blank';
+    regLink.rel = 'noopener noreferrer';
+    regLink.className = 'btn btn-ghost btn-sm';
+    regLink.textContent = 'Register';
+    regLink.setAttribute('aria-label', `Register ${domain} on Namecheap`);
+    actionsDiv.appendChild(regLink);
+
+    // Watchlist btn
+    const wlBtn = document.createElement('button');
+    const inWL = watchlist.some(w => w.domain === domain);
+    wlBtn.className = `btn btn-sm ${inWL ? 'btn-secondary' : 'btn-ghost'}`;
+    wlBtn.textContent = inWL ? '🔖' : '+ Watch';
+    wlBtn.setAttribute('aria-label', inWL ? `Remove ${domain} from watchlist` : `Add ${domain} to watchlist`);
+    wlBtn.addEventListener('click', () => {
+      if (watchlist.some(w => w.domain === domain)) {
+        removeFromWatchlist(domain);
+        wlBtn.textContent = '+ Watch';
+        wlBtn.className = 'btn btn-sm btn-ghost';
+      } else {
+        addToWatchlist(item);
+        wlBtn.textContent = '🔖';
+        wlBtn.className = 'btn btn-sm btn-secondary';
+      }
+    });
+    actionsDiv.appendChild(wlBtn);
+
+    // Score detail toggle
+    const scoreBtn = document.createElement('button');
+    scoreBtn.className = 'btn btn-ghost btn-sm';
+    scoreBtn.textContent = 'Score';
+    scoreBtn.setAttribute('aria-label', `View score details for ${domain}`);
+    let expanded = false;
+    scoreBtn.addEventListener('click', () => {
+      expanded = !expanded;
+      let detail = div.querySelector('.score-detail');
+      if (expanded) {
+        if (!detail) {
+          detail = document.createElement('div');
+          detail.className = 'score-detail';
+          detail.style.gridColumn = '1 / -1';
+          detail.style.marginTop = '8px';
+          detail.innerHTML = renderScoreDetail(score);
+          div.appendChild(detail);
+        }
+        detail.style.display = '';
+        scoreBtn.textContent = 'Hide';
+      } else {
+        if (detail) detail.style.display = 'none';
+        scoreBtn.textContent = 'Score';
+      }
+    });
+    actionsDiv.appendChild(scoreBtn);
+
+    return div;
+  }
+
+  function renderScoreDetail(score) {
+    const metrics = [
+      { label: 'Pronounceability', key: 'pronounce', val: score.pronounce },
+      { label: 'Length', key: 'length', val: score.length },
+      { label: 'Memorability', key: 'memorability', val: score.memorability },
+      { label: 'Brandability', key: 'brand', val: score.brand },
+    ];
+    return `<div class="score-breakdown">${metrics.map(m => `
+      <div class="score-metric">
+        <div class="score-metric-label">${m.label}</div>
+        <div class="score-metric-val" style="color:${scoreColor(m.val)}">${m.val}<small style="font-size:0.6em; color:var(--muted)">/100</small></div>
+        <div class="score-bar"><div class="score-bar-fill" style="width:${m.val}%; background:${scoreColor(m.val)}"></div></div>
+      </div>`).join('')}</div>`;
+  }
+
+  function renderResults(results, gridId, countId, filterState) {
+    const grid = document.getElementById(gridId);
+    const countEl = document.getElementById(countId);
+    grid.innerHTML = '';
+
+    const filtered = filterState === 'all' ? results
+      : results.filter(r => filterState === 'available' ? r.available : !r.available);
+
+    const avail = results.filter(r => r.available).length;
+
+    countEl.innerHTML = `Showing <strong>${filtered.length}</strong> of <strong>${results.length}</strong> domains`;
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div style="text-align:center; padding:32px; color:var(--muted);">No domains match this filter.</div>`;
+      return;
+    }
+
+    // Sort: available first, then by score
+    const sorted = [...filtered].sort((a, b) => {
+      if (a.available !== b.available) return a.available ? -1 : 1;
+      return b.score.overall - a.score.overall;
+    });
+
+    sorted.forEach((item, i) => {
+      const row = renderDomainRow(item);
+      row.style.animationDelay = `${i * 0.03}s`;
+      grid.appendChild(row);
+    });
+  }
+
+  function renderStatsBar(results, barId) {
+    const bar = document.getElementById(barId);
+    const total = results.length;
+    const avail = results.filter(r => r.available).length;
+    const taken = total - avail;
+    const avgScore = total ? Math.round(results.reduce((s, r) => s + r.score.overall, 0) / total) : 0;
+    const topDomain = [...results].sort((a, b) => b.score.overall - a.score.overall)[0];
+
+    bar.innerHTML = `
+      <div class="stat-item">
+        <span class="stat-label">Total Checked</span>
+        <span class="stat-val">${total}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Available</span>
+        <span class="stat-val green">${avail}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Taken</span>
+        <span class="stat-val red">${taken}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Avg Score</span>
+        <span class="stat-val" style="color:${scoreColor(avgScore)}">${avgScore}</span>
+      </div>
+      ${topDomain ? `<div class="stat-item">
+        <span class="stat-label">Top Pick</span>
+        <span class="stat-val" style="font-size:0.9rem;">${escHtml(topDomain.domain)}</span>
+      </div>` : ''}
+    `;
+  }
+
+  function renderSuggestions(names) {
+    const grid = document.getElementById('suggestion-grid');
+    const countEl = document.getElementById('suggestion-count');
+    grid.innerHTML = '';
+    countEl.textContent = `— ${names.length} suggestions`;
+
+    names.forEach(name => {
+      const chip = document.createElement('button');
+      chip.className = `suggestion-chip${selectedDomains.has(name) ? ' selected' : ''}`;
+      chip.setAttribute('aria-pressed', selectedDomains.has(name) ? 'true' : 'false');
+      chip.innerHTML = `${escHtml(name)} <span class="chip-add" aria-hidden="true">${selectedDomains.has(name) ? '✓' : '+'}</span>`;
+      chip.addEventListener('click', () => {
+        if (selectedDomains.has(name)) {
+          selectedDomains.delete(name);
+          chip.classList.remove('selected');
+          chip.querySelector('.chip-add').textContent = '+';
+          chip.setAttribute('aria-pressed', 'false');
+        } else {
+          selectedDomains.add(name);
+          chip.classList.add('selected');
+          chip.querySelector('.chip-add').textContent = '✓';
+          chip.setAttribute('aria-pressed', 'true');
+        }
+        updateCheckBar();
+      });
+      grid.appendChild(chip);
+    });
+  }
+
+  function updateCheckBar() {
+    const bar = document.getElementById('check-bar');
+    const label = document.getElementById('selected-count-label');
+    const btn = document.getElementById('check-btn');
+
+    if (selectedDomains.size > 0) {
+      bar.style.display = 'block';
+      label.textContent = `${selectedDomains.size} name${selectedDomains.size !== 1 ? 's' : ''} selected`;
+      btn.disabled = false;
+    } else {
+      bar.style.display = 'none';
+      btn.disabled = true;
+    }
+  }
+
+  function renderWatchlist() {
+    const container = document.getElementById('watchlist-container');
+    if (watchlist.length === 0) {
+      container.innerHTML = `
+        <div class="watchlist-empty">
+          <div class="empty-icon" aria-hidden="true">🔖</div>
+          <p>No domains saved yet. Add domains from the Generator or Bulk Check tabs.</p>
+        </div>`;
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'watchlist-grid';
+
+    watchlist.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'watchlist-row';
+      row.setAttribute('role', 'listitem');
+
+      const statusClass = item.available ? 'status-available' : 'status-taken';
+      const statusText = item.available ? 'Available' : 'Taken';
+
+      row.innerHTML = `
+        <div class="watchlist-info">
+          <span class="status-badge ${statusClass}">
+            <span class="status-dot" aria-hidden="true"></span>${statusText}
+          </span>
+          <span class="watchlist-domain">${escHtml(item.domain)}</span>
+          <span style="color:var(--muted); font-size:0.78rem;">Score: ${item.score.overall}</span>
+        </div>
+        <div class="watchlist-actions"></div>
+      `;
+
+      const actions = row.querySelector('.watchlist-actions');
+
+      const regLink = document.createElement('a');
+      regLink.href = REGISTRAR_URL(item.domain);
+      regLink.target = '_blank';
+      regLink.rel = 'noopener noreferrer';
+      regLink.className = 'btn btn-ghost btn-sm';
+      regLink.textContent = 'Register';
+      regLink.setAttribute('aria-label', `Register ${item.domain}`);
+      actions.appendChild(regLink);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn btn-danger btn-sm';
+      removeBtn.textContent = 'Remove';
+      removeBtn.setAttribute('aria-label', `Remove ${item.domain} from watchlist`);
+      removeBtn.addEventListener('click', () => removeFromWatchlist(item.domain));
+      actions.appendChild(removeBtn);
+
+      grid.appendChild(row);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(grid);
+  }
+
+  // ── CSV Export ────────────────────────────────────────────────────────────
+  function exportCSV(results, filename) {
+    const header = 'Domain,Status,Overall Score,Pronounce,Length,Memorability,Brand,Register URL';
+    const rows = results.map(r =>
+      `"${r.domain}","${r.available ? 'Available' : 'Taken'}",${r.score.overall},${r.score.pronounce},${r.score.length},${r.score.memorability},${r.score.brand},"${REGISTRAR_URL(r.domain)}"`
+    );
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV exported', '📥');
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(msg, icon = 'ℹ️') {
+    const toast = document.getElementById('toast');
+    toast.innerHTML = `<span aria-hidden="true">${icon}</span> ${escHtml(msg)}`;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  // ── Escape HTML ───────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Simulated async check ─────────────────────────────────────────────────
+  async function simulateCheck(domains) {
+    // Simulate network latency in batches
+    const results = [];
+    const batchSize = 10;
+    for (let i = 0; i < domains.length; i += batchSize) {
+      const batch = domains.slice(i, i + batchSize);
+      await new Promise(r => setTimeout(r, 120 + Math.random() * 80));
+      batch.forEach(d => results.push(d));
+    }
+    return results;
+  }
+
+  // ── Tab logic ─────────────────────────────────────────────────────────────
+  function initTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+        const panelId = `panel-${btn.dataset.tab}`;
+        document.getElementById(panelId).classList.add('active');
+        if (btn.dataset.tab === 'watchlist') renderWatchlist();
+      });
+    });
+  }
+
+  // ── Filter logic ──────────────────────────────────────────────────────────
+  function initFilters(barId, getResults, gridId, countId, getFilter, setFilter) {
+    document.querySelectorAll(`#${barId} .filter-chip`).forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll(`#${barId} .filter-chip`).forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        setFilter(chip.dataset.filter);
+        renderResults(getResults(), gridId, countId, getFilter());
+      });
+    });
+  }
+
+  // ── Generator actions ─────────────────────────────────────────────────────
+  async function handleGenerate() {
+    const input = document.getElementById('keyword-input').value.trim();
+    if (!input) {
+      showToast('Please enter at least one keyword', '⚠️');
+      document.getElementById('keyword-input').focus();
+      return;
+    }
+    const keywords = input.split(',').map(k => k.trim()).filter(Boolean);
+    const names = generateNames(keywords);
+    if (!names.length) {
+      showToast('Could not generate names from those keywords', '⚠️');
+      return;
+    }
+
+    const btn = document.getElementById('gen-btn-content');
+    btn.innerHTML = `<span class="spinner" aria-label="Generating..."></span>`;
+    document.getElementById('generate-btn').disabled = true;
+
+    await new Promise(r => setTimeout(r, 400));
+
+    selectedDomains.clear();
+    document.getElementById('suggestions-section').style.display = 'block';
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('check-bar').style.display = 'none';
+
+    renderSuggestions(names);
+    updateCheckBar();
+    showToast(`Generated ${names.length} name suggestions`, '✨');
+
+    btn.textContent = 'Generate';
+    document.getElementById('generate-btn').disabled = false;
+  }
+
+  async function handleCheck() {
+    if (!selectedDomains.size) return;
+    const tlds = getSelectedTLDs();
+    if (!tlds.length) {
+      showToast('Select at least one TLD extension', '⚠️');
+      return;
+    }
+
+    const btn = document.getElementById('check-btn-content');
+    btn.innerHTML = `<span class="spinner" aria-label="Checking..."></span> Checking…`;
+    document.getElementById('check-btn').disabled = true;
+
+    const names = [...selectedDomains];
+    const domainList = buildDomainList(names, tlds);
+    generatorResults = await simulateCheck(domainList);
+
+    document.getElementById('results-section').style.display = 'block';
+    renderStatsBar(generatorResults, 'stats-bar');
+    renderResults(generatorResults, 'domain-grid', 'results-count', genFilter);
+    document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    showToast(`Checked ${generatorResults.length} domains`, '✅');
+
+    btn.textContent = 'Check Availability';
+    document.getElementById('check-btn').disabled = false;
+  }
+
+  // ── Bulk check actions ────────────────────────────────────────────────────
+  async function handleBulkCheck() {
+    const raw = document.getElementById('bulk-input').value.trim();
+    if (!raw) {
+      showToast('Enter domain names to check', '⚠️');
+      document.getElementById('bulk-input').focus();
+      return;
+    }
+
+    const lines = raw.split('\n').map(l => l.trim().toLowerCase()).filter(Boolean);
+    const domains = [...new Set(lines)].slice(0, 100);
+
+    if (!domains.length) {
+      showToast('No valid domains found', '⚠️');
+      return;
+    }
+
+    const btn = document.getElementById('bulk-btn-content');
+    btn.innerHTML = `<span class="spinner" aria-label="Checking..."></span> Checking ${domains.length}…`;
+    document.getElementById('bulk-check-btn').disabled = true;
+
+    const items = domains.map(domain => {
+      const parts = domain.match(/^(.+?)(\.[a-z]{2,})$/);
+      const name = parts ? parts[1] : domain;
+      const tld = parts ? parts[2] : '.com';
+      const available = isAvailable(domain);
+      const score = scoreDomain(name);
+      return { domain, name, tld, available, score };
+    });
+
+    bulkResults = await simulateCheck(items);
+
+    document.getElementById('bulk-results-section').style.display = 'block';
+    renderStatsBar(bulkResults, 'bulk-stats-bar');
+    renderResults(bulkResults, 'bulk-domain-grid', 'bulk-results-count', bulkFilter);
+    document.getElementById('bulk-results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    showToast(`Checked ${bulkResults.length} domains`, '✅');
+
+    btn.textContent = 'Check All';
+    document.getElementById('bulk-check-btn').disabled = false;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  function init() {
+    initTabs();
+    initTLDToggles();
+    updateWatchlistBadge();
+
+    // Generator
+    document.getElementById('generate-btn').addEventListener('click', handleGenerate);
+    document.getElementById('keyword-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleGenerate();
+    });
+    document.getElementById('check-btn').addEventListener('click', handleCheck);
+    document.getElementById('clear-selection-btn').addEventListener('click', () => {
+      selectedDomains.clear();
+      document.querySelectorAll('.suggestion-chip').forEach(c => {
+        c.classList.remove('selected');
+        c.querySelector('.chip-add').textContent = '+';
+        c.setAttribute('aria-pressed', 'false');
+      });
+      updateCheckBar();
+    });
+
+    // Filter: generator
+    initFilters('filter-bar',
+      () => generatorResults,
+      'domain-grid',
+      'results-count',
+      () => genFilter,
+      v => { genFilter = v; }
+    );
+
+    // Filter: bulk
+    initFilters('bulk-filter-bar',
+      () => bulkResults,
+      'bulk-domain-grid',
+      'bulk-results-count',
+      () => bulkFilter,
+      v => { bulkFilter = v; }
+    );
+
+    // Export
+    document.getElementById('export-csv-gen').addEventListener('click', () => {
+      if (!generatorResults.length) { showToast('No results to export', '⚠️'); return; }
+      exportCSV(generatorResults, 'domain-results.csv');
+    });
+    document.getElementById('export-csv-bulk').addEventListener('click', () => {
+      if (!bulkResults.length) { showToast('No results to export', '⚠️'); return; }
+      exportCSV(bulkResults, 'bulk-domain-results.csv');
+    });
+    document.getElementById('export-watchlist-csv').addEventListener('click', () => {
+      if (!watchlist.length) { showToast('Watchlist is empty', '⚠️'); return; }
+      exportCSV(watchlist, 'watchlist.csv');
+    });
+
+    // Bulk actions
+    document.getElementById('bulk-check-btn').addEventListener('click', handleBulkCheck);
+    document.getElementById('bulk-clear-btn').addEventListener('click', () => {
+      document.getElementById('bulk-input').value = '';
+      document.getElementById('bulk-results-section').style.display = 'none';
+      bulkResults = [];
+    });
+    document.getElementById('bulk-load-example').addEventListener('click', () => {
+      document.getElementById('bulk-input').value = [
+        'shopify.com', 'notion.io', 'linear.app', 'vercel.app', 'supabase.io',
+        'stripe.com', 'figma.com', 'loom.app', 'craft.do', 'ray.so'
+      ].join('\n');
+    });
+
+    // Watchlist actions
+    document.getElementById('clear-watchlist-btn').addEventListener('click', () => {
+      if (!watchlist.length) { showToast('Watchlist is already empty', 'ℹ️'); return; }
+      watchlist = [];
+      saveWatchlist();
+      renderWatchlist();
+      updateWatchlistBadge();
+      showToast('Watchlist cleared', '🗑️');
+    });
+
+    document.getElementById('recheck-all-btn').addEventListener('click', async () => {
+      if (!watchlist.length) { showToast('No domains to re-check', 'ℹ️'); return; }
+      const btn = document.getElementById('recheck-all-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span>`;
+      // Re-simulate (deterministic, so same results — but shows UX)
+      await new Promise(r => setTimeout(r, 800));
+      renderWatchlist();
+      btn.disabled = false;
+      btn.textContent = 'Re-check All';
+      showToast('Watchlist refreshed', '✅');
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pairing — Alcohol Pairing Suggester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+button { cursor: pointer; font-family: var(--font-body); }
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep { width: 1px; height: 16px; background: var(--color-border); flex-shrink: 0; }
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App Shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Mode toggle */
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  background: var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+.mode-btn {
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.03em;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.mode-btn.active {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  box-shadow: 0 1px 3px oklch(18% 0.04 155 / 0.08);
+}
+
+/* Section labels */
+.s-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+
+/* Drink type selector */
+.drink-type-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.type-chip {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 99px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.type-chip.active {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+/* Style select */
+.style-select-wrap { position: relative; }
+.style-select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  padding-right: var(--space-8);
+  appearance: none;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  transition: border-color 0.15s;
+}
+.style-select:focus { outline: none; border-color: var(--color-accent); }
+.style-select-arrow {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* Food category chips */
+.food-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.food-chip {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 99px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.food-chip.active {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+/* Text input */
+.text-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.text-input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10); }
+.text-input::placeholder { color: var(--color-ink-muted); }
+
+/* Filter group */
+.filter-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.filter-chip {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.filter-chip.active {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+/* Sidebar divider */
+.s-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0 calc(-1 * var(--space-4));
+}
+
+/* My Menu section */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 180px;
+  overflow-y: auto;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+.menu-item-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-ink);
+}
+.menu-item-price {
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+}
+.menu-item-remove {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: color 0.12s;
+  padding: 0;
+}
+.menu-item-remove:hover { color: var(--color-danger); }
+.menu-empty {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-3) 0;
+}
+.btn-add-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px dashed var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  width: 100%;
+  transition: background 0.12s;
+}
+.btn-add-menu:hover { background: var(--color-accent-subtle); }
+
+/* Sidebar CTA */
+.btn-find {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  width: 100%;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.btn-find:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-find:active { transform: translateY(0); }
+
+/* ── Main Panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Empty / welcome state */
+.welcome-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  text-align: center;
+  gap: var(--space-4);
+}
+.welcome-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+.welcome-sub {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  max-width: 360px;
+  line-height: 1.65;
+}
+.welcome-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  max-width: 400px;
+}
+.welcome-chip {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 99px;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+}
+
+/* Drink profile card */
+.drink-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-paper-2);
+}
+.drink-card-head {
+  padding: var(--space-6);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.drink-card-emoji {
+  font-size: 2.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.drink-card-info { flex: 1; min-width: 0; }
+.drink-card-name {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  line-height: 1.2;
+}
+.drink-card-type {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+}
+.drink-card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: none;
+}
+.drink-stat {
+  padding: var(--space-4) var(--space-6);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.drink-stat:last-child { border-right: none; }
+.drink-stat-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.drink-stat-value {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+.drink-flavor-notes {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+}
+.drink-flavor-label {
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-right: var(--space-2);
+}
+
+/* Section heading */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+.section-count {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+}
+
+/* Pairing grid */
+.pairing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+.pairing-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--color-paper);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: default;
+  animation: card-in 0.2s ease both;
+}
+.pairing-card:hover {
+  border-color: var(--color-accent-line);
+  box-shadow: 0 2px 8px oklch(52% 0.14 155 / 0.08);
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pairing-card-emoji { font-size: 2rem; line-height: 1; }
+.pairing-card-name {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+}
+.pairing-quality-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+.q-classic { background: var(--color-success); }
+.q-good    { background: oklch(65% 0.14 155); }
+.q-fair    { background: var(--color-warn); }
+.pairing-quality-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+}
+
+/* Drink recommendation list */
+.rec-list { display: flex; flex-direction: column; gap: var(--space-4); }
+.rec-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  background: var(--color-paper);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4);
+  align-items: start;
+  animation: card-in 0.2s ease both;
+  transition: border-color 0.15s;
+}
+.rec-item:hover { border-color: var(--color-accent-line); }
+.rec-item-rank {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+.rec-item-body { min-width: 0; }
+.rec-item-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+.rec-item-category {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+.rec-item-rationale {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.65;
+}
+.rec-in-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-success);
+  background: oklch(55% 0.14 155 / 0.08);
+  border: 1px solid oklch(55% 0.14 155 / 0.25);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  margin-left: var(--space-2);
+}
+
+/* Pairing note (sommelier) */
+.sommelier-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sommelier-selectors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+.sommelier-note {
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-paper);
+  border-left: 3px solid var(--color-accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: var(--text-sm);
+  font-style: italic;
+  color: var(--color-ink-muted);
+  line-height: 1.75;
+  display: none;
+}
+.sommelier-note.visible { display: block; }
+
+/* Pairing matrix */
+.matrix-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.matrix-table {
+  border-collapse: collapse;
+  min-width: 640px;
+  width: 100%;
+}
+.matrix-table th,
+.matrix-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: center;
+  font-size: 10px;
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.matrix-table th {
+  background: var(--color-paper-2);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.matrix-table th.row-head {
+  text-align: left;
+  font-size: var(--text-xs);
+  min-width: 160px;
+}
+.mx-classic { background: oklch(55% 0.14 155 / 0.18); color: oklch(35% 0.12 155); font-weight: 700; }
+.mx-good    { background: oklch(65% 0.10 155 / 0.12); color: oklch(40% 0.10 155); font-weight: 600; }
+.mx-fair    { background: oklch(62% 0.15 72 / 0.12);  color: oklch(42% 0.12 72);  font-weight: 500; }
+.mx-empty   { color: var(--color-border); }
+
+/* Guest menu builder */
+.menu-builder {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.menu-builder-head {
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-paper-2);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.menu-builder-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+.btn-print {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-print:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.menu-builder-body { padding: var(--space-5) var(--space-6); }
+.course-rows { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-4); }
+.course-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 28px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.course-input {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  width: 100%;
+  transition: border-color 0.15s;
+}
+.course-input:focus { outline: none; border-color: var(--color-accent); }
+.course-input::placeholder { color: var(--color-ink-muted); }
+.btn-remove-course {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-size: var(--text-lg);
+  transition: color 0.12s;
+  padding: 0;
+}
+.btn-remove-course:hover { color: var(--color-danger); }
+.btn-add-course {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px dashed var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  transition: background 0.12s;
+}
+.btn-add-course:hover { background: var(--color-accent-subtle); }
+
+/* Printable pairing card (hidden until print) */
+@media print {
+  .nav, .sidebar, .non-printable, .matrix-section { display: none !important; }
+  body { overflow: visible; }
+  .app-shell { display: block; height: auto; margin-top: 0; }
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: 0; }
+  .print-card {
+    display: block !important;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 32px;
+    page-break-inside: avoid;
+  }
+}
+.print-card { display: none; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: oklch(18% 0.04 155 / 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  transform: translateY(8px);
+  transition: transform 0.2s;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-h {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.modal-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-size: var(--text-base);
+  transition: color 0.12s, border-color 0.12s;
+}
+.modal-close:hover { color: var(--color-ink); border-color: var(--color-ink-muted); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--color-border); max-height: none; }
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+  .pairing-grid { grid-template-columns: 1fr 1fr; }
+  .sommelier-selectors { grid-template-columns: 1fr; }
+  .drink-card-stats { grid-template-columns: 1fr 1fr; }
+  .drink-stat:nth-child(2) { border-right: none; }
+  .drink-stat:nth-child(3) { border-top: 1px solid var(--color-border); grid-column: span 2; }
+  .course-row { grid-template-columns: 1fr 28px; }
+  .course-row .course-input:last-of-type { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pairing-card, .rec-item { animation: none; }
+  .btn-find:hover { transform: none; }
+  .toast { transition: opacity 0.15s; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Pair<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Alcohol Pairing Suggester</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Pairing controls">
+    <div class="sidebar-scroll">
+
+      <!-- Mode Toggle -->
+      <div>
+        <p class="s-label">Mode</p>
+        <div class="mode-toggle" role="radiogroup" aria-label="Search mode">
+          <button class="mode-btn active" data-mode="drink" role="radio" aria-checked="true">I have a drink</button>
+          <button class="mode-btn" data-mode="food" role="radio" aria-checked="false">I have food</button>
+        </div>
+      </div>
+
+      <!-- Drink mode controls -->
+      <div id="drink-controls">
+        <p class="s-label">Drink type</p>
+        <div class="drink-type-row" role="group" aria-label="Drink categories">
+          <button class="type-chip active" data-dtype="wine">Wine</button>
+          <button class="type-chip" data-dtype="spirits">Spirits</button>
+        </div>
+
+        <div style="margin-top: var(--space-3)">
+          <p class="s-label">Style</p>
+          <div class="style-select-wrap">
+            <select class="style-select" id="drink-style-select" aria-label="Select drink style">
+              <option value="">— Select a style —</option>
+            </select>
+            <span class="style-select-arrow" aria-hidden="true">▾</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Food mode controls -->
+      <div id="food-controls" style="display:none">
+        <p class="s-label">Food category</p>
+        <div class="food-chips" id="food-chips" role="group" aria-label="Food categories">
+          <!-- populated by JS -->
+        </div>
+        <div style="margin-top: var(--space-3)">
+          <p class="s-label">Specific dish</p>
+          <input
+            type="text"
+            class="text-input"
+            id="food-search-input"
+            placeholder="e.g. grilled salmon, foie gras…"
+            autocomplete="off"
+            aria-label="Specific dish search"
+          >
+        </div>
+      </div>
+
+      <div class="s-divider"></div>
+
+      <!-- Guest preference -->
+      <div>
+        <p class="s-label">Guest palate</p>
+        <div class="filter-row" role="group" aria-label="Guest palate preference">
+          <button class="filter-chip active" data-pref="all">All</button>
+          <button class="filter-chip" data-pref="dry">Dry</button>
+          <button class="filter-chip" data-pref="medium">Medium</button>
+          <button class="filter-chip" data-pref="sweet">Sweet</button>
+          <button class="filter-chip" data-pref="adventurous">Bold</button>
+        </div>
+      </div>
+
+      <!-- Flavor profile -->
+      <div>
+        <p class="s-label">Flavor body</p>
+        <div class="filter-row" role="group" aria-label="Flavor body preference">
+          <button class="filter-chip active" data-body="all">All</button>
+          <button class="filter-chip" data-body="light">Light</button>
+          <button class="filter-chip" data-body="medium">Medium</button>
+          <button class="filter-chip" data-body="bold">Bold</button>
+        </div>
+      </div>
+
+      <div class="s-divider"></div>
+
+      <!-- My Menu (Venue Inventory) -->
+      <div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--space-2)">
+          <p class="s-label" style="margin:0">My Menu</p>
+          <span style="font-size:var(--text-xs); color:var(--color-ink-muted);" id="menu-count">0 / 30</span>
+        </div>
+        <div class="menu-list" id="menu-list" aria-label="Venue inventory"></div>
+        <button class="btn-add-menu" id="btn-add-menu" style="margin-top: var(--space-2)" aria-label="Add drink to menu">
+          + Add to my menu
+        </button>
+      </div>
+
+      <!-- CTA -->
+      <button class="btn-find" id="btn-find" aria-label="Find pairings">
+        Find Pairings
+      </button>
+
+    </div>
+  </aside>
+
+  <!-- Main Panel -->
+  <main class="main" aria-label="Pairing results">
+    <div class="main-scroll" id="main-scroll">
+
+      <!-- Welcome state -->
+      <div class="welcome-state" id="welcome-state">
+        <p class="welcome-title">Find the perfect match.</p>
+        <p class="welcome-sub">Select a drink style or food category in the sidebar, then hit Find Pairings.</p>
+        <div class="welcome-chips">
+          <span class="welcome-chip">🍷 Wines</span>
+          <span class="welcome-chip">🥃 Spirits</span>
+          <span class="welcome-chip">🦪 Seafood</span>
+          <span class="welcome-chip">🥩 Meat</span>
+          <span class="welcome-chip">🧀 Cheese</span>
+          <span class="welcome-chip">🍫 Dessert</span>
+        </div>
+      </div>
+
+      <!-- Results area (hidden until search) -->
+      <div id="results-area" style="display:none; display:flex; flex-direction:column; gap:var(--space-8);">
+
+        <!-- Drink profile card -->
+        <div id="drink-profile-section" style="display:none"></div>
+
+        <!-- Pairing grid (drink→food) or recommendations (food→drink) -->
+        <div id="pairing-section"></div>
+
+        <!-- Sommelier tasting note generator -->
+        <section class="sommelier-card non-printable" id="sommelier-section" style="display:none" aria-label="Sommelier note generator">
+          <div>
+            <h2 class="section-title" style="font-size:var(--text-base)">Sommelier Note Generator</h2>
+            <p style="font-size:var(--text-sm); color:var(--color-ink-muted); margin-top:4px">Select a drink + food to generate a pairing note.</p>
+          </div>
+          <div class="sommelier-selectors">
+            <div>
+              <p class="s-label">Drink</p>
+              <div class="style-select-wrap">
+                <select class="style-select" id="som-drink-select" aria-label="Select drink for sommelier note"></select>
+                <span class="style-select-arrow" aria-hidden="true">▾</span>
+              </div>
+            </div>
+            <div>
+              <p class="s-label">Food</p>
+              <div class="style-select-wrap">
+                <select class="style-select" id="som-food-select" aria-label="Select food for sommelier note">
+                  <option value="">— Select food —</option>
+                </select>
+                <span class="style-select-arrow" aria-hidden="true">▾</span>
+              </div>
+            </div>
+          </div>
+          <blockquote class="sommelier-note" id="sommelier-note" aria-live="polite"></blockquote>
+          <button class="btn-find" id="btn-generate-note" style="max-width:200px">Generate Note</button>
+        </section>
+
+        <!-- Pairing matrix -->
+        <section class="matrix-section non-printable" id="matrix-section" style="display:none" aria-label="Pairing quality matrix">
+          <div class="section-head" style="margin-bottom:var(--space-4)">
+            <h2 class="section-title">Pairing Matrix</h2>
+            <span style="font-size:var(--text-xs); color:var(--color-ink-muted)">
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--color-success); margin-right:4px"></span>Classic
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:oklch(65% 0.10 155); margin:0 4px 0 12px"></span>Good
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--color-warn); margin:0 4px 0 12px"></span>Fair
+            </span>
+          </div>
+          <div class="matrix-wrap" id="matrix-wrap"></div>
+        </section>
+
+        <!-- Guest menu builder -->
+        <section class="menu-builder non-printable" id="menu-builder-section" aria-label="Tonight's pairing menu builder">
+          <div class="menu-builder-head">
+            <span class="menu-builder-title">Tonight's Pairings</span>
+            <button class="btn-print" id="btn-print-menu" aria-label="Print pairing card">Print Card</button>
+          </div>
+          <div class="menu-builder-body">
+            <p style="font-size:var(--text-xs); color:var(--color-ink-muted); margin-bottom:var(--space-4)">Build up to 6 course + drink pairs for your guests tonight.</p>
+            <div class="course-rows" id="course-rows"></div>
+            <button class="btn-add-course" id="btn-add-course">+ Add course</button>
+          </div>
+        </section>
+
+        <!-- Print card (shown only on print) -->
+        <div class="print-card" id="print-card-area" aria-hidden="true"></div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Add to menu modal -->
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-h">
+  <div class="modal" id="modal-body">
+    <div class="modal-title-row">
+      <h2 class="modal-h" id="modal-h">Add Drink to My Menu</h2>
+      <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+    </div>
+    <div>
+      <p class="s-label">Drink name</p>
+      <input type="text" class="text-input" id="modal-name" placeholder="e.g. Château Margaux 2018" autocomplete="off">
+    </div>
+    <div>
+      <p class="s-label">Style / type</p>
+      <input type="text" class="text-input" id="modal-style" placeholder="e.g. Cabernet Sauvignon" autocomplete="off">
+    </div>
+    <div>
+      <p class="s-label">Price (optional)</p>
+      <input type="text" class="text-input" id="modal-price" placeholder="e.g. €45" autocomplete="off">
+    </div>
+    <div>
+      <p class="s-label">Tasting notes (optional)</p>
+      <input type="text" class="text-input" id="modal-notes" placeholder="e.g. dark fruit, cedar, firm tannins" autocomplete="off">
+    </div>
+    <button class="btn-find" id="modal-save" style="margin-top:var(--space-2)">Add to My Menu</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   PAIRING DATABASE
+══════════════════════════════════════════════ */
+const DB = {
+  wines: {
+    'Champagne / Prosecco': {
+      emoji: '🥂', type: 'wine', body: 'light', palate: 'dry',
+      flavor: 'Yeasty brioche, green apple, lemon zest, toasty minerality',
+      serving: '6–8°C', structure: 'High acidity · Effervescent',
+      pairings: { Seafood: 'classic', Cheese: 'good', Charcuterie: 'good', Poultry: 'fair', Vegetarian: 'fair', Meat: '', Dessert: 'fair', Spicy: '', Asian: 'good', Mediterranean: 'good' }
+    },
+    'Sauvignon Blanc': {
+      emoji: '🍋', type: 'wine', body: 'light', palate: 'dry',
+      flavor: 'Grapefruit, gooseberry, cut grass, herbaceous, mineral',
+      serving: '8–10°C', structure: 'High acidity · Crisp',
+      pairings: { Seafood: 'classic', Vegetarian: 'classic', Cheese: 'good', Poultry: 'good', Charcuterie: 'fair', Meat: '', Dessert: '', Spicy: '', Asian: 'fair', Mediterranean: 'good' }
+    },
+    'Pinot Grigio / Pinot Gris': {
+      emoji: '🍐', type: 'wine', body: 'light', palate: 'dry',
+      flavor: 'Pear, white peach, almond, lemon, subtle spice',
+      serving: '8–10°C', structure: 'Medium acidity · Delicate',
+      pairings: { Seafood: 'classic', Vegetarian: 'good', Cheese: 'good', Poultry: 'fair', Charcuterie: '', Meat: '', Dessert: '', Spicy: '', Asian: 'fair', Mediterranean: 'good' }
+    },
+    'Chardonnay (oaked)': {
+      emoji: '🧈', type: 'wine', body: 'medium', palate: 'medium',
+      flavor: 'Butter, vanilla, baked apple, cream, toasty oak',
+      serving: '10–12°C', structure: 'Medium acidity · Rich texture',
+      pairings: { Seafood: 'classic', Poultry: 'classic', Cheese: 'good', Vegetarian: 'fair', Charcuterie: '', Meat: '', Dessert: '', Spicy: '', Asian: '', Mediterranean: 'fair' }
+    },
+    'Riesling (dry)': {
+      emoji: '🌸', type: 'wine', body: 'light', palate: 'dry',
+      flavor: 'Lime, apricot, slate, petrol, green apple',
+      serving: '7–9°C', structure: 'High acidity · Bone dry',
+      pairings: { Seafood: 'classic', Spicy: 'good', Poultry: 'classic', Vegetarian: 'good', Asian: 'good', Cheese: 'fair', Charcuterie: '', Meat: '', Dessert: '', Mediterranean: '' }
+    },
+    'Riesling (off-dry)': {
+      emoji: '🍯', type: 'wine', body: 'light', palate: 'sweet',
+      flavor: 'Honey, peach, apricot, lime, white flowers',
+      serving: '6–8°C', structure: 'High acidity · Touch of sweetness',
+      pairings: { Spicy: 'classic', Asian: 'classic', Poultry: 'good', Seafood: 'fair', Dessert: 'good', Vegetarian: 'fair', Cheese: '', Meat: '', Charcuterie: '', Mediterranean: '' }
+    },
+    'Rosé': {
+      emoji: '🌹', type: 'wine', body: 'light', palate: 'dry',
+      flavor: 'Strawberry, watermelon, peach, light herbs, mineral',
+      serving: '8–10°C', structure: 'Medium acidity · Refreshing',
+      pairings: { Mediterranean: 'classic', Seafood: 'good', Charcuterie: 'good', Vegetarian: 'good', Poultry: 'fair', Cheese: 'fair', Meat: '', Dessert: '', Spicy: '', Asian: '' }
+    },
+    'Pinot Noir': {
+      emoji: '🍒', type: 'wine', body: 'medium', palate: 'dry',
+      flavor: 'Cherry, raspberry, forest floor, subtle spice, silky tannins',
+      serving: '14–16°C', structure: 'Low tannin · Elegant',
+      pairings: { Seafood: 'good', Poultry: 'classic', Meat: 'good', Cheese: 'good', Vegetarian: 'good', Charcuterie: 'fair', Dessert: '', Spicy: '', Asian: '', Mediterranean: 'fair' }
+    },
+    'Merlot': {
+      emoji: '🫐', type: 'wine', body: 'medium', palate: 'medium',
+      flavor: 'Plum, blackberry, chocolate, bay leaf, soft tannins',
+      serving: '15–17°C', structure: 'Medium tannin · Velvety',
+      pairings: { Meat: 'classic', Poultry: 'good', Cheese: 'good', Vegetarian: 'good', Mediterranean: 'classic', Charcuterie: 'fair', Seafood: '', Dessert: '', Spicy: '', Asian: '' }
+    },
+    'Cabernet Sauvignon': {
+      emoji: '🍇', type: 'wine', body: 'bold', palate: 'dry',
+      flavor: 'Blackcurrant, cedar, tobacco, dark cherry, firm tannins',
+      serving: '16–18°C', structure: 'High tannin · Full-bodied',
+      pairings: { Meat: 'classic', Cheese: 'good', Charcuterie: 'good', Poultry: 'fair', Vegetarian: '', Seafood: '', Dessert: '', Spicy: '', Asian: '', Mediterranean: 'fair' }
+    },
+    'Malbec': {
+      emoji: '🥩', type: 'wine', body: 'bold', palate: 'dry',
+      flavor: 'Plum, dark chocolate, violet, leather, oak spice',
+      serving: '15–17°C', structure: 'Medium-high tannin · Plush',
+      pairings: { Meat: 'classic', Charcuterie: 'good', Cheese: 'good', Poultry: 'fair', Mediterranean: 'fair', Vegetarian: '', Seafood: '', Dessert: '', Spicy: '', Asian: '' }
+    },
+    'Syrah / Shiraz': {
+      emoji: '🫚', type: 'wine', body: 'bold', palate: 'dry',
+      flavor: 'Black pepper, smoked meat, dark berry, olive, leather',
+      serving: '16–18°C', structure: 'High tannin · Bold · Spicy',
+      pairings: { Meat: 'classic', Charcuterie: 'classic', Cheese: 'good', Poultry: 'fair', Mediterranean: 'good', Spicy: 'fair', Vegetarian: '', Seafood: '', Dessert: '', Asian: '' }
+    },
+    'Zinfandel': {
+      emoji: '🍕', type: 'wine', body: 'bold', palate: 'medium',
+      flavor: 'Jammy berry, black pepper, vanilla, dried fruit, tobacco',
+      serving: '15–17°C', structure: 'Medium-high tannin · Jammy',
+      pairings: { Meat: 'good', Mediterranean: 'classic', Charcuterie: 'good', Spicy: 'good', Poultry: 'fair', Cheese: 'fair', Vegetarian: '', Seafood: '', Dessert: '', Asian: '' }
+    },
+    'Tempranillo': {
+      emoji: '🫒', type: 'wine', body: 'medium', palate: 'dry',
+      flavor: 'Dried cherry, leather, tobacco, vanilla, earthy spice',
+      serving: '15–17°C', structure: 'Medium tannin · Earthy',
+      pairings: { Meat: 'classic', Cheese: 'classic', Mediterranean: 'classic', Poultry: 'good', Charcuterie: 'good', Vegetarian: 'fair', Seafood: '', Dessert: '', Spicy: '', Asian: '' }
+    },
+    'Port': {
+      emoji: '🍮', type: 'wine', body: 'bold', palate: 'sweet',
+      flavor: 'Fig, raisin, chocolate, caramel, walnut, dried fruit',
+      serving: '14–16°C', structure: 'High sugar · Fortified',
+      pairings: { Dessert: 'classic', Cheese: 'classic', Charcuterie: 'good', Meat: 'fair', Poultry: '', Seafood: '', Spicy: '', Vegetarian: '', Asian: '', Mediterranean: '' }
+    },
+  },
+  spirits: {
+    'Whisky / Bourbon': {
+      emoji: '🥃', type: 'spirit', body: 'bold', palate: 'dry',
+      flavor: 'Caramel, vanilla, oak, dried fruit, peat (scotch), corn sweetness (bourbon)',
+      serving: 'Room temp or with ice', structure: 'High alcohol · Complex',
+      pairings: { Cheese: 'classic', Charcuterie: 'classic', Meat: 'good', Dessert: 'good', Seafood: 'fair', Poultry: '', Spicy: '', Asian: '', Mediterranean: '', Vegetarian: '' }
+    },
+    'Scotch': {
+      emoji: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', type: 'spirit', body: 'bold', palate: 'dry',
+      flavor: 'Peat smoke, brine, heather, dried fruit, malt, oak',
+      serving: 'Room temp or neat', structure: 'Complex · Smoky',
+      pairings: { Seafood: 'classic', Cheese: 'classic', Charcuterie: 'good', Meat: 'good', Dessert: 'fair', Poultry: '', Spicy: '', Asian: 'fair', Mediterranean: '', Vegetarian: '' }
+    },
+    'Gin': {
+      emoji: '🌿', type: 'spirit', body: 'light', palate: 'dry',
+      flavor: 'Juniper, citrus peel, floral herbs, cucumber, spice',
+      serving: '4–8°C (G&T)', structure: 'Botanical · Aromatic',
+      pairings: { Seafood: 'classic', Vegetarian: 'good', Charcuterie: 'fair', Mediterranean: 'good', Asian: 'fair', Poultry: 'fair', Cheese: '', Meat: '', Dessert: '', Spicy: '' }
+    },
+    'Vodka': {
+      emoji: '❄️', type: 'spirit', body: 'light', palate: 'dry',
+      flavor: 'Neutral, clean, slight grain or citrus, ice cold clarity',
+      serving: 'Ice cold', structure: 'Neutral · Clean',
+      pairings: { Seafood: 'classic', Asian: 'good', Charcuterie: 'good', Cheese: 'fair', Vegetarian: 'fair', Poultry: '', Meat: '', Dessert: '', Spicy: '', Mediterranean: '' }
+    },
+    'Rum (dark)': {
+      emoji: '🏝️', type: 'spirit', body: 'medium', palate: 'sweet',
+      flavor: 'Molasses, tropical fruit, caramel, vanilla, oak, spice',
+      serving: 'Neat or on ice', structure: 'Medium-sweet · Warming',
+      pairings: { Dessert: 'classic', Meat: 'good', Mediterranean: 'fair', Spicy: 'fair', Asian: 'fair', Poultry: '', Cheese: '', Seafood: '', Vegetarian: '', Charcuterie: '' }
+    },
+    'Tequila': {
+      emoji: '🌵', type: 'spirit', body: 'medium', palate: 'dry',
+      flavor: 'Agave, citrus, pepper, mineral, vegetal earth',
+      serving: 'Neat or as margarita', structure: 'Earthy · Bright',
+      pairings: { Spicy: 'classic', Seafood: 'good', Mediterranean: 'good', Vegetarian: 'fair', Meat: 'fair', Asian: 'fair', Cheese: '', Charcuterie: '', Dessert: '', Poultry: '' }
+    },
+    'Cognac': {
+      emoji: '🫙', type: 'spirit', body: 'bold', palate: 'medium',
+      flavor: 'Dried apricot, orange zest, vanilla, leather, oak, floral',
+      serving: 'Room temp, large glass', structure: 'Rich · Elegant',
+      pairings: { Cheese: 'classic', Dessert: 'classic', Charcuterie: 'good', Meat: 'fair', Seafood: 'fair', Poultry: '', Spicy: '', Asian: '', Vegetarian: '', Mediterranean: '' }
+    },
+    'Mezcal': {
+      emoji: '🔥', type: 'spirit', body: 'bold', palate: 'adventurous',
+      flavor: 'Smoke, roasted agave, citrus, mineral, earthy complexity',
+      serving: 'Neat, room temp', structure: 'Smoky · Complex · Wild',
+      pairings: { Meat: 'classic', Spicy: 'classic', Mediterranean: 'good', Vegetarian: 'fair', Seafood: 'fair', Cheese: '', Charcuterie: 'good', Asian: '', Dessert: '', Poultry: '' }
+    },
+    'Pisco': {
+      emoji: '🍊', type: 'spirit', body: 'light', palate: 'dry',
+      flavor: 'Citrus, floral, grape must, light mineral, fresh herb',
+      serving: 'Chilled or as Pisco Sour', structure: 'Aromatic · Bright',
+      pairings: { Seafood: 'classic', Mediterranean: 'good', Vegetarian: 'good', Asian: 'fair', Poultry: 'fair', Cheese: '', Charcuterie: '', Meat: '', Dessert: '', Spicy: '' }
+    },
+    'Sake': {
+      emoji: '🍶', type: 'spirit', body: 'light', palate: 'medium',
+      flavor: 'Rice, melon, umami, floral, clean minerality, subtle sweetness',
+      serving: '10–14°C (chilled)', structure: 'Umami-rich · Delicate',
+      pairings: { Seafood: 'classic', Asian: 'classic', Vegetarian: 'good', Poultry: 'fair', Cheese: '', Meat: '', Charcuterie: 'fair', Dessert: '', Spicy: '', Mediterranean: '' }
+    },
+  }
+};
+
+const FOOD_CATEGORIES = ['Seafood', 'Meat', 'Poultry', 'Vegetarian', 'Cheese', 'Dessert', 'Spicy', 'Charcuterie', 'Asian', 'Mediterranean'];
+
+const FOOD_EMOJIS = {
+  Seafood: '🦪', Meat: '🥩', Poultry: '🍗', Vegetarian: '🥗',
+  Cheese: '🧀', Dessert: '🍫', Spicy: '🌶️', Charcuterie: '🥓',
+  Asian: '🍣', Mediterranean: '🫒'
+};
+
+const QUALITY_LABELS = { classic: 'Classic', good: 'Good', fair: 'Fair', '': '' };
+const QUALITY_CLASSES = { classic: 'q-classic', good: 'q-good', fair: 'q-fair', '': '' };
+
+/* All drinks flat for sommelier selects */
+const ALL_DRINKS = { ...DB.wines, ...DB.spirits };
+
+/* Sommelier note templates */
+const NOTES = {
+  'Champagne / Prosecco': { Seafood: 'The lively effervescence of Champagne lifts the briny sweetness of seafood, while its toasty brioche notes add a luxurious counterpoint. The high acidity cuts through richness, leaving the palate refreshed and ready for the next bite.', Cheese: 'The crisp acidity and fine bubbles of Champagne cut through the creaminess of soft cheeses, while citrus and toasty notes create a delightful interplay with the dairy richness.', default: 'The bright acidity and persistent bubbles of Champagne provide an elegant counterpoint, lifting flavors and cleansing the palate between each bite with effortless grace.' },
+  'Sauvignon Blanc': { Cheese: 'The bright acidity of the Sauvignon Blanc cuts through the richness of the goat cheese, while its herbaceous notes echo the fresh herbs in the accompaniment — a pairing rooted in the Loire Valley tradition.', Seafood: 'The zippy citrus and mineral qualities of Sauvignon Blanc mirror the clean ocean character of the seafood, while its crisp acidity brightens every delicate, briny bite.', Vegetarian: 'The herbaceous, grassy notes of Sauvignon Blanc are a natural companion for vegetable dishes, amplifying fresh herb flavors while its lively acidity keeps everything bright on the palate.', default: 'The fresh acidity and bright citrus character of Sauvignon Blanc provide a vibrant counterpoint, cutting through richness and highlighting the natural flavors of the dish.' },
+  'Chardonnay (oaked)': { Seafood: 'The buttery texture of oaked Chardonnay mirrors the richness of lobster and crab, while vanilla oak notes add a warm complexity that elevates the delicate sweetness of the shellfish.', Poultry: 'The creamy, toasted oak character of this Chardonnay envelops the golden, roasted notes of the poultry, while its fresh acidity lifts the richness into a harmonious, indulgent finish.', default: 'The lush texture and vanilla-kissed oak of this Chardonnay wrap around the richness of the dish, adding warmth and depth while maintaining just enough acidity to keep the palate lively.' },
+  'Pinot Noir': { Poultry: 'The silky tannins and earthy red fruit of Pinot Noir complement the savory depth of poultry, while its gentle acidity lifts the natural umami notes of the dish without overpowering them.', Meat: 'The fine-grained tannins and cherry-forest character of Pinot Noir trace the tender grain of the meat, while earthy undertones deepen the savory, long finish.', Seafood: 'An unconventional but compelling pairing — the low tannins and bright cherry acidity of Pinot Noir harmonize with the richness of salmon without overwhelming its delicate flesh.', default: 'The elegant, fine-grained tannins of Pinot Noir create a gentle embrace around the dish, while its earthy red fruit notes add complexity and depth to every bite.' },
+  'Cabernet Sauvignon': { Meat: 'The firm tannins of Cabernet Sauvignon bind with the proteins in red meat, softening on the palate while its dark fruit and cedar notes echo the char and depth of a well-seared cut.', Cheese: 'The structural tannins and blackcurrant depth of Cabernet Sauvignon stand up admirably to aged cheese, creating a dialogue between the wine\'s firm grip and the cheese\'s crystalline intensity.', default: 'The bold architecture of Cabernet Sauvignon — firm tannins, dark fruit, cedar — provides a powerful, structured counterpoint that elevates rich, full-flavored foods to their full potential.' },
+  'Port': { Dessert: 'The syrupy sweetness and complex dried fruit of Port meet the richness of chocolate in perfect harmony — sweet meeting sweet, with the wine\'s fortified warmth adding a velvet finish.', Cheese: 'Port and blue cheese is one of gastronomy\'s great duets: the wine\'s sweetness tames the cheese\'s pungency, while shared notes of dried fruit and walnut create a remarkably satisfying counterpoint.', default: 'The luscious sweetness and warming fortified character of Port provide a generous, enveloping finish that elevates rich and indulgent foods into a moment of true sensory pleasure.' },
+  'Whisky / Bourbon': { Cheese: 'The caramel and vanilla of aged bourbon echo the butterscotch notes of an aged cheddar, while the whisky\'s warmth gently softens the cheese\'s sharp crystalline bite.', Meat: 'The caramelized oak and dried fruit of bourbon mirror the Maillard crust of smoked meats, while its warm alcohol gently cuts through the fat for a long, satisfying finish.', Charcuterie: 'The complex spice and dried fruit character of whisky finds a worthy partner in cured meats — the fat of the charcuterie softens the spirit\'s heat, revealing deeper, more nuanced flavors in both.', default: 'The warming complexity of whisky — caramel, vanilla, and dried fruit — creates a rich, layered backdrop that draws out the savory depth of the dish with every contemplative sip.' },
+  'Sake': { Seafood: 'The clean umami richness of Junmai sake mirrors the delicate oceanic sweetness of fresh seafood without competing — a pairing rooted in centuries of Japanese culinary tradition.', Asian: 'The understated umami and clean rice character of sake provides a seamless cultural bridge — neither overshadowing the dish\'s complexity nor retreating from its intensity.', default: 'The gentle umami character and clean minerality of sake provide a beautifully understated complement, allowing the natural flavors of the dish to take the lead with elegant restraint.' },
+  'Tequila': { Spicy: 'The earthy agave and citrus brightness of tequila match the complexity of spiced dishes perfectly, providing a clean cut through heat while amplifying the dish\'s herbal and mineral notes.', Seafood: 'The vegetal agave notes and citrus brightness of tequila recall the flavors of a fresh squeeze of lime — a natural companion to ceviche and other vibrant, citrus-dressed seafood.', default: 'The earthy, citrus-kissed character of tequila adds a vivid, clean brightness that refreshes the palate and heightens the natural intensity of bold, flavorful dishes.' },
+  default: { default: 'This pairing brings the wine\'s character into conversation with the dish in a way that elevates both — the drink\'s structure offering balance while its aromatic profile adds dimension and pleasure to every bite.' }
+};
+
+function getSommelierNote(drinkName, foodCat) {
+  const notes = NOTES[drinkName] || NOTES['default'];
+  return notes[foodCat] || notes['default'] || NOTES['default']['default'];
+}
+
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+let mode = 'drink'; // 'drink' | 'food'
+let selectedDrinkType = 'wine';
+let selectedDrinkStyle = '';
+let selectedFoodCat = '';
+let foodSearchQuery = '';
+let guestPref = 'all';
+let flavorBody = 'all';
+let myMenu = [];
+
+/* ══════════════════════════════════════════════
+   STORAGE
+══════════════════════════════════════════════ */
+function loadMenu() {
+  try { myMenu = JSON.parse(localStorage.getItem('pair_menu') || '[]'); } catch { myMenu = []; }
+}
+function saveMenu() {
+  localStorage.setItem('pair_menu', JSON.stringify(myMenu.slice(0, 30)));
+}
+
+/* ══════════════════════════════════════════════
+   SIDEBAR INIT
+══════════════════════════════════════════════ */
+function populateDrinkStyles() {
+  const sel = document.getElementById('drink-style-select');
+  const db = selectedDrinkType === 'wine' ? DB.wines : DB.spirits;
+  sel.innerHTML = '<option value="">— Select a style —</option>';
+  for (const name of Object.keys(db)) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  }
+  selectedDrinkStyle = '';
+}
+
+function populateFoodChips() {
+  const wrap = document.getElementById('food-chips');
+  wrap.innerHTML = FOOD_CATEGORIES.map(cat =>
+    `<button class="food-chip" data-food="${cat}">${FOOD_EMOJIS[cat]} ${cat}</button>`
+  ).join('');
+  wrap.querySelectorAll('.food-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      wrap.querySelectorAll('.food-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedFoodCat = btn.dataset.food;
+    });
+  });
+}
+
+function renderMenuList() {
+  const list = document.getElementById('menu-list');
+  const count = document.getElementById('menu-count');
+  count.textContent = `${myMenu.length} / 30`;
+  if (!myMenu.length) {
+    list.innerHTML = '<p class="menu-empty">No drinks added yet.</p>';
+    return;
+  }
+  list.innerHTML = myMenu.map((item, i) => `
+    <div class="menu-item">
+      <span class="menu-item-name" title="${esc(item.style)}">${esc(item.name)}</span>
+      ${item.price ? `<span class="menu-item-price">${esc(item.price)}</span>` : ''}
+      <button class="menu-item-remove" data-idx="${i}" aria-label="Remove ${esc(item.name)}">×</button>
+    </div>`).join('');
+  list.querySelectorAll('.menu-item-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      myMenu.splice(Number(btn.dataset.idx), 1);
+      saveMenu();
+      renderMenuList();
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   MAIN RESULTS RENDERING
+══════════════════════════════════════════════ */
+function showResults() {
+  document.getElementById('welcome-state').style.display = 'none';
+  const area = document.getElementById('results-area');
+  area.style.display = 'flex';
+  area.style.flexDirection = 'column';
+}
+
+function renderDrinkMode() {
+  if (!selectedDrinkStyle) { toast('Please select a drink style.', 'error'); return; }
+  const db = selectedDrinkType === 'wine' ? DB.wines : DB.spirits;
+  const drink = db[selectedDrinkStyle];
+  if (!drink) return;
+
+  showResults();
+
+  // Drink profile card
+  const profileSection = document.getElementById('drink-profile-section');
+  profileSection.style.display = 'block';
+  profileSection.innerHTML = `
+    <div class="drink-card">
+      <div class="drink-card-head">
+        <span class="drink-card-emoji">${drink.emoji}</span>
+        <div class="drink-card-info">
+          <div class="drink-card-name">${esc(selectedDrinkStyle)}</div>
+          <div class="drink-card-type">${drink.type === 'wine' ? 'Wine' : 'Spirit'} · ${drink.body} body · ${drink.palate} palate</div>
+        </div>
+      </div>
+      <div class="drink-card-stats">
+        <div class="drink-stat">
+          <span class="drink-stat-label">Serving temp</span>
+          <span class="drink-stat-value">${drink.serving}</span>
+        </div>
+        <div class="drink-stat">
+          <span class="drink-stat-label">Structure</span>
+          <span class="drink-stat-value">${drink.structure}</span>
+        </div>
+        <div class="drink-stat">
+          <span class="drink-stat-label">Best pairing with</span>
+          <span class="drink-stat-value">${getBestFoods(drink)}</span>
+        </div>
+      </div>
+      <div class="drink-flavor-notes">
+        <span class="drink-flavor-label">Flavor notes:</span>${esc(drink.flavor)}
+      </div>
+    </div>`;
+
+  // Pairing grid
+  const pairingSection = document.getElementById('pairing-section');
+  const filteredPairings = Object.entries(drink.pairings).filter(([, q]) => q);
+  const classics = filteredPairings.filter(([, q]) => q === 'classic');
+  const goods = filteredPairings.filter(([, q]) => q === 'good');
+  const fairs = filteredPairings.filter(([, q]) => q === 'fair');
+  const allPairings = [...classics, ...goods, ...fairs];
+
+  pairingSection.innerHTML = `
+    <div class="section-head">
+      <h2 class="section-title">Food Pairings</h2>
+      <span class="section-count">${allPairings.length} matches</span>
+    </div>
+    <div class="pairing-grid" style="margin-top:var(--space-4)">
+      ${allPairings.map(([cat, quality], i) => `
+        <div class="pairing-card" style="animation-delay:${i * 40}ms" tabindex="0">
+          <span class="pairing-card-emoji">${FOOD_EMOJIS[cat]}</span>
+          <div class="pairing-card-name">${cat}</div>
+          <span class="pairing-quality-label">
+            <span class="pairing-quality-dot ${QUALITY_CLASSES[quality]}"></span>
+            ${QUALITY_LABELS[quality]}
+          </span>
+        </div>`).join('')}
+    </div>`;
+
+  // Sommelier section
+  setupSommelierSection(selectedDrinkStyle, null);
+
+  // Matrix
+  renderMatrix(selectedDrinkStyle);
+
+  // Menu builder
+  setupMenuBuilder();
+
+  // Scroll
+  document.getElementById('main-scroll').scrollTop = 0;
+}
+
+function getBestFoods(drink) {
+  const classics = Object.entries(drink.pairings).filter(([, q]) => q === 'classic').map(([f]) => f);
+  return classics.slice(0, 2).join(', ') || Object.entries(drink.pairings).filter(([, q]) => q === 'good').map(([f]) => f).slice(0, 2).join(', ') || '—';
+}
+
+function renderFoodMode() {
+  if (!selectedFoodCat && !foodSearchQuery) {
+    toast('Select a food category or enter a dish name.', 'error');
+    return;
+  }
+  const cat = selectedFoodCat || guessCat(foodSearchQuery);
+  if (!cat) {
+    toast('No matching category found. Try a broader term.', 'error');
+    return;
+  }
+
+  showResults();
+  document.getElementById('drink-profile-section').style.display = 'none';
+
+  // Find all drinks that pair with this category, with quality filter
+  const allDrinks = { ...DB.wines, ...DB.spirits };
+  let results = [];
+  for (const [name, data] of Object.entries(allDrinks)) {
+    const q = data.pairings[cat];
+    if (!q) continue;
+    // Apply palate filter
+    if (guestPref !== 'all' && data.palate !== guestPref) continue;
+    // Apply body filter
+    if (flavorBody !== 'all' && data.body !== flavorBody) continue;
+    results.push({ name, data, quality: q });
+  }
+  // Sort: classic first, then good, then fair
+  const qOrder = { classic: 0, good: 1, fair: 2 };
+  results.sort((a, b) => (qOrder[a.quality] ?? 9) - (qOrder[b.quality] ?? 9));
+
+  // Flag items in my menu
+  const menuStyles = myMenu.map(m => m.style?.toLowerCase());
+  results = results.map(r => ({
+    ...r,
+    inMenu: menuStyles.includes(r.name.toLowerCase()),
+  }));
+
+  const pairingSection = document.getElementById('pairing-section');
+  pairingSection.innerHTML = `
+    <div class="section-head">
+      <h2 class="section-title">
+        ${FOOD_EMOJIS[cat]} ${cat} — Drink Recommendations
+      </h2>
+      <span class="section-count">${results.length} drinks</span>
+    </div>
+    <div class="rec-list" style="margin-top:var(--space-4)">
+      ${results.map((r, i) => `
+        <div class="rec-item" style="animation-delay:${i * 50}ms">
+          <div class="rec-item-rank">${i + 1}</div>
+          <div class="rec-item-body">
+            <div>
+              <span class="rec-item-name">${esc(r.name)}</span>
+              ${r.inMenu ? '<span class="rec-in-menu">✓ On your menu</span>' : ''}
+            </div>
+            <div class="rec-item-category">${r.data.type === 'wine' ? 'Wine' : 'Spirit'} · ${r.quality} pairing</div>
+            <p class="rec-item-rationale">${getRationale(r.name, cat, r.data)}</p>
+          </div>
+        </div>`).join('')}
+    </div>`;
+
+  // Sommelier
+  setupSommelierSection(null, cat);
+  // Matrix
+  renderMatrix(null, cat);
+  // Menu builder
+  setupMenuBuilder();
+
+  document.getElementById('main-scroll').scrollTop = 0;
+}
+
+function guessCat(query) {
+  const q = query.toLowerCase();
+  const map = {
+    Seafood: ['fish','salmon','tuna','lobster','crab','oyster','shrimp','prawn','sushi','sashimi','seafood','clam','mussel','squid','cod','halibut'],
+    Meat: ['beef','steak','lamb','venison','burger','meatball','red meat','roast','veal','pork'],
+    Poultry: ['chicken','turkey','duck','hen','quail','goose','poultry'],
+    Cheese: ['cheese','cheddar','brie','camembert','gouda','parmesan','blue cheese','manchego','gruyere','mozzarella','feta'],
+    Dessert: ['chocolate','cake','dessert','sweet','ice cream','tart','mousse','brownie','cheesecake','tiramisu'],
+    Spicy: ['spicy','curry','thai','chili','hot','jalapeño','sriracha','kimchi','mexican','sichuan','habanero','wasabi'],
+    Charcuterie: ['charcuterie','cured meat','prosciutto','salami','chorizo','ham','sausage','pate','terrine'],
+    Asian: ['asian','japanese','ramen','pho','dim sum','chinese','korean','vietnamese','tempura','teriyaki','miso','gyoza'],
+    Mediterranean: ['mediterranean','greek','spanish','italian','tapas','olive','hummus','falafel','pasta','pizza','ratatouille'],
+    Vegetarian: ['salad','vegetarian','vegan','mushroom','tofu','lentil','vegetable','asparagus','artichoke','zucchini']
+  };
+  for (const [cat, kws] of Object.entries(map)) {
+    if (kws.some(kw => q.includes(kw) || kw.includes(q))) return cat;
+  }
+  return null;
+}
+
+function getRationale(drinkName, cat, data) {
+  const rationales = {
+    'Champagne / Prosecco': {
+      Seafood: 'Effervescence and high acidity lift the delicate flavors of seafood while brioche notes add luxurious depth.',
+      Cheese: 'Fine bubbles and crisp citrus cut through creamy richness, bringing balance and freshness to soft cheeses.',
+      Charcuterie: 'Bubbles and bright acidity cleanse the salt and fat of cured meats, resetting the palate beautifully.',
+      default: 'The lively acidity and persistent bubbles create an elegant, palate-cleansing effect.'
+    },
+    'Sauvignon Blanc': {
+      Seafood: 'Herbaceous notes and citrus mirror the briny freshness of seafood, while high acidity brightens every bite.',
+      Vegetarian: 'Grassy, herbaceous character naturally complements green vegetables and herb-forward preparations.',
+      Cheese: 'Bright acidity cuts through the richness of goat cheese, and herbal notes echo fresh herbs in the dish.',
+      default: 'Fresh acidity and herbaceous character provide a lively, cleansing counterpoint.'
+    },
+    'Cabernet Sauvignon': {
+      Meat: 'Firm tannins bind with proteins in red meat, softening on the palate while dark fruit echoes the caramelized crust.',
+      Cheese: 'Bold structure and blackcurrant depth stand up to aged cheese, creating a dialogue of intensity.',
+      default: 'Firm tannins and dark fruit provide bold structure that elevates rich, full-flavored foods.'
+    },
+    'Port': {
+      Dessert: 'Shared sweetness and concentrated fruit create a perfect harmony, with the fortified warmth adding a velvet finish.',
+      Cheese: 'Sweetness tames the pungency of blue cheese while shared dried fruit and walnut notes create a classic duet.',
+      default: 'Rich sweetness and warming fortified character provide an enveloping, indulgent finish.'
+    },
+    'Sake': {
+      Seafood: 'Clean umami richness mirrors oceanic sweetness without competing — centuries of Japanese tradition confirm this pairing.',
+      Asian: 'Understated umami and clean rice character bridge Eastern flavors without overshadowing their complexity.',
+      default: 'Gentle umami and clean minerality allow the natural flavors of the dish to take the lead.'
+    },
+    default: {
+      default: `The ${data.body} body and ${data.palate} character of ${drinkName} provide a natural complement to ${cat} dishes, with ${data.flavor.split(',')[0].toLowerCase()} notes creating an elegant bridge between glass and plate.`
+    }
+  };
+  const r = rationales[drinkName] || rationales['default'];
+  return r[cat] || r['default'] || rationales['default']['default'];
+}
+
+/* ── Sommelier section ── */
+function setupSommelierSection(drinkName, foodCat) {
+  const sec = document.getElementById('sommelier-section');
+  sec.style.display = 'block';
+
+  const drinkSel = document.getElementById('som-drink-select');
+  drinkSel.innerHTML = Object.keys(ALL_DRINKS).map(n =>
+    `<option value="${esc(n)}"${drinkName === n ? ' selected' : ''}>${esc(n)}</option>`
+  ).join('');
+
+  const foodSel = document.getElementById('som-food-select');
+  foodSel.innerHTML = '<option value="">— Select food —</option>' +
+    FOOD_CATEGORIES.map(c => `<option value="${c}"${foodCat === c ? ' selected' : ''}>${FOOD_EMOJIS[c]} ${c}</option>`).join('');
+
+  document.getElementById('sommelier-note').classList.remove('visible');
+  document.getElementById('sommelier-note').textContent = '';
+
+  if (drinkName && foodCat) {
+    generateNote(drinkName, foodCat);
+  }
+}
+
+function generateNote(drink, food) {
+  if (!drink || !food) { toast('Select both a drink and a food.', 'error'); return; }
+  const note = getSommelierNote(drink, food);
+  const el = document.getElementById('sommelier-note');
+  el.textContent = `"${note}"`;
+  el.classList.add('visible');
+}
+
+document.getElementById('btn-generate-note').addEventListener('click', () => {
+  const drink = document.getElementById('som-drink-select').value;
+  const food = document.getElementById('som-food-select').value;
+  generateNote(drink, food);
+});
+
+/* ── Pairing Matrix ── */
+function renderMatrix(drinkName, foodCat) {
+  const sec = document.getElementById('matrix-section');
+  sec.style.display = 'block';
+
+  // Show 5 relevant drinks for the matrix
+  let drinksToShow = [];
+  if (drinkName) {
+    drinksToShow = [drinkName];
+    // Add a few related ones
+    const db = DB.wines[drinkName] ? DB.wines : DB.spirits;
+    const others = Object.keys(db).filter(n => n !== drinkName);
+    drinksToShow = [drinkName, ...others.slice(0, 8)];
+  } else {
+    // food mode: show drinks that pair with this category
+    drinksToShow = Object.entries(ALL_DRINKS)
+      .filter(([, d]) => d.pairings[foodCat])
+      .sort((a, b) => {
+        const qOrder = { classic: 0, good: 1, fair: 2 };
+        return (qOrder[a[1].pairings[foodCat]] ?? 9) - (qOrder[b[1].pairings[foodCat]] ?? 9);
+      })
+      .slice(0, 10)
+      .map(([n]) => n);
+  }
+
+  const cats = FOOD_CATEGORIES;
+  const table = document.createElement('table');
+  table.className = 'matrix-table';
+  table.setAttribute('aria-label', 'Pairing quality matrix');
+
+  const thead = `<thead><tr>
+    <th class="row-head" scope="col">Drink</th>
+    ${cats.map(c => `<th scope="col" title="${c}">${FOOD_EMOJIS[c]}</th>`).join('')}
+  </tr></thead>`;
+
+  const tbody = drinksToShow.map(name => {
+    const drink = ALL_DRINKS[name];
+    if (!drink) return '';
+    const cells = cats.map(c => {
+      const q = drink.pairings[c] || '';
+      const cls = q === 'classic' ? 'mx-classic' : q === 'good' ? 'mx-good' : q === 'fair' ? 'mx-fair' : 'mx-empty';
+      const label = q === 'classic' ? '●' : q === 'good' ? '◉' : q === 'fair' ? '○' : '·';
+      return `<td class="${cls}" title="${name} + ${c}: ${q || 'avoid'}">${label}</td>`;
+    }).join('');
+    const isHighlighted = name === drinkName || (foodCat && drink.pairings[foodCat] === 'classic');
+    return `<tr${isHighlighted ? ' style="background:var(--color-accent-subtle)"' : ''}><th class="row-head" scope="row">${esc(name)}</th>${cells}</tr>`;
+  }).join('');
+
+  table.innerHTML = thead + `<tbody>${tbody}</tbody>`;
+  document.getElementById('matrix-wrap').innerHTML = '';
+  document.getElementById('matrix-wrap').appendChild(table);
+}
+
+/* ── Guest Menu Builder ── */
+let courses = [];
+function setupMenuBuilder() {
+  const sec = document.getElementById('menu-builder-section');
+  sec.style.display = 'block';
+  if (!courses.length) {
+    courses = [{ course: '', drink: '' }, { course: '', drink: '' }];
+  }
+  renderCourseRows();
+}
+
+function renderCourseRows() {
+  const container = document.getElementById('course-rows');
+  container.innerHTML = '';
+  courses.forEach((c, i) => {
+    const row = document.createElement('div');
+    row.className = 'course-row';
+    row.innerHTML = `
+      <input class="course-input" type="text" placeholder="Course / dish" value="${esc(c.course)}" aria-label="Course ${i+1} dish" data-idx="${i}" data-field="course">
+      <input class="course-input" type="text" placeholder="Drink pairing" value="${esc(c.drink)}" aria-label="Course ${i+1} drink" data-idx="${i}" data-field="drink">
+      <button class="btn-remove-course" data-idx="${i}" aria-label="Remove course ${i+1}">×</button>`;
+    row.querySelectorAll('.course-input').forEach(inp => {
+      inp.addEventListener('input', () => {
+        courses[Number(inp.dataset.idx)][inp.dataset.field] = inp.value;
+      });
+    });
+    row.querySelector('.btn-remove-course').addEventListener('click', () => {
+      courses.splice(i, 1);
+      renderCourseRows();
+    });
+    container.appendChild(row);
+  });
+}
+
+document.getElementById('btn-add-course').addEventListener('click', () => {
+  if (courses.length >= 6) { toast('Maximum 6 courses reached.', 'error'); return; }
+  courses.push({ course: '', drink: '' });
+  renderCourseRows();
+});
+
+document.getElementById('btn-print-menu').addEventListener('click', () => {
+  const filled = courses.filter(c => c.course || c.drink);
+  if (!filled.length) { toast('Add at least one course to print.', 'error'); return; }
+
+  const printArea = document.getElementById('print-card-area');
+  printArea.innerHTML = `
+    <h1 style="font-family:var(--font-display);font-size:2rem;font-weight:400;margin-bottom:1rem">Tonight's Pairings</h1>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 12px;border-bottom:2px solid #ccc;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase">Course</th>
+        <th style="text-align:left;padding:8px 12px;border-bottom:2px solid #ccc;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase">Drink Pairing</th>
+      </tr></thead>
+      <tbody>
+        ${filled.map(c => `
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:0.9rem">${esc(c.course)}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #eee;font-size:0.9rem">${esc(c.drink)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  window.print();
+});
+
+/* ══════════════════════════════════════════════
+   MODAL — ADD TO MENU
+══════════════════════════════════════════════ */
+function openModal() {
+  ['modal-name', 'modal-style', 'modal-price', 'modal-notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-name').focus();
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+document.getElementById('btn-add-menu').addEventListener('click', openModal);
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+document.getElementById('modal-save').addEventListener('click', () => {
+  const name = document.getElementById('modal-name').value.trim();
+  if (!name) { toast('Please enter a drink name.', 'error'); return; }
+  if (myMenu.length >= 30) { toast('Menu full (30 items max).', 'error'); return; }
+  myMenu.push({
+    name,
+    style: document.getElementById('modal-style').value.trim(),
+    price: document.getElementById('modal-price').value.trim(),
+    notes: document.getElementById('modal-notes').value.trim(),
+  });
+  saveMenu();
+  renderMenuList();
+  closeModal();
+  toast('Added to My Menu.', 'success');
+});
+
+/* ══════════════════════════════════════════════
+   CONTROLS WIRING
+══════════════════════════════════════════════ */
+// Mode buttons
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-checked', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-checked', 'true');
+    mode = btn.dataset.mode;
+    document.getElementById('drink-controls').style.display = mode === 'drink' ? '' : 'none';
+    document.getElementById('food-controls').style.display = mode === 'food' ? '' : 'none';
+  });
+});
+
+// Drink type chips
+document.querySelectorAll('.type-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.type-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedDrinkType = btn.dataset.dtype;
+    populateDrinkStyles();
+  });
+});
+
+// Drink style select
+document.getElementById('drink-style-select').addEventListener('change', e => {
+  selectedDrinkStyle = e.target.value;
+});
+
+// Food search input
+document.getElementById('food-search-input').addEventListener('input', e => {
+  foodSearchQuery = e.target.value;
+});
+document.getElementById('food-search-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-find').click();
+});
+
+// Guest preference chips
+document.querySelectorAll('[data-pref]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-pref]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    guestPref = btn.dataset.pref;
+  });
+});
+
+// Flavor body chips
+document.querySelectorAll('[data-body]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-body]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    flavorBody = btn.dataset.body;
+  });
+});
+
+// Find pairings
+document.getElementById('btn-find').addEventListener('click', () => {
+  if (mode === 'drink') renderDrinkMode();
+  else renderFoodMode();
+});
+
+/* ══════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════ */
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+loadMenu();
+populateDrinkStyles();
+populateFoodChips();
+renderMenuList();
+</script>
+</body>
+</html>

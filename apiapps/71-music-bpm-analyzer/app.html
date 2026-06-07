@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BPM Analyzer — Music Tempo Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 Edge-aligned nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep { width: 1px; height: 16px; background: var(--color-border); flex-shrink: 0; }
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tap tempo section */
+.tap-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+  display: block;
+}
+
+.tap-btn {
+  width: 100%;
+  height: 72px;
+  background: var(--color-accent);
+  color: oklch(97% 0.008 95);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.1s ease, transform 0.08s ease;
+  position: relative;
+  overflow: hidden;
+}
+.tap-btn:hover { opacity: 0.88; }
+.tap-btn:active { transform: scale(0.97); }
+.tap-btn.tapped { opacity: 0.92; }
+
+.tap-bpm-display {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-align: center;
+  padding: var(--space-3) 0 var(--space-1);
+}
+.tap-bpm-display .bpm-unit {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.tap-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+}
+.tap-count-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+.tap-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.btn-ghost-sm {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  text-align: center;
+}
+.btn-ghost-sm:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+.btn-ghost-sm.accent {
+  border-color: var(--color-accent-line);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+.btn-ghost-sm.accent:hover { background: oklch(88% 0.035 155); }
+
+/* History section */
+.history-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.history-head {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+}
+.history-empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.7;
+}
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.history-item:hover { background: oklch(90% 0.018 95); }
+.history-item-bpm {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-accent);
+  min-width: 42px;
+  letter-spacing: -0.01em;
+}
+.history-item-info { flex: 1; min-width: 0; }
+.history-item-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 1px;
+}
+.history-item-del {
+  background: none;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: var(--text-base);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.history-item-del:hover { color: var(--color-danger); }
+
+/* BPM Reference guide */
+.ref-section {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+  flex-shrink: 0;
+}
+.ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-2);
+}
+.ref-table tr { border-bottom: 1px solid var(--color-border); }
+.ref-table tr:last-child { border-bottom: none; }
+.ref-table td {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+.ref-table td:first-child { font-weight: 600; color: var(--color-ink); }
+.ref-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Upload zone ── */
+.upload-zone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-12) var(--space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+.upload-zone.has-file {
+  padding: var(--space-6);
+  border-style: solid;
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+.upload-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: var(--space-4);
+}
+.upload-zone.has-file .upload-icon { display: none; }
+.upload-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-2);
+}
+.upload-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-6);
+}
+.upload-formats {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-3);
+}
+.upload-zone.has-file .upload-formats { display: none; }
+.upload-zone.has-file .upload-sub { display: none; }
+
+.file-input { display: none; }
+
+.btn-pick-file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.btn-pick-file:hover { opacity: 0.8; }
+
+.file-info {
+  display: none;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.upload-zone.has-file .file-info { display: flex; }
+.upload-zone.has-file .upload-title { display: none; }
+.upload-zone.has-file .btn-pick-file { display: none; }
+.file-name {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-ink);
+}
+.file-size {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.btn-analyze {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-3) var(--space-8);
+  background: var(--color-accent);
+  color: oklch(97% 0.008 95);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.btn-analyze:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28); }
+.btn-analyze:active { transform: translateY(0); box-shadow: none; }
+.btn-analyze:disabled { opacity: 0.45; pointer-events: none; }
+
+.btn-change-file {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.upload-zone.has-file .btn-change-file { display: inline-flex; }
+.btn-change-file:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+
+/* ── Progress ── */
+.progress-bar-wrap {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.progress-bar-wrap.visible { display: flex; }
+.progress-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  justify-content: space-between;
+}
+.progress-track {
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+/* ── Results ── */
+.results-section {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-6);
+  animation: fade-in 0.4s ease;
+}
+.results-section.visible { display: flex; }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* BPM hero */
+.bpm-hero {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-6);
+  align-items: start;
+}
+.bpm-hero-left { display: flex; flex-direction: column; gap: var(--space-4); }
+.bpm-main-number {
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 12vw, 8rem);
+  font-weight: 300;
+  color: var(--color-ink);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.bpm-main-unit {
+  font-family: var(--font-body);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  margin-left: var(--space-2);
+  vertical-align: baseline;
+}
+
+.bpm-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.badge-tempo {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-color: var(--color-accent-line);
+}
+.badge-confidence {
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  border-color: var(--color-border);
+}
+.badge-range {
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  border-color: var(--color-border);
+}
+
+.bpm-hero-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 180px;
+}
+.bpm-stat { display: flex; flex-direction: column; gap: 2px; }
+.bpm-stat-label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.03em;
+}
+.bpm-stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.bpm-stat-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* Musical info row */
+.musical-info {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+.musical-stat {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.musical-stat-label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.musical-stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.musical-stat-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* Waveform canvas */
+.waveform-section {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+}
+.waveform-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.waveform-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.waveform-hint {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+#waveform-canvas {
+  width: 100%;
+  height: 80px;
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+/* Playback */
+.playback-section {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.btn-play {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border: none;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+.btn-play:hover { opacity: 0.8; }
+.btn-play:active { transform: scale(0.95); }
+.btn-play:disabled { opacity: 0.3; pointer-events: none; }
+
+.playback-info { flex: 1; min-width: 0; }
+.playback-filename {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.playback-time {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.pulse-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-accent-subtle);
+  border: 2px solid var(--color-accent-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.05s ease;
+}
+.pulse-ring.beat {
+  animation: pulse-beat 0.15s ease-out;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+@keyframes pulse-beat {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+.pulse-ring svg { color: var(--color-accent); transition: color 0.15s ease; }
+.pulse-ring.beat svg { color: oklch(97% 0.008 95); }
+
+.scrubber {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--color-border);
+  border-radius: 2px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
+/* DJ info */
+.dj-section {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+}
+.dj-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.dj-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dj-stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+}
+.dj-stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.dj-stat-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { background: var(--color-danger); }
+.toast.success { background: var(--color-success); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: none;
+    overflow: visible;
+  }
+  .history-section { max-height: 280px; }
+  .history-list { max-height: 200px; }
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+  .bpm-hero { grid-template-columns: 1fr; }
+  .bpm-hero-right { flex-direction: row; flex-wrap: wrap; }
+  .musical-info { grid-template-columns: 1fr 1fr; }
+  .dj-grid { grid-template-columns: 1fr 1fr; }
+  .ref-section { display: none; }
+}
+
+@media (max-width: 480px) {
+  .musical-info { grid-template-columns: 1fr; }
+  .dj-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .results-section { animation: none; }
+  .pulse-ring.beat { animation: none; background: var(--color-accent); }
+  .btn-analyze:hover { transform: none; box-shadow: none; }
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">BPM<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Music BPM Analyzer</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Tap tempo and history">
+
+    <!-- Tap Tempo -->
+    <div class="tap-section">
+      <span class="section-label">Tap Tempo</span>
+      <button class="tap-btn" id="tap-btn" aria-label="Tap to detect BPM — tap along to the beat">
+        TAP
+      </button>
+      <div class="tap-bpm-display" id="tap-bpm-display" aria-live="polite" aria-atomic="true">
+        —<span class="bpm-unit">BPM</span>
+      </div>
+      <div class="tap-meta">
+        <span class="tap-count-label" id="tap-count-label">Tap to the beat…</span>
+      </div>
+      <div class="tap-actions">
+        <button class="btn-ghost-sm" id="tap-reset-btn" aria-label="Reset tap tempo">Reset</button>
+        <button class="btn-ghost-sm accent" id="tap-use-btn" aria-label="Use tap BPM as main display" disabled>Use this BPM</button>
+      </div>
+    </div>
+
+    <!-- Analysis history -->
+    <div class="history-section">
+      <div class="history-head">
+        <span class="section-label" style="margin-bottom:0">Recent analyses</span>
+      </div>
+      <div class="history-list" id="history-list" role="list" aria-label="Analysis history">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- BPM Reference Guide -->
+    <div class="ref-section" aria-label="BPM reference guide">
+      <span class="section-label">Genre BPM Reference</span>
+      <table class="ref-table" aria-label="Genre BPM ranges">
+        <tbody>
+          <tr><td>Hip-hop</td><td>70–100</td></tr>
+          <tr><td>R&amp;B / Soul</td><td>85–105</td></tr>
+          <tr><td>Pop</td><td>100–130</td></tr>
+          <tr><td>House</td><td>120–135</td></tr>
+          <tr><td>Techno</td><td>130–160</td></tr>
+          <tr><td>Drum &amp; Bass</td><td>160–180</td></tr>
+          <tr><td>Ambient</td><td>60–90</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="BPM analyzer">
+    <div class="main-scroll">
+
+      <!-- Upload zone -->
+      <section aria-labelledby="upload-heading">
+        <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Drop an audio file here or click to browse">
+          <div class="upload-icon" aria-hidden="true">♪</div>
+          <p class="upload-title" id="upload-heading">Drop your audio file here</p>
+          <p class="upload-sub">or click to browse from your device</p>
+          <button class="btn-pick-file" id="btn-pick-file" type="button">Browse files</button>
+          <p class="upload-formats">Supports MP3, WAV, OGG, FLAC, M4A, AAC</p>
+
+          <!-- After file selected -->
+          <div class="file-info" id="file-info">
+            <span class="file-name" id="file-name-label">—</span>
+            <span class="file-size" id="file-size-label">—</span>
+            <button class="btn-analyze" id="btn-analyze" type="button">Analyze BPM</button>
+            <button class="btn-change-file" id="btn-change-file" type="button">Change file</button>
+          </div>
+        </div>
+        <input type="file" class="file-input" id="file-input" accept=".mp3,.wav,.ogg,.flac,.m4a,.aac,audio/*" aria-label="Select audio file">
+      </section>
+
+      <!-- Progress -->
+      <div class="progress-bar-wrap" id="progress-wrap" role="status" aria-live="polite" aria-label="Analysis progress">
+        <div class="progress-label">
+          <span id="progress-text">Processing audio…</span>
+          <span id="progress-pct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="results-section" id="results-section" aria-label="Analysis results">
+
+        <!-- BPM Hero -->
+        <div class="bpm-hero">
+          <div class="bpm-hero-left">
+            <div>
+              <span class="bpm-main-number" id="result-bpm" aria-label="Detected BPM">—</span>
+              <span class="bpm-main-unit">BPM</span>
+            </div>
+            <div class="bpm-badges" role="status" aria-live="polite">
+              <span class="badge badge-tempo" id="badge-tempo">—</span>
+              <span class="badge badge-confidence" id="badge-confidence">—</span>
+              <span class="badge badge-range" id="badge-range">—</span>
+            </div>
+          </div>
+          <div class="bpm-hero-right">
+            <div class="bpm-stat">
+              <span class="bpm-stat-label">Half-time</span>
+              <span class="bpm-stat-value" id="stat-half">—</span>
+              <span class="bpm-stat-sub">BPM (÷2)</span>
+            </div>
+            <div class="bpm-stat">
+              <span class="bpm-stat-label">Double-time</span>
+              <span class="bpm-stat-value" id="stat-double">—</span>
+              <span class="bpm-stat-sub">BPM (×2)</span>
+            </div>
+            <div class="bpm-stat">
+              <span class="bpm-stat-label">Beat interval</span>
+              <span class="bpm-stat-value" id="stat-interval">—</span>
+              <span class="bpm-stat-sub">ms per beat</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Musical info -->
+        <div class="musical-info" role="region" aria-label="Musical tempo information">
+          <div class="musical-stat">
+            <span class="musical-stat-label">4/4 bar length</span>
+            <span class="musical-stat-value" id="info-bar-44">—</span>
+            <span class="musical-stat-sub">seconds</span>
+          </div>
+          <div class="musical-stat">
+            <span class="musical-stat-label">Bars per min (4/4)</span>
+            <span class="musical-stat-value" id="info-bars-44">—</span>
+            <span class="musical-stat-sub">bars / minute</span>
+          </div>
+          <div class="musical-stat">
+            <span class="musical-stat-label">3/4 bar length</span>
+            <span class="musical-stat-value" id="info-bar-34">—</span>
+            <span class="musical-stat-sub">seconds</span>
+          </div>
+          <div class="musical-stat">
+            <span class="musical-stat-label">6/8 bar length</span>
+            <span class="musical-stat-value" id="info-bar-68">—</span>
+            <span class="musical-stat-sub">seconds</span>
+          </div>
+        </div>
+
+        <!-- Waveform -->
+        <div class="waveform-section">
+          <div class="waveform-head">
+            <span class="waveform-title">Waveform — beat markers</span>
+            <span class="waveform-hint" id="waveform-hint">Vertical lines = detected beats</span>
+          </div>
+          <canvas id="waveform-canvas" aria-label="Audio waveform with beat markers" role="img"></canvas>
+        </div>
+
+        <!-- Playback -->
+        <div class="playback-section">
+          <div class="playback-controls">
+            <button class="btn-play" id="btn-play" aria-label="Play / pause audio" disabled>▶</button>
+            <div class="playback-info">
+              <div class="playback-filename" id="playback-filename">—</div>
+              <div class="playback-time" id="playback-time">0:00 / 0:00</div>
+            </div>
+            <div class="pulse-ring" id="pulse-ring" aria-label="Beat pulse indicator" title="Pulses at detected BPM when playing">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                <path d="M9 18V5l12-2v13"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+              </svg>
+            </div>
+          </div>
+          <input type="range" class="scrubber" id="scrubber" min="0" max="100" value="0" step="0.1" aria-label="Audio position scrubber">
+        </div>
+
+        <!-- DJ info -->
+        <div class="dj-section">
+          <span class="section-label">DJ Toolkit</span>
+          <div class="dj-grid">
+            <div class="dj-stat">
+              <span class="dj-stat-label">4-bar phrase</span>
+              <span class="dj-stat-value" id="dj-phrase-4">—</span>
+              <span class="dj-stat-sub">seconds</span>
+            </div>
+            <div class="dj-stat">
+              <span class="dj-stat-label">8-bar phrase</span>
+              <span class="dj-stat-value" id="dj-phrase-8">—</span>
+              <span class="dj-stat-sub">seconds</span>
+            </div>
+            <div class="dj-stat">
+              <span class="dj-stat-label">16-bar phrase</span>
+              <span class="dj-stat-value" id="dj-phrase-16">—</span>
+              <span class="dj-stat-sub">seconds</span>
+            </div>
+            <div class="dj-stat">
+              <span class="dj-stat-label">Eighth note</span>
+              <span class="dj-stat-value" id="dj-eighth">—</span>
+              <span class="dj-stat-sub">ms</span>
+            </div>
+            <div class="dj-stat">
+              <span class="dj-stat-label">Sixteenth note</span>
+              <span class="dj-stat-value" id="dj-sixteenth">—</span>
+              <span class="dj-stat-sub">ms</span>
+            </div>
+            <div class="dj-stat">
+              <span class="dj-stat-label">Triplet 8th</span>
+              <span class="dj-stat-value" id="dj-triplet">—</span>
+              <span class="dj-stat-sub">ms</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- end results -->
+
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+'use strict';
+
+/* ── Helpers ──────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtTime = s => {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2,'0')}`;
+};
+
+let toastTimer = null;
+function toast(msg, type = '', dur = 3200) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, dur);
+}
+
+/* ── State ────────────────────────────────────────────────────── */
+let selectedFile = null;
+let audioBuffer = null;       // decoded audio
+let detectedBPM = 0;
+let detectedPeakTimes = [];   // array of seconds
+let audioCtx = null;
+let sourceNode = null;
+let isPlaying = false;
+let playStartTime = 0;       // audioCtx.currentTime when play began
+let playStartOffset = 0;     // offset into buffer when play began
+let beatPulseTimer = null;
+let scrubbing = false;
+
+// Tap tempo
+let tapTimes = [];
+let tapResetTimer = null;
+const TAP_TIMEOUT_MS = 2500;
+const MAX_TAPS = 8;
+
+/* ── BPM Detection ────────────────────────────────────────────── */
+function lowPassFilter(data, sampleRate, cutoff) {
+  const rc = 1.0 / (cutoff * 2 * Math.PI);
+  const dt = 1.0 / sampleRate;
+  const alpha = dt / (rc + dt);
+  const output = new Float32Array(data.length);
+  output[0] = data[0];
+  for (let i = 1; i < data.length; i++) {
+    output[i] = output[i - 1] + alpha * (data[i] - output[i - 1]);
+  }
+  return output;
+}
+
+function mean(arr) {
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function mostCommon(values, roundTo) {
+  if (!values.length) return 0;
+  // Build histogram in bins of `roundTo`
+  const hist = {};
+  for (const v of values) {
+    const bin = Math.round(v / roundTo) * roundTo;
+    hist[bin] = (hist[bin] || 0) + 1;
+  }
+  let bestBin = null, bestCount = 0;
+  for (const [bin, count] of Object.entries(hist)) {
+    if (count > bestCount) { bestCount = count; bestBin = Number(bin); }
+  }
+  return bestBin ?? 0;
+}
+
+function setProgress(pct, label) {
+  $('progress-fill').style.width = pct + '%';
+  $('progress-pct').textContent = Math.round(pct) + '%';
+  if (label) $('progress-text').textContent = label;
+}
+
+async function analyzeBPM(buffer) {
+  return new Promise((resolve) => {
+    // Use setTimeout to let the UI update between steps
+    setTimeout(() => {
+      const sampleRate = buffer.sampleRate;
+      // Limit to first 60 seconds
+      const maxSamples = Math.min(buffer.length, sampleRate * 60);
+      const rawData = buffer.getChannelData(0).slice(0, maxSamples);
+
+      setProgress(15, 'Applying low-pass filter…');
+      setTimeout(() => {
+        const filtered = lowPassFilter(rawData, sampleRate, 200);
+        setProgress(30, 'Computing energy envelope…');
+
+        setTimeout(() => {
+          const windowSize = Math.floor(sampleRate * 0.01); // 10ms windows
+          const energies = [];
+          for (let i = 0; i < filtered.length - windowSize; i += windowSize) {
+            let sum = 0;
+            for (let j = i; j < i + windowSize; j++) sum += filtered[j] * filtered[j];
+            energies.push(Math.sqrt(sum / windowSize));
+          }
+          setProgress(55, 'Detecting onsets…');
+
+          setTimeout(() => {
+            const avg = mean(energies);
+            const threshold = avg * 1.5;
+            const peaks = [];
+            for (let i = 1; i < energies.length - 1; i++) {
+              if (energies[i] > threshold &&
+                  energies[i] > energies[i - 1] &&
+                  energies[i] > energies[i + 1]) {
+                const tSec = i * 0.01;
+                // min gap between peaks: 250ms (to avoid noise)
+                if (!peaks.length || tSec - peaks[peaks.length - 1] > 0.25) {
+                  peaks.push(tSec);
+                }
+              }
+            }
+            setProgress(75, 'Computing inter-onset intervals…');
+
+            setTimeout(() => {
+              const intervals = [];
+              for (let i = 1; i < peaks.length; i++) {
+                intervals.push(peaks[i] - peaks[i - 1]);
+              }
+
+              const bpmCandidates = intervals
+                .map(t => 60 / t)
+                .filter(b => b >= 60 && b <= 200);
+
+              let bpm = 0;
+              let confidence = 0;
+              let bpmMin = 0, bpmMax = 0;
+
+              if (bpmCandidates.length >= 4) {
+                bpm = mostCommon(bpmCandidates, 5);
+
+                // Refine: filter candidates within ±10 of the winner
+                const refined = bpmCandidates.filter(b => Math.abs(b - bpm) <= 10);
+                if (refined.length) {
+                  const avgRefined = mean(refined);
+                  bpm = Math.round(avgRefined);
+                  bpmMin = Math.round(Math.min(...refined));
+                  bpmMax = Math.round(Math.max(...refined));
+
+                  // Confidence: how consistent are the intervals?
+                  const variance = refined.reduce((s, b) => s + Math.pow(b - avgRefined, 2), 0) / refined.length;
+                  const stdDev = Math.sqrt(variance);
+                  confidence = Math.max(20, Math.min(98, Math.round(100 - (stdDev / avgRefined) * 100)));
+                }
+              } else if (bpmCandidates.length > 0) {
+                bpm = Math.round(mean(bpmCandidates));
+                confidence = 30;
+                bpmMin = bpm;
+                bpmMax = bpm;
+              }
+
+              setProgress(95, 'Finalizing…');
+              setTimeout(() => {
+                resolve({ bpm, confidence, bpmMin, bpmMax, peaks });
+              }, 80);
+            }, 60);
+          }, 60);
+        }, 60);
+      }, 60);
+    }, 30);
+  });
+}
+
+/* ── Waveform Drawing ─────────────────────────────────────────── */
+function drawWaveform(buffer, peaks) {
+  const canvas = $('waveform-canvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+  const mid = H / 2;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Downsample the channel data to W points
+  const data = buffer.getChannelData(0);
+  const maxSamples = Math.min(data.length, buffer.sampleRate * 60);
+  const step = Math.floor(maxSamples / W);
+  const totalDuration = maxSamples / buffer.sampleRate;
+
+  // Draw waveform
+  ctx.beginPath();
+  for (let x = 0; x < W; x++) {
+    let min = 0, max = 0;
+    const start = x * step;
+    for (let j = 0; j < step; j++) {
+      const v = data[start + j] || 0;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    const yTop = mid - max * mid * 0.9;
+    const yBot = mid - min * mid * 0.9;
+    if (x === 0) ctx.moveTo(x, yTop);
+    ctx.lineTo(x, yTop);
+    ctx.lineTo(x, yBot);
+  }
+  ctx.strokeStyle = 'oklch(52% 0.14 155 / 0.45)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Draw beat markers
+  ctx.strokeStyle = 'oklch(52% 0.14 155 / 0.85)';
+  ctx.lineWidth = 1.5;
+  for (const t of peaks) {
+    if (t > totalDuration) break;
+    const x = (t / totalDuration) * W;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+}
+
+/* ── Results display ──────────────────────────────────────────── */
+const TEMPO_CATEGORIES = [
+  { label: 'Largo',     min: 0,   max: 59  },
+  { label: 'Adagio',    min: 60,  max: 75  },
+  { label: 'Andante',   min: 76,  max: 107 },
+  { label: 'Moderato',  min: 108, max: 119 },
+  { label: 'Allegro',   min: 120, max: 167 },
+  { label: 'Presto',    min: 168, max: 999 },
+];
+
+function getTempoCategory(bpm) {
+  return TEMPO_CATEGORIES.find(c => bpm >= c.min && bpm <= c.max)?.label ?? 'Moderato';
+}
+
+function showResults(bpm, confidence, bpmMin, bpmMax, peaks) {
+  detectedBPM = bpm;
+  detectedPeakTimes = peaks;
+
+  if (!bpm) {
+    toast('Could not detect a clear beat. Try a track with a stronger rhythm.', 'error');
+    return;
+  }
+
+  // BPM hero
+  $('result-bpm').textContent = bpm;
+  $('badge-tempo').textContent = getTempoCategory(bpm);
+  $('badge-confidence').textContent = `${confidence}% confidence`;
+  if (bpmMin && bpmMax && bpmMin !== bpmMax) {
+    $('badge-range').textContent = `Range: ${bpmMin}–${bpmMax} BPM`;
+  } else {
+    $('badge-range').textContent = `Detected: ${bpm} BPM`;
+  }
+
+  // Half / double / interval
+  $('stat-half').textContent = Math.round(bpm / 2);
+  $('stat-double').textContent = bpm * 2;
+  const beatMs = Math.round(60000 / bpm);
+  $('stat-interval').textContent = beatMs;
+
+  // Musical info
+  const secPerBeat = 60 / bpm;
+  $('info-bar-44').textContent = (secPerBeat * 4).toFixed(2);
+  $('info-bars-44').textContent = (bpm / 4).toFixed(1);
+  $('info-bar-34').textContent = (secPerBeat * 3).toFixed(2);
+  $('info-bar-68').textContent = (secPerBeat * 6 / 4).toFixed(2); // 6/8 = 6 eighth notes = 1.5 beats
+
+  // DJ toolkit
+  $('dj-phrase-4').textContent = (secPerBeat * 16).toFixed(1);
+  $('dj-phrase-8').textContent = (secPerBeat * 32).toFixed(1);
+  $('dj-phrase-16').textContent = (secPerBeat * 64).toFixed(1);
+  $('dj-eighth').textContent = Math.round(beatMs / 2);
+  $('dj-sixteenth').textContent = Math.round(beatMs / 4);
+  $('dj-triplet').textContent = Math.round(beatMs * 2 / 3);
+
+  // Show results
+  $('results-section').classList.add('visible');
+
+  // Waveform
+  if (audioBuffer) {
+    requestAnimationFrame(() => drawWaveform(audioBuffer, peaks));
+  }
+
+  // Save to history
+  saveHistory({
+    filename: selectedFile?.name ?? 'Unknown',
+    bpm,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  });
+  renderHistory();
+}
+
+/* ── File handling ────────────────────────────────────────────── */
+function handleFile(file) {
+  if (!file) return;
+  if (!file.type.startsWith('audio/') && !/\.(mp3|wav|ogg|flac|m4a|aac)$/i.test(file.name)) {
+    toast('Please select an audio file (MP3, WAV, OGG, FLAC, M4A, AAC)', 'error');
+    return;
+  }
+  selectedFile = file;
+  $('file-name-label').textContent = file.name;
+  $('file-size-label').textContent = formatBytes(file.size);
+  $('upload-zone').classList.add('has-file');
+  $('btn-analyze').disabled = false;
+  $('results-section').classList.remove('visible');
+  $('progress-wrap').classList.remove('visible');
+
+  // Setup playback filename
+  $('playback-filename').textContent = file.name;
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+async function runAnalysis() {
+  if (!selectedFile) return;
+
+  // Stop any playing audio
+  stopAudio();
+
+  $('results-section').classList.remove('visible');
+  $('progress-wrap').classList.add('visible');
+  $('btn-analyze').disabled = true;
+  setProgress(5, 'Decoding audio…');
+
+  try {
+    // Decode audio
+    const arrayBuffer = await selectedFile.arrayBuffer();
+    setProgress(10, 'Decoding audio…');
+
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) {
+      toast('Web Audio API not supported in this browser.', 'error');
+      return;
+    }
+    // Use a temporary offline context for decoding
+    const tmpCtx = new AC();
+    audioBuffer = await tmpCtx.decodeAudioData(arrayBuffer);
+    tmpCtx.close();
+
+    setProgress(12, 'Audio decoded — analyzing BPM…');
+
+    const result = await analyzeBPM(audioBuffer);
+
+    setProgress(100, 'Done!');
+    setTimeout(() => {
+      $('progress-wrap').classList.remove('visible');
+      $('btn-analyze').disabled = false;
+      showResults(result.bpm, result.confidence, result.bpmMin, result.bpmMax, result.peaks);
+      // Enable playback
+      $('btn-play').disabled = false;
+    }, 300);
+
+  } catch (err) {
+    console.error(err);
+    $('progress-wrap').classList.remove('visible');
+    $('btn-analyze').disabled = false;
+    toast('Could not decode audio. The file may be corrupted or in an unsupported format.', 'error');
+  }
+}
+
+/* ── Audio Playback ───────────────────────────────────────────── */
+function getAudioCtx() {
+  if (!audioCtx || audioCtx.state === 'closed') {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+  }
+  return audioCtx;
+}
+
+function startAudio(offset = 0) {
+  if (!audioBuffer) return;
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+
+  if (sourceNode) {
+    try { sourceNode.stop(); } catch {}
+    sourceNode = null;
+  }
+
+  sourceNode = ctx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.connect(ctx.destination);
+  playStartOffset = Math.max(0, Math.min(offset, audioBuffer.duration));
+  playStartTime = ctx.currentTime;
+  sourceNode.start(0, playStartOffset);
+  isPlaying = true;
+  $('btn-play').textContent = '⏸';
+  $('btn-play').setAttribute('aria-label', 'Pause audio');
+  startBeatPulse();
+  requestAnimationFrame(updatePlaybackUI);
+
+  sourceNode.onended = () => {
+    if (isPlaying) {
+      isPlaying = false;
+      $('btn-play').textContent = '▶';
+      $('btn-play').setAttribute('aria-label', 'Play audio');
+      stopBeatPulse();
+      $('scrubber').value = 0;
+      $('playback-time').textContent = `0:00 / ${fmtTime(audioBuffer.duration)}`;
+    }
+  };
+}
+
+function stopAudio() {
+  if (sourceNode) {
+    try { sourceNode.stop(); } catch {}
+    sourceNode = null;
+  }
+  isPlaying = false;
+  $('btn-play').textContent = '▶';
+  $('btn-play').setAttribute('aria-label', 'Play audio');
+  stopBeatPulse();
+}
+
+function currentPlayPosition() {
+  if (!audioCtx || !isPlaying) return playStartOffset;
+  return playStartOffset + (audioCtx.currentTime - playStartTime);
+}
+
+function updatePlaybackUI() {
+  if (!isPlaying) return;
+  const pos = Math.min(currentPlayPosition(), audioBuffer?.duration ?? 0);
+  const dur = audioBuffer?.duration ?? 1;
+  $('scrubber').value = (pos / dur) * 100;
+  $('playback-time').textContent = `${fmtTime(pos)} / ${fmtTime(dur)}`;
+  requestAnimationFrame(updatePlaybackUI);
+}
+
+function startBeatPulse() {
+  stopBeatPulse();
+  if (!detectedBPM) return;
+  const intervalMs = (60 / detectedBPM) * 1000;
+  const ring = $('pulse-ring');
+  function pulse() {
+    if (!isPlaying) return;
+    ring.classList.add('beat');
+    setTimeout(() => ring.classList.remove('beat'), 120);
+    beatPulseTimer = setTimeout(pulse, intervalMs);
+  }
+  beatPulseTimer = setTimeout(pulse, intervalMs);
+}
+
+function stopBeatPulse() {
+  clearTimeout(beatPulseTimer);
+  beatPulseTimer = null;
+  $('pulse-ring').classList.remove('beat');
+}
+
+/* ── Tap Tempo ────────────────────────────────────────────────── */
+function handleTap() {
+  const now = Date.now();
+  if (tapResetTimer) clearTimeout(tapResetTimer);
+  tapResetTimer = setTimeout(resetTaps, TAP_TIMEOUT_MS);
+
+  if (tapTimes.length && now - tapTimes[tapTimes.length - 1] > TAP_TIMEOUT_MS) {
+    tapTimes = [];
+  }
+  tapTimes.push(now);
+  if (tapTimes.length > MAX_TAPS) tapTimes.shift();
+
+  // Animate
+  const btn = $('tap-btn');
+  btn.classList.add('tapped');
+  setTimeout(() => btn.classList.remove('tapped'), 80);
+
+  if (tapTimes.length < 2) {
+    $('tap-bpm-display').innerHTML = `—<span class="bpm-unit">BPM</span>`;
+    $('tap-count-label').textContent = `Keep tapping… (1 tap)`;
+    $('tap-use-btn').disabled = true;
+    return;
+  }
+
+  const intervals = [];
+  for (let i = 1; i < tapTimes.length; i++) intervals.push(tapTimes[i] - tapTimes[i - 1]);
+  const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+  const tapBpm = Math.round(60000 / avg);
+
+  $('tap-bpm-display').innerHTML = `${tapBpm}<span class="bpm-unit">BPM</span>`;
+  $('tap-count-label').textContent = `Based on ${tapTimes.length} tap${tapTimes.length !== 1 ? 's' : ''}`;
+  $('tap-use-btn').disabled = false;
+  $('tap-use-btn').dataset.bpm = tapBpm;
+}
+
+function resetTaps() {
+  tapTimes = [];
+  clearTimeout(tapResetTimer);
+  tapResetTimer = null;
+  $('tap-bpm-display').innerHTML = `—<span class="bpm-unit">BPM</span>`;
+  $('tap-count-label').textContent = 'Tap to the beat…';
+  $('tap-use-btn').disabled = true;
+}
+
+/* ── History (localStorage) ───────────────────────────────────── */
+const HISTORY_KEY = 'bpm-analyzer-history';
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; }
+}
+
+function saveHistory(entry) {
+  let list = loadHistory();
+  list.unshift(entry);
+  if (list.length > 10) list = list.slice(0, 10);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+}
+
+function renderHistory() {
+  const list = loadHistory();
+  const container = $('history-list');
+  if (!list.length) {
+    container.innerHTML = '<div class="history-empty">No analyses yet.<br>Upload a track to get started.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  list.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.setAttribute('role', 'listitem');
+    div.innerHTML = `
+      <span class="history-item-bpm">${item.bpm}</span>
+      <div class="history-item-info">
+        <div class="history-item-name">${esc(item.filename)}</div>
+        <div class="history-item-meta">${esc(item.timestamp)}</div>
+      </div>
+      <button class="history-item-del" data-idx="${idx}" aria-label="Remove ${esc(item.filename)} from history" title="Remove">×</button>
+    `;
+    div.querySelector('.history-item-del').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const list2 = loadHistory();
+      list2.splice(idx, 1);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(list2));
+      renderHistory();
+    });
+    container.appendChild(div);
+  });
+}
+
+/* ── Event wiring ─────────────────────────────────────────────── */
+
+// Upload zone click / drag-drop
+$('upload-zone').addEventListener('click', (e) => {
+  if (e.target.id === 'btn-analyze' || e.target.id === 'btn-change-file') return;
+  if (!$('upload-zone').classList.contains('has-file')) {
+    $('file-input').click();
+  }
+});
+$('upload-zone').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file-input').click(); }
+});
+$('btn-pick-file').addEventListener('click', (e) => { e.stopPropagation(); $('file-input').click(); });
+$('btn-change-file').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('upload-zone').classList.remove('has-file');
+  $('file-input').value = '';
+  selectedFile = null;
+  audioBuffer = null;
+  stopAudio();
+  $('results-section').classList.remove('visible');
+  $('progress-wrap').classList.remove('visible');
+  $('btn-play').disabled = true;
+});
+$('file-input').addEventListener('change', (e) => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+// Drag-drop
+$('upload-zone').addEventListener('dragover', (e) => {
+  e.preventDefault();
+  $('upload-zone').classList.add('drag-over');
+});
+$('upload-zone').addEventListener('dragleave', () => {
+  $('upload-zone').classList.remove('drag-over');
+});
+$('upload-zone').addEventListener('drop', (e) => {
+  e.preventDefault();
+  $('upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+// Analyze
+$('btn-analyze').addEventListener('click', (e) => { e.stopPropagation(); runAnalysis(); });
+
+// Play/pause
+$('btn-play').addEventListener('click', () => {
+  if (isPlaying) {
+    const pos = currentPlayPosition();
+    stopAudio();
+    playStartOffset = pos; // remember position for resume
+  } else {
+    startAudio(currentPlayPosition());
+  }
+});
+
+// Scrubber
+$('scrubber').addEventListener('mousedown', () => { scrubbing = true; });
+$('scrubber').addEventListener('touchstart', () => { scrubbing = true; }, { passive: true });
+$('scrubber').addEventListener('input', () => {
+  if (!audioBuffer) return;
+  const pos = (Number($('scrubber').value) / 100) * audioBuffer.duration;
+  $('playback-time').textContent = `${fmtTime(pos)} / ${fmtTime(audioBuffer.duration)}`;
+  playStartOffset = pos;
+});
+$('scrubber').addEventListener('change', () => {
+  scrubbing = false;
+  if (!audioBuffer) return;
+  const pos = (Number($('scrubber').value) / 100) * audioBuffer.duration;
+  if (isPlaying) {
+    stopAudio();
+    startAudio(pos);
+  } else {
+    playStartOffset = pos;
+  }
+});
+
+// Tap tempo
+$('tap-btn').addEventListener('click', handleTap);
+$('tap-btn').addEventListener('keydown', (e) => {
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleTap(); }
+});
+$('tap-reset-btn').addEventListener('click', resetTaps);
+$('tap-use-btn').addEventListener('click', () => {
+  const bpm = Number($('tap-use-btn').dataset.bpm);
+  if (!bpm) return;
+  detectedBPM = bpm;
+  $('result-bpm').textContent = bpm;
+  $('badge-tempo').textContent = getTempoCategory(bpm);
+  $('badge-confidence').textContent = 'Tap tempo';
+  $('badge-range').textContent = '—';
+  $('stat-half').textContent = Math.round(bpm / 2);
+  $('stat-double').textContent = bpm * 2;
+  const beatMs = Math.round(60000 / bpm);
+  $('stat-interval').textContent = beatMs;
+  const secPerBeat = 60 / bpm;
+  $('info-bar-44').textContent = (secPerBeat * 4).toFixed(2);
+  $('info-bars-44').textContent = (bpm / 4).toFixed(1);
+  $('info-bar-34').textContent = (secPerBeat * 3).toFixed(2);
+  $('info-bar-68').textContent = (secPerBeat * 6 / 4).toFixed(2);
+  $('dj-phrase-4').textContent = (secPerBeat * 16).toFixed(1);
+  $('dj-phrase-8').textContent = (secPerBeat * 32).toFixed(1);
+  $('dj-phrase-16').textContent = (secPerBeat * 64).toFixed(1);
+  $('dj-eighth').textContent = Math.round(beatMs / 2);
+  $('dj-sixteenth').textContent = Math.round(beatMs / 4);
+  $('dj-triplet').textContent = Math.round(beatMs * 2 / 3);
+  $('results-section').classList.add('visible');
+  if (isPlaying) { stopBeatPulse(); startBeatPulse(); }
+  toast(`Tap BPM applied: ${bpm} BPM`, 'success');
+});
+
+// Keyboard shortcut: Space for tap when no input focused
+document.addEventListener('keydown', (e) => {
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.key === ' ' || e.key === 't') {
+    e.preventDefault();
+    handleTap();
+    $('tap-btn').focus();
+  }
+});
+
+// Resize waveform
+window.addEventListener('resize', () => {
+  if (audioBuffer && detectedPeakTimes.length) {
+    requestAnimationFrame(() => drawWaveform(audioBuffer, detectedPeakTimes));
+  }
+});
+
+/* ── Init ─────────────────────────────────────────────────────── */
+renderHistory();
+$('btn-play').disabled = true;
+</script>
+</body>
+</html>

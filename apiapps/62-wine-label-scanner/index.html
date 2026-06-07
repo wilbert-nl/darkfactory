@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wine Label Scanner — Dark Factory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400&family=Nunito:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0c0800;
+      --surface: #1a1200;
+      --surface2: #251a00;
+      --border: rgba(249,115,22,0.2);
+      --accent: #f97316;
+      --accent2: #84cc16;
+      --text: #fef9ee;
+      --muted: #a16207;
+      --green: #4ade80;
+      --red: #f87171;
+      --radius: 16px;
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-body: 'Nunito', system-ui, sans-serif;
+      --wine:#9b1c31; --wine2:#c0392b; --gold:#d4af37;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh; line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, var(--surface) 0%, #1a0f1e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-left { display: flex; align-items: center; gap: 1rem; }
+    .logo {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, var(--wine), var(--accent));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .brand h1 {
+      font-size: 1.2rem; font-weight: 700;
+      background: linear-gradient(90deg, var(--text), #c084fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .brand p { font-size: 0.72rem; color: var(--muted); }
+    .header-badge {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 0.3rem 0.9rem;
+      font-size: 0.72rem; color: var(--muted);
+    }
+    .header-badge span { color: var(--green); font-weight: 600; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .tabs {
+      display: flex; gap: 0.25rem; margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      background: none; border: none; color: var(--muted);
+      font-size: 0.875rem; font-weight: 500;
+      padding: 0.75rem 1.25rem; cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Search */
+    .search-hero {
+      text-align: center; padding: 2.5rem 1rem 2rem;
+      background: radial-gradient(ellipse at 50% 0%, rgba(156,28,49,0.12) 0%, transparent 70%);
+      border-radius: var(--radius); margin-bottom: 2rem;
+    }
+    .search-hero h2 {
+      font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--text), #c084fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .search-hero p { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+    .search-bar {
+      display: flex; gap: 0.75rem; max-width: 600px; margin: 0 auto;
+    }
+    .search-bar input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: var(--radius);
+      padding: 0.85rem 1.2rem; font-size: 1rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar input::placeholder { color: var(--muted); }
+    .btn {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border: none; color: #fff; border-radius: var(--radius);
+      padding: 0.85rem 1.5rem; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(249,115,22,0.35); }
+    .btn:active { transform: translateY(0); }
+    .btn-sm {
+      padding: 0.5rem 1rem; font-size: 0.8rem;
+    }
+    .btn-outline {
+      background: none; border: 1px solid var(--border); color: var(--text);
+    }
+    .btn-outline:hover {
+      border-color: var(--accent); color: var(--accent);
+      box-shadow: none; transform: none;
+    }
+    .btn-wine {
+      background: linear-gradient(135deg, var(--wine), #7b0d1e);
+    }
+    .btn-wine:hover { box-shadow: 0 4px 16px rgba(155,28,49,0.4); }
+    .btn-green {
+      background: linear-gradient(135deg, var(--green), #2cb88a);
+    }
+    .btn-green:hover { box-shadow: 0 4px 16px rgba(67,217,173,0.3); }
+
+    .filter-row {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .filter-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 20px; padding: 0.35rem 1rem;
+      font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+    }
+    .filter-chip:hover, .filter-chip.active {
+      border-color: var(--accent); color: var(--accent);
+      background: rgba(249,115,22,0.08);
+    }
+
+    .results-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .wine-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: all 0.25s; cursor: pointer;
+    }
+    .wine-card:hover {
+      transform: translateY(-3px); border-color: var(--accent);
+      box-shadow: 0 8px 32px rgba(249,115,22,0.15);
+    }
+    .wine-card-banner {
+      height: 6px;
+    }
+    .wine-card-body { padding: 1.25rem; }
+    .wine-card-region {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin-bottom: 0.4rem;
+    }
+    .wine-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; line-height: 1.3; }
+    .wine-card-grapes { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .wine-card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 0.75rem; border-top: 1px solid var(--border);
+    }
+    .price-badge {
+      font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+    }
+    .price-$ { background: rgba(67,217,173,0.1); color: var(--green); }
+    .price-$$ { background: rgba(247,201,72,0.1); color: var(--yellow); }
+    .price-$$$ { background: rgba(249,115,22,0.1); color: var(--accent); }
+    .price-$$$$ { background: rgba(132,204,22,0.1); color: var(--accent2); }
+    .score-dots { display: flex; gap: 3px; align-items: center; }
+    .score-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); transition: background 0.2s;
+    }
+    .score-dot.filled { background: var(--gold); }
+
+    /* Wine Detail Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
+      padding: 1rem; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; max-width: 800px; width: 100%;
+      max-height: 90vh; overflow-y: auto;
+      transform: translateY(20px); transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header {
+      padding: 1.5rem 1.5rem 0;
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .modal-close {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 8px; width: 32px; height: 32px;
+      cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; flex-shrink: 0;
+    }
+    .modal-close:hover { color: var(--text); border-color: var(--accent); }
+    .modal-body { padding: 1.5rem; }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    @media (max-width: 600px) { .modal-grid { grid-template-columns: 1fr; } }
+    .detail-section { margin-bottom: 1.5rem; }
+    .detail-section h4 {
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin-bottom: 0.6rem;
+    }
+    .detail-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .tag {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px; padding: 0.2rem 0.6rem;
+      font-size: 0.78rem;
+    }
+    .tag-green { border-color: rgba(67,217,173,0.3); color: var(--green); background: rgba(67,217,173,0.07); }
+    .tag-yellow { border-color: rgba(247,201,72,0.3); color: var(--yellow); background: rgba(247,201,72,0.07); }
+    .tag-purple { border-color: rgba(249,115,22,0.3); color: var(--accent); background: rgba(249,115,22,0.07); }
+    .tag-red { border-color: rgba(132,204,22,0.3); color: var(--accent2); background: rgba(132,204,22,0.07); }
+
+    /* Flavor Wheel */
+    .flavor-wheel-wrap { display: flex; justify-content: center; margin: 1rem 0; }
+
+    /* Serving info */
+    .serving-row {
+      display: flex; gap: 1rem; margin-bottom: 1rem;
+    }
+    .serving-item {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.85rem; text-align: center;
+    }
+    .serving-item .icon { font-size: 1.4rem; margin-bottom: 0.3rem; }
+    .serving-item .label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .serving-item .value { font-size: 0.85rem; font-weight: 600; color: var(--text); margin-top: 0.2rem; }
+
+    .add-cellar-btn {
+      width: 100%; margin-top: 1rem;
+    }
+
+    /* Cellar */
+    .cellar-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .cellar-header h2 { font-size: 1.4rem; font-weight: 700; }
+    .cellar-stats {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem; text-align: center;
+    }
+    .stat-card .stat-val { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .stat-card .stat-lbl { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; }
+    .cellar-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .cellar-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.1rem 1.25rem;
+      display: flex; align-items: center; gap: 1rem; transition: border-color 0.2s;
+    }
+    .cellar-item:hover { border-color: var(--border); }
+    .cellar-item-info { flex: 1; }
+    .cellar-item-name { font-weight: 600; font-size: 0.95rem; }
+    .cellar-item-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+    .qty-control { display: flex; align-items: center; gap: 0.5rem; }
+    .qty-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); width: 28px; height: 28px; border-radius: 6px;
+      cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .qty-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .qty-val { font-weight: 600; font-size: 0.95rem; min-width: 24px; text-align: center; }
+    .cellar-window-badge {
+      font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 6px;
+      font-weight: 500;
+    }
+    .window-optimal { background: rgba(67,217,173,0.1); color: var(--green); }
+    .window-early { background: rgba(247,201,72,0.1); color: var(--yellow); }
+    .window-past { background: rgba(132,204,22,0.1); color: var(--accent2); }
+    .cellar-empty {
+      text-align: center; padding: 4rem 2rem;
+      color: var(--muted);
+    }
+    .cellar-empty .icon { font-size: 3.5rem; margin-bottom: 1rem; display: block; }
+
+    /* Vintage Chart */
+    .vintage-section { margin-bottom: 2.5rem; }
+    .vintage-section h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+    .vintage-table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    .vintage-table {
+      width: 100%; border-collapse: collapse; font-size: 0.82rem;
+    }
+    .vintage-table th, .vintage-table td {
+      padding: 0.6rem 0.85rem; text-align: center; border-bottom: 1px solid var(--border);
+    }
+    .vintage-table th {
+      background: var(--surface2); color: var(--muted);
+      font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .vintage-table td:first-child { text-align: left; font-weight: 600; color: var(--text); }
+    .vintage-table tr:last-child td { border-bottom: none; }
+    .vintage-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .vr {
+      display: inline-block; width: 28px; height: 28px; border-radius: 6px;
+      font-weight: 700; font-size: 0.8rem; line-height: 28px; text-align: center;
+    }
+    .vr-95 { background: rgba(67,217,173,0.2); color: var(--green); }
+    .vr-90 { background: rgba(249,115,22,0.2); color: var(--accent); }
+    .vr-85 { background: rgba(247,201,72,0.2); color: var(--yellow); }
+    .vr-75 { background: rgba(132,204,22,0.15); color: var(--accent2); }
+    .vr-65 { background: rgba(142,142,142,0.15); color: var(--muted); }
+
+    /* Journal */
+    .journal-form {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem; margin-bottom: 2rem;
+    }
+    .journal-form h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group label { font-size: 0.78rem; color: var(--muted); }
+    .form-group input, .form-group select, .form-group textarea {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 0.65rem 0.9rem;
+      font-size: 0.875rem; outline: none; transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--accent);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-group select option { background: var(--surface2); }
+    .rating-stars { display: flex; gap: 0.3rem; margin-top: 0.25rem; }
+    .star-btn {
+      background: none; border: none; font-size: 1.3rem; cursor: pointer;
+      color: var(--border); transition: color 0.15s; padding: 0;
+    }
+    .star-btn.active { color: var(--gold); }
+    .star-btn:hover { color: var(--gold); }
+    .journal-entries { display: flex; flex-direction: column; gap: 1rem; }
+    .journal-entry {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem; transition: border-color 0.2s;
+    }
+    .journal-entry:hover { border-color: var(--border); }
+    .journal-entry-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .journal-entry-name { font-weight: 600; font-size: 0.95rem; }
+    .journal-entry-date { font-size: 0.75rem; color: var(--muted); }
+    .journal-entry-stars { color: var(--gold); font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .journal-entry-notes { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+    .journal-entry-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .journal-empty {
+      text-align: center; padding: 4rem 2rem; color: var(--muted);
+    }
+    .journal-empty .icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+    .del-btn {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 0.9rem; padding: 0.25rem; border-radius: 4px; transition: color 0.15s;
+    }
+    .del-btn:hover { color: var(--accent2); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: var(--surface); border: 1px solid var(--green);
+      color: var(--text); border-radius: 10px; padding: 0.85rem 1.25rem;
+      font-size: 0.875rem; z-index: 300;
+      transform: translateY(100px); opacity: 0;
+      transition: all 0.3s; max-width: 320px;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { border-color: var(--accent2); }
+
+    /* No results */
+    .no-results { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+    .no-results .icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .fade-in { animation: fadeIn 0.3s ease forwards; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { animation: spin 0.7s linear infinite; display: inline-block; }
+
+    /* Wine type color bands */
+    .band-red { background: linear-gradient(90deg, #9b1c31, #c0392b); }
+    .band-white { background: linear-gradient(90deg, #c9a84c, #f0d060); }
+    .band-rose { background: linear-gradient(90deg, #e8607a, #f4a0b0); }
+    .band-sparkling { background: linear-gradient(90deg, #6c63ff, #a78bfa); }
+    .band-dessert { background: linear-gradient(90deg, #d4af37, #f7c948); }
+
+    .type-badge {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em;
+      padding: 0.15rem 0.55rem; border-radius: 4px; font-weight: 600;
+    }
+    .type-red { background: rgba(155,28,49,0.2); color: #e07090; }
+    .type-white { background: rgba(201,168,76,0.2); color: var(--yellow); }
+    .type-rose { background: rgba(232,96,122,0.2); color: #f4a0b0; }
+    .type-sparkling { background: rgba(249,115,22,0.2); color: var(--accent); }
+    .type-dessert { background: rgba(212,175,55,0.2); color: var(--gold); }
+
+    /* === Food v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 800px 600px at 20% 10%, rgba(249,115,22,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 600px 400px at 80% 80%, rgba(132,204,22,0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body > * { position: relative; z-index: 1; }
+
+    h1, h2, .title, .app-title, .card-title, .name, label { font-family: var(--font-display); }
+
+    h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+    h2 { font-size: clamp(1.2rem, 2.5vw, 1.6rem); font-weight: 400; font-style: italic; }
+    h3 { font-size: 1rem; font-weight: 700; font-family: var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .recipe, .info-box, .box, .panel, .section, .alcohol-card,
+    [class*="card"], [class*="result"], [class*="item"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: 0 4px 24px rgba(249,115,22,0.08);
+      animation: warmFade 0.5s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      width: 100%;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+    }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 0.75rem 2rem;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    button:hover, .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(249,115,22,0.4);
+    }
+    button:active { transform: scale(0.96); }
+
+    .tag, .badge, .pill, .category, .allergen, .label, li.tag {
+      display: inline-block;
+      background: rgba(249,115,22,0.15);
+      border: 1px solid rgba(249,115,22,0.3);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 0.2rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .positive, .safe, .good, .match, .compatible { color: var(--green); }
+    .negative, .danger, .alert, .incompatible { color: var(--red); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th { padding: 0.6rem 1rem; background: var(--surface2); color: var(--muted); text-align: left; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.75rem; }
+    td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); }
+    tr:hover td { background: rgba(249,115,22,0.04); }
+
+    .nutrition-label, .label-box {
+      border: 3px solid var(--text);
+      border-radius: 4px;
+      padding: 1rem;
+      font-family: var(--font-body);
+      background: var(--surface);
+    }
+
+    @keyframes warmFade {
+      from { opacity: 0; transform: translateY(12px) scale(0.97); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes warmGlow {
+      0%, 100% { box-shadow: 0 0 8px rgba(249,115,22,0.3); }
+      50% { box-shadow: 0 0 20px rgba(249,115,22,0.6); }
+    }
+
+    button[type="submit"], .primary { animation: warmGlow 2.5s ease infinite; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">🍷</div>
+    <div class="brand">
+      <h1>Wine Label Scanner</h1>
+      <p>Wine discovery, cellar tracking &amp; tasting journal</p>
+    </div>
+  </div>
+  <div class="header-badge"><span>60+</span> curated wines</div>
+</header>
+
+<div class="container">
+  <nav class="tabs" role="tablist" aria-label="Main navigation">
+    <button class="tab-btn active" role="tab" aria-selected="true" data-tab="search">🔍 Wine Search</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-tab="cellar">🏺 My Cellar</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-tab="vintage">📅 Vintage Chart</button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-tab="journal">📓 Tasting Journal</button>
+  </nav>
+
+  <!-- SEARCH TAB -->
+  <section id="tab-search" class="tab-panel active" role="tabpanel">
+    <div class="search-hero">
+      <h2>Discover Great Wines</h2>
+      <p>Search by wine name, region, or grape variety across our curated database</p>
+      <div class="search-bar">
+        <input type="search" id="searchInput" placeholder="e.g. Barolo, Chardonnay, Opus One…" aria-label="Search wines" />
+        <button class="btn" id="searchBtn">Search</button>
+      </div>
+    </div>
+    <div class="filter-row" id="filterRow" role="group" aria-label="Filter by type">
+      <button class="filter-chip active" data-filter="all">All Types</button>
+      <button class="filter-chip" data-filter="red">🍷 Red</button>
+      <button class="filter-chip" data-filter="white">🥂 White</button>
+      <button class="filter-chip" data-filter="rose">🌸 Rosé</button>
+      <button class="filter-chip" data-filter="sparkling">✨ Sparkling</button>
+      <button class="filter-chip" data-filter="dessert">🍯 Dessert</button>
+    </div>
+    <div class="results-grid" id="resultsGrid"></div>
+  </section>
+
+  <!-- CELLAR TAB -->
+  <section id="tab-cellar" class="tab-panel" role="tabpanel">
+    <div class="cellar-header">
+      <h2>My Wine Cellar</h2>
+      <button class="btn btn-sm btn-wine" id="clearCellarBtn">Clear Cellar</button>
+    </div>
+    <div class="cellar-stats">
+      <div class="stat-card">
+        <div class="stat-val" id="totalBottles">0</div>
+        <div class="stat-lbl">Total Bottles</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="totalWines">0</div>
+        <div class="stat-lbl">Unique Wines</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="optimalWines">0</div>
+        <div class="stat-lbl">Drinking Now</div>
+      </div>
+    </div>
+    <div class="cellar-list" id="cellarList"></div>
+  </section>
+
+  <!-- VINTAGE CHART TAB -->
+  <section id="tab-vintage" class="tab-panel" role="tabpanel">
+    <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:0.5rem;">Vintage Quality Chart</h2>
+    <p style="color:var(--muted);font-size:0.875rem;margin-bottom:2rem;">Quality ratings by year and region (100-point scale)</p>
+    <div id="vintageContent"></div>
+  </section>
+
+  <!-- JOURNAL TAB -->
+  <section id="tab-journal" class="tab-panel" role="tabpanel">
+    <div class="journal-form">
+      <h3>📝 Log a Tasting Note</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="jWineName">Wine Name *</label>
+          <input type="text" id="jWineName" placeholder="e.g. Château Margaux 2015" />
+        </div>
+        <div class="form-group">
+          <label for="jVintage">Vintage</label>
+          <input type="number" id="jVintage" placeholder="2020" min="1900" max="2030" />
+        </div>
+        <div class="form-group">
+          <label for="jRegion">Region</label>
+          <input type="text" id="jRegion" placeholder="e.g. Bordeaux" />
+        </div>
+        <div class="form-group">
+          <label for="jOccasion">Occasion</label>
+          <select id="jOccasion">
+            <option value="">Select…</option>
+            <option>Restaurant</option>
+            <option>Home dinner</option>
+            <option>Wine tasting</option>
+            <option>Gift</option>
+            <option>Cellar pull</option>
+            <option>Special event</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label>Overall Rating</label>
+        <div class="rating-stars" id="ratingStars" role="group" aria-label="Rate this wine">
+          <button class="star-btn" data-star="1" aria-label="1 star">★</button>
+          <button class="star-btn" data-star="2" aria-label="2 stars">★</button>
+          <button class="star-btn" data-star="3" aria-label="3 stars">★</button>
+          <button class="star-btn" data-star="4" aria-label="4 stars">★</button>
+          <button class="star-btn" data-star="5" aria-label="5 stars">★</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label for="jNotes">Tasting Notes</label>
+        <textarea id="jNotes" placeholder="Aromas of dark cherry, tobacco… On the palate…"></textarea>
+      </div>
+      <button class="btn btn-green" id="saveJournalBtn">Save Tasting Note</button>
+    </div>
+    <div class="journal-entries" id="journalEntries"></div>
+  </section>
+</div>
+
+<!-- Wine Detail Modal -->
+<div class="modal-overlay" id="wineModal" role="dialog" aria-modal="true" aria-labelledby="modalWineName">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.3rem;" id="modalRegion"></div>
+        <h2 style="font-size:1.4rem;font-weight:700;" id="modalWineName"></h2>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;" id="modalBadges"></div>
+      </div>
+      <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="serving-row" id="modalServing"></div>
+      <div class="modal-grid">
+        <div>
+          <div class="detail-section">
+            <h4>Grape Varieties</h4>
+            <div class="detail-tags" id="modalGrapes"></div>
+          </div>
+          <div class="detail-section">
+            <h4>Tasting Profile</h4>
+            <div id="modalFlavorWheel"></div>
+          </div>
+          <div class="detail-section">
+            <h4>Tasting Notes</h4>
+            <p style="font-size:0.875rem;color:var(--muted);line-height:1.6;" id="modalNotes"></p>
+          </div>
+        </div>
+        <div>
+          <div class="detail-section">
+            <h4>Food Pairings</h4>
+            <div class="detail-tags" id="modalPairings"></div>
+          </div>
+          <div class="detail-section">
+            <h4>Allergen Info</h4>
+            <div class="detail-tags" id="modalAllergens"></div>
+          </div>
+          <div class="detail-section">
+            <h4>Drinking Window</h4>
+            <p style="font-size:0.875rem;color:var(--text);" id="modalWindow"></p>
+          </div>
+          <div class="detail-section">
+            <h4>Producer Notes</h4>
+            <p style="font-size:0.875rem;color:var(--muted);line-height:1.6;" id="modalProducer"></p>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <button class="btn btn-wine add-cellar-btn" id="modalAddCellar" style="flex:1;min-width:160px;">🏺 Add to Cellar</button>
+        <button class="btn btn-outline btn-sm" id="modalLogTasting" style="flex:1;min-width:160px;">📝 Log Tasting</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+<script>
+// ─── Wine Database ───────────────────────────────────────────────────────────
+const WINES = [
+  // RED - Bordeaux
+  { id:1, name:"Château Margaux", region:"Bordeaux, France", type:"red", grapes:["Cabernet Sauvignon","Merlot","Petit Verdot"], vintageRange:"1995–2022", drinkFrom:2010, drinkTo:2045, price:"$$$$", score:97,
+    notes:"Extraordinarily perfumed with black currant, violets, and cedar. Velvety tannins with great precision and a long, mineral finish.",
+    pairings:["Roasted lamb","Duck confit","Aged Comté","Beef Wellington"],
+    servingTemp:"17–18°C", decanting:"2 hours", allergens:["Sulfites","Egg (fining)"],
+    profile:{Fruit:90,Earth:75,Tannin:85,Acid:70,Body:90,Oak:80},
+    producer:"First Growth estate producing some of the world's most sought-after Cabernet-dominant blends." },
+  { id:2, name:"Château Pétrus", region:"Pomerol, Bordeaux", type:"red", grapes:["Merlot"], vintageRange:"2000–2020", drinkFrom:2015, drinkTo:2050, price:"$$$$", score:99,
+    notes:"Pure Merlot from iron-rich clay soils. Dense, rich, and plush with truffle, plum, chocolate, and immense depth.",
+    pairings:["Truffled beef","Foie gras","Braised short rib"],
+    servingTemp:"17–18°C", decanting:"3 hours", allergens:["Sulfites"],
+    profile:{Fruit:95,Earth:85,Tannin:80,Acid:65,Body:98,Oak:70},
+    producer:"Perhaps the most legendary wine estate in the world, producing pure Merlot from a unique clay plateau." },
+  { id:3, name:"Sassicaia", region:"Bolgheri, Tuscany", type:"red", grapes:["Cabernet Sauvignon","Cabernet Franc"], vintageRange:"1994–2021", drinkFrom:2005, drinkTo:2040, price:"$$$", score:95,
+    notes:"Pioneer of the Super Tuscans. Blackcurrant, cedar, graphite, and tobacco with firm but silky tannins.",
+    pairings:["Bistecca Fiorentina","Wild boar","Aged Pecorino"],
+    servingTemp:"17°C", decanting:"1.5 hours", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:80,Tannin:88,Acid:78,Body:88,Oak:82},
+    producer:"The original Super Tuscan, created by the Incisa della Rocchetta family in the 1940s." },
+  { id:4, name:"Barolo Cannubi", region:"Piedmont, Italy", type:"red", grapes:["Nebbiolo"], vintageRange:"2004–2019", drinkFrom:2012, drinkTo:2038, price:"$$$", score:94,
+    notes:"The king of Italian wines. Intense garnet, tar, roses, and dried cherries with powerful tannins and vibrant acidity.",
+    pairings:["Braised beef","Truffle risotto","Lamb chops","Aged Barolo cheese"],
+    servingTemp:"18°C", decanting:"2.5 hours", allergens:["Sulfites"],
+    profile:{Fruit:75,Earth:90,Tannin:95,Acid:90,Body:85,Oak:60},
+    producer:"From the Cannubi Cru, one of Barolo's most celebrated vineyards with centuries of winemaking history." },
+  { id:5, name:"Opus One", region:"Napa Valley, California", type:"red", grapes:["Cabernet Sauvignon","Merlot","Cabernet Franc","Petit Verdot","Malbec"], vintageRange:"2005–2020", drinkFrom:2012, drinkTo:2042, price:"$$$$", score:96,
+    notes:"Bordeaux-inspired Napa icon. Cassis, dark plum, mocha, and vanilla with polished tannins and seamless balance.",
+    pairings:["Prime rib","Lamb rack","Mushroom risotto","Dark chocolate"],
+    servingTemp:"17–18°C", decanting:"1 hour", allergens:["Sulfites","Egg (fining)"],
+    profile:{Fruit:92,Earth:65,Tannin:82,Acid:72,Body:92,Oak:88},
+    producer:"A joint venture between Robert Mondavi and Baron Philippe de Rothschild, founded in 1979." },
+  { id:6, name:"Penfolds Grange", region:"South Australia", type:"red", grapes:["Shiraz","Cabernet Sauvignon"], vintageRange:"1997–2019", drinkFrom:2015, drinkTo:2050, price:"$$$$", score:98,
+    notes:"Australia's greatest wine. Immense concentration with dark fruit, chocolate, leather, and eucalyptus. Built for decades of aging.",
+    pairings:["Grilled kangaroo","Aged cheddar","Slow-roasted lamb","Game meats"],
+    servingTemp:"18°C", decanting:"3 hours", allergens:["Sulfites"],
+    profile:{Fruit:95,Earth:70,Tannin:90,Acid:75,Body:99,Oak:90},
+    producer:"Created by Max Schubert in 1951 after a trip to Bordeaux; considered Australia's first growth." },
+  { id:7, name:"Vega Sicilia Único", region:"Ribera del Duero, Spain", type:"red", grapes:["Tempranillo","Cabernet Sauvignon"], vintageRange:"1990–2016", drinkFrom:2010, drinkTo:2050, price:"$$$$", score:98,
+    notes:"Spain's legendary wine. Complex aromas of dried fruit, vanilla, tobacco, and earth with unparalleled elegance and longevity.",
+    pairings:["Cochinillo","Iberian lamb","Aged Manchego"],
+    servingTemp:"17°C", decanting:"2 hours", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:88,Tannin:85,Acid:80,Body:88,Oak:85},
+    producer:"The iconic estate that put Ribera del Duero on the world wine map, aged for up to 10 years before release." },
+  { id:8, name:"Amarone della Valpolicella Classico", region:"Veneto, Italy", type:"red", grapes:["Corvina","Rondinella","Molinara"], vintageRange:"2001–2016", drinkFrom:2010, drinkTo:2040, price:"$$$", score:94,
+    notes:"Made from air-dried grapes, offering intense dried cherry, fig, chocolate, and tobacco with velvety richness.",
+    pairings:["Braised oxtail","Aged cheeses","Dark chocolate","Risotto with game"],
+    servingTemp:"18°C", decanting:"2 hours", allergens:["Sulfites"],
+    profile:{Fruit:90,Earth:75,Tannin:85,Acid:70,Body:95,Oak:75},
+    producer:"Classic from the Valpolicella hills, using the traditional appassimento drying technique." },
+  { id:9, name:"Domaine de la Romanée-Conti", region:"Burgundy, France", type:"red", grapes:["Pinot Noir"], vintageRange:"2005–2020", drinkFrom:2020, drinkTo:2060, price:"$$$$", score:100,
+    notes:"The world's most revered wine. Ethereal complexity with rose petals, spice, forest floor, and red fruit of haunting purity.",
+    pairings:["Roasted squab","Wild mushroom dishes","Truffle preparations"],
+    servingTemp:"16°C", decanting:"30 min", allergens:["Sulfites"],
+    profile:{Fruit:88,Earth:95,Tannin:65,Acid:90,Body:78,Oak:55},
+    producer:"The 1.8 hectare Grand Cru monopole in Vosne-Romanée, producing fewer than 6,000 bottles per year." },
+  { id:10, name:"Caymus Cabernet Sauvignon", region:"Napa Valley, California", type:"red", grapes:["Cabernet Sauvignon"], vintageRange:"2010–2022", drinkFrom:2013, drinkTo:2035, price:"$$", score:92,
+    notes:"Approachable Napa Cab with rich dark cherry, vanilla, mocha, and hints of eucalyptus. Crowd-pleasing and consistent.",
+    pairings:["Burgers","Grilled steak","BBQ ribs","Pizza"],
+    servingTemp:"17°C", decanting:"30 min", allergens:["Sulfites"],
+    profile:{Fruit:90,Earth:55,Tannin:72,Acid:65,Body:88,Oak:85},
+    producer:"Family-owned Napa estate founded in 1972, known for rich and crowd-pleasing Cabernets." },
+  { id:11, name:"Silver Oak Alexander Valley Cabernet", region:"Alexander Valley, California", type:"red", grapes:["Cabernet Sauvignon"], vintageRange:"2012–2021", drinkFrom:2015, drinkTo:2035, price:"$$", score:91,
+    notes:"Soft and approachable with blackberry, vanilla, dill, and dusty tannins. Aged exclusively in American oak.",
+    pairings:["BBQ brisket","Roasted chicken","Pasta Bolognese"],
+    servingTemp:"17°C", decanting:"30 min", allergens:["Sulfites"],
+    profile:{Fruit:88,Earth:55,Tannin:70,Acid:62,Body:85,Oak:88},
+    producer:"Known for American oak-aged Cabernets with a signature soft and accessible style." },
+  { id:12, name:"Malbec Achaval Ferrer Quimera", region:"Mendoza, Argentina", type:"red", grapes:["Malbec","Cabernet Sauvignon","Merlot"], vintageRange:"2010–2022", drinkFrom:2012, drinkTo:2030, price:"$$", score:92,
+    notes:"Elegant Mendoza blend with violet, plum, chocolate, and soft tannins. Exceptional quality-to-price ratio.",
+    pairings:["Asado","Empanadas","Grilled chorizo","Chimichurri steak"],
+    servingTemp:"16–17°C", decanting:"45 min", allergens:["Sulfites"],
+    profile:{Fruit:88,Earth:60,Tannin:75,Acid:68,Body:87,Oak:72},
+    producer:"Boutique winery in Luján de Cuyo producing world-class Malbec blends with minimal intervention." },
+  // WHITE - Burgundy & Chardonnay
+  { id:13, name:"Puligny-Montrachet Premier Cru", region:"Burgundy, France", type:"white", grapes:["Chardonnay"], vintageRange:"2012–2021", drinkFrom:2015, drinkTo:2032, price:"$$$", score:95,
+    notes:"The benchmark white Burgundy. Lemon curd, white flowers, hazelnut, and wet stone with breathtaking minerality and length.",
+    pairings:["Sole meunière","Lobster bisque","Coquilles St. Jacques","Aged Brie"],
+    servingTemp:"10–12°C", decanting:"15 min", allergens:["Sulfites"],
+    profile:{Fruit:80,Earth:85,Tannin:10,Acid:90,Body:75,Oak:65},
+    producer:"From the limestone soils of Puligny-Montrachet, producing some of the world's finest white wines." },
+  { id:14, name:"Chablis Grand Cru Les Clos", region:"Chablis, Burgundy", type:"white", grapes:["Chardonnay"], vintageRange:"2014–2022", drinkFrom:2016, drinkTo:2035, price:"$$$", score:93,
+    notes:"Pure, stony expression of Chardonnay. Oyster shell, lemon zest, green apple, and flint with razor-sharp acidity.",
+    pairings:["Oysters","Steamed clams","Sea bass","Goat cheese"],
+    servingTemp:"9–11°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:68,Earth:95,Tannin:5,Acid:95,Body:65,Oak:20},
+    producer:"From the revered Les Clos Grand Cru, the largest and arguably finest of Chablis's seven Grands Crus." },
+  { id:15, name:"Far Niente Chardonnay", region:"Napa Valley, California", type:"white", grapes:["Chardonnay"], vintageRange:"2018–2023", drinkFrom:2019, drinkTo:2028, price:"$$", score:91,
+    notes:"Rich and creamy Napa Chardonnay with tropical fruit, vanilla, butter, and toasty oak. Full-bodied and opulent.",
+    pairings:["Lobster","Roasted chicken","Pasta with cream sauce","Brie"],
+    servingTemp:"11–13°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:88,Earth:40,Tannin:8,Acid:68,Body:88,Oak:90},
+    producer:"Historic Oakville estate known for rich, oak-influenced Napa Chardonnay." },
+  { id:16, name:"Château Montelena Chardonnay", region:"Napa Valley, California", type:"white", grapes:["Chardonnay"], vintageRange:"2018–2022", drinkFrom:2019, drinkTo:2030, price:"$$", score:92,
+    notes:"Legendary wine that beat French whites in the 1976 Judgment of Paris. Elegant pear, apple, citrus, and mineral finish.",
+    pairings:["Grilled halibut","Clam chowder","Soft cheeses"],
+    servingTemp:"10–12°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:82,Earth:65,Tannin:8,Acid:80,Body:78,Oak:70},
+    producer:"Famous for winning the 1976 Paris tasting; still producing elegant, restrained Napa Chardonnays." },
+  { id:17, name:"Riesling Spätlese Mosel", region:"Mosel, Germany", type:"white", grapes:["Riesling"], vintageRange:"2015–2022", drinkFrom:2018, drinkTo:2040, price:"$$", score:93,
+    notes:"Delicate and racy with peach, apricot, slate, and floral notes. Off-dry with crystalline acidity and ethereal lightness.",
+    pairings:["Asian cuisine","Spicy Thai","Smoked salmon","Pork belly"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:80,Tannin:5,Acid:95,Body:55,Oak:5},
+    producer:"From steep slate slopes along the Mosel River, producing delicate Rieslings with extraordinary aging potential." },
+  { id:18, name:"Sancerre Blanc Henri Bourgeois", region:"Loire Valley, France", type:"white", grapes:["Sauvignon Blanc"], vintageRange:"2019–2023", drinkFrom:2020, drinkTo:2027, price:"$$", score:90,
+    notes:"Benchmark Sancerre with grapefruit, white currant, herbs, and flinty minerality. Crisp and food-friendly.",
+    pairings:["Goat cheese","Grilled asparagus","Oysters","Light fish"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:75,Earth:80,Tannin:5,Acid:90,Body:60,Oak:10},
+    producer:"One of the most respected Sancerre producers with estate vineyards across multiple appellations." },
+  { id:19, name:"Cloudy Bay Sauvignon Blanc", region:"Marlborough, New Zealand", type:"white", grapes:["Sauvignon Blanc"], vintageRange:"2021–2024", drinkFrom:2021, drinkTo:2026, price:"$$", score:91,
+    notes:"The wine that put Marlborough on the map. Vivid passion fruit, lime, elderflower, and cut grass with electric acidity.",
+    pairings:["Green salads","Sushi","Ceviche","Steamed mussels"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:90,Earth:55,Tannin:5,Acid:92,Body:62,Oak:5},
+    producer:"Iconic New Zealand producer that sparked the global Marlborough Sauvignon Blanc phenomenon." },
+  { id:20, name:"Gewürztraminer Vendanges Tardives", region:"Alsace, France", type:"white", grapes:["Gewürztraminer"], vintageRange:"2010–2018", drinkFrom:2015, drinkTo:2035, price:"$$$", score:93,
+    notes:"Intensely aromatic with lychee, rose petal, ginger, and honey. Rich yet balanced with a long, perfumed finish.",
+    pairings:["Foie gras","Spiced duck","Blue cheese","Asian fusion"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:92,Earth:55,Tannin:5,Acid:72,Body:80,Oak:15},
+    producer:"From Alsace's finest estates, producing some of the world's most aromatic late-harvest wines." },
+  { id:21, name:"Viognier Condrieu Georges Vernay", region:"Rhône Valley, France", type:"white", grapes:["Viognier"], vintageRange:"2018–2022", drinkFrom:2019, drinkTo:2028, price:"$$$", score:94,
+    notes:"The greatest Viognier appellation. Apricot, peach blossom, honeysuckle, and white pepper. Opulent yet fresh.",
+    pairings:["Lobster","Scallops","Mild curries","Roasted white fish"],
+    servingTemp:"10–12°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:90,Earth:60,Tannin:8,Acid:68,Body:82,Oak:50},
+    producer:"The estate that saved Condrieu from extinction; Georges Vernay is regarded as the father of Viognier." },
+  // SPARKLING
+  { id:22, name:"Dom Pérignon Brut", region:"Champagne, France", type:"sparkling", grapes:["Chardonnay","Pinot Noir"], vintageRange:"2006–2015", drinkFrom:2012, drinkTo:2035, price:"$$$$", score:97,
+    notes:"Prestige cuvée of legendary status. Fine persistent bubbles, brioche, white peach, chalk, and an endlessly complex finish.",
+    pairings:["Caviar","Oysters","Grilled langoustine","White truffle pasta"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:82,Earth:80,Tannin:10,Acid:88,Body:75,Oak:35},
+    producer:"The most famous prestige cuvée in the world, produced exclusively in vintage years by Moët & Chandon." },
+  { id:23, name:"Krug Grande Cuvée", region:"Champagne, France", type:"sparkling", grapes:["Chardonnay","Pinot Noir","Pinot Meunier"], vintageRange:"NV", drinkFrom:2020, drinkTo:2035, price:"$$$$", score:98,
+    notes:"The ultimate non-vintage Champagne. Hazelnut, brioche, dried apricot, and fresh bread with extraordinary depth.",
+    pairings:["Lobster","Oysters","Caviar","Foie gras"],
+    servingTemp:"9–11°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:80,Earth:82,Tannin:10,Acid:90,Body:78,Oak:40},
+    producer:"The most complex house in Champagne, blending up to 120 wines from 10+ vintages for the Grande Cuvée." },
+  { id:24, name:"Billecart-Salmon Blanc de Blancs", region:"Champagne, France", type:"sparkling", grapes:["Chardonnay"], vintageRange:"2008–2016", drinkFrom:2015, drinkTo:2030, price:"$$$", score:95,
+    notes:"Elegant and precise Blanc de Blancs with lemon, green apple, chalk, and toasted almonds. Exceptional freshness.",
+    pairings:["Oysters","Sushi","Grilled langoustines","Soft cheeses"],
+    servingTemp:"7–9°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:75,Earth:88,Tannin:8,Acid:93,Body:68,Oak:25},
+    producer:"Family-owned house in Mareuil-sur-Aÿ celebrated for elegance, freshness, and long aging." },
+  { id:25, name:"Ferrari Trento Reserva Lunelli", region:"Trentino, Italy", type:"sparkling", grapes:["Chardonnay","Pinot Nero"], vintageRange:"2012–2018", drinkFrom:2016, drinkTo:2028, price:"$$", score:92,
+    notes:"Italy's finest Traditional Method sparkler. Brioche, apple, citrus, and creamy texture with fine, persistent bubbles.",
+    pairings:["Risotto","Seafood pasta","Mild cheeses","Antipasti"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:78,Earth:72,Tannin:8,Acid:88,Body:70,Oak:30},
+    producer:"The leading Trentino sparkling producer making Italy's most acclaimed Traditional Method wines." },
+  { id:26, name:"Cava Codorníu Reserva", region:"Penedès, Spain", type:"sparkling", grapes:["Macabeo","Xarel-lo","Parellada"], vintageRange:"2020–2023", drinkFrom:2020, drinkTo:2026, price:"$", score:88,
+    notes:"Great value Spanish sparkler with apple, pear, almond, and bread dough notes. Crisp and refreshing.",
+    pairings:["Tapas","Jamón","Seafood","Light appetizers"],
+    servingTemp:"7–9°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:78,Earth:60,Tannin:8,Acid:82,Body:60,Oak:15},
+    producer:"Founded in 1551, the oldest winery in Spain and pioneer of the Cava method." },
+  // ROSÉ
+  { id:27, name:"Whispering Angel Côtes de Provence", region:"Provence, France", type:"rose", grapes:["Grenache","Cinsault","Rolle"], vintageRange:"2021–2024", drinkFrom:2021, drinkTo:2026, price:"$$", score:90,
+    notes:"The iconic Provence rosé. Pale salmon pink with strawberry, peach, white flowers, and a saline finish. Ethereally elegant.",
+    pairings:["Salade Niçoise","Grilled sea bass","Ratatouille","Soft cheeses"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:55,Tannin:15,Acid:78,Body:60,Oak:10},
+    producer:"The wine that made Provence rosé a luxury lifestyle product; owned by the Sacha Lichine family." },
+  { id:28, name:"Château Miraval Rosé", region:"Provence, France", type:"rose", grapes:["Cinsault","Grenache","Syrah","Rolle"], vintageRange:"2021–2024", drinkFrom:2021, drinkTo:2026, price:"$$", score:91,
+    notes:"From Brad Pitt and Angelina Jolie's estate. Exceptionally refined with grapefruit, peach, and delicate floral notes.",
+    pairings:["Grilled fish","Vegetable tarts","Charcuterie","Mediterranean cuisine"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:83,Earth:58,Tannin:15,Acid:80,Body:58,Oak:8},
+    producer:"Celebrity-owned Provence estate in the Luberon producing critically acclaimed pale rosés." },
+  { id:29, name:"Tavel Rosé Domaine de la Mordorée", region:"Rhône Valley, France", type:"rose", grapes:["Grenache","Cinsault","Clairette"], vintageRange:"2020–2023", drinkFrom:2020, drinkTo:2028, price:"$$", score:91,
+    notes:"France's only AOC dedicated to rosé. Fuller-bodied with cherry, spice, herb, and a long, warming finish.",
+    pairings:["Grilled salmon","Lamb tagine","Mediterranean vegetable dishes"],
+    servingTemp:"10–12°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:65,Tannin:25,Acid:78,Body:72,Oak:12},
+    producer:"One of the top producers in Tavel, France's most serious rosé appellation." },
+  // DESSERT
+  { id:30, name:"Château d'Yquem Sauternes", region:"Bordeaux, France", type:"dessert", grapes:["Sémillon","Sauvignon Blanc"], vintageRange:"1998–2017", drinkFrom:2010, drinkTo:2070, price:"$$$$", score:100,
+    notes:"The world's greatest dessert wine. Botrytized apricot, honey, saffron, crème brûlée, and extraordinary complexity that evolves for decades.",
+    pairings:["Foie gras","Roquefort","Crème brûlée","Peach tarte Tatin"],
+    servingTemp:"10–12°C", decanting:"15 min", allergens:["Sulfites"],
+    profile:{Fruit:95,Earth:75,Tannin:10,Acid:85,Body:95,Oak:70},
+    producer:"The only First Premier Cru of Sauternes, producing the world's most celebrated botrytised wine since 1593." },
+  { id:31, name:"Taylor Fladgate 20 Year Tawny Port", region:"Douro, Portugal", type:"dessert", grapes:["Touriga Nacional","Touriga Franca","Tinta Roriz"], vintageRange:"NV", drinkFrom:2020, drinkTo:2035, price:"$$", score:93,
+    notes:"Nutty and complex tawny with dried fig, orange peel, toffee, and roasted nuts. Endlessly versatile with food.",
+    pairings:["Crème caramel","Walnuts","Hard cheeses","Chocolate truffles"],
+    servingTemp:"14–16°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:80,Earth:65,Tannin:40,Acid:70,Body:88,Oak:85},
+    producer:"One of the original Port shippers, founded in 1692 and still making some of the finest Ports." },
+  { id:32, name:"Graham's Vintage Port", region:"Douro, Portugal", type:"dessert", grapes:["Touriga Nacional","Tinta Barroca","Tinta Roriz"], vintageRange:"2000–2017", drinkFrom:2020, drinkTo:2055, price:"$$$", score:96,
+    notes:"Classic vintage Port with explosive dark fruit, chocolate, spice, and robust tannins that demand decades of cellaring.",
+    pairings:["Stilton cheese","Dark chocolate","Walnuts","Dried fruits"],
+    servingTemp:"16–18°C", decanting:"4 hours", allergens:["Sulfites"],
+    profile:{Fruit:90,Earth:72,Tannin:88,Acid:78,Body:95,Oak:60},
+    producer:"Established 1820, Graham's is one of the Douro's most revered vintage Port producers." },
+  // More reds
+  { id:33, name:"Rioja Gran Reserva Marqués de Riscal", region:"Rioja, Spain", type:"red", grapes:["Tempranillo","Graciano","Mazuelo"], vintageRange:"2010–2018", drinkFrom:2016, drinkTo:2035, price:"$$", score:92,
+    notes:"Classic Rioja Gran Reserva with cherry, leather, tobacco, and vanilla from extended oak aging. Elegant and food-friendly.",
+    pairings:["Roast lamb","Chorizo","Iberian ham","Aged Manchego"],
+    servingTemp:"16–17°C", decanting:"1 hour", allergens:["Sulfites"],
+    profile:{Fruit:80,Earth:82,Tannin:80,Acid:78,Body:82,Oak:85},
+    producer:"Rioja's oldest estate founded in 1858, credited with introducing Bordeaux techniques to Spain." },
+  { id:34, name:"Côtes du Rhône Villages Château Rayas", region:"Rhône Valley, France", type:"red", grapes:["Grenache"], vintageRange:"2012–2020", drinkFrom:2015, drinkTo:2035, price:"$$$", score:95,
+    notes:"Pure Grenache of exceptional delicacy. Raspberry, kirsch, white pepper, and Provençal herbs with silky texture.",
+    pairings:["Daube Provençale","Roasted chicken","Grilled lamb","Boeuf bourguignon"],
+    servingTemp:"16°C", decanting:"1 hour", allergens:["Sulfites"],
+    profile:{Fruit:88,Earth:78,Tannin:65,Acid:78,Body:80,Oak:35},
+    producer:"The legendary estate in Châteauneuf-du-Pape producing cult pure Grenache of extraordinary quality." },
+  { id:35, name:"Brunello di Montalcino Biondi-Santi", region:"Montalcino, Tuscany", type:"red", grapes:["Brunello (Sangiovese)"], vintageRange:"2007–2018", drinkFrom:2018, drinkTo:2050, price:"$$$$", score:97,
+    notes:"The founding estate of Brunello. Austere and magnificent with dried cherry, iron, tobacco, and extraordinary tannic structure.",
+    pairings:["Wild boar","Bistecca","Truffle pasta","Aged Pecorino"],
+    servingTemp:"18°C", decanting:"3 hours", allergens:["Sulfites"],
+    profile:{Fruit:78,Earth:92,Tannin:95,Acid:90,Body:88,Oak:55},
+    producer:"The Biondi-Santi family invented Brunello di Montalcino in the 19th century; the benchmark producer." },
+  { id:36, name:"Syrah Saint-Joseph Chapoutier", region:"Rhône Valley, France", type:"red", grapes:["Syrah"], vintageRange:"2016–2022", drinkFrom:2018, drinkTo:2032, price:"$$", score:91,
+    notes:"Northern Rhône Syrah with violet, black olive, smoked meat, and dark plum. Elegant and savory with firm tannins.",
+    pairings:["Grilled lamb","Duck magret","Hard cheeses","Mushroom dishes"],
+    servingTemp:"16–17°C", decanting:"45 min", allergens:["Sulfites"],
+    profile:{Fruit:82,Earth:80,Tannin:80,Acid:78,Body:82,Oak:65},
+    producer:"Leading Rhône négociant and estate producer known for biodynamic practices." },
+  { id:37, name:"Chianti Classico Gran Selezione Antinori", region:"Tuscany, Italy", type:"red", grapes:["Sangiovese"], vintageRange:"2015–2021", drinkFrom:2018, drinkTo:2038, price:"$$", score:93,
+    notes:"Flagship Chianti from one of Italy's oldest wine families. Sour cherry, dried herbs, leather, and earthy minerality.",
+    pairings:["Pasta al ragù","Bistecca Fiorentina","Cured meats","Aged Pecorino"],
+    servingTemp:"16–17°C", decanting:"1 hour", allergens:["Sulfites"],
+    profile:{Fruit:82,Earth:85,Tannin:85,Acid:85,Body:80,Oak:68},
+    producer:"Founded in 1385, the Antinori family is one of the oldest and most influential in Italian wine." },
+  { id:38, name:"Malbec Catena Zapata Adrianna", region:"Mendoza, Argentina", type:"red", grapes:["Malbec"], vintageRange:"2015–2021", drinkFrom:2018, drinkTo:2038, price:"$$$", score:97,
+    notes:"From high-altitude Adrianna Vineyard at 1,500m. Extraordinary finesse with violet, plum, graphite, and silky tannins.",
+    pairings:["Grilled beef","Lamb asado","Dark chocolate","Aged cheeses"],
+    servingTemp:"16–17°C", decanting:"1 hour", allergens:["Sulfites"],
+    profile:{Fruit:90,Earth:78,Tannin:82,Acid:80,Body:90,Oak:75},
+    producer:"The estate that put Argentine Malbec on the world stage; Adrianna Vineyard is their flagship." },
+  { id:39, name:"Pinot Noir Willamette Valley Domaine Drouhin", region:"Oregon, USA", type:"red", grapes:["Pinot Noir"], vintageRange:"2016–2022", drinkFrom:2018, drinkTo:2032, price:"$$", score:92,
+    notes:"Burgundian house transplanted to Oregon. Elegant red cherry, earth, mushroom, and spice with silky tannins.",
+    pairings:["Duck breast","Roasted salmon","Mushroom risotto","Soft cheeses"],
+    servingTemp:"15–16°C", decanting:"30 min", allergens:["Sulfites"],
+    profile:{Fruit:83,Earth:80,Tannin:65,Acid:82,Body:72,Oak:55},
+    producer:"The Drouhin family from Burgundy established this Oregon outpost in 1988, bringing French finesse to the Pacific Northwest." },
+  { id:40, name:"Zinfandel Ridge Lytton Springs", region:"Dry Creek Valley, California", type:"red", grapes:["Zinfandel","Petite Sirah","Carignane"], vintageRange:"2016–2021", drinkFrom:2018, drinkTo:2030, price:"$$", score:92,
+    notes:"Old-vine Zinfandel benchmark. Brambly blackberry, spice, pepper, and chocolate with robust structure and generous fruit.",
+    pairings:["BBQ ribs","Grilled sausages","Pizza","Cheeseburgers"],
+    servingTemp:"16–17°C", decanting:"30 min", allergens:["Sulfites"],
+    profile:{Fruit:92,Earth:65,Tannin:78,Acid:72,Body:90,Oak:72},
+    producer:"Ridge Vineyards is synonymous with American Zinfandel; Lytton Springs comes from old vines planted in the 1870s." },
+  // More whites
+  { id:41, name:"Grüner Veltliner Smaragd Loibner", region:"Wachau, Austria", type:"white", grapes:["Grüner Veltliner"], vintageRange:"2017–2022", drinkFrom:2019, drinkTo:2030, price:"$$", score:93,
+    notes:"Austria's signature grape at its finest. White pepper, grapefruit, herbs, and mineral notes with great precision and aging potential.",
+    pairings:["Wiener Schnitzel","White asparagus","Trout","Vegetable dishes"],
+    servingTemp:"9–11°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:75,Earth:80,Tannin:5,Acid:88,Body:72,Oak:15},
+    producer:"From the steep terraced vineyards of the Wachau, producing Austria's most age-worthy whites." },
+  { id:42, name:"Albariño Rías Baixas Pazo de Señoráns", region:"Galicia, Spain", type:"white", grapes:["Albariño"], vintageRange:"2020–2023", drinkFrom:2020, drinkTo:2028, price:"$$", score:91,
+    notes:"The quintessential Atlantic white. Stone fruit, white flowers, saline minerality, and zesty acidity. Perfect seafood wine.",
+    pairings:["Galician octopus","Grilled fish","Clams","Seafood paella"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:82,Earth:72,Tannin:5,Acid:88,Body:65,Oak:5},
+    producer:"The benchmark producer in Rías Baixas, making some of Galicia's most aromatic and mineral Albariños." },
+  { id:43, name:"Vernaccia di San Gimignano", region:"Tuscany, Italy", type:"white", grapes:["Vernaccia"], vintageRange:"2020–2023", drinkFrom:2020, drinkTo:2027, price:"$", score:88,
+    notes:"Italy's first DOC wine. Almonds, citrus, white flowers, and a characteristic bitter finish. Crisp and refreshing.",
+    pairings:["Bistecca Fiorentina","Light pasta","Grilled fish","Bruschetta"],
+    servingTemp:"8–10°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:72,Earth:65,Tannin:8,Acid:82,Body:60,Oak:10},
+    producer:"From the medieval towers of San Gimignano, this was Italy's first DOC wine designation (1966)." },
+  { id:44, name:"Pouilly-Fumé Dagueneau Silex", region:"Loire Valley, France", type:"white", grapes:["Sauvignon Blanc"], vintageRange:"2015–2021", drinkFrom:2017, drinkTo:2030, price:"$$$", score:96,
+    notes:"The most intellectual Sauvignon Blanc in the world. Gunflint, lime, white currant, and a mineral intensity unlike any other.",
+    pairings:["Oysters","Goat cheese","White asparagus","Grilled turbot"],
+    servingTemp:"9–11°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:72,Earth:95,Tannin:5,Acid:93,Body:68,Oak:25},
+    producer:"The late Didier Dagueneau was the maverick genius who elevated Pouilly-Fumé to Grand Cru status." },
+  { id:45, name:"Tokaji Aszú 5 Puttonyos Royal Tokaji", region:"Tokaj, Hungary", type:"dessert", grapes:["Furmint","Hárslevelű"], vintageRange:"2008–2017", drinkFrom:2015, drinkTo:2060, price:"$$$", score:95,
+    notes:"Hungary's liquid gold. Botrytized honey, apricot, orange peel, and saffron with thrilling acidity and century-long aging potential.",
+    pairings:["Foie gras","Blue cheese","Crème brûlée","Fruit desserts"],
+    servingTemp:"10–12°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:93,Earth:70,Tannin:8,Acid:92,Body:90,Oak:40},
+    producer:"The world's oldest botrytised wine region; Royal Tokaji was co-founded by Hugh Johnson in 1990." },
+  { id:46, name:"Soave Classico Pieropan", region:"Veneto, Italy", type:"white", grapes:["Garganega","Trebbiano di Soave"], vintageRange:"2019–2023", drinkFrom:2020, drinkTo:2028, price:"$", score:90,
+    notes:"The benchmark Soave. White peach, almond, chamomile, and volcanic minerality. Beautifully elegant and food-friendly.",
+    pairings:["Risotto","Grilled fish","Light pasta","Soft cheeses"],
+    servingTemp:"9–11°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:78,Earth:72,Tannin:5,Acid:82,Body:62,Oak:10},
+    producer:"The family credited with saving Soave's reputation by producing authentic, terroir-driven wines." },
+  { id:47, name:"Chenin Blanc Vouvray Huet", region:"Loire Valley, France", type:"white", grapes:["Chenin Blanc"], vintageRange:"2012–2020", drinkFrom:2018, drinkTo:2045, price:"$$", score:94,
+    notes:"The most profound Chenin Blanc expression. Quince, honey, beeswax, and a stunning tension between richness and acidity.",
+    pairings:["Roasted pork","Aged Brie","Pear tart","Veal in cream sauce"],
+    servingTemp:"10–12°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:82,Tannin:5,Acid:92,Body:78,Oak:20},
+    producer:"The greatest Vouvray estate, biodynamically farmed; wines age effortlessly for 30+ years." },
+  { id:48, name:"Greco di Tufo Mastroberardino", region:"Campania, Italy", type:"white", grapes:["Greco"], vintageRange:"2020–2023", drinkFrom:2021, drinkTo:2028, price:"$", score:89,
+    notes:"Ancient southern Italian variety. Apricot, peach, mineral, and a distinctive slightly bitter, smoky finish.",
+    pairings:["Seafood","Grilled vegetables","Mozzarella","Light chicken dishes"],
+    servingTemp:"9–11°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:78,Earth:75,Tannin:8,Acid:82,Body:65,Oak:15},
+    producer:"The estate that preserved Greco di Tufo and Taurasi when southern Italian wine was forgotten." },
+  { id:49, name:"Pinot Gris Domaine Zind-Humbrecht", region:"Alsace, France", type:"white", grapes:["Pinot Gris"], vintageRange:"2016–2021", drinkFrom:2018, drinkTo:2035, price:"$$", score:93,
+    notes:"Intense and opulent Alsatian Pinot Gris. Smoke, white peach, honey, and spice with a lush, textural palate.",
+    pairings:["Foie gras","Roasted pork","Strong cheeses","Alsatian choucroute"],
+    servingTemp:"10–12°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:88,Earth:75,Tannin:8,Acid:75,Body:85,Oak:20},
+    producer:"The leading biodynamic estate in Alsace, producing wines of extraordinary intensity and complexity." },
+  { id:50, name:"Fiano di Avellino Feudi di San Gregorio", region:"Campania, Italy", type:"white", grapes:["Fiano"], vintageRange:"2020–2023", drinkFrom:2021, drinkTo:2030, price:"$", score:90,
+    notes:"Elegant southern Italian white with hazelnut, white peach, honey, and mineral notes. Ages beautifully.",
+    pairings:["Grilled sea bream","Pasta con le vongole","Mozzarella di Bufala"],
+    servingTemp:"9–11°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:80,Earth:72,Tannin:5,Acid:82,Body:68,Oak:10},
+    producer:"The estate that revived ancient Campanian grape varieties and put southern Italy on the fine wine map." },
+  // More sparkling and rosé
+  { id:51, name:"Prosecco Superiore DOCG Bisol", region:"Valdobbiadene, Italy", type:"sparkling", grapes:["Glera"], vintageRange:"2022–2024", drinkFrom:2022, drinkTo:2025, price:"$", score:88,
+    notes:"Light, frothy, and approachable with pear, green apple, white flowers, and almond. Quintessential aperitivo.",
+    pairings:["Aperitivo","Prosciutto","Bruschetta","Light starters"],
+    servingTemp:"6–8°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:82,Earth:45,Tannin:5,Acid:78,Body:55,Oak:5},
+    producer:"Historic Valdobbiadene producer making some of Prosecco's most elegant and refined wines." },
+  { id:52, name:"Crémant d'Alsace Lucien Albrecht", region:"Alsace, France", type:"sparkling", grapes:["Pinot Blanc","Auxerrois","Pinot Gris"], vintageRange:"NV", drinkFrom:2022, drinkTo:2026, price:"$", score:89,
+    notes:"France's second most popular sparkling wine. Elegant apple, pear, and bread dough with fine bubbles.",
+    pairings:["Quiche Lorraine","Tarte flambée","Soft cheeses","Light appetizers"],
+    servingTemp:"7–9°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:78,Earth:60,Tannin:8,Acid:82,Body:62,Oak:12},
+    producer:"Long-established Alsatian producer making some of the region's most reliable Crémants." },
+  { id:53, name:"Bandol Rosé Domaine Tempier", region:"Provence, France", type:"rose", grapes:["Mourvèdre","Grenache","Cinsault"], vintageRange:"2021–2023", drinkFrom:2021, drinkTo:2028, price:"$$", score:93,
+    notes:"The most serious rosé in France. Structured and complex with wild strawberry, herbs, and a long, savory finish.",
+    pairings:["Grilled red mullet","Lamb chops","Bouillabaisse","Niçoise salad"],
+    servingTemp:"10–12°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:78,Tannin:30,Acid:80,Body:75,Oak:15},
+    producer:"The iconic Bandol estate beloved by food and wine writers for its Mourvèdre-based reds and rosés." },
+  { id:54, name:"Marsannay Rosé Domaine Bart", region:"Burgundy, France", type:"rose", grapes:["Pinot Noir"], vintageRange:"2021–2023", drinkFrom:2021, drinkTo:2026, price:"$$", score:91,
+    notes:"Burgundy's only rosé AOC. Elegant Pinot Noir rosé with raspberry, cherry, and earthy complexity. Unique in the rosé world.",
+    pairings:["Coq au vin","Roasted chicken","Salmon","Charcuterie"],
+    servingTemp:"10–12°C", decanting:"none", allergens:["Sulfites"],
+    profile:{Fruit:83,Earth:75,Tannin:22,Acid:82,Body:65,Oak:12},
+    producer:"Family domaine producing some of the finest expressions of Marsannay, Burgundy's only rosé AOC." },
+  // Additional reds for variety
+  { id:55, name:"Pomerol Château Lafleur", region:"Pomerol, Bordeaux", type:"red", grapes:["Merlot","Cabernet Franc"], vintageRange:"2005–2019", drinkFrom:2015, drinkTo:2050, price:"$$$$", score:98,
+    notes:"Pétrus's greatest rival. Mineral, complex, with dark plum, violets, graphite, and tannic firmness from its unique gravelly soils.",
+    pairings:["Truffle dishes","Roast lamb","Duck confit"],
+    servingTemp:"17°C", decanting:"2 hours", allergens:["Sulfites"],
+    profile:{Fruit:90,Earth:90,Tannin:88,Acid:80,Body:92,Oak:62},
+    producer:"Tiny 4.5-hectare estate owned by the Guinaudeau family, producing one of Pomerol's most coveted wines." },
+  { id:56, name:"Shiraz Henschke Hill of Grace", region:"Eden Valley, Australia", type:"red", grapes:["Shiraz"], vintageRange:"2005–2018", drinkFrom:2015, drinkTo:2055, price:"$$$$", score:99,
+    notes:"Australia's most iconic single-vineyard Shiraz. Old-vine complexity with black olive, licorice, earth, and extraordinary elegance.",
+    pairings:["Grilled ribeye","Lamb rack","Game meats","Aged hard cheese"],
+    servingTemp:"17–18°C", decanting:"2 hours", allergens:["Sulfites"],
+    profile:{Fruit:88,Earth:82,Tannin:85,Acid:78,Body:92,Oak:78},
+    producer:"The Henschke family has farmed Eden Valley since 1868; Hill of Grace comes from pre-phylloxera vines." },
+  { id:57, name:"Petite Sirah Stags Leap District Shafer", region:"Napa Valley, California", type:"red", grapes:["Petite Sirah"], vintageRange:"2015–2020", drinkFrom:2018, drinkTo:2035, price:"$$", score:92,
+    notes:"Dense and inky with blackberry, tar, smoked meat, and violets. Exceptional depth and aging potential.",
+    pairings:["BBQ brisket","Lamb stew","Strong cheeses","Dark chocolate"],
+    servingTemp:"17°C", decanting:"1 hour", allergens:["Sulfites"],
+    profile:{Fruit:90,Earth:70,Tannin:90,Acid:72,Body:95,Oak:78},
+    producer:"Stags Leap District estate known for powerful, structured reds with excellent aging potential." },
+  { id:58, name:"Carménère Santa Rita Casa Real", region:"Maipo Valley, Chile", type:"red", grapes:["Carménère"], vintageRange:"2015–2021", drinkFrom:2017, drinkTo:2030, price:"$$", score:91,
+    notes:"Chile's signature grape at its best. Dark fruit, green pepper, chocolate, and leather with supple tannins.",
+    pairings:["Beef empanadas","Grilled beef","Black bean dishes","Manchego"],
+    servingTemp:"16°C", decanting:"30 min", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:72,Tannin:78,Acid:72,Body:85,Oak:75},
+    producer:"Chile's oldest wine estate founded in 1880, producing their flagship Carménère from old vines." },
+  { id:59, name:"Touriga Nacional Barca Velha", region:"Douro, Portugal", type:"red", grapes:["Touriga Nacional","Touriga Franca","Tinta Roriz"], vintageRange:"2004–2015", drinkFrom:2015, drinkTo:2045, price:"$$$$", score:97,
+    notes:"Portugal's greatest table wine. Structured and profound with dark fruit, violets, cedar, and remarkable longevity.",
+    pairings:["Suckling pig","Aged sheep cheeses","Game birds","Roast lamb"],
+    servingTemp:"17°C", decanting:"2 hours", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:88,Tannin:90,Acid:82,Body:90,Oak:72},
+    producer:"Produced only in exceptional vintages by Ferreira; widely considered Portugal's finest table wine." },
+  { id:60, name:"Pinotage Kanonkop Estate", region:"Stellenbosch, South Africa", type:"red", grapes:["Pinotage"], vintageRange:"2015–2021", drinkFrom:2018, drinkTo:2035, price:"$$", score:93,
+    notes:"South Africa's signature grape at benchmark level. Wild plum, coffee, earth, and spice with grippy tannins that age beautifully.",
+    pairings:["Braai","Ostrich fillet","Biltong","Bobotie"],
+    servingTemp:"16–17°C", decanting:"45 min", allergens:["Sulfites"],
+    profile:{Fruit:85,Earth:75,Tannin:82,Acid:75,Body:85,Oak:78},
+    producer:"The most celebrated Pinotage producer in the world, producing wines that have changed perceptions of the variety." },
+  { id:61, name:"Grauburgunder Fürst Spätburgunder R", region:"Franken, Germany", type:"red", grapes:["Pinot Noir"], vintageRange:"2016–2020", drinkFrom:2018, drinkTo:2032, price:"$$$", score:94,
+    notes:"Germany's finest Pinot Noir. Silky and elegant with red cherry, earth, mushroom, and spice. Comparable to fine Burgundy.",
+    pairings:["Venison","Salmon","Mushroom dishes","Soft German cheeses"],
+    servingTemp:"15–16°C", decanting:"30 min", allergens:["Sulfites"],
+    profile:{Fruit:83,Earth:82,Tannin:68,Acid:85,Body:75,Oak:60},
+    producer:"Paul Fürst produces Germany's most revered Pinot Noir from Franken's unique red sandstone soils." },
+  { id:62, name:"Nero d'Avola Planeta Santa Cecilia", region:"Sicily, Italy", type:"red", grapes:["Nero d'Avola"], vintageRange:"2015–2021", drinkFrom:2017, drinkTo:2030, price:"$$", score:92,
+    notes:"Sicily's signature variety at its most expressive. Dark cherry, licorice, chocolate, and dried herbs with velvet tannins.",
+    pairings:["Arancini","Grilled swordfish","Caponata","Aged cheeses"],
+    servingTemp:"16–17°C", decanting:"45 min", allergens:["Sulfites"],
+    profile:{Fruit:88,Earth:72,Tannin:80,Acid:72,Body:88,Oak:70},
+    producer:"Planeta has done more than any other estate to bring Sicilian wine onto the world stage." }
+];
+
+// ─── Vintage Charts ──────────────────────────────────────────────────────────
+const VINTAGE_CHARTS = [
+  { region:"Bordeaux (Red)", years:{2022:96,2021:90,2020:97,2019:98,2018:95,2017:85,2016:99,2015:96,2014:90,2013:82,2012:88,2011:85,2010:99,2009:98,2008:90,2005:99,2000:96} },
+  { region:"Burgundy (Red)", years:{2022:95,2021:96,2020:92,2019:97,2018:96,2017:90,2016:96,2015:97,2014:94,2013:88,2012:90,2011:84,2010:97,2009:95,2008:90} },
+  { region:"Champagne", years:{2022:0,2021:0,2020:96,2019:97,2018:97,2017:0,2016:0,2015:97,2014:92,2013:89,2012:97,2008:98,2006:96,2004:95,2002:99} },
+  { region:"Barolo (Piedmont)", years:{2022:94,2021:98,2020:92,2019:97,2018:95,2017:90,2016:99,2015:96,2014:86,2013:97,2012:94,2011:92,2010:99,2009:92,2008:96} },
+  { region:"Tuscany (Super)", years:{2022:95,2021:97,2020:92,2019:96,2018:96,2017:87,2016:96,2015:97,2014:84,2013:90,2012:92,2011:88,2010:97,2009:88,2008:94} },
+  { region:"Rioja", years:{2022:92,2021:95,2020:90,2019:96,2018:95,2017:88,2016:96,2015:95,2014:92,2013:86,2012:90,2011:88,2010:96,2009:90,2008:88} },
+  { region:"Napa Cabernet", years:{2022:96,2021:93,2020:92,2019:97,2018:96,2017:90,2016:96,2015:97,2014:97,2013:96,2012:96,2011:88,2010:97,2009:96,2008:92} },
+  { region:"Rhône (North)", years:{2022:94,2021:97,2020:95,2019:98,2018:97,2017:93,2016:95,2015:97,2014:91,2013:85,2012:95,2011:88,2010:97,2009:97,2008:88} },
+  { region:"Sauternes", years:{2022:0,2021:91,2020:95,2019:97,2018:97,2017:95,2016:96,2015:97,2014:88,2013:94,2011:96,2010:97,2009:99,2007:99,2005:98} },
+  { region:"Douro (Port)", years:{2022:0,2021:0,2020:98,2019:0,2018:0,2017:97,2016:98,2015:0,2014:0,2013:0,2011:97,2009:95,2007:97,2003:97,2000:97} }
+];
+
+// ─── App State ───────────────────────────────────────────────────────────────
+let currentFilter = `all`;
+let searchQuery = ``;
+let selectedWine = null;
+let journalRating = 0;
+
+function getCellar() {
+  try { return JSON.parse(localStorage.getItem(`wls_cellar`) || `[]`); } catch { return []; }
+}
+function saveCellar(data) { localStorage.setItem(`wls_cellar`, JSON.stringify(data)); }
+function getJournal() {
+  try { return JSON.parse(localStorage.getItem(`wls_journal`) || `[]`); } catch { return []; }
+}
+function saveJournal(data) { localStorage.setItem(`wls_journal`, JSON.stringify(data)); }
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById(`toast`);
+  t.textContent = msg;
+  t.className = `toast${isError ? ` error` : ``} show`;
+  setTimeout(() => { t.className = `toast${isError ? ` error` : ``}`; }, 3000);
+}
+
+// ─── Tabs ────────────────────────────────────────────────────────────────────
+function initTabs() {
+  document.querySelectorAll(`.tab-btn`).forEach(btn => {
+    btn.addEventListener(`click`, () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll(`.tab-btn`).forEach(b => { b.classList.remove(`active`); b.setAttribute(`aria-selected`, `false`); });
+      document.querySelectorAll(`.tab-panel`).forEach(p => p.classList.remove(`active`));
+      btn.classList.add(`active`); btn.setAttribute(`aria-selected`, `true`);
+      document.getElementById(`tab-${tab}`).classList.add(`active`);
+      if (tab === `cellar`) renderCellar();
+      if (tab === `vintage`) renderVintageChart();
+      if (tab === `journal`) renderJournal();
+    });
+    btn.addEventListener(`keydown`, e => {
+      if (e.key === `Enter` || e.key === ` `) { e.preventDefault(); btn.click(); }
+    });
+  });
+}
+
+// ─── Search & Filter ─────────────────────────────────────────────────────────
+function filterWines() {
+  const q = searchQuery.toLowerCase();
+  return WINES.filter(w => {
+    const matchType = currentFilter === `all` || w.type === currentFilter;
+    const matchQ = !q ||
+      w.name.toLowerCase().includes(q) ||
+      w.region.toLowerCase().includes(q) ||
+      w.grapes.some(g => g.toLowerCase().includes(q)) ||
+      w.notes.toLowerCase().includes(q);
+    return matchType && matchQ;
+  });
+}
+
+function scoreClass(s) {
+  if (s >= 95) return 5; if (s >= 92) return 4; if (s >= 89) return 3; if (s >= 86) return 2; return 1;
+}
+
+function renderResults(wines) {
+  const grid = document.getElementById(`resultsGrid`);
+  if (wines.length === 0) {
+    grid.innerHTML = `<div class="no-results" style="grid-column:1/-1"><span class="icon">🍾</span><p>No wines found. Try a different search or filter.</p></div>`;
+    return;
+  }
+  grid.innerHTML = wines.map(w => {
+    const dots = Array.from({length:5}, (_,i) => `<span class="score-dot${i < scoreClass(w.score) ? ` filled` : ``}"></span>`).join(``);
+    const bandClass = `band-${w.type}`;
+    return `<article class="wine-card fade-in" tabindex="0" role="button" aria-label="View details for ${w.name}" data-id="${w.id}">
+      <div class="wine-card-banner ${bandClass}"></div>
+      <div class="wine-card-body">
+        <div class="wine-card-region">${w.region}</div>
+        <h3>${w.name}</h3>
+        <div class="wine-card-grapes">${w.grapes.slice(0,3).join(` · `)}</div>
+        <div class="wine-card-footer">
+          <span class="price-badge price-${w.price}">${w.price}</span>
+          <div class="score-dots" aria-label="Score: ${w.score}/100">${dots}</div>
+          <span class="type-badge type-${w.type}">${w.type}</span>
+        </div>
+      </div>
+    </article>`;
+  }).join(``);
+
+  grid.querySelectorAll(`.wine-card`).forEach(card => {
+    card.addEventListener(`click`, () => openModal(parseInt(card.dataset.id)));
+    card.addEventListener(`keydown`, e => {
+      if (e.key === `Enter` || e.key === ` `) { e.preventDefault(); openModal(parseInt(card.dataset.id)); }
+    });
+  });
+}
+
+function initSearch() {
+  const input = document.getElementById(`searchInput`);
+  const btn = document.getElementById(`searchBtn`);
+
+  const doSearch = () => { searchQuery = input.value.trim(); renderResults(filterWines()); };
+  btn.addEventListener(`click`, doSearch);
+  input.addEventListener(`keydown`, e => { if (e.key === `Enter`) doSearch(); });
+  input.addEventListener(`input`, () => { if (input.value === ``) { searchQuery = ``; renderResults(filterWines()); } });
+
+  document.getElementById(`filterRow`).querySelectorAll(`.filter-chip`).forEach(chip => {
+    chip.addEventListener(`click`, () => {
+      document.querySelectorAll(`.filter-chip`).forEach(c => c.classList.remove(`active`));
+      chip.classList.add(`active`);
+      currentFilter = chip.dataset.filter;
+      renderResults(filterWines());
+    });
+  });
+
+  renderResults(WINES);
+}
+
+// ─── Flavor Wheel SVG ────────────────────────────────────────────────────────
+function buildFlavorWheel(profile) {
+  const cx = 100, cy = 100, r = 75;
+  const labels = Object.keys(profile);
+  const vals = Object.values(profile);
+  const n = labels.length;
+  const step = (2 * Math.PI) / n;
+
+  const points = vals.map((v, i) => {
+    const angle = -Math.PI / 2 + i * step;
+    const radius = (v / 100) * r;
+    return [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)];
+  });
+
+  const gridPoints = (pct) => labels.map((_, i) => {
+    const angle = -Math.PI / 2 + i * step;
+    const radius = pct * r;
+    return `${cx + radius * Math.cos(angle)},${cy + radius * Math.sin(angle)}`;
+  }).join(` `);
+
+  const poly = points.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(` `);
+
+  const axisLines = labels.map((_, i) => {
+    const angle = -Math.PI / 2 + i * step;
+    const x2 = cx + r * Math.cos(angle);
+    const y2 = cy + r * Math.sin(angle);
+    return `<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#2e3350" stroke-width="1"/>`;
+  }).join(``);
+
+  const labelEls = labels.map((lbl, i) => {
+    const angle = -Math.PI / 2 + i * step;
+    const dist = r + 16;
+    const x = cx + dist * Math.cos(angle);
+    const y = cy + dist * Math.sin(angle);
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" fill="#8892b0" font-size="8" font-family="system-ui">${lbl}</text>`;
+  }).join(``);
+
+  return `<svg viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Flavor profile chart">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2e3350" stroke-width="0.5"/>
+    <polygon points="${gridPoints(0.25)}" fill="none" stroke="#2e3350" stroke-width="0.5"/>
+    <polygon points="${gridPoints(0.5)}" fill="none" stroke="#2e3350" stroke-width="0.5"/>
+    <polygon points="${gridPoints(0.75)}" fill="none" stroke="#2e3350" stroke-width="0.5"/>
+    ${axisLines}
+    <polygon points="${poly}" fill="rgba(108,99,255,0.25)" stroke="#6c63ff" stroke-width="1.5" stroke-linejoin="round"/>
+    ${labelEls}
+  </svg>`;
+}
+
+// ─── Modal ───────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const w = WINES.find(x => x.id === id);
+  if (!w) return;
+  selectedWine = w;
+
+  document.getElementById(`modalRegion`).textContent = w.region;
+  document.getElementById(`modalWineName`).textContent = w.name;
+
+  const badges = document.getElementById(`modalBadges`);
+  badges.innerHTML = `<span class="type-badge type-${w.type}">${w.type}</span>
+    <span class="price-badge price-${w.price}">${w.price}</span>
+    <span class="tag tag-yellow">Score: ${w.score}/100</span>
+    <span class="tag">${w.vintageRange}</span>`;
+
+  document.getElementById(`modalServing`).innerHTML = `
+    <div class="serving-item"><div class="icon">🌡️</div><div class="label">Serving Temp</div><div class="value">${w.servingTemp}</div></div>
+    <div class="serving-item"><div class="icon">⏱️</div><div class="label">Decanting</div><div class="value">${w.decanting}</div></div>
+    <div class="serving-item"><div class="icon">🍇</div><div class="label">Drink Window</div><div class="value">${w.drinkFrom}–${w.drinkTo}</div></div>`;
+
+  document.getElementById(`modalGrapes`).innerHTML = w.grapes.map(g => `<span class="tag tag-purple">${g}</span>`).join(``);
+  document.getElementById(`modalFlavorWheel`).innerHTML = buildFlavorWheel(w.profile);
+  document.getElementById(`modalNotes`).textContent = w.notes;
+  document.getElementById(`modalPairings`).innerHTML = w.pairings.map(p => `<span class="tag tag-green">🍽 ${p}</span>`).join(``);
+  document.getElementById(`modalAllergens`).innerHTML = w.allergens.map(a => `<span class="tag tag-red">⚠ ${a}</span>`).join(``);
+
+  const now = new Date().getFullYear();
+  let windowText = ``;
+  if (now < w.drinkFrom) windowText = `Best from ${w.drinkFrom} — still developing`;
+  else if (now > w.drinkTo) windowText = `Past peak — may have declined after ${w.drinkTo}`;
+  else windowText = `Optimal now through ${w.drinkTo}`;
+  document.getElementById(`modalWindow`).textContent = windowText;
+  document.getElementById(`modalProducer`).textContent = w.producer;
+
+  const overlay = document.getElementById(`wineModal`);
+  overlay.classList.add(`open`);
+  overlay.querySelector(`.modal`).scrollTop = 0;
+  document.getElementById(`modalClose`).focus();
+  document.body.style.overflow = `hidden`;
+}
+
+function closeModal() {
+  document.getElementById(`wineModal`).classList.remove(`open`);
+  document.body.style.overflow = ``;
+  selectedWine = null;
+}
+
+function initModal() {
+  document.getElementById(`modalClose`).addEventListener(`click`, closeModal);
+  document.getElementById(`wineModal`).addEventListener(`click`, e => {
+    if (e.target.id === `wineModal`) closeModal();
+  });
+  document.addEventListener(`keydown`, e => { if (e.key === `Escape`) closeModal(); });
+
+  document.getElementById(`modalAddCellar`).addEventListener(`click`, () => {
+    if (!selectedWine) return;
+    const cellar = getCellar();
+    const existing = cellar.find(c => c.id === selectedWine.id);
+    if (existing) { existing.qty++; } else {
+      cellar.push({ id: selectedWine.id, name: selectedWine.name, region: selectedWine.region, type: selectedWine.type,
+        drinkFrom: selectedWine.drinkFrom, drinkTo: selectedWine.drinkTo, qty: 1, addedOn: new Date().toISOString() });
+    }
+    saveCellar(cellar);
+    showToast(`Added ${selectedWine.name} to your cellar 🏺`);
+  });
+
+  document.getElementById(`modalLogTasting`).addEventListener(`click`, () => {
+    if (!selectedWine) return;
+    closeModal();
+    document.querySelector(`[data-tab="journal"]`).click();
+    document.getElementById(`jWineName`).value = selectedWine.name;
+    document.getElementById(`jRegion`).value = selectedWine.region;
+    document.getElementById(`jWineName`).focus();
+    showToast(`Ready to log a tasting note for ${selectedWine.name}`);
+  });
+}
+
+// ─── Cellar ──────────────────────────────────────────────────────────────────
+function renderCellar() {
+  const cellar = getCellar();
+  const now = new Date().getFullYear();
+  const totalBottles = cellar.reduce((s, c) => s + c.qty, 0);
+  const optimal = cellar.filter(c => now >= c.drinkFrom && now <= c.drinkTo);
+
+  document.getElementById(`totalBottles`).textContent = totalBottles;
+  document.getElementById(`totalWines`).textContent = cellar.length;
+  document.getElementById(`optimalWines`).textContent = optimal.length;
+
+  const list = document.getElementById(`cellarList`);
+  if (cellar.length === 0) {
+    list.innerHTML = `<div class="cellar-empty"><span class="icon">🏺</span><p>Your cellar is empty.</p><p style="font-size:0.85rem;margin-top:0.5rem;">Search for wines and add them to get started.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = cellar.map(c => {
+    let windowClass = `window-early`, windowLabel = `Too Young`;
+    if (now > c.drinkTo) { windowClass = `window-past`; windowLabel = `Past Peak`; }
+    else if (now >= c.drinkFrom) { windowClass = `window-optimal`; windowLabel = `Drink Now`; }
+
+    return `<div class="cellar-item" data-cellar-id="${c.id}">
+      <div style="font-size:1.5rem">${c.type === `red` ? `🍷` : c.type === `white` ? `🥂` : c.type === `sparkling` ? `✨` : c.type === `dessert` ? `🍯` : `🌸`}</div>
+      <div class="cellar-item-info">
+        <div class="cellar-item-name">${c.name}</div>
+        <div class="cellar-item-meta">${c.region} · Window: ${c.drinkFrom}–${c.drinkTo}</div>
+      </div>
+      <span class="cellar-window-badge ${windowClass}">${windowLabel}</span>
+      <div class="qty-control">
+        <button class="qty-btn" data-action="dec" data-id="${c.id}" aria-label="Remove bottle">−</button>
+        <span class="qty-val">${c.qty}</span>
+        <button class="qty-btn" data-action="inc" data-id="${c.id}" aria-label="Add bottle">+</button>
+      </div>
+    </div>`;
+  }).join(``);
+
+  list.querySelectorAll(`.qty-btn`).forEach(btn => {
+    btn.addEventListener(`click`, () => {
+      const cellar = getCellar();
+      const id = parseInt(btn.dataset.id);
+      const idx = cellar.findIndex(c => c.id === id);
+      if (idx === -1) return;
+      if (btn.dataset.action === `inc`) cellar[idx].qty++;
+      else { cellar[idx].qty--; if (cellar[idx].qty <= 0) cellar.splice(idx, 1); }
+      saveCellar(cellar);
+      renderCellar();
+    });
+  });
+}
+
+function initCellar() {
+  document.getElementById(`clearCellarBtn`).addEventListener(`click`, () => {
+    if (confirm(`Clear your entire cellar? This cannot be undone.`)) {
+      saveCellar([]);
+      renderCellar();
+      showToast(`Cellar cleared`);
+    }
+  });
+}
+
+// ─── Vintage Chart ───────────────────────────────────────────────────────────
+function vrClass(score) {
+  if (!score) return ``;
+  if (score >= 96) return `vr-95`;
+  if (score >= 92) return `vr-90`;
+  if (score >= 88) return `vr-85`;
+  if (score >= 82) return `vr-75`;
+  return `vr-65`;
+}
+
+function renderVintageChart() {
+  const container = document.getElementById(`vintageContent`);
+  const YEARS = [2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,2009,2008];
+
+  container.innerHTML = VINTAGE_CHARTS.map(vc => `
+    <div class="vintage-section">
+      <h3>${vc.region}</h3>
+      <div class="vintage-table-wrap">
+        <table class="vintage-table">
+          <thead><tr>
+            <th>Region</th>
+            ${YEARS.map(y => `<th>${y}</th>`).join(``)}
+          </tr></thead>
+          <tbody><tr>
+            <td>${vc.region}</td>
+            ${YEARS.map(y => {
+              const s = vc.years[y];
+              if (!s) return `<td><span style="color:var(--border)">—</span></td>`;
+              return `<td><span class="vr ${vrClass(s)}">${s}</span></td>`;
+            }).join(``)}
+          </tr></tbody>
+        </table>
+      </div>
+    </div>`).join(``);
+}
+
+// ─── Journal ─────────────────────────────────────────────────────────────────
+function initJournal() {
+  const stars = document.querySelectorAll(`.star-btn`);
+  stars.forEach(star => {
+    star.addEventListener(`click`, () => {
+      journalRating = parseInt(star.dataset.star);
+      stars.forEach(s => {
+        s.classList.toggle(`active`, parseInt(s.dataset.star) <= journalRating);
+      });
+    });
+    star.addEventListener(`keydown`, e => {
+      if (e.key === `Enter` || e.key === ` `) { e.preventDefault(); star.click(); }
+    });
+  });
+
+  document.getElementById(`saveJournalBtn`).addEventListener(`click`, () => {
+    const name = document.getElementById(`jWineName`).value.trim();
+    if (!name) { showToast(`Please enter a wine name`, true); return; }
+    const entry = {
+      id: Date.now(),
+      name, vintage: document.getElementById(`jVintage`).value,
+      region: document.getElementById(`jRegion`).value,
+      occasion: document.getElementById(`jOccasion`).value,
+      rating: journalRating,
+      notes: document.getElementById(`jNotes`).value.trim(),
+      date: new Date().toLocaleDateString(`en-GB`, {day:`numeric`, month:`short`, year:`numeric`})
+    };
+    const journal = getJournal();
+    journal.unshift(entry);
+    saveJournal(journal);
+    document.getElementById(`jWineName`).value = ``;
+    document.getElementById(`jVintage`).value = ``;
+    document.getElementById(`jRegion`).value = ``;
+    document.getElementById(`jOccasion`).value = ``;
+    document.getElementById(`jNotes`).value = ``;
+    journalRating = 0;
+    stars.forEach(s => s.classList.remove(`active`));
+    renderJournal();
+    showToast(`Tasting note saved! 📓`);
+  });
+}
+
+function renderJournal() {
+  const journal = getJournal();
+  const container = document.getElementById(`journalEntries`);
+  if (journal.length === 0) {
+    container.innerHTML = `<div class="journal-empty"><span class="icon">📓</span><p>No tasting notes yet.</p><p style="font-size:0.85rem;margin-top:0.5rem;">Log your first wine above.</p></div>`;
+    return;
+  }
+  container.innerHTML = journal.map(e => `
+    <div class="journal-entry fade-in" data-journal-id="${e.id}">
+      <div class="journal-entry-header">
+        <div>
+          <div class="journal-entry-name">${e.name}${e.vintage ? ` ${e.vintage}` : ``}</div>
+          <div class="journal-entry-date">${e.date}</div>
+        </div>
+        <button class="del-btn" data-id="${e.id}" aria-label="Delete tasting note">🗑</button>
+      </div>
+      ${e.rating ? `<div class="journal-entry-stars">${`★`.repeat(e.rating)}${'☆'.repeat(5 - e.rating)}</div>` : ``}
+      ${e.notes ? `<div class="journal-entry-notes">${e.notes}</div>` : ``}
+      <div class="journal-entry-meta">
+        ${e.region ? `<span class="tag">${e.region}</span>` : ``}
+        ${e.occasion ? `<span class="tag tag-purple">${e.occasion}</span>` : ``}
+      </div>
+    </div>`).join(``);
+
+  container.querySelectorAll(`.del-btn`).forEach(btn => {
+    btn.addEventListener(`click`, () => {
+      const journal = getJournal().filter(e => e.id !== parseInt(btn.dataset.id));
+      saveJournal(journal);
+      renderJournal();
+      showToast(`Note deleted`);
+    });
+  });
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+document.addEventListener(`DOMContentLoaded`, () => {
+  initTabs();
+  initSearch();
+  initModal();
+  initCellar();
+  initJournal();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airport Delay Notifier — Logistics Intelligence Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --bg: #070c1a;
+      --surface: #0d1526;
+      --surface2: #141f36;
+      --border: rgba(245,158,11,0.2);
+      --accent: #f59e0b;
+      --accent2: #3b82f6;
+      --text: #e8eaf6;
+      --muted: #6b7da8;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f97316;
+      --radius: 8px;
+      --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .logo h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .logo span {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(67, 217, 173, 0.12);
+      border: 1px solid rgba(67, 217, 173, 0.3);
+      color: var(--green);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.75rem;
+      border-radius: 100px;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    .refresh-timer {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* ── Layout ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      grid-template-rows: auto 1fr;
+      gap: 0;
+    }
+
+    /* ── Summary Bar ── */
+    .summary-bar {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .stat-icon.green { background: rgba(67, 217, 173, 0.15); }
+    .stat-icon.yellow { background: rgba(247, 201, 72, 0.15); }
+    .stat-icon.orange { background: rgba(247, 149, 72, 0.15); }
+    .stat-icon.red { background: rgba(56, 189, 248, 0.15); }
+
+    .stat-info label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    .stat-info .stat-val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .stat-val.green { color: var(--green); }
+    .stat-val.yellow { color: var(--yellow); }
+    .stat-val.orange { color: var(--orange); }
+    .stat-val.red { color: var(--red); }
+
+    .summary-divider {
+      width: 1px;
+      height: 36px;
+      background: var(--border);
+    }
+
+    .last-update {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* ── Sidebar ── */
+    aside {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 1.25rem 1.25rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-header h2 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem 0.5rem 2.1rem;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+
+    .airport-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+    }
+
+    .airport-list::-webkit-scrollbar { width: 4px; }
+    .airport-list::-webkit-scrollbar-track { background: transparent; }
+    .airport-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .airport-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1.25rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-left: 3px solid transparent;
+    }
+
+    .airport-item:hover {
+      background: var(--surface2);
+    }
+
+    .airport-item.active {
+      background: rgba(74, 222, 128, 0.1);
+      border-left-color: var(--accent);
+    }
+
+    .airport-item.watched {
+      border-left-color: var(--yellow);
+    }
+
+    .airport-item.active.watched {
+      border-left-color: var(--accent);
+    }
+
+    .airport-iata {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+      min-width: 36px;
+    }
+
+    .airport-name-small {
+      font-size: 0.75rem;
+      color: var(--muted);
+      flex: 1;
+      margin-left: 0.5rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .airport-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-left: 0.5rem;
+    }
+
+    .watch-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 0.15rem;
+      margin-left: 0.4rem;
+      transition: color 0.15s, transform 0.15s;
+      line-height: 1;
+    }
+
+    .watch-btn:hover { transform: scale(1.2); }
+    .watch-btn.watching { color: var(--yellow); }
+
+    /* ── Main Content ── */
+    .content {
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .content::-webkit-scrollbar { width: 6px; }
+    .content::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Airport Detail ── */
+    .airport-detail-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .airport-title-group h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .airport-title-group .airport-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 0.15rem;
+    }
+
+    .airport-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
+    }
+
+    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #5a52e0);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-watch {
+      background: rgba(247, 201, 72, 0.12);
+      color: var(--yellow);
+      border: 1px solid rgba(247, 201, 72, 0.3);
+    }
+
+    .btn-watch.active {
+      background: rgba(247, 201, 72, 0.2);
+      box-shadow: 0 0 12px rgba(247, 201, 72, 0.2);
+    }
+
+    /* ── Alert Threshold ── */
+    .threshold-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .threshold-panel h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+
+    .threshold-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .threshold-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .threshold-item label {
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+
+    .threshold-item input[type="number"] {
+      width: 70px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.5rem;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .threshold-item input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+
+    .threshold-item span {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Flight Board ── */
+    .board-tabs {
+      display: flex;
+      gap: 0;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 3px;
+      width: fit-content;
+    }
+
+    .board-tab {
+      padding: 0.45rem 1.1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .board-tab.active {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .flight-board {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .board-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .board-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .board-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .pill {
+      padding: 0.25rem 0.7rem;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      letter-spacing: 0.04em;
+    }
+
+    .pill.all { background: rgba(74, 222, 128, 0.15); color: var(--accent); border-color: rgba(74, 222, 128, 0.3); }
+    .pill.on-time { background: rgba(67, 217, 173, 0.1); color: var(--green); border-color: rgba(67, 217, 173, 0.25); }
+    .pill.delayed { background: rgba(247, 201, 72, 0.1); color: var(--yellow); border-color: rgba(247, 201, 72, 0.25); }
+    .pill.cancelled { background: rgba(56, 189, 248, 0.1); color: var(--red); border-color: rgba(56, 189, 248, 0.25); }
+    .pill.active { opacity: 1; }
+    .pill:not(.active) { opacity: 0.45; }
+
+    .flight-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .flight-table thead {
+      background: var(--surface2);
+    }
+
+    .flight-table th {
+      padding: 0.65rem 1rem;
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .flight-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .flight-table tbody tr {
+      transition: background 0.12s;
+    }
+
+    .flight-table tbody tr:hover {
+      background: var(--surface2);
+    }
+
+    .flight-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .flight-num {
+      font-weight: 700;
+      color: var(--accent);
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .airline-name {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .route-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .route-arrow {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .time-cell {
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+    }
+
+    .time-original {
+      color: var(--muted);
+      text-decoration: line-through;
+      font-size: 0.75rem;
+      display: block;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .status-badge.on-time {
+      background: rgba(67, 217, 173, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(67, 217, 173, 0.25);
+    }
+
+    .status-badge.delayed-minor {
+      background: rgba(247, 201, 72, 0.12);
+      color: var(--yellow);
+      border: 1px solid rgba(247, 201, 72, 0.25);
+    }
+
+    .status-badge.delayed-major {
+      background: rgba(247, 149, 72, 0.12);
+      color: var(--orange);
+      border: 1px solid rgba(247, 149, 72, 0.25);
+    }
+
+    .status-badge.cancelled {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--red);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .delay-minutes {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* ── Row animation on update ── */
+    @keyframes row-flash {
+      0% { background: rgba(74, 222, 128, 0.15); }
+      100% { background: transparent; }
+    }
+
+    .row-updated {
+      animation: row-flash 1.2s ease-out;
+    }
+
+    /* ── Alerts Panel ── */
+    .alerts-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .alerts-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .alerts-header h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .alert-count-badge {
+      background: var(--accent2);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.1rem 0.5rem;
+      border-radius: 100px;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .alert-list {
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .alert-list::-webkit-scrollbar { width: 4px; }
+    .alert-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      animation: slide-in 0.3s ease-out;
+    }
+
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .alert-item:last-child { border-bottom: none; }
+
+    .alert-icon {
+      font-size: 1rem;
+      flex-shrink: 0;
+      margin-top: 0.05rem;
+    }
+
+    .alert-body .alert-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .alert-body .alert-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    .alert-time {
+      margin-left: auto;
+      font-size: 0.72rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .no-alerts {
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── Weather Correlation ── */
+    .weather-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .weather-panel-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .weather-panel-header h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0;
+    }
+
+    .weather-cause {
+      padding: 1rem 1.25rem;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .weather-cause:hover { background: var(--surface2); }
+
+    .weather-cause-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .weather-cause-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .weather-cause-desc {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .weather-impact {
+      display: inline-block;
+      margin-top: 0.4rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: 100px;
+      letter-spacing: 0.04em;
+    }
+
+    .impact-high { background: rgba(56, 189, 248, 0.15); color: var(--red); }
+    .impact-med { background: rgba(247, 201, 72, 0.15); color: var(--yellow); }
+    .impact-low { background: rgba(67, 217, 173, 0.15); color: var(--green); }
+
+    /* ── Notification Toast ── */
+    .toast-container {
+      position: fixed;
+      top: 80px;
+      right: 1.5rem;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      min-width: 280px;
+      max-width: 340px;
+      pointer-events: all;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      animation: toast-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(60px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .toast-fade-out {
+      animation: toast-out 0.3s ease-in forwards;
+    }
+
+    @keyframes toast-out {
+      to { opacity: 0; transform: translateX(60px); }
+    }
+
+    .toast-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.05rem; }
+
+    .toast-body .toast-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .toast-body .toast-msg {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    .toast-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .toast-close:hover { color: var(--text); }
+
+    /* ── Empty State ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 3rem;
+      text-align: center;
+    }
+
+    .empty-state-icon { font-size: 3rem; }
+    .empty-state h3 { font-size: 1.1rem; color: var(--text); }
+    .empty-state p { font-size: 0.85rem; color: var(--muted); max-width: 280px; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Progress bar ── */
+    .refresh-bar {
+      height: 2px;
+      background: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .refresh-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 1s linear;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+      }
+
+      aside {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 220px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header { padding: 0 1rem; }
+      .summary-bar { padding: 0.75rem 1rem; gap: 1rem; }
+      .content { padding: 1rem; }
+      .flight-table { font-size: 0.78rem; }
+      .flight-table th, .flight-table td { padding: 0.55rem 0.65rem; }
+    }
+
+    /* === Travel v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 800px 500px at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 400px 300px at 90% 90%, rgba(245,158,11,0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.02em; }
+    h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+    h2 { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .flight, .route, .delay, .alert, .station, .transit, .park, .trail, .ev-station, .transport,
+    [class*="card"], [class*="item"], [class*="flight"], [class*="route"], [class*="result"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      animation: boardSlide 0.35s cubic-bezier(0.4,0,0.2,1) both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { background: var(--surface2); }
+
+    .time, .code, .flight-number, .gate, .terminal, .delay-time, .duration, .distance,
+    .iss-time, .coords, .lat, .lon, .pass-time, .co2, .emission, .minutes, .seconds,
+    .countdown, .stat, .number, .metric, pre, code, .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    .big-time, .big-number, .countdown, .pass-time {
+      font-family: var(--font-mono);
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0.65rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.7rem 1.75rem;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.88rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .status, .label, .type, .mode, .line, .provider {
+      display: inline-block;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--font-mono);
+    }
+
+    .on-time, .normal, .open, .available, .active, .lower { color: var(--green); }
+    .delayed, .late, .closed, .disrupted, .higher { color: var(--red); }
+    .caution, .minor-delay, .check { color: var(--orange); }
+
+    .status-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
+    .status-fill { height: 100%; background: var(--accent2); border-radius: 2px; transition: width 0.6s ease; }
+
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(245,158,11,0.06); font-variant-numeric: tabular-nums; }
+    tr:hover td { background: var(--surface2); }
+
+    @keyframes boardSlide {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes alertBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .delayed, .alert-active, .disrupted { animation: alertBlink 1.8s ease infinite; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">✈️</div>
+    <div>
+      <h1>AirDelay Monitor</h1>
+      <span>Logistics Intelligence Dashboard</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+    <div class="refresh-timer" id="refreshTimer">Next update in 30s</div>
+  </div>
+</header>
+
+<main>
+  <div class="summary-bar" id="summaryBar">
+    <div class="stat-card">
+      <div class="stat-icon green">🟢</div>
+      <div class="stat-info">
+        <label>On Time</label>
+        <div class="stat-val green" id="statOnTime">—</div>
+      </div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="stat-card">
+      <div class="stat-icon yellow">🟡</div>
+      <div class="stat-info">
+        <label>Minor Delay</label>
+        <div class="stat-val yellow" id="statMinor">—</div>
+      </div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="stat-card">
+      <div class="stat-icon orange">🟠</div>
+      <div class="stat-info">
+        <label>Major Delay</label>
+        <div class="stat-val orange" id="statMajor">—</div>
+      </div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="stat-card">
+      <div class="stat-icon red">🔴</div>
+      <div class="stat-info">
+        <label>Cancelled</label>
+        <div class="stat-val red" id="statCancelled">—</div>
+      </div>
+    </div>
+    <div class="last-update" id="lastUpdate">Initializing…</div>
+  </div>
+
+  <aside>
+    <div class="sidebar-header">
+      <h2>Airports</h2>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="airportSearch" placeholder="Search airports…" aria-label="Search airports" />
+      </div>
+    </div>
+    <div class="airport-list" id="airportList" role="listbox" aria-label="Airport list"></div>
+  </aside>
+
+  <section class="content" id="mainContent"></section>
+</main>
+
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+  'use strict';
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+
+  const AIRPORTS = [
+    { iata: 'ATL', name: 'Hartsfield-Jackson Atlanta', city: 'Atlanta, GA', country: 'USA' },
+    { iata: 'LAX', name: 'Los Angeles International', city: 'Los Angeles, CA', country: 'USA' },
+    { iata: 'ORD', name: `O'Hare International`, city: 'Chicago, IL', country: 'USA' },
+    { iata: 'DFW', name: 'Dallas/Fort Worth International', city: 'Dallas, TX', country: 'USA' },
+    { iata: 'DEN', name: 'Denver International', city: 'Denver, CO', country: 'USA' },
+    { iata: 'JFK', name: 'John F. Kennedy International', city: 'New York, NY', country: 'USA' },
+    { iata: 'SFO', name: 'San Francisco International', city: 'San Francisco, CA', country: 'USA' },
+    { iata: 'SEA', name: 'Seattle-Tacoma International', city: 'Seattle, WA', country: 'USA' },
+    { iata: 'LAS', name: 'Harry Reid International', city: 'Las Vegas, NV', country: 'USA' },
+    { iata: 'MCO', name: 'Orlando International', city: 'Orlando, FL', country: 'USA' },
+    { iata: 'LHR', name: 'Heathrow Airport', city: 'London', country: 'UK' },
+    { iata: 'CDG', name: 'Charles de Gaulle Airport', city: 'Paris', country: 'France' },
+    { iata: 'FRA', name: 'Frankfurt Airport', city: 'Frankfurt', country: 'Germany' },
+    { iata: 'AMS', name: 'Amsterdam Schiphol', city: 'Amsterdam', country: 'Netherlands' },
+    { iata: 'DXB', name: 'Dubai International', city: 'Dubai', country: 'UAE' },
+    { iata: 'HKG', name: 'Hong Kong International', city: 'Hong Kong', country: 'China' },
+    { iata: 'NRT', name: 'Narita International', city: 'Tokyo', country: 'Japan' },
+    { iata: 'SIN', name: 'Singapore Changi', city: 'Singapore', country: 'Singapore' },
+    { iata: 'SYD', name: 'Kingsford Smith Airport', city: 'Sydney', country: 'Australia' },
+    { iata: 'GRU', name: `São Paulo Guarulhos`, city: `São Paulo`, country: 'Brazil' },
+    { iata: 'MIA', name: 'Miami International', city: 'Miami, FL', country: 'USA' },
+    { iata: 'BOS', name: 'Logan International', city: 'Boston, MA', country: 'USA' },
+    { iata: 'MUC', name: 'Munich Airport', city: 'Munich', country: 'Germany' },
+    { iata: 'MAD', name: 'Adolfo Suárez Madrid-Barajas', city: 'Madrid', country: 'Spain' },
+    { iata: 'ICN', name: 'Incheon International', city: 'Seoul', country: 'South Korea' },
+  ];
+
+  const AIRLINES = [
+    'Delta Air Lines', 'United Airlines', 'American Airlines', 'Southwest Airlines',
+    'British Airways', 'Lufthansa', 'Air France', 'KLM Royal Dutch Airlines',
+    'Emirates', 'Singapore Airlines', 'Japan Airlines', 'Cathay Pacific',
+    'Qantas', 'LATAM Airlines', 'Turkish Airlines', 'Air Canada',
+  ];
+
+  const AIRLINE_CODES = ['DL', 'UA', 'AA', 'WN', 'BA', 'LH', 'AF', 'KL', 'EK', 'SQ', 'JL', 'CX', 'QF', 'LA', 'TK', 'AC'];
+
+  const WEATHER_CAUSES = [
+    {
+      icon: '⛈️',
+      name: 'Thunderstorms',
+      desc: 'Ground stops and airspace closures. Average delay: 45–180 min.',
+      impact: 'high',
+    },
+    {
+      icon: '🌫️',
+      name: 'Low Visibility / Fog',
+      desc: 'Reduced approach capacity, increased spacing requirements.',
+      impact: 'high',
+    },
+    {
+      icon: '❄️',
+      name: 'Snow & Ice',
+      desc: 'De-icing queues add 20–60 min per departure.',
+      impact: 'high',
+    },
+    {
+      icon: '💨',
+      name: 'High Crosswinds',
+      desc: 'Single-runway ops reduce throughput by up to 50%.',
+      impact: 'med',
+    },
+    {
+      icon: '🌧️',
+      name: 'Heavy Rain',
+      desc: 'Reduced visibility and tarmac safety restrictions.',
+      impact: 'med',
+    },
+    {
+      icon: '🌩️',
+      name: 'Air Traffic Volume',
+      desc: 'Peak-hour congestion amplifies minor weather into cascading delays.',
+      impact: 'med',
+    },
+    {
+      icon: '🌪️',
+      name: 'Windshear',
+      desc: 'Mandatory go-arounds and holding patterns.',
+      impact: 'high',
+    },
+    {
+      icon: '☀️',
+      name: 'Clear Conditions',
+      desc: 'Minimal weather impact. Delays mainly mechanical or staffing.',
+      impact: 'low',
+    },
+  ];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+
+  let state = {
+    flightData: {},       // iata -> { departures: [], arrivals: [] }
+    airportStatuses: {},  // iata -> 'green' | 'yellow' | 'orange' | 'red'
+    watchedAirports: new Set(),
+    thresholds: {},       // iata -> { minor: number, major: number }
+    selectedIata: 'ATL',
+    boardMode: 'departures', // 'departures' | 'arrivals'
+    filterStatus: 'all',
+    alerts: [],
+    countdown: 30,
+    searchQuery: '',
+  };
+
+  const STORAGE_KEY_WATCHED = 'adn_watched';
+  const STORAGE_KEY_THRESHOLDS = 'adn_thresholds';
+
+  function loadStorage() {
+    try {
+      const w = localStorage.getItem(STORAGE_KEY_WATCHED);
+      if (w) state.watchedAirports = new Set(JSON.parse(w));
+      const t = localStorage.getItem(STORAGE_KEY_THRESHOLDS);
+      if (t) state.thresholds = JSON.parse(t);
+    } catch (_) {}
+  }
+
+  function saveStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY_WATCHED, JSON.stringify([...state.watchedAirports]));
+      localStorage.setItem(STORAGE_KEY_THRESHOLDS, JSON.stringify(state.thresholds));
+    } catch (_) {}
+  }
+
+  // ── Mock Data Generation ──────────────────────────────────────────────────
+
+  function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function weightedStatus() {
+    const r = Math.random();
+    if (r < 0.52) return 'on-time';
+    if (r < 0.74) return 'delayed-minor';   // 1-29 min
+    if (r < 0.88) return 'delayed-major';   // 30+ min
+    return 'cancelled';
+  }
+
+  function genFlight(iata, direction) {
+    const airlineIdx = rand(0, AIRLINES.length - 1);
+    const flightNum = `${AIRLINE_CODES[airlineIdx]}${rand(100, 9999)}`;
+    const status = weightedStatus();
+    const baseHour = rand(0, 23);
+    const baseMin = rand(0, 59);
+    const baseFmt = `${String(baseHour).padStart(2, '0')}:${String(baseMin).padStart(2, '0')}`;
+
+    let delayMin = 0;
+    if (status === 'delayed-minor') delayMin = rand(5, 29);
+    if (status === 'delayed-major') delayMin = rand(30, 180);
+
+    let actualHour = baseHour;
+    let actualMin = baseMin + delayMin;
+    actualHour += Math.floor(actualMin / 60);
+    actualMin = actualMin % 60;
+    actualHour = actualHour % 24;
+    const actualFmt = `${String(actualHour).padStart(2, '0')}:${String(actualMin).padStart(2, '0')}`;
+
+    // pick a destination/origin airport (not same)
+    const others = AIRPORTS.filter(a => a.iata !== iata);
+    const peer = others[rand(0, others.length - 1)];
+
+    return {
+      id: `${flightNum}-${Date.now()}-${Math.random()}`,
+      flightNum,
+      airline: AIRLINES[airlineIdx],
+      status,
+      delayMin,
+      scheduled: baseFmt,
+      actual: status === 'on-time' ? baseFmt : (status === 'cancelled' ? '—' : actualFmt),
+      peer: peer.iata,
+      peerName: peer.city,
+      gate: `${String.fromCharCode(65 + rand(0, 7))}${rand(1, 40)}`,
+      terminal: `T${rand(1, 5)}`,
+    };
+  }
+
+  function generateAirportData(iata) {
+    return {
+      departures: Array.from({ length: rand(8, 16) }, () => genFlight(iata, 'dep'))
+        .sort((a, b) => a.scheduled.localeCompare(b.scheduled)),
+      arrivals: Array.from({ length: rand(8, 16) }, () => genFlight(iata, 'arr'))
+        .sort((a, b) => a.scheduled.localeCompare(b.scheduled)),
+    };
+  }
+
+  function getOverallStatus(data) {
+    const all = [...data.departures, ...data.arrivals];
+    const hasCancelled = all.some(f => f.status === 'cancelled');
+    const hasMajor = all.some(f => f.status === 'delayed-major');
+    const hasMinor = all.some(f => f.status === 'delayed-minor');
+    if (hasCancelled) return 'red';
+    if (hasMajor) return 'orange';
+    if (hasMinor) return 'yellow';
+    return 'green';
+  }
+
+  function refreshAllData() {
+    const prev = { ...state.airportStatuses };
+    AIRPORTS.forEach(airport => {
+      state.flightData[airport.iata] = generateAirportData(airport.iata);
+      state.airportStatuses[airport.iata] = getOverallStatus(state.flightData[airport.iata]);
+    });
+
+    // Check thresholds for watched airports and emit alerts
+    state.watchedAirports.forEach(iata => {
+      const data = state.flightData[iata];
+      if (!data) return;
+      const all = [...data.departures, ...data.arrivals];
+      const avgDelay = all.filter(f => f.delayMin > 0).reduce((s, f) => s + f.delayMin, 0) / Math.max(all.filter(f => f.delayMin > 0).length, 1);
+      const threshold = state.thresholds[iata] || { minor: 15, major: 45 };
+
+      const newStatus = state.airportStatuses[iata];
+      const oldStatus = prev[iata];
+
+      if (oldStatus && newStatus !== oldStatus) {
+        // Status change alert
+        if (newStatus === 'red' || newStatus === 'orange') {
+          addAlert(iata, newStatus);
+        }
+      }
+
+      if (avgDelay >= threshold.major) {
+        const airport = AIRPORTS.find(a => a.iata === iata);
+        if (Math.random() < 0.3) { // don't spam, only sometimes emit
+          addAlert(iata, 'threshold', Math.round(avgDelay));
+        }
+      }
+    });
+  }
+
+  function addAlert(iata, type, delayMin) {
+    const airport = AIRPORTS.find(a => a.iata === iata);
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let title, sub, icon;
+    if (type === 'red') {
+      icon = '🔴'; title = `${iata} — Cancellations Detected`;
+      sub = `Flights cancelled at ${airport.name}`;
+    } else if (type === 'orange') {
+      icon = '🟠'; title = `${iata} — Major Delays`;
+      sub = `Average delay exceeds 30 min at ${airport.name}`;
+    } else if (type === 'threshold') {
+      icon = '⚠️'; title = `${iata} — Threshold Breached`;
+      sub = `Average delay ${delayMin} min exceeds your alert threshold`;
+    } else {
+      icon = '🟡'; title = `${iata} — Minor Delays`;
+      sub = `Delays building at ${airport.name}`;
+    }
+
+    state.alerts.unshift({ id: Date.now(), icon, title, sub, time: timeStr, iata });
+    if (state.alerts.length > 50) state.alerts.pop();
+
+    // Show toast only for watched airports
+    if (state.watchedAirports.has(iata)) {
+      showToast(icon, title, sub);
+    }
+  }
+
+  // ── Rendering ─────────────────────────────────────────────────────────────
+
+  function statusColor(status) {
+    return { 'green': '#43d9ad', 'yellow': '#f7c948', 'orange': '#f79548', 'red': '#ff6584' }[status] || '#8892b0';
+  }
+
+  function renderSidebar() {
+    const list = document.getElementById('airportList');
+    const query = state.searchQuery.toLowerCase();
+    const filtered = AIRPORTS.filter(a =>
+      a.iata.toLowerCase().includes(query) ||
+      a.name.toLowerCase().includes(query) ||
+      a.city.toLowerCase().includes(query)
+    );
+
+    list.innerHTML = filtered.map(airport => {
+      const status = state.airportStatuses[airport.iata] || 'green';
+      const isWatched = state.watchedAirports.has(airport.iata);
+      const isActive = state.selectedIata === airport.iata;
+      return `
+        <div class="airport-item ${isActive ? 'active' : ''} ${isWatched ? 'watched' : ''}"
+             role="option" aria-selected="${isActive}"
+             data-iata="${airport.iata}" tabindex="0">
+          <span class="airport-iata">${airport.iata}</span>
+          <span class="airport-name-small">${airport.city}</span>
+          <span class="airport-status-dot" style="background:${statusColor(status)}"></span>
+          <button class="watch-btn ${isWatched ? 'watching' : ''}"
+                  data-watch="${airport.iata}"
+                  title="${isWatched ? 'Remove from watchlist' : 'Add to watchlist'}"
+                  aria-label="${isWatched ? 'Remove' : 'Watch'} ${airport.iata}">
+            ${isWatched ? '★' : '☆'}
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderSummaryBar() {
+    const all = Object.values(state.flightData).flatMap(d => [...d.departures, ...d.arrivals]);
+    const onTime = all.filter(f => f.status === 'on-time').length;
+    const minor = all.filter(f => f.status === 'delayed-minor').length;
+    const major = all.filter(f => f.status === 'delayed-major').length;
+    const cancelled = all.filter(f => f.status === 'cancelled').length;
+
+    document.getElementById('statOnTime').textContent = onTime;
+    document.getElementById('statMinor').textContent = minor;
+    document.getElementById('statMajor').textContent = major;
+    document.getElementById('statCancelled').textContent = cancelled;
+
+    const now = new Date();
+    document.getElementById('lastUpdate').textContent =
+      `Last updated ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+  }
+
+  function flightRows(flights, direction) {
+    const filter = state.filterStatus;
+    const filtered = filter === 'all' ? flights : flights.filter(f => {
+      if (filter === 'on-time') return f.status === 'on-time';
+      if (filter === 'delayed') return f.status === 'delayed-minor' || f.status === 'delayed-major';
+      if (filter === 'cancelled') return f.status === 'cancelled';
+      return true;
+    });
+
+    if (!filtered.length) {
+      return `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">No flights match this filter</td></tr>`;
+    }
+
+    return filtered.map(f => {
+      const badgeClass = f.status === 'on-time' ? 'on-time'
+        : f.status === 'delayed-minor' ? 'delayed-minor'
+        : f.status === 'delayed-major' ? 'delayed-major'
+        : 'cancelled';
+
+      const badgeLabel = f.status === 'on-time' ? '● On Time'
+        : f.status === 'delayed-minor' ? `▲ +${f.delayMin}m`
+        : f.status === 'delayed-major' ? `▲ +${f.delayMin}m`
+        : '✕ Cancelled';
+
+      const timeCell = f.status === 'on-time'
+        ? `<span class="time-cell">${f.scheduled}</span>`
+        : f.status === 'cancelled'
+        ? `<span class="time-cell" style="color:var(--muted)">—</span>`
+        : `<span class="time-cell" style="color:var(--orange)">${f.actual}</span>
+           <span class="time-original">${f.scheduled}</span>`;
+
+      const routeDisplay = direction === 'dep'
+        ? `<div class="route-cell"><span>${f.peer}</span><span class="route-arrow">→</span><span style="color:var(--muted);font-size:0.78rem">${f.peerName}</span></div>`
+        : `<div class="route-cell"><span style="color:var(--muted);font-size:0.78rem">${f.peerName}</span><span class="route-arrow">→</span><span>${f.peer}</span></div>`;
+
+      return `
+        <tr>
+          <td>
+            <span class="flight-num">${f.flightNum}</span><br>
+            <span class="airline-name">${f.airline}</span>
+          </td>
+          <td>${routeDisplay}</td>
+          <td>${timeCell}</td>
+          <td><span class="status-badge ${badgeClass}">${badgeLabel}</span></td>
+          <td style="color:var(--muted);font-size:0.8rem">${f.gate}</td>
+          <td style="color:var(--muted);font-size:0.8rem">${f.terminal}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderAlerts() {
+    if (!state.alerts.length) {
+      return `<div class="no-alerts">No alerts yet. Watch airports to receive threshold notifications.</div>`;
+    }
+    return state.alerts.slice(0, 20).map(a => `
+      <div class="alert-item">
+        <span class="alert-icon">${a.icon}</span>
+        <div class="alert-body">
+          <div class="alert-title">${a.title}</div>
+          <div class="alert-sub">${a.sub}</div>
+        </div>
+        <span class="alert-time">${a.time}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderMainContent() {
+    const airport = AIRPORTS.find(a => a.iata === state.selectedIata);
+    if (!airport) return;
+    const data = state.flightData[airport.iata];
+    if (!data) return;
+
+    const isWatched = state.watchedAirports.has(airport.iata);
+    const threshold = state.thresholds[airport.iata] || { minor: 15, major: 45 };
+    const overallStatus = state.airportStatuses[airport.iata] || 'green';
+
+    const statusLabel = { green: 'Normal Operations', yellow: 'Minor Delays', orange: 'Significant Delays', red: 'Disrupted' }[overallStatus];
+    const statusColor2 = { green: 'var(--green)', yellow: 'var(--yellow)', orange: 'var(--orange)', red: 'var(--red)' }[overallStatus];
+
+    const flights = state.boardMode === 'departures' ? data.departures : data.arrivals;
+    const direction = state.boardMode === 'departures' ? 'dep' : 'arr';
+
+    const allFlights = [...data.departures, ...data.arrivals];
+    const delayedCount = allFlights.filter(f => f.status !== 'on-time').length;
+    const avgDelay = allFlights.filter(f => f.delayMin > 0).length
+      ? Math.round(allFlights.filter(f => f.delayMin > 0).reduce((s, f) => s + f.delayMin, 0) / allFlights.filter(f => f.delayMin > 0).length)
+      : 0;
+
+    const alertCount = state.alerts.filter(a => a.iata === airport.iata).length;
+
+    document.getElementById('mainContent').innerHTML = `
+      <div class="airport-detail-header">
+        <div class="airport-title-group">
+          <h2>${airport.iata} &mdash; ${airport.name}</h2>
+          <div class="airport-meta">${airport.city}, ${airport.country} &bull; <span style="color:${statusColor2};font-weight:600">${statusLabel}</span></div>
+        </div>
+        <div class="airport-actions">
+          <button class="btn btn-watch ${isWatched ? 'active' : ''}" id="watchBtn" aria-pressed="${isWatched}">
+            ${isWatched ? '★ Watching' : '☆ Watch'}
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:1rem;flex-wrap:wrap">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.5rem;flex:1;min-width:140px">
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;margin-bottom:0.3rem">Total Flights</div>
+          <div style="font-size:1.8rem;font-weight:700">${allFlights.length}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.5rem;flex:1;min-width:140px">
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;margin-bottom:0.3rem">Disrupted</div>
+          <div style="font-size:1.8rem;font-weight:700;color:${delayedCount > 0 ? 'var(--yellow)' : 'var(--green)'}">${delayedCount}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.5rem;flex:1;min-width:140px">
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;margin-bottom:0.3rem">Avg Delay</div>
+          <div style="font-size:1.8rem;font-weight:700;color:${avgDelay >= 30 ? 'var(--orange)' : avgDelay > 0 ? 'var(--yellow)' : 'var(--green)'}">
+            ${avgDelay > 0 ? `${avgDelay}m` : 'None'}
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.5rem;flex:1;min-width:140px">
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;margin-bottom:0.3rem">Alerts</div>
+          <div style="font-size:1.8rem;font-weight:700;color:${alertCount > 0 ? 'var(--accent2)' : 'var(--muted)'}">${alertCount}</div>
+        </div>
+      </div>
+
+      ${isWatched ? `
+      <div class="threshold-panel">
+        <h3>Alert Thresholds for ${airport.iata}</h3>
+        <div class="threshold-controls">
+          <div class="threshold-item">
+            <label for="threshMinor">Minor delay alert after</label>
+            <input type="number" id="threshMinor" min="5" max="60" value="${threshold.minor}" aria-label="Minor delay threshold in minutes" />
+            <span>min</span>
+          </div>
+          <div class="threshold-item">
+            <label for="threshMajor">Major delay alert after</label>
+            <input type="number" id="threshMajor" min="15" max="180" value="${threshold.major}" aria-label="Major delay threshold in minutes" />
+            <span>min</span>
+          </div>
+          <button class="btn btn-primary" id="saveThreshBtn">Save Thresholds</button>
+        </div>
+      </div>
+      ` : ''}
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+          <div class="board-tabs" role="tablist">
+            <button class="board-tab ${state.boardMode === 'departures' ? 'active' : ''}" role="tab" aria-selected="${state.boardMode === 'departures'}" data-board="departures">Departures (${data.departures.length})</button>
+            <button class="board-tab ${state.boardMode === 'arrivals' ? 'active' : ''}" role="tab" aria-selected="${state.boardMode === 'arrivals'}" data-board="arrivals">Arrivals (${data.arrivals.length})</button>
+          </div>
+          <div class="filter-pills" role="group" aria-label="Filter by status">
+            <button class="pill all ${state.filterStatus === 'all' ? 'active' : ''}" data-filter="all">All</button>
+            <button class="pill on-time ${state.filterStatus === 'on-time' ? 'active' : ''}" data-filter="on-time">On Time</button>
+            <button class="pill delayed ${state.filterStatus === 'delayed' ? 'active' : ''}" data-filter="delayed">Delayed</button>
+            <button class="pill cancelled ${state.filterStatus === 'cancelled' ? 'active' : ''}" data-filter="cancelled">Cancelled</button>
+          </div>
+        </div>
+
+        <div class="flight-board">
+          <div class="refresh-bar">
+            <div class="refresh-bar-fill" id="refreshBarFill" style="width:${((30 - state.countdown) / 30 * 100)}%"></div>
+          </div>
+          <table class="flight-table" role="grid" aria-label="${state.boardMode} board for ${airport.iata}">
+            <thead>
+              <tr>
+                <th>Flight</th>
+                <th>${state.boardMode === 'departures' ? 'To' : 'From'}</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Gate</th>
+                <th>Terminal</th>
+              </tr>
+            </thead>
+            <tbody id="flightBody">
+              ${flightRows(flights, direction)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="alerts-panel">
+        <div class="alerts-header">
+          <h3>🔔 Recent Alerts</h3>
+          ${state.alerts.length ? `<span class="alert-count-badge">${Math.min(state.alerts.length, 99)}</span>` : ''}
+        </div>
+        <div class="alert-list">
+          ${renderAlerts()}
+        </div>
+      </div>
+
+      <div class="weather-panel">
+        <div class="weather-panel-header">
+          <span style="font-size:1.2rem">🌤️</span>
+          <h3>Delay Cause Reference</h3>
+          <span style="color:var(--muted);font-size:0.8rem;margin-left:auto">Common airport delay factors</span>
+        </div>
+        <div class="weather-grid">
+          ${WEATHER_CAUSES.map(c => `
+            <div class="weather-cause">
+              <div class="weather-cause-icon">${c.icon}</div>
+              <div class="weather-cause-name">${c.name}</div>
+              <div class="weather-cause-desc">${c.desc}</div>
+              <span class="weather-impact impact-${c.impact}">${c.impact.toUpperCase()} IMPACT</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    // Bind events
+    document.getElementById('watchBtn').addEventListener('click', () => {
+      toggleWatch(airport.iata);
+    });
+
+    document.querySelectorAll('[data-board]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.boardMode = btn.dataset.board;
+        renderMainContent();
+      });
+    });
+
+    document.querySelectorAll('[data-filter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.filterStatus = btn.dataset.filter;
+        renderMainContent();
+      });
+    });
+
+    if (isWatched) {
+      document.getElementById('saveThreshBtn').addEventListener('click', () => {
+        const minor = parseInt(document.getElementById('threshMinor').value) || 15;
+        const major = parseInt(document.getElementById('threshMajor').value) || 45;
+        state.thresholds[airport.iata] = { minor, major };
+        saveStorage();
+        showToast('✅', `Thresholds saved for ${airport.iata}`, `Minor: ${minor}m, Major: ${major}m`);
+      });
+    }
+  }
+
+  function toggleWatch(iata) {
+    if (state.watchedAirports.has(iata)) {
+      state.watchedAirports.delete(iata);
+      showToast('☆', `Removed ${iata} from watchlist`, `You will no longer receive alerts for this airport`);
+    } else {
+      state.watchedAirports.add(iata);
+      const airport = AIRPORTS.find(a => a.iata === iata);
+      showToast('★', `Watching ${iata}`, `Alerts enabled for ${airport.name}`);
+    }
+    saveStorage();
+    renderSidebar();
+    renderMainContent();
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+
+  function showToast(icon, title, msg) {
+    const container = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.setAttribute('role', 'alert');
+    el.innerHTML = `
+      <span class="toast-icon">${icon}</span>
+      <div class="toast-body">
+        <div class="toast-title">${title}</div>
+        <div class="toast-msg">${msg}</div>
+      </div>
+      <button class="toast-close" aria-label="Dismiss notification">✕</button>
+    `;
+    el.querySelector('.toast-close').addEventListener('click', () => dismissToast(el));
+    container.appendChild(el);
+    setTimeout(() => dismissToast(el), 5000);
+  }
+
+  function dismissToast(el) {
+    if (!el.parentNode) return;
+    el.classList.add('toast-fade-out');
+    setTimeout(() => el.parentNode && el.parentNode.removeChild(el), 300);
+  }
+
+  // ── Countdown & Auto-refresh ──────────────────────────────────────────────
+
+  function tick() {
+    state.countdown -= 1;
+    document.getElementById('refreshTimer').textContent = `Next update in ${state.countdown}s`;
+    const fill = document.getElementById('refreshBarFill');
+    if (fill) fill.style.width = `${((30 - state.countdown) / 30 * 100)}%`;
+
+    if (state.countdown <= 0) {
+      state.countdown = 30;
+      refreshAllData();
+      renderSidebar();
+      renderSummaryBar();
+      renderMainContent();
+    }
+  }
+
+  // ── Sidebar event delegation ──────────────────────────────────────────────
+
+  document.getElementById('airportList').addEventListener('click', e => {
+    const watchBtn = e.target.closest('[data-watch]');
+    if (watchBtn) {
+      e.stopPropagation();
+      toggleWatch(watchBtn.dataset.watch);
+      return;
+    }
+    const item = e.target.closest('[data-iata]');
+    if (item) {
+      state.selectedIata = item.dataset.iata;
+      state.boardMode = 'departures';
+      state.filterStatus = 'all';
+      renderSidebar();
+      renderMainContent();
+    }
+  });
+
+  document.getElementById('airportList').addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const item = e.target.closest('[data-iata]');
+      if (item) {
+        e.preventDefault();
+        state.selectedIata = item.dataset.iata;
+        renderSidebar();
+        renderMainContent();
+      }
+    }
+  });
+
+  document.getElementById('airportSearch').addEventListener('input', e => {
+    state.searchQuery = e.target.value;
+    renderSidebar();
+  });
+
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
+
+  function init() {
+    loadStorage();
+    refreshAllData();
+    renderSidebar();
+    renderSummaryBar();
+    renderMainContent();
+    setInterval(tick, 1000);
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palette — Color Palette Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/*
+ * NOTE: Colormind API is HTTP-only (http://colormind.io/api/).
+ * When served from a file:// origin this works fine.
+ * If hosted on an HTTPS domain, browsers will block the mixed-content
+ * request. In that case proxy the Colormind call through your server.
+ */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-3);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep {
+  width: 1px; height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+.nav-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 296px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+  display: block;
+}
+
+/* Model select */
+.model-select {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  padding-right: var(--space-8);
+}
+.model-select:focus { outline: none; border-color: var(--color-accent); }
+
+/* Generate button */
+.btn-generate {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  margin-top: var(--space-3);
+}
+.btn-generate:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px oklch(52% 0.14 155 / 0.28);
+}
+.btn-generate:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+.btn-generate:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Seed rows */
+.seed-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.seed-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto 36px;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.seed-swatch-wrap {
+  position: relative;
+  width: 32px; height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.seed-swatch-wrap input[type="color"] {
+  position: absolute;
+  inset: -4px;
+  opacity: 0;
+  cursor: pointer;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+}
+
+.seed-hex {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  width: 100%;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: border-color 0.15s ease;
+}
+.seed-hex:focus { outline: none; border-color: var(--color-accent); }
+.seed-hex::placeholder { color: var(--color-ink-muted); text-transform: none; }
+
+.btn-lock {
+  font-size: 14px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  line-height: 1;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.btn-lock:hover { border-color: var(--color-accent); background: var(--color-accent-subtle); }
+.btn-lock.locked {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.seed-index {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 600;
+  text-align: center;
+  line-height: 32px;
+}
+
+/* Randomize button */
+.btn-randomize {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: transparent;
+  border: 1px dashed var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: background 0.12s ease, border-style 0.12s ease;
+  margin-top: var(--space-2);
+}
+.btn-randomize:hover { background: var(--color-accent-subtle); border-style: solid; }
+
+/* Saved palettes */
+.saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 32px;
+}
+.saved-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+  position: relative;
+}
+.saved-item:hover { border-color: var(--color-accent-line); background: var(--color-accent-subtle); }
+.saved-item-strip {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.saved-item-strip-color {
+  width: 14px; height: 24px;
+  border-radius: 2px;
+}
+.saved-item-meta {
+  flex: 1;
+  min-width: 0;
+}
+.saved-item-name {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.saved-item-date {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  margin-top: 1px;
+}
+.btn-saved-del {
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  transition: color 0.12s ease;
+}
+.btn-saved-del:hover { color: var(--color-danger); }
+.saved-empty {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-3) 0;
+  line-height: 1.6;
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* ── Palette strip ── */
+.palette-strip {
+  display: flex;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  height: 200px;
+}
+
+.palette-block {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  transition: flex 0.3s ease;
+  cursor: default;
+}
+.palette-block:hover { flex: 1.6; }
+
+.block-lock {
+  position: absolute;
+  top: var(--space-2); right: var(--space-2);
+  width: 28px; height: 28px;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  transition: background 0.15s ease;
+  z-index: 2;
+}
+.block-lock:hover { background: rgba(0,0,0,0.7); }
+.block-lock.locked { background: oklch(52% 0.14 155 / 0.75); border-color: oklch(70% 0.09 155); }
+
+.block-info {
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.palette-block:hover .block-info {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.block-hex {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.06em;
+}
+.block-rgb {
+  font-size: var(--text-xs);
+  color: rgba(255,255,255,0.7);
+}
+.block-hsl {
+  font-size: var(--text-xs);
+  color: rgba(255,255,255,0.7);
+}
+.block-name {
+  font-size: var(--text-xs);
+  color: rgba(255,255,255,0.55);
+  font-style: italic;
+}
+.block-copy {
+  margin-top: var(--space-1);
+  padding: 3px var(--space-2);
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.12s ease;
+}
+.block-copy:hover { background: rgba(255,255,255,0.28); }
+.block-copy.copied { background: oklch(52% 0.14 155 / 0.7); border-color: oklch(70% 0.09 155); }
+
+/* ── Live preview ── */
+.preview-heading {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  margin-bottom: var(--space-4);
+}
+.preview-badge {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+.preview-ui {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.preview-nav {
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.preview-nav-brand { font-size: var(--text-base); font-weight: 700; }
+.preview-nav-links { display: flex; gap: var(--space-6); font-size: var(--text-sm); }
+
+.preview-hero {
+  padding: var(--space-12) var(--space-8);
+  text-align: center;
+}
+.preview-hero-h { font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-3); letter-spacing: -0.02em; }
+.preview-hero-p { font-size: var(--text-base); margin-bottom: var(--space-6); opacity: 0.8; }
+.preview-hero-btn {
+  display: inline-block;
+  padding: var(--space-3) var(--space-8);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: default;
+}
+
+.preview-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  padding: 0 var(--space-6) var(--space-6);
+}
+.preview-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+}
+.preview-card-title { font-weight: 700; margin-bottom: var(--space-2); font-size: var(--text-sm); }
+.preview-card-body { font-size: var(--text-xs); opacity: 0.75; line-height: 1.6; }
+
+/* ── Export panel ── */
+.export-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.export-tabs {
+  display: flex;
+  background: var(--color-paper-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.export-tab {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.export-tab:hover { color: var(--color-ink); }
+.export-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+.export-body {
+  padding: var(--space-4);
+  background: var(--color-paper);
+}
+.export-code {
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  color: var(--color-ink);
+  white-space: pre;
+  overflow-x: auto;
+  padding: var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  max-height: 200px;
+  overflow-y: auto;
+  tab-size: 2;
+}
+.export-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+.btn-copy-export {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.btn-copy-export:hover { color: var(--color-accent); border-color: var(--color-accent-line); background: var(--color-accent-subtle); }
+.btn-copy-export.copied { color: var(--color-success); border-color: var(--color-success); }
+
+.btn-save-palette {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-paper);
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.btn-save-palette:hover { opacity: 0.85; transform: translateY(-1px); }
+.btn-save-palette:active { transform: translateY(0); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6); right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Loading state ── */
+.btn-generate .spin {
+  display: inline-block;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+  }
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+  .preview-cards { grid-template-columns: 1fr; }
+  .palette-strip { height: 140px; }
+}
+
+@media (max-width: 480px) {
+  .nav-label { display: none; }
+  .nav-sep { display: none; }
+  .palette-strip { height: 100px; }
+  .export-tabs { flex-wrap: wrap; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .palette-block { transition: none; }
+  .block-info { transition: opacity 0.1s ease; transform: none; }
+  .btn-generate:hover { transform: none; box-shadow: none; }
+  .toast { transition: opacity 0.1s ease; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Palette<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-label">Color Palette Generator</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Palette controls">
+
+    <!-- Model + Generate -->
+    <div class="sidebar-section">
+      <label class="section-label" for="model-select">AI Model</label>
+      <select class="model-select" id="model-select" aria-label="Colormind model">
+        <option value="default">Default</option>
+      </select>
+      <button class="btn-generate" id="btn-generate" aria-label="Generate palette">
+        <span id="gen-icon" aria-hidden="true">✦</span>
+        Generate Palette
+      </button>
+    </div>
+
+    <!-- Seed colors -->
+    <div class="sidebar-section">
+      <span class="section-label">Seed Colors</span>
+      <div class="seed-rows" id="seed-rows" aria-label="Seed color inputs" role="group">
+        <!-- Populated by JS -->
+      </div>
+      <button class="btn-randomize" id="btn-randomize" aria-label="Randomize unlocked colors">
+        ↻ Randomize unlocked
+      </button>
+    </div>
+
+    <!-- Saved palettes -->
+    <div class="sidebar-section" style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column;">
+      <span class="section-label">Saved Palettes</span>
+      <div class="saved-list" id="saved-list" role="list" aria-label="Saved palettes" style="flex:1; overflow-y:auto;">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── Main panel ── -->
+  <main class="main" aria-label="Palette viewer">
+    <div class="main-scroll">
+
+      <!-- Palette strip -->
+      <section aria-label="Color palette" aria-live="polite">
+        <div class="palette-strip" id="palette-strip" role="list" aria-label="Palette color blocks">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- Live preview -->
+      <section aria-label="Live UI preview">
+        <p class="preview-heading">
+          Live preview
+          <span class="preview-badge">updates automatically</span>
+        </p>
+        <div class="preview-ui" id="preview-ui" aria-hidden="true">
+          <div class="preview-nav" id="pv-nav">
+            <div class="preview-nav-brand" id="pv-brand">BrandName</div>
+            <div class="preview-nav-links">
+              <span id="pv-link1">Product</span>
+              <span id="pv-link2">Pricing</span>
+              <span id="pv-link3">About</span>
+            </div>
+          </div>
+          <div class="preview-hero" id="pv-hero">
+            <div class="preview-hero-h" id="pv-hero-h">Beautiful Design Starts Here</div>
+            <div class="preview-hero-p" id="pv-hero-p">Create stunning interfaces with your perfect color palette. Every shade, in harmony.</div>
+            <span class="preview-hero-btn" id="pv-hero-btn">Get Started</span>
+          </div>
+          <div class="preview-cards" id="pv-cards">
+            <div class="preview-card" id="pvc1">
+              <div class="preview-card-title">Fast Export</div>
+              <div class="preview-card-body">CSS variables, Tailwind, SCSS — one click to copy.</div>
+            </div>
+            <div class="preview-card" id="pvc2">
+              <div class="preview-card-title">AI Harmony</div>
+              <div class="preview-card-body">Colormind generates palettes trained on real design trends.</div>
+            </div>
+            <div class="preview-card" id="pvc3">
+              <div class="preview-card-title">Lock & Seed</div>
+              <div class="preview-card-body">Lock any color as a seed — regenerate the rest.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Export panel -->
+      <section aria-label="Export palette">
+        <div class="export-section">
+          <div class="export-tabs" role="tablist" aria-label="Export format">
+            <button class="export-tab active" id="etab-css" role="tab" aria-selected="true" data-fmt="css">CSS Vars</button>
+            <button class="export-tab" id="etab-tailwind" role="tab" aria-selected="false" data-fmt="tailwind">Tailwind</button>
+            <button class="export-tab" id="etab-scss" role="tab" aria-selected="false" data-fmt="scss">SCSS</button>
+            <button class="export-tab" id="etab-json" role="tab" aria-selected="false" data-fmt="json">JSON</button>
+          </div>
+          <div class="export-body">
+            <pre class="export-code" id="export-code" tabindex="0" aria-label="Export code">Generate a palette to see export code.</pre>
+            <div class="export-actions">
+              <button class="btn-copy-export" id="btn-copy-export" aria-label="Copy export code">
+                ⎘ Copy code
+              </button>
+              <button class="btn-save-palette" id="btn-save-palette" aria-label="Save palette to library">
+                ↓ Save palette
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+'use strict';
+
+/* ─────────────────────────────────────────────
+   Color Math — pure JS, no library
+   ───────────────────────────────────────────── */
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToRgb(h, s, l) {
+  h /= 360; s /= 100; l /= 100;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+}
+
+function hslToHex(h, s, l) {
+  const { r, g, b } = hslToRgb(h, s, l);
+  return rgbToHex(r, g, b);
+}
+
+function hexToHsl(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  return rgbToHsl(r, g, b);
+}
+
+function luminance(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const toLinear = c => {
+    c /= 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+/* Best readable text color (black or white) for a given bg */
+function readableOn(hex) {
+  return luminance(hex) > 0.35 ? '#111111' : '#ffffff';
+}
+
+/* Hue-based color name */
+function colorName(hex) {
+  const { h, s, l } = hexToHsl(hex);
+  if (s < 8) {
+    if (l < 15) return 'Jet Black';
+    if (l < 40) return 'Charcoal';
+    if (l < 65) return 'Slate Gray';
+    if (l < 85) return 'Silver';
+    return 'Snow White';
+  }
+  if (l < 15) return 'Dark Shade';
+  if (l > 88) return 'Pale Tint';
+  if      (h <  15) return 'Crimson';
+  else if (h <  30) return 'Vermilion';
+  else if (h <  45) return 'Tangerine';
+  else if (h <  60) return 'Amber';
+  else if (h <  75) return 'Gold';
+  else if (h <  90) return 'Chartreuse';
+  else if (h < 120) return 'Lime Green';
+  else if (h < 150) return 'Forest Green';
+  else if (h < 165) return 'Emerald';
+  else if (h < 185) return 'Teal';
+  else if (h < 200) return 'Cyan';
+  else if (h < 220) return 'Sky Blue';
+  else if (h < 240) return 'Cornflower';
+  else if (h < 260) return 'Cobalt';
+  else if (h < 280) return 'Indigo';
+  else if (h < 300) return 'Violet';
+  else if (h < 320) return 'Orchid';
+  else if (h < 340) return 'Hot Pink';
+  else if (h < 355) return 'Rose';
+  return 'Crimson';
+}
+
+function randomHex() {
+  return '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
+}
+
+function isValidHex(str) {
+  const s = str.startsWith('#') ? str : '#' + str;
+  return /^#[0-9a-fA-F]{6}$/.test(s);
+}
+
+function normalizeHex(str) {
+  const s = str.startsWith('#') ? str : '#' + str;
+  return s.toLowerCase();
+}
+
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* ─────────────────────────────────────────────
+   App State
+   ───────────────────────────────────────────── */
+const NUM_SEEDS = 5;
+
+// seeds: array of { hex: string, locked: boolean }
+let seeds = Array.from({ length: NUM_SEEDS }, () => ({ hex: randomHex(), locked: false }));
+let currentPalette = []; // array of hex strings, length 5
+let currentExportFmt = 'css';
+
+/* ─────────────────────────────────────────────
+   Colormind API
+   NOTE: HTTP-only endpoint — works from file:// origins.
+   From HTTPS origins browsers block mixed content.
+   ───────────────────────────────────────────── */
+const COLORMIND_API = 'http://colormind.io/api/';
+const COLORMIND_LIST = 'http://colormind.io/list/';
+
+async function fetchModels() {
+  const sel = document.getElementById('model-select');
+  try {
+    const res = await fetch(COLORMIND_LIST, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) throw new Error('list fetch failed');
+    const data = await res.json();
+    const models = data.result || ['default'];
+    sel.innerHTML = '';
+    models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m.charAt(0).toUpperCase() + m.slice(1).replace(/_/g, ' ');
+      if (m === 'default') opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch {
+    // Fall back to known models if fetch fails (likely blocked by browser)
+    ['default', 'ui', 'metroui'].forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+      if (m === 'default') opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+async function callColormind(model, inputSeeds) {
+  // inputSeeds: array of 5 items, each either [R,G,B] or "N"
+  const body = JSON.stringify({ model, input: inputSeeds });
+  const res = await fetch(COLORMIND_API, {
+    method: 'POST',
+    body,
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error(`Colormind error ${res.status}`);
+  const data = await res.json();
+  if (!data.result || !Array.isArray(data.result)) throw new Error('Bad response');
+  return data.result; // [[R,G,B], ...]
+}
+
+/* ─────────────────────────────────────────────
+   Generate
+   ───────────────────────────────────────────── */
+async function generate() {
+  const btn = document.getElementById('btn-generate');
+  const icon = document.getElementById('gen-icon');
+  btn.disabled = true;
+  icon.classList.add('spin');
+  icon.textContent = '↻';
+
+  const model = document.getElementById('model-select').value || 'default';
+
+  // Build input array: locked seeds send their RGB, unlocked send "N"
+  const inputSeeds = seeds.map(s => {
+    if (s.locked && isValidHex(s.hex)) {
+      const { r, g, b } = hexToRgb(s.hex);
+      return [r, g, b];
+    }
+    return 'N';
+  });
+
+  try {
+    const result = await callColormind(model, inputSeeds);
+    currentPalette = result.map(([r, g, b]) => rgbToHex(r, g, b));
+
+    // Sync seeds to match result (so swatch colors always reflect palette)
+    seeds = currentPalette.map((hex, i) => ({
+      hex,
+      locked: seeds[i]?.locked ?? false,
+    }));
+
+    renderSeeds();
+    renderPaletteStrip();
+    updatePreview();
+    updateExport();
+    toast('Palette generated', 'success');
+  } catch (err) {
+    const msg = err.name === 'TimeoutError'
+      ? 'Colormind timed out. Try again.'
+      : (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))
+        ? 'Network error. Colormind is HTTP-only — may be blocked from HTTPS pages.'
+        : `Error: ${err.message}`;
+    toast(msg, 'error');
+  } finally {
+    btn.disabled = false;
+    icon.classList.remove('spin');
+    icon.textContent = '✦';
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Seed Rows
+   ───────────────────────────────────────────── */
+function renderSeeds() {
+  const container = document.getElementById('seed-rows');
+  container.innerHTML = '';
+
+  seeds.forEach((seed, i) => {
+    const row = document.createElement('div');
+    row.className = 'seed-row';
+    row.dataset.index = i;
+
+    // Swatch
+    const swatchWrap = document.createElement('div');
+    swatchWrap.className = 'seed-swatch-wrap';
+    swatchWrap.style.background = seed.hex;
+    swatchWrap.title = 'Click to pick color';
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = seed.hex;
+    colorInput.setAttribute('aria-label', `Seed color ${i + 1}`);
+    colorInput.addEventListener('input', e => {
+      seeds[i].hex = e.target.value;
+      swatchWrap.style.background = e.target.value;
+      hexInput.value = e.target.value.toUpperCase();
+      if (currentPalette.length) {
+        currentPalette[i] = e.target.value;
+        renderPaletteStrip();
+        updatePreview();
+        updateExport();
+      }
+    });
+    swatchWrap.appendChild(colorInput);
+
+    // Hex input
+    const hexInput = document.createElement('input');
+    hexInput.type = 'text';
+    hexInput.className = 'seed-hex';
+    hexInput.value = seed.hex.toUpperCase();
+    hexInput.maxLength = 7;
+    hexInput.setAttribute('aria-label', `Seed hex value ${i + 1}`);
+    hexInput.addEventListener('input', e => {
+      const val = e.target.value.trim();
+      if (isValidHex(val)) {
+        const hex = normalizeHex(val);
+        seeds[i].hex = hex;
+        swatchWrap.style.background = hex;
+        colorInput.value = hex;
+        if (currentPalette.length) {
+          currentPalette[i] = hex;
+          renderPaletteStrip();
+          updatePreview();
+          updateExport();
+        }
+      }
+    });
+
+    // Lock button
+    const lockBtn = document.createElement('button');
+    lockBtn.className = 'btn-lock' + (seed.locked ? ' locked' : '');
+    lockBtn.textContent = seed.locked ? '🔒' : '🔓';
+    lockBtn.title = seed.locked ? 'Unlock this color' : 'Lock this color';
+    lockBtn.setAttribute('aria-label', `${seed.locked ? 'Unlock' : 'Lock'} seed ${i + 1}`);
+    lockBtn.setAttribute('aria-pressed', seed.locked);
+    lockBtn.addEventListener('click', () => {
+      seeds[i].locked = !seeds[i].locked;
+      lockBtn.classList.toggle('locked', seeds[i].locked);
+      lockBtn.textContent = seeds[i].locked ? '🔒' : '🔓';
+      lockBtn.title = seeds[i].locked ? 'Unlock this color' : 'Lock this color';
+      lockBtn.setAttribute('aria-label', `${seeds[i].locked ? 'Unlock' : 'Lock'} seed ${i + 1}`);
+      lockBtn.setAttribute('aria-pressed', seeds[i].locked);
+      // Sync palette block lock indicator
+      const block = document.querySelector(`.palette-block[data-index="${i}"] .block-lock`);
+      if (block) {
+        block.classList.toggle('locked', seeds[i].locked);
+        block.textContent = seeds[i].locked ? '🔒' : '🔓';
+      }
+    });
+
+    row.appendChild(swatchWrap);
+    row.appendChild(hexInput);
+    row.appendChild(lockBtn);
+    container.appendChild(row);
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Palette Strip
+   ───────────────────────────────────────────── */
+function renderPaletteStrip() {
+  const strip = document.getElementById('palette-strip');
+  strip.innerHTML = '';
+
+  currentPalette.forEach((hex, i) => {
+    const { r, g, b } = hexToRgb(hex);
+    const hsl = rgbToHsl(r, g, b);
+    const name = colorName(hex);
+    const isLocked = seeds[i]?.locked ?? false;
+
+    const block = document.createElement('div');
+    block.className = 'palette-block';
+    block.dataset.index = i;
+    block.style.background = hex;
+    block.setAttribute('role', 'listitem');
+    block.setAttribute('aria-label', `Color ${i + 1}: ${hex.toUpperCase()}, ${name}`);
+
+    const lockBtn = document.createElement('button');
+    lockBtn.className = 'block-lock' + (isLocked ? ' locked' : '');
+    lockBtn.textContent = isLocked ? '🔒' : '🔓';
+    lockBtn.title = isLocked ? 'Unlock' : 'Lock';
+    lockBtn.setAttribute('aria-label', `${isLocked ? 'Unlock' : 'Lock'} color ${i + 1}`);
+    lockBtn.setAttribute('aria-pressed', isLocked);
+    lockBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      seeds[i].locked = !seeds[i].locked;
+      lockBtn.classList.toggle('locked', seeds[i].locked);
+      lockBtn.textContent = seeds[i].locked ? '🔒' : '🔓';
+      lockBtn.setAttribute('aria-pressed', seeds[i].locked);
+      // Sync sidebar lock button
+      const sidebarLock = document.querySelector(`#seed-rows .seed-row[data-index="${i}"] .btn-lock`);
+      if (sidebarLock) {
+        sidebarLock.classList.toggle('locked', seeds[i].locked);
+        sidebarLock.textContent = seeds[i].locked ? '🔒' : '🔓';
+      }
+    });
+
+    const info = document.createElement('div');
+    info.className = 'block-info';
+    info.innerHTML = `
+      <div class="block-hex">${hex.toUpperCase()}</div>
+      <div class="block-rgb">rgb(${r}, ${g}, ${b})</div>
+      <div class="block-hsl">hsl(${hsl.h}°, ${hsl.s}%, ${hsl.l}%)</div>
+      <div class="block-name">${esc(name)}</div>
+    `;
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'block-copy';
+    copyBtn.textContent = 'Copy hex';
+    copyBtn.setAttribute('aria-label', `Copy hex ${hex.toUpperCase()}`);
+    copyBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      copyText(hex.toUpperCase(), `${hex.toUpperCase()} copied`);
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy hex';
+        copyBtn.classList.remove('copied');
+      }, 1800);
+    });
+    info.appendChild(copyBtn);
+
+    block.appendChild(lockBtn);
+    block.appendChild(info);
+    strip.appendChild(block);
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Live Preview
+   ───────────────────────────────────────────── */
+function updatePreview() {
+  if (!currentPalette.length) return;
+  const p = currentPalette;
+
+  // Role mapping: bg, primary (navbar), accent (CTA), card1, card2
+  const bg       = p[0] || '#f5f5f5';
+  const primary  = p[1] || p[0];
+  const accent   = p[2] || p[0];
+  const card1    = p[3] || p[1] || p[0];
+  const card2    = p[4] || p[2] || p[0];
+
+  // Nav
+  const nav = document.getElementById('pv-nav');
+  nav.style.background = primary;
+  nav.style.color = readableOn(primary);
+  document.getElementById('pv-brand').style.color = readableOn(primary);
+  ['pv-link1','pv-link2','pv-link3'].forEach(id => {
+    document.getElementById(id).style.color = readableOn(primary);
+  });
+
+  // Hero
+  const hero = document.getElementById('pv-hero');
+  hero.style.background = bg;
+  hero.style.color = readableOn(bg);
+  document.getElementById('pv-hero-h').style.color = readableOn(bg);
+  document.getElementById('pv-hero-p').style.color = readableOn(bg);
+
+  // CTA button
+  const heroBtn = document.getElementById('pv-hero-btn');
+  heroBtn.style.background = accent;
+  heroBtn.style.color = readableOn(accent);
+
+  // Cards
+  [['pvc1', card1], ['pvc2', card2], ['pvc3', accent]].forEach(([id, col]) => {
+    const el = document.getElementById(id);
+    el.style.background = col;
+    el.style.color = readableOn(col);
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Export
+   ───────────────────────────────────────────── */
+function buildExport(fmt) {
+  if (!currentPalette.length) return 'Generate a palette to see export code.';
+
+  const entries = currentPalette.map((hex, i) => {
+    const { r, g, b } = hexToRgb(hex);
+    const hsl = rgbToHsl(r, g, b);
+    return { i: i + 1, hex: hex.toUpperCase(), r, g, b, h: hsl.h, s: hsl.s, l: hsl.l };
+  });
+
+  if (fmt === 'css') {
+    return `:root {\n${entries.map(c => `  --color-${c.i}: ${c.hex}; /* rgb(${c.r}, ${c.g}, ${c.b}) */`).join('\n')}\n}`;
+  }
+
+  if (fmt === 'tailwind') {
+    const lines = entries.map(c => `      'brand-${c.i}': '${c.hex}',`).join('\n');
+    return `/** @type {import('tailwindcss').Config} */\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n${lines}\n      },\n    },\n  },\n};`;
+  }
+
+  if (fmt === 'scss') {
+    return entries.map(c => `$color-${c.i}: ${c.hex}; // hsl(${c.h}, ${c.s}%, ${c.l}%)`).join('\n');
+  }
+
+  if (fmt === 'json') {
+    const obj = {};
+    entries.forEach(c => {
+      obj[`color-${c.i}`] = {
+        hex: c.hex,
+        rgb: `rgb(${c.r}, ${c.g}, ${c.b})`,
+        hsl: `hsl(${c.h}deg, ${c.s}%, ${c.l}%)`,
+      };
+    });
+    return JSON.stringify({ palette: obj }, null, 2);
+  }
+
+  return '';
+}
+
+function updateExport() {
+  document.getElementById('export-code').textContent = buildExport(currentExportFmt);
+}
+
+/* ─────────────────────────────────────────────
+   Saved Palettes (localStorage, last 10)
+   ───────────────────────────────────────────── */
+const STORAGE_KEY = 'palette-gen-saved';
+
+function getSaved() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function setSaved(list) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+  catch {}
+}
+
+function savePalette() {
+  if (!currentPalette.length) { toast('Generate a palette first', 'error'); return; }
+  const list = getSaved();
+  list.unshift({
+    id: Date.now(),
+    colors: [...currentPalette],
+    ts: new Date().toLocaleString(),
+  });
+  if (list.length > 10) list.splice(10);
+  setSaved(list);
+  renderSaved();
+  toast('Palette saved', 'success');
+}
+
+function loadSaved(id) {
+  const list = getSaved();
+  const item = list.find(s => s.id === id);
+  if (!item) return;
+  currentPalette = [...item.colors];
+  seeds = currentPalette.map((hex, i) => ({ hex, locked: seeds[i]?.locked ?? false }));
+  renderSeeds();
+  renderPaletteStrip();
+  updatePreview();
+  updateExport();
+  toast('Palette loaded', 'success');
+}
+
+function deleteSaved(id) {
+  const list = getSaved().filter(s => s.id !== id);
+  setSaved(list);
+  renderSaved();
+}
+
+function renderSaved() {
+  const container = document.getElementById('saved-list');
+  const list = getSaved();
+
+  if (!list.length) {
+    container.innerHTML = '<div class="saved-empty">No saved palettes yet.<br>Generate one and save it.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  list.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'saved-item';
+    el.setAttribute('role', 'listitem');
+
+    const strip = document.createElement('div');
+    strip.className = 'saved-item-strip';
+    item.colors.forEach(hex => {
+      const swatch = document.createElement('div');
+      swatch.className = 'saved-item-strip-color';
+      swatch.style.background = hex;
+      strip.appendChild(swatch);
+    });
+
+    const meta = document.createElement('div');
+    meta.className = 'saved-item-meta';
+    meta.innerHTML = `
+      <div class="saved-item-name">${item.colors.map(h => h.toUpperCase()).slice(0,3).join(', ')}…</div>
+      <div class="saved-item-date">${esc(item.ts)}</div>
+    `;
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-saved-del';
+    delBtn.textContent = '×';
+    delBtn.setAttribute('aria-label', 'Delete saved palette');
+    delBtn.addEventListener('click', e => { e.stopPropagation(); deleteSaved(item.id); });
+
+    el.appendChild(strip);
+    el.appendChild(meta);
+    el.appendChild(delBtn);
+    el.addEventListener('click', () => loadSaved(item.id));
+    el.tabIndex = 0;
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') loadSaved(item.id); });
+    container.appendChild(el);
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Clipboard
+   ───────────────────────────────────────────── */
+function copyText(text, message) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => toast(message, 'success')).catch(() => fallbackCopy(text, message));
+  } else {
+    fallbackCopy(text, message);
+  }
+}
+
+function fallbackCopy(text, message) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); toast(message, 'success'); }
+  catch { toast('Copy failed — please copy manually', 'error'); }
+  document.body.removeChild(ta);
+}
+
+/* ─────────────────────────────────────────────
+   Toast
+   ───────────────────────────────────────────── */
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+/* ─────────────────────────────────────────────
+   Event Wiring
+   ───────────────────────────────────────────── */
+document.getElementById('btn-generate').addEventListener('click', generate);
+
+document.getElementById('btn-randomize').addEventListener('click', () => {
+  seeds.forEach((s, i) => {
+    if (!s.locked) seeds[i].hex = randomHex();
+  });
+  renderSeeds();
+  // Auto-generate after randomize
+  generate();
+});
+
+document.getElementById('btn-save-palette').addEventListener('click', savePalette);
+
+// Export tab switching
+document.querySelectorAll('.export-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    currentExportFmt = tab.dataset.fmt;
+    document.querySelectorAll('.export-tab').forEach(t => {
+      t.classList.toggle('active', t === tab);
+      t.setAttribute('aria-selected', t === tab);
+    });
+    updateExport();
+  });
+});
+
+// Copy export
+document.getElementById('btn-copy-export').addEventListener('click', () => {
+  const code = document.getElementById('export-code').textContent;
+  const btn = document.getElementById('btn-copy-export');
+  copyText(code, 'Export code copied!');
+  btn.classList.add('copied');
+  btn.textContent = '✓ Copied!';
+  setTimeout(() => {
+    btn.classList.remove('copied');
+    btn.textContent = '⎘ Copy code';
+  }, 2000);
+});
+
+/* ─────────────────────────────────────────────
+   Init
+   ───────────────────────────────────────────── */
+async function init() {
+  renderSeeds();
+  renderSaved();
+
+  // Fetch model list (may fail on HTTPS origins — falls back gracefully)
+  fetchModels();
+
+  // Kick off initial generation
+  await generate();
+}
+
+init();
+</script>
+</body>
+</html>

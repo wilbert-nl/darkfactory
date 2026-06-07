@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nutrition Label Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400&family=Nunito:wght@400;500;600;700&display=swap');
+  :root {
+  --bg: #0c0800;
+  --surface: #1a1200;
+  --surface2: #251a00;
+  --border: rgba(249,115,22,0.2);
+  --accent: #f97316;
+  --accent2: #84cc16;
+  --text: #fef9ee;
+  --muted: #a16207;
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --radius: 16px;
+}
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header .tagline {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-left: auto;
+  }
+
+  .icon-badge {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+    padding: 24px;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .card h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card h2 span.badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+
+  label {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  input, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 9px 12px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  input::placeholder { color: var(--muted); opacity: 0.7; }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: end;
+    margin-bottom: 12px;
+  }
+
+  .input-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .field { margin-bottom: 14px; }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 9px 16px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  button:active { transform: scale(0.97); }
+  button:hover { opacity: 0.88; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-danger {
+    background: var(--accent2);
+    color: #fff;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .btn-green {
+    background: var(--green);
+    color: #000;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .search-row input { flex: 1; }
+
+  .search-results {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  .search-results.show { display: block; }
+
+  .result-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    font-size: 0.88rem;
+  }
+
+  .result-item:last-child { border-bottom: none; }
+
+  .result-item:hover { background: var(--border); }
+
+  .result-item .name { font-weight: 600; }
+  .result-item .meta { color: var(--muted); font-size: 0.78rem; }
+
+  .ingredient-list {
+    list-style: none;
+    margin-bottom: 14px;
+  }
+
+  .ingredient-list li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 0.88rem;
+  }
+
+  .ingredient-list li .ing-name { font-weight: 500; }
+  .ingredient-list li .ing-meta { color: var(--muted); font-size: 0.78rem; }
+
+  .qty-input {
+    width: 80px;
+    padding: 5px 8px;
+    font-size: 0.85rem;
+  }
+
+  .unit-select {
+    width: 70px;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+  }
+
+  .servings-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* ─── Nutrition Label Styles ─── */
+  .label-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .nutrition-label {
+    background: #fff;
+    color: #000;
+    width: 280px;
+    padding: 6px 8px;
+    font-family: Arial, Helvetica, sans-serif;
+    border: 2px solid #000;
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .nutrition-label .nf-title {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  .nutrition-label .nf-serving-size {
+    font-size: 10px;
+    border-bottom: 8px solid #000;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+
+  .nutrition-label .nf-calories-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 4px solid #000;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+
+  .nutrition-label .nf-calories-label { font-size: 14px; font-weight: 700; }
+  .nutrition-label .nf-calories-val { font-size: 36px; font-weight: 900; line-height: 1; }
+
+  .nutrition-label .nf-dv-note {
+    text-align: right;
+    font-size: 8px;
+    border-bottom: 4px solid #000;
+    padding-bottom: 4px;
+    margin-bottom: 2px;
+  }
+
+  .nutrition-label .nf-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #ccc;
+    padding: 2px 0;
+    font-size: 10px;
+  }
+
+  .nutrition-label .nf-row.thick { border-bottom-width: 4px; border-color: #000; }
+  .nutrition-label .nf-row.medium { border-bottom-width: 2px; border-color: #000; }
+
+  .nutrition-label .nf-row .bold { font-weight: 700; }
+  .nutrition-label .nf-row .indent { padding-left: 10px; }
+
+  .nutrition-label .nf-footer {
+    font-size: 8px;
+    margin-top: 4px;
+    border-top: 1px solid #000;
+    padding-top: 4px;
+  }
+
+  .label-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    width: 280px;
+  }
+
+  /* Saved Recipes */
+  .recipe-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .recipe-card:hover { border-color: var(--accent); }
+
+  .recipe-card .r-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+
+  .recipe-card .r-meta {
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
+  .recipe-card .r-macros {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .macro-chip {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+
+  .macro-chip.cal { background: #ff6584; color: #fff; }
+  .macro-chip.fat { background: #f7c948; color: #000; }
+  .macro-chip.carb { background: #43d9ad; color: #000; }
+  .macro-chip.prot { background: #6c63ff; color: #fff; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .empty-state .big-icon { font-size: 48px; margin-bottom: 12px; }
+
+  .status-msg {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  .status-msg.show { display: block; }
+  .status-msg.info { background: rgba(249,115,22,0.15); color: var(--accent); border: 1px solid rgba(249,115,22,0.3); }
+  .status-msg.error { background: rgba(132,204,22,0.15); color: var(--accent2); border: 1px solid rgba(132,204,22,0.3); }
+  .status-msg.success { background: rgba(67,217,173,0.15); color: var(--green); border: 1px solid rgba(67,217,173,0.3); }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .format-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .format-btn {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .format-btn.active {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .product-name-display {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 6px;
+    font-style: italic;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .summary-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+
+  .summary-card .s-val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .summary-card .s-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+
+  .manual-section { display: none; }
+  .search-section { display: block; }
+
+  .mode-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    margin-bottom: 16px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .mode-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  scrollbar-width: thin;
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media print {
+    body { background: #fff; }
+    .layout > *:first-child { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    header { display: none; }
+    .nutrition-label { border: 2px solid #000 !important; }
+    .label-actions { display: none; }
+  }
+
+/* ── Food & Health design system v2 ── */
+body { font-family: 'Nunito', system-ui, sans-serif; }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 20% 85%, rgba(249,115,22,.08) 0%, transparent 60%),
+              radial-gradient(ellipse 40% 40% at 85% 10%, rgba(132,204,22,.06) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+h1, h2, [class*="title"], [class*="name"] {
+  font-family: 'Fraunces', Georgia, serif;
+  letter-spacing: -.02em;
+}
+h1 {
+  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.card,[class*="card"],[class*="recipe"],[class*="result"] {
+  border-radius: 20px !important;
+  box-shadow: 0 4px 24px rgba(249,115,22,.1), 0 1px 4px rgba(0,0,0,.3) !important;
+  border: 1px solid rgba(249,115,22,.15) !important;
+}
+[class*="tag"],[class*="badge"],[class*="pill"],[class*="chip"] {
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  background: rgba(249,115,22,.15);
+  color: var(--accent);
+  border: 1px solid rgba(249,115,22,.25);
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(249,115,22,.3); border-radius: 3px; }
+@keyframes warmFade { from{opacity:0;transform:translateY(14px) scale(.97);} to{opacity:1;transform:translateY(0) scale(1);} }
+@keyframes warmGlow { 0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0);} 50%{box-shadow:0 0 28px 6px rgba(249,115,22,.18);} }
+@keyframes ingredientIn { from{opacity:0;transform:translateX(-8px);} to{opacity:1;transform:translateX(0);} }
+.card,[class*="card"],[class*="result"],[class*="recipe"] { animation: warmFade .45s cubic-bezier(.34,1.56,.64,1) both; }
+.card:nth-child(2){animation-delay:.06s} .card:nth-child(3){animation-delay:.12s} .card:nth-child(4){animation-delay:.18s}
+li,[class*="ingredient"],[class*="step"] { animation: ingredientIn .3s ease both; }
+li:nth-child(2){animation-delay:.04s} li:nth-child(3){animation-delay:.08s} li:nth-child(4){animation-delay:.12s}
+li:nth-child(5){animation-delay:.16s} li:nth-child(6){animation-delay:.20s}
+button[type="submit"],[class*="generate"],[class*="btn-primary"] { animation: warmGlow 2.5s ease-in-out infinite; }
+button,[class*="btn"] { transition: all .2s; border-radius: 12px; }
+button:hover,[class*="btn"]:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(249,115,22,.35);
+}
+input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 3px rgba(249,115,22,.2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="icon-badge">🍱</div>
+  <div>
+    <h1>Nutrition Label Generator</h1>
+    <div class="tagline" style="margin-left:0;color:var(--muted);font-size:0.8rem;">For artisan food makers — no lab required</div>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- LEFT PANEL -->
+  <div>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('builder')">Recipe Builder</button>
+      <button class="tab" onclick="showTab('saved')">Saved Recipes</button>
+    </div>
+
+    <!-- Builder Tab -->
+    <div id="tab-builder">
+
+      <!-- Product Info -->
+      <div class="card">
+        <h2>📋 Product Info</h2>
+        <div class="input-row-2">
+          <div class="field">
+            <label>Product Name</label>
+            <input type="text" id="productName" placeholder="e.g. Artisan Granola" oninput="updateLabel()">
+          </div>
+          <div class="field">
+            <label>Label Format</label>
+            <select id="labelFormat" onchange="updateLabel()">
+              <option value="fda">FDA (US)</option>
+              <option value="eu">EU Format</option>
+            </select>
+          </div>
+        </div>
+        <div class="servings-row">
+          <div class="field" style="margin-bottom:0">
+            <label>Serving Size</label>
+            <input type="number" id="servingSize" value="30" min="1" oninput="updateLabel()">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Unit</label>
+            <select id="servingUnit" onchange="updateLabel()">
+              <option value="g">g</option>
+              <option value="ml">ml</option>
+              <option value="oz">oz</option>
+              <option value="cup">cup</option>
+              <option value="tbsp">tbsp</option>
+              <option value="tsp">tsp</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-top:12px;margin-bottom:0">
+          <label>Servings Per Container</label>
+          <input type="number" id="servingsPerContainer" value="8" min="1" oninput="updateLabel()">
+        </div>
+      </div>
+
+      <!-- Ingredients -->
+      <div class="card">
+        <h2>🥄 Ingredients <span class="badge" id="ingCount">0</span></h2>
+
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="modeSearch" onclick="switchMode('search')">Search Ingredient</button>
+          <button class="mode-btn" id="modeManual" onclick="switchMode('manual')">Manual Entry</button>
+        </div>
+
+        <!-- Search Mode -->
+        <div class="search-section" id="searchSection">
+          <div id="statusMsg" class="status-msg"></div>
+          <div class="search-row">
+            <input type="text" id="searchInput" placeholder="Search ingredient (e.g. oats, honey)" onkeydown="handleSearchKey(event)">
+            <button class="btn-primary" onclick="searchIngredient()">Search</button>
+          </div>
+          <div class="search-results" id="searchResults"></div>
+        </div>
+
+        <!-- Manual Mode -->
+        <div class="manual-section" id="manualSection">
+          <div class="input-row-2">
+            <div class="field">
+              <label>Ingredient Name</label>
+              <input type="text" id="manualName" placeholder="e.g. Rolled Oats">
+            </div>
+            <div class="field">
+              <label>Amount per 100g</label>
+              <input type="number" id="manualQtyGrams" value="100" min="1">
+            </div>
+          </div>
+          <div class="input-row-2">
+            <div class="field">
+              <label>Calories (kcal/100g)</label>
+              <input type="number" id="mCal" placeholder="e.g. 389" min="0">
+            </div>
+            <div class="field">
+              <label>Total Fat (g/100g)</label>
+              <input type="number" id="mFat" placeholder="e.g. 7" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="input-row-2">
+            <div class="field">
+              <label>Saturated Fat (g/100g)</label>
+              <input type="number" id="mSatFat" placeholder="e.g. 1.2" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label>Trans Fat (g/100g)</label>
+              <input type="number" id="mTransFat" placeholder="e.g. 0" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="input-row-2">
+            <div class="field">
+              <label>Total Carbs (g/100g)</label>
+              <input type="number" id="mCarbs" placeholder="e.g. 66" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label>Dietary Fiber (g/100g)</label>
+              <input type="number" id="mFiber" placeholder="e.g. 10" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="input-row-2">
+            <div class="field">
+              <label>Sugars (g/100g)</label>
+              <input type="number" id="mSugars" placeholder="e.g. 1" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label>Protein (g/100g)</label>
+              <input type="number" id="mProtein" placeholder="e.g. 17" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="input-row-2">
+            <div class="field">
+              <label>Sodium (mg/100g)</label>
+              <input type="number" id="mSodium" placeholder="e.g. 2" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label>Amount to Use (g)</label>
+              <input type="number" id="mAmount" value="100" min="1">
+            </div>
+          </div>
+          <button class="btn-primary" style="width:100%" onclick="addManualIngredient()">Add Ingredient</button>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Ingredient List -->
+        <ul class="ingredient-list" id="ingredientList">
+        </ul>
+
+        <div class="empty-state" id="ingEmptyState">
+          <div class="big-icon">🥗</div>
+          <p>Add ingredients to build your recipe</p>
+          <p style="font-size:0.8rem;margin-top:6px;">Search the database or enter nutrition data manually</p>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-primary" onclick="calculateAndUpdate()" style="flex:1">Calculate Label</button>
+          <button class="btn-outline" onclick="clearRecipe()">Clear All</button>
+        </div>
+      </div>
+
+      <!-- Save Recipe -->
+      <div class="card">
+        <h2>💾 Save Recipe</h2>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="recipeSaveName" placeholder="Recipe name...">
+          <button class="btn-green" onclick="saveRecipe()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Saved Tab -->
+    <div id="tab-saved" style="display:none">
+      <div class="card">
+        <h2>📁 Saved Recipes</h2>
+        <div id="savedList">
+          <div class="empty-state">
+            <div class="big-icon">📂</div>
+            <p>No saved recipes yet</p>
+            <p style="font-size:0.8rem;margin-top:6px;">Build a recipe and save it to see it here</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL — Label Preview -->
+  <div>
+    <div class="card">
+      <h2>🏷️ Label Preview</h2>
+
+      <!-- Nutrition Summary -->
+      <div class="summary-grid" id="summaryGrid">
+        <div class="summary-card">
+          <div class="s-val" id="sumCal" style="color:var(--accent2)">—</div>
+          <div class="s-label">Calories</div>
+        </div>
+        <div class="summary-card">
+          <div class="s-val" id="sumFat" style="color:var(--yellow)">—</div>
+          <div class="s-label">Fat (g)</div>
+        </div>
+        <div class="summary-card">
+          <div class="s-val" id="sumCarb" style="color:var(--green)">—</div>
+          <div class="s-label">Carbs (g)</div>
+        </div>
+        <div class="summary-card">
+          <div class="s-val" id="sumProt" style="color:var(--accent)">—</div>
+          <div class="s-label">Protein (g)</div>
+        </div>
+      </div>
+
+      <div class="label-container">
+        <div class="product-name-display" id="labelProductName"></div>
+        <div class="nutrition-label" id="nutritionLabel">
+          <div style="font-size:13px;color:#555;text-align:center;padding:20px 0">
+            Add ingredients and click Calculate Label to generate the nutrition facts panel.
+          </div>
+        </div>
+
+        <div class="label-actions">
+          <button class="btn-primary" onclick="printLabel()" style="flex:1">🖨️ Print Label</button>
+          <button class="btn-outline" onclick="copyLabelText()" style="flex:1">📋 Copy Text</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Values Reference -->
+    <div class="card">
+      <h2>📊 % Daily Values (FDA)</h2>
+      <div style="font-size:0.78rem;color:var(--muted);line-height:1.9">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:4px">
+          <span>Total Fat</span><span>78 g</span>
+          <span>Saturated Fat</span><span>20 g</span>
+          <span>Cholesterol</span><span>300 mg</span>
+          <span>Sodium</span><span>2300 mg</span>
+          <span>Total Carbohydrate</span><span>275 g</span>
+          <span>Dietary Fiber</span><span>28 g</span>
+          <span>Protein</span><span>50 g</span>
+        </div>
+        <div style="margin-top:8px;font-size:0.72rem">*Based on 2,000 calorie diet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const state = {
+  ingredients: [],
+  nutrition: null,
+  savedRecipes: JSON.parse(localStorage.getItem('nlg_recipes') || '[]')
+};
+
+// ─── Tab Navigation ────────────────────────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('tab-builder').style.display = tab === 'builder' ? '' : 'none';
+  document.getElementById('tab-saved').style.display = tab === 'saved' ? '' : 'none';
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 && tab === 'builder') || (i === 1 && tab === 'saved'));
+  });
+  if (tab === 'saved') renderSavedList();
+}
+
+// ─── Mode Toggle ────────────────────────────────────────────────────────────
+function switchMode(mode) {
+  const isSearch = mode === 'search';
+  document.getElementById('searchSection').style.display = isSearch ? 'block' : 'none';
+  document.getElementById('manualSection').style.display = isSearch ? 'none' : 'block';
+  document.getElementById('modeSearch').classList.toggle('active', isSearch);
+  document.getElementById('modeManual').classList.toggle('active', !isSearch);
+}
+
+// ─── Status Messages ────────────────────────────────────────────────────────
+function showStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg show ' + type;
+}
+function hideStatus() {
+  document.getElementById('statusMsg').className = 'status-msg';
+}
+
+// ─── Search ────────────────────────────────────────────────────────────────────
+let searchTimeout = null;
+function handleSearchKey(e) {
+  if (e.key === 'Enter') searchIngredient();
+}
+
+async function searchIngredient() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+  showStatus('Searching OpenFoodFacts...', 'info');
+  const resultsEl = document.getElementById('searchResults');
+  resultsEl.innerHTML = '';
+  resultsEl.classList.remove('show');
+
+  try {
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const products = (data.products || []).filter(p => p.nutriments && p.product_name);
+
+    if (products.length === 0) {
+      showStatus('No results found. Try manual entry or a different search term.', 'error');
+      return;
+    }
+
+    hideStatus();
+    resultsEl.classList.add('show');
+
+    products.slice(0, 8).forEach(product => {
+      const nut = product.nutriments;
+      const cal = Math.round(nut['energy-kcal_100g'] || nut['energy_100g'] / 4.184 || 0);
+      const fat = (nut['fat_100g'] || 0).toFixed(1);
+      const carbs = (nut['carbohydrates_100g'] || 0).toFixed(1);
+      const protein = (nut['proteins_100g'] || 0).toFixed(1);
+
+      const item = document.createElement('div');
+      item.className = 'result-item';
+      const name = product.product_name || 'Unknown';
+      const brand = product.brands || '';
+      item.innerHTML = `<div class="name">${escHtml(name)}</div><div class="meta">${escHtml(brand)} &bull; ${cal} kcal &bull; F:${fat}g C:${carbs}g P:${protein}g per 100g</div>`;
+      item.onclick = () => selectProduct(product);
+      resultsEl.appendChild(item);
+    });
+  } catch (err) {
+    showStatus('Search failed. Check connection or try manual entry.', 'error');
+  }
+}
+
+function selectProduct(product) {
+  const nut = product.nutriments;
+
+  // Prefer kcal; some products store kJ
+  let cal100 = nut['energy-kcal_100g'] || 0;
+  if (!cal100 && nut['energy_100g']) cal100 = nut['energy_100g'] / 4.184;
+
+  const nutrition100g = {
+    energy: Math.round(cal100),
+    fat: parseFloat((nut['fat_100g'] || 0).toFixed(2)),
+    saturatedFat: parseFloat((nut['saturated-fat_100g'] || 0).toFixed(2)),
+    transFat: parseFloat((nut['trans-fat_100g'] || 0).toFixed(2)),
+    carbs: parseFloat((nut['carbohydrates_100g'] || 0).toFixed(2)),
+    fiber: parseFloat((nut['fiber_100g'] || 0).toFixed(2)),
+    sugars: parseFloat((nut['sugars_100g'] || 0).toFixed(2)),
+    protein: parseFloat((nut['proteins_100g'] || 0).toFixed(2)),
+    sodium: parseFloat((nut['sodium_100g'] ? nut['sodium_100g'] * 1000 : (nut['salt_100g'] ? nut['salt_100g'] * 393 : 0)).toFixed(1))
+  };
+
+  const ingredient = {
+    id: Date.now(),
+    name: product.product_name || 'Unknown',
+    brand: product.brands || '',
+    amountG: 100,
+    nutrition100g
+  };
+
+  state.ingredients.push(ingredient);
+  document.getElementById('searchResults').classList.remove('show');
+  document.getElementById('searchInput').value = '';
+  hideStatus();
+  renderIngredientList();
+  calculateAndUpdate();
+}
+
+// ─── Manual Entry ────────────────────────────────────────────────────────────
+function addManualIngredient() {
+  const name = document.getElementById('manualName').value.trim();
+  if (!name) { alert('Please enter an ingredient name.'); return; }
+
+  const get = id => parseFloat(document.getElementById(id).value) || 0;
+  const amount = get('mAmount');
+
+  const nutrition100g = {
+    energy: get('mCal'),
+    fat: get('mFat'),
+    saturatedFat: get('mSatFat'),
+    transFat: get('mTransFat'),
+    carbs: get('mCarbs'),
+    fiber: get('mFiber'),
+    sugars: get('mSugars'),
+    protein: get('mProtein'),
+    sodium: get('mSodium')
+  };
+
+  state.ingredients.push({
+    id: Date.now(),
+    name,
+    brand: 'Manual entry',
+    amountG: amount,
+    nutrition100g
+  });
+
+  document.getElementById('manualName').value = '';
+  renderIngredientList();
+  calculateAndUpdate();
+}
+
+// ─── Ingredient List ────────────────────────────────────────────────────────────
+function renderIngredientList() {
+  const list = document.getElementById('ingredientList');
+  const empty = document.getElementById('ingEmptyState');
+  const count = document.getElementById('ingCount');
+
+  list.innerHTML = '';
+  count.textContent = state.ingredients.length;
+
+  if (state.ingredients.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  state.ingredients.forEach(ing => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div>
+        <div class="ing-name">${escHtml(ing.name)}</div>
+        <div class="ing-meta">${escHtml(ing.brand)}</div>
+      </div>
+      <input class="qty-input" type="number" value="${ing.amountG}" min="1"
+        onchange="updateIngAmount(${ing.id}, this.value)" title="Amount in grams">
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:0.75rem;color:var(--muted)">g</span>
+        <button class="btn-danger" onclick="removeIngredient(${ing.id})">✕</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function updateIngAmount(id, val) {
+  const ing = state.ingredients.find(i => i.id === id);
+  if (ing) {
+    ing.amountG = parseFloat(val) || 100;
+    calculateAndUpdate();
+  }
+}
+
+function removeIngredient(id) {
+  state.ingredients = state.ingredients.filter(i => i.id !== id);
+  renderIngredientList();
+  calculateAndUpdate();
+}
+
+function clearRecipe() {
+  if (state.ingredients.length > 0 && !confirm('Clear all ingredients?')) return;
+  state.ingredients = [];
+  state.nutrition = null;
+  renderIngredientList();
+  resetLabel();
+}
+
+// ─── Nutrition Calculation ─────────────────────────────────────────────────────
+function calculateNutrition() {
+  const servingG = parseFloat(document.getElementById('servingSize').value) || 100;
+  const unit = document.getElementById('servingUnit').value;
+
+  // Convert serving unit to grams
+  const unitToG = { g: 1, ml: 1, oz: 28.3495, cup: 240, tbsp: 14.79, tsp: 4.93 };
+  const servingGrams = servingG * (unitToG[unit] || 1);
+
+  const totalRecipeG = state.ingredients.reduce((s, i) => s + i.amountG, 0);
+
+  if (totalRecipeG === 0) return null;
+
+  // Sum total nutrition for entire recipe
+  const totals = { energy: 0, fat: 0, saturatedFat: 0, transFat: 0, carbs: 0, fiber: 0, sugars: 0, protein: 0, sodium: 0 };
+
+  state.ingredients.forEach(ing => {
+    const ratio = ing.amountG / 100;
+    Object.keys(totals).forEach(k => {
+      totals[k] += (ing.nutrition100g[k] || 0) * ratio;
+    });
+  });
+
+  // Per serving
+  const perServingRatio = servingGrams / totalRecipeG;
+  const perServing = {};
+  Object.keys(totals).forEach(k => {
+    perServing[k] = totals[k] * perServingRatio;
+  });
+
+  return { totals, perServing, servingGrams, servingSize: servingG, servingUnit: unit, totalRecipeG };
+}
+
+function calculateAndUpdate() {
+  state.nutrition = calculateNutrition();
+  updateLabel();
+}
+
+// ─── Label Render ─────────────────────────────────────────────────────────────
+function updateLabel() {
+  const nut = state.nutrition;
+  const labelEl = document.getElementById('nutritionLabel');
+  const productName = document.getElementById('productName').value.trim() || 'Your Product';
+  const format = document.getElementById('labelFormat').value;
+  const servingSize = document.getElementById('servingSize').value || '30';
+  const servingUnit = document.getElementById('servingUnit').value || 'g';
+  const servingsPerContainer = document.getElementById('servingsPerContainer').value || '8';
+
+  document.getElementById('labelProductName').textContent = productName;
+
+  if (!nut) {
+    labelEl.innerHTML = '<div style="font-size:13px;color:#555;text-align:center;padding:20px 0">Add ingredients and click Calculate Label to generate the nutrition facts panel.</div>';
+    resetSummary();
+    return;
+  }
+
+  const p = nut.perServing;
+  const r = v => Math.round(v);
+  const r1 = v => parseFloat(v.toFixed(1));
+
+  // Update summary cards
+  document.getElementById('sumCal').textContent = r(p.energy);
+  document.getElementById('sumFat').textContent = r1(p.fat);
+  document.getElementById('sumCarb').textContent = r1(p.carbs);
+  document.getElementById('sumProt').textContent = r1(p.protein);
+
+  // Daily value percentages (FDA 2020)
+  const dvFat = 78, dvSatFat = 20, dvChol = 300, dvSodium = 2300, dvCarbs = 275, dvFiber = 28;
+  const pct = (val, dv) => Math.round(val / dv * 100);
+
+  if (format === 'fda') {
+    labelEl.innerHTML = `
+      <div class="nf-title">Nutrition Facts</div>
+      <div class="nf-serving-size">
+        <div>${servingsPerContainer} servings per container</div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:12px;margin-top:2px">
+          <span>Serving size</span>
+          <span>${servingSize}${servingUnit}</span>
+        </div>
+      </div>
+      <div class="nf-calories-row">
+        <div>
+          <div class="nf-calories-label">Amount Per Serving</div>
+          <div style="font-size:11px;font-weight:700">Calories</div>
+        </div>
+        <div class="nf-calories-val">${r(p.energy)}</div>
+      </div>
+      <div class="nf-dv-note">% Daily Value*</div>
+      <div class="nf-row thick">
+        <span><span class="bold">Total Fat</span> ${r1(p.fat)}g</span>
+        <span class="bold">${pct(p.fat, dvFat)}%</span>
+      </div>
+      <div class="nf-row">
+        <span class="indent">Saturated Fat ${r1(p.saturatedFat)}g</span>
+        <span class="bold">${pct(p.saturatedFat, dvSatFat)}%</span>
+      </div>
+      <div class="nf-row medium">
+        <span class="indent"><em>Trans</em> Fat ${r1(p.transFat)}g</span>
+        <span></span>
+      </div>
+      <div class="nf-row thick">
+        <span><span class="bold">Total Carbohydrate</span> ${r1(p.carbs)}g</span>
+        <span class="bold">${pct(p.carbs, dvCarbs)}%</span>
+      </div>
+      <div class="nf-row">
+        <span class="indent">Dietary Fiber ${r1(p.fiber)}g</span>
+        <span class="bold">${pct(p.fiber, dvFiber)}%</span>
+      </div>
+      <div class="nf-row">
+        <span class="indent">Total Sugars ${r1(p.sugars)}g</span>
+        <span></span>
+      </div>
+      <div class="nf-row medium">
+        <span class="indent" style="padding-left:20px">Includes 0g Added Sugars</span>
+        <span class="bold">0%</span>
+      </div>
+      <div class="nf-row thick">
+        <span><span class="bold">Protein</span> ${r1(p.protein)}g</span>
+        <span></span>
+      </div>
+      <div class="nf-row">
+        <span>Sodium</span>
+        <span class="bold">${pct(p.sodium, dvSodium)}%</span>
+      </div>
+      <div class="nf-footer">
+        *The % Daily Value (DV) tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice.
+      </div>
+    `;
+  } else {
+    // EU Format
+    labelEl.innerHTML = `
+      <div class="nf-title" style="font-size:18px">Nutrition Information</div>
+      <div style="font-size:9px;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:4px">
+        Typical values per 100g | per serving (${servingSize}${servingUnit})
+      </div>
+      <div class="nf-row" style="font-weight:700;background:#000;color:#fff;padding:3px 2px">
+        <span>Nutrient</span>
+        <span style="display:flex;gap:16px"><span>per 100g</span><span>per serving</span></span>
+      </div>
+      ${euRow('Energy (kcal)', nut.totals.energy / nut.totalRecipeG * 100, r(p.energy))}
+      ${euRow('Total Fat', r1(nut.totals.fat / nut.totalRecipeG * 100), r1(p.fat), 'g')}
+      ${euRow('of which Saturates', r1(nut.totals.saturatedFat / nut.totalRecipeG * 100), r1(p.saturatedFat), 'g')}
+      ${euRow('Carbohydrates', r1(nut.totals.carbs / nut.totalRecipeG * 100), r1(p.carbs), 'g')}
+      ${euRow('of which Sugars', r1(nut.totals.sugars / nut.totalRecipeG * 100), r1(p.sugars), 'g')}
+      ${euRow('Fibre', r1(nut.totals.fiber / nut.totalRecipeG * 100), r1(p.fiber), 'g')}
+      ${euRow('Protein', r1(nut.totals.protein / nut.totalRecipeG * 100), r1(p.protein), 'g')}
+      ${euRow('Salt', r1(nut.totals.sodium / nut.totalRecipeG * 100 / 393), r1(p.sodium / 393), 'g')}
+      <div class="nf-footer">Average values. Salt calculated from sodium content.</div>
+    `;
+  }
+}
+
+function euRow(label, per100, perServing, unit) {
+  const u = unit || 'kcal';
+  const isIndented = label.startsWith('of which');
+  const indent = isIndented ? 'padding-left:10px;' : '';
+  return `<div class="nf-row" style="${indent}">
+    <span>${label}</span>
+    <span style="display:flex;gap:25px">
+      <span>${per100}${u}</span>
+      <span>${perServing}${u}</span>
+    </span>
+  </div>`;
+}
+
+function resetLabel() {
+  document.getElementById('nutritionLabel').innerHTML = '<div style="font-size:13px;color:#555;text-align:center;padding:20px 0">Add ingredients and click Calculate Label to generate the nutrition facts panel.</div>';
+  document.getElementById('labelProductName').textContent = '';
+  resetSummary();
+}
+
+function resetSummary() {
+  ['sumCal', 'sumFat', 'sumCarb', 'sumProt'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+}
+
+// ─── Recipes ────────────────────────────────────────────────────────────────
+function saveRecipe() {
+  const name = document.getElementById('recipeSaveName').value.trim() ||
+               document.getElementById('productName').value.trim() || 'My Recipe';
+
+  if (state.ingredients.length === 0) {
+    alert('Add at least one ingredient before saving.');
+    return;
+  }
+
+  const recipe = {
+    id: Date.now(),
+    name,
+    productName: document.getElementById('productName').value.trim(),
+    servingSize: document.getElementById('servingSize').value,
+    servingUnit: document.getElementById('servingUnit').value,
+    servingsPerContainer: document.getElementById('servingsPerContainer').value,
+    labelFormat: document.getElementById('labelFormat').value,
+    ingredients: JSON.parse(JSON.stringify(state.ingredients)),
+    nutrition: state.nutrition,
+    savedAt: new Date().toLocaleDateString()
+  };
+
+  state.savedRecipes.unshift(recipe);
+  if (state.savedRecipes.length > 10) state.savedRecipes = state.savedRecipes.slice(0, 10);
+  localStorage.setItem('nlg_recipes', JSON.stringify(state.savedRecipes));
+  document.getElementById('recipeSaveName').value = '';
+  alert(`Recipe "${name}" saved!`);
+}
+
+function loadRecipe(recipe) {
+  document.getElementById('productName').value = recipe.productName || '';
+  document.getElementById('servingSize').value = recipe.servingSize || 30;
+  document.getElementById('servingUnit').value = recipe.servingUnit || 'g';
+  document.getElementById('servingsPerContainer').value = recipe.servingsPerContainer || 8;
+  document.getElementById('labelFormat').value = recipe.labelFormat || 'fda';
+  state.ingredients = JSON.parse(JSON.stringify(recipe.ingredients));
+  renderIngredientList();
+  calculateAndUpdate();
+  showTab('builder');
+}
+
+function deleteRecipe(id) {
+  if (!confirm('Delete this recipe?')) return;
+  state.savedRecipes = state.savedRecipes.filter(r => r.id !== id);
+  localStorage.setItem('nlg_recipes', JSON.stringify(state.savedRecipes));
+  renderSavedList();
+}
+
+function renderSavedList() {
+  const el = document.getElementById('savedList');
+
+  if (state.savedRecipes.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="big-icon">📂</div><p>No saved recipes yet</p><p style="font-size:0.8rem;margin-top:6px;">Build a recipe and save it to see it here</p></div>';
+    return;
+  }
+
+  el.innerHTML = state.savedRecipes.map(r => {
+    const nut = r.nutrition;
+    const cal = nut ? Math.round(nut.perServing.energy) : '—';
+    const fat = nut ? nut.perServing.fat.toFixed(1) : '—';
+    const carbs = nut ? nut.perServing.carbs.toFixed(1) : '—';
+    const prot = nut ? nut.perServing.protein.toFixed(1) : '—';
+    const ingCount = r.ingredients ? r.ingredients.length : 0;
+    return `<div class="recipe-card" onclick="loadRecipe(${JSON.stringify(r).replace(/"/g, '&quot;')})">
+      <div class="r-name">${escHtml(r.name)}</div>
+      <div class="r-meta">${ingCount} ingredients &bull; saved ${r.savedAt}</div>
+      <div class="r-macros">
+        <span class="macro-chip cal">${cal} kcal</span>
+        <span class="macro-chip fat">Fat ${fat}g</span>
+        <span class="macro-chip carb">Carbs ${carbs}g</span>
+        <span class="macro-chip prot">Protein ${prot}g</span>
+      </div>
+      <div style="margin-top:8px;text-align:right">
+        <button class="btn-danger" onclick="event.stopPropagation();deleteRecipe(${r.id})" style="font-size:0.75rem;padding:4px 10px">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Actions ────────────────────────────────────────────────────────────────
+function printLabel() {
+  window.print();
+}
+
+function copyLabelText() {
+  if (!state.nutrition) { alert('Calculate the label first.'); return; }
+  const p = state.nutrition.perServing;
+  const r = v => Math.round(v);
+  const r1 = v => parseFloat(v.toFixed(1));
+  const text = `NUTRITION FACTS
+Serving Size: ${document.getElementById('servingSize').value}${document.getElementById('servingUnit').value}
+Servings Per Container: ${document.getElementById('servingsPerContainer').value}
+
+Calories: ${r(p.energy)}
+Total Fat: ${r1(p.fat)}g
+  Saturated Fat: ${r1(p.saturatedFat)}g
+  Trans Fat: ${r1(p.transFat)}g
+Total Carbohydrate: ${r1(p.carbs)}g
+  Dietary Fiber: ${r1(p.fiber)}g
+  Total Sugars: ${r1(p.sugars)}g
+Protein: ${r1(p.protein)}g
+Sodium: ${r(p.sodium)}mg`;
+
+  navigator.clipboard.writeText(text).then(() => alert('Nutrition facts copied to clipboard!')).catch(() => alert('Copy failed. Please manually copy the label.'));
+}
+
+// ─── Utility ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(str || ''));
+  return d.innerHTML;
+}
+
+// ─── Demo Content ────────────────────────────────────────────────────────────
+function loadDemoRecipe() {
+  document.getElementById('productName').value = 'Artisan Granola';
+  document.getElementById('servingSize').value = '45';
+  document.getElementById('servingUnit').value = 'g';
+  document.getElementById('servingsPerContainer').value = '10';
+
+  state.ingredients = [
+    {
+      id: 1,
+      name: 'Rolled Oats',
+      brand: 'Demo',
+      amountG: 300,
+      nutrition100g: { energy: 389, fat: 6.9, saturatedFat: 1.2, transFat: 0, carbs: 66.3, fiber: 10.6, sugars: 0, protein: 16.9, sodium: 2 }
+    },
+    {
+      id: 2,
+      name: 'Honey',
+      brand: 'Demo',
+      amountG: 80,
+      nutrition100g: { energy: 304, fat: 0, saturatedFat: 0, transFat: 0, carbs: 82.4, fiber: 0.2, sugars: 82.1, protein: 0.3, sodium: 4 }
+    },
+    {
+      id: 3,
+      name: 'Almonds',
+      brand: 'Demo',
+      amountG: 100,
+      nutrition100g: { energy: 579, fat: 49.9, saturatedFat: 3.8, transFat: 0, carbs: 21.6, fiber: 12.5, sugars: 4.4, protein: 21.2, sodium: 1 }
+    },
+    {
+      id: 4,
+      name: 'Coconut Oil',
+      brand: 'Demo',
+      amountG: 50,
+      nutrition100g: { energy: 862, fat: 100, saturatedFat: 87, transFat: 0, carbs: 0, fiber: 0, sugars: 0, protein: 0, sodium: 0 }
+    }
+  ];
+
+  renderIngredientList();
+  calculateAndUpdate();
+}
+
+// Initialize with demo
+loadDemoRecipe();
+</script>
+
+</body>
+</html>

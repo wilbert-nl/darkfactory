@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrailWatch — Trail Condition Aggregator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --bg: #070c1a;
+      --surface: #0d1526;
+      --surface2: #141f36;
+      --border: rgba(245,158,11,0.2);
+      --accent: #f59e0b;
+      --accent2: #3b82f6;
+      --text: #e8eaf6;
+      --muted: #6b7da8;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f97316;
+      --radius: 8px;
+      --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-inner {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      height: 64px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .logo-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
+
+    nav {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--muted);
+      padding: 0.4rem 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .nav-btn:hover, .nav-btn.active {
+      color: var(--text);
+      background: var(--surface2);
+      border-color: var(--border);
+    }
+
+    .nav-btn.active {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Hero bar */
+    .hero {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+    }
+
+    .hero-sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 1.8rem;
+      font-weight: 700;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.2rem;
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+
+    .filter-label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.35rem 0.85rem;
+      border-radius: 100px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .filter-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .filter-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 0.25rem;
+    }
+
+    .search-box {
+      margin-left: auto;
+      position: relative;
+    }
+
+    .search-box input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.4rem 0.85rem 0.4rem 2.2rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      width: 220px;
+      transition: border-color 0.15s ease;
+      outline: none;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-box input::placeholder {
+      color: var(--muted);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.7rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+
+    /* Trail grid */
+    .trail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1.25rem;
+    }
+
+    /* Trail card */
+    .trail-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .trail-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 32px rgba(74, 222, 128, 0.15);
+    }
+
+    .trail-card:focus-within {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .card-header {
+      padding: 1.25rem 1.25rem 0.75rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .trail-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .trail-icon.good { background: rgba(67, 217, 173, 0.15); }
+    .trail-icon.muddy { background: rgba(247, 201, 72, 0.15); }
+    .trail-icon.icy { background: rgba(74, 222, 128, 0.15); }
+    .trail-icon.closed { background: rgba(255, 101, 132, 0.15); }
+    .trail-icon.loading { background: rgba(136, 146, 176, 0.15); }
+
+    .trail-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .trail-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .trail-location {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    .fav-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1.1rem;
+      padding: 0.25rem;
+      transition: color 0.15s ease, transform 0.15s ease;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .fav-btn:hover { transform: scale(1.2); }
+    .fav-btn.active { color: var(--yellow); }
+
+    .card-body {
+      padding: 0 1.25rem 1rem;
+    }
+
+    .trail-tags {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tag.easy { background: rgba(67, 217, 173, 0.15); color: var(--green); }
+    .tag.moderate { background: rgba(247, 201, 72, 0.15); color: var(--yellow); }
+    .tag.hard { background: rgba(255, 101, 132, 0.15); color: var(--accent2); }
+    .tag.region { background: rgba(74, 222, 128, 0.12); color: var(--accent); }
+
+    .trail-stats {
+      display: flex;
+      gap: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .trail-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .trail-stat-val {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .trail-stat-lbl {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    /* Condition badge */
+    .condition-bar {
+      border-top: 1px solid var(--border);
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .condition-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 2s infinite;
+    }
+
+    .condition-dot.good { background: var(--green); }
+    .condition-dot.muddy { background: var(--yellow); }
+    .condition-dot.icy { background: var(--accent); }
+    .condition-dot.closed { background: var(--accent2); }
+    .condition-dot.loading { background: var(--muted); animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+      50% { opacity: 0.8; }
+    }
+
+    .condition-text {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .condition-text.good { color: var(--green); }
+    .condition-text.muddy { color: var(--yellow); }
+    .condition-text.icy { color: var(--accent); }
+    .condition-text.closed { color: var(--accent2); }
+    .condition-text.loading { color: var(--muted); }
+
+    .condition-detail {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    /* Skeleton loader */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    /* Detail modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(20px) scale(0.97);
+      transition: transform 0.2s ease;
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      margin-left: auto;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .modal-close:hover { color: var(--text); border-color: var(--accent); }
+
+    .modal-body { padding: 1.5rem; }
+
+    .modal-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .weather-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem;
+      text-align: center;
+    }
+
+    .weather-day {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .weather-temp {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .weather-precip {
+      font-size: 0.75rem;
+      color: var(--accent);
+    }
+
+    .weather-snow {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .info-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem;
+    }
+
+    .info-item-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+
+    .info-item-val {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .condition-alert {
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .condition-alert.good { background: rgba(67, 217, 173, 0.1); border: 1px solid rgba(67, 217, 173, 0.3); color: var(--green); }
+    .condition-alert.muddy { background: rgba(247, 201, 72, 0.1); border: 1px solid rgba(247, 201, 72, 0.3); color: var(--yellow); }
+    .condition-alert.icy { background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3); color: var(--accent); }
+    .condition-alert.closed { background: rgba(255, 101, 132, 0.1); border: 1px solid rgba(255, 101, 132, 0.3); color: var(--accent2); }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1.1rem;
+      font-size: 0.875rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      min-width: 240px;
+      max-width: 320px;
+      transform: translateX(110%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .toast.show { transform: translateX(0); }
+
+    .toast-icon { font-size: 1rem; }
+
+    /* Loading overlay */
+    .loading-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--green));
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 2px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+
+    .empty-state .icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Refresh button */
+    .refresh-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      color: #fff;
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .refresh-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .refresh-btn:active { transform: translateY(0); }
+    .refresh-btn.spinning span { animation: spin 0.8s linear infinite; display: inline-block; }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Favorites view */
+    .fav-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3rem;
+      color: var(--muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .container { padding: 1rem; }
+      .hero { flex-direction: column; align-items: flex-start; }
+      .hero-stats { gap: 1rem; }
+      .trail-grid { grid-template-columns: 1fr; }
+      .weather-grid { grid-template-columns: repeat(3, 1fr); }
+      nav { display: none; }
+    }
+
+    /* Focus visible styles for keyboard nav */
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Section heading */
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .section-count {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 0.15rem 0.5rem;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+    }
+
+    /* Staggered card animation */
+    .trail-card {
+      animation: fadeUp 0.3s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .trail-card:nth-child(2) { animation-delay: 0.04s; }
+    .trail-card:nth-child(3) { animation-delay: 0.08s; }
+    .trail-card:nth-child(4) { animation-delay: 0.12s; }
+    .trail-card:nth-child(5) { animation-delay: 0.16s; }
+    .trail-card:nth-child(6) { animation-delay: 0.20s; }
+
+    /* Status indicator */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .status-badge.live {
+      background: rgba(67, 217, 173, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(67, 217, 173, 0.3);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    /* === Travel v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 800px 500px at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 400px 300px at 90% 90%, rgba(245,158,11,0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.02em; }
+    h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+    h2 { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .flight, .route, .delay, .alert, .station, .transit, .park, .trail, .ev-station, .transport,
+    [class*="card"], [class*="item"], [class*="flight"], [class*="route"], [class*="result"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      animation: boardSlide 0.35s cubic-bezier(0.4,0,0.2,1) both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { background: var(--surface2); }
+
+    .time, .code, .flight-number, .gate, .terminal, .delay-time, .duration, .distance,
+    .iss-time, .coords, .lat, .lon, .pass-time, .co2, .emission, .minutes, .seconds,
+    .countdown, .stat, .number, .metric, pre, code, .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    .big-time, .big-number, .countdown, .pass-time {
+      font-family: var(--font-mono);
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0.65rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.7rem 1.75rem;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.88rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .status, .label, .type, .mode, .line, .provider {
+      display: inline-block;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--font-mono);
+    }
+
+    .on-time, .normal, .open, .available, .active, .lower { color: var(--green); }
+    .delayed, .late, .closed, .disrupted, .higher { color: var(--red); }
+    .caution, .minor-delay, .check { color: var(--orange); }
+
+    .status-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
+    .status-fill { height: 100%; background: var(--accent2); border-radius: 2px; transition: width 0.6s ease; }
+
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(245,158,11,0.06); font-variant-numeric: tabular-nums; }
+    tr:hover td { background: var(--surface2); }
+
+    @keyframes boardSlide {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes alertBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .delayed, .alert-active, .disrupted { animation: alertBlink 1.8s ease infinite; }
+  </style>
+</head>
+<body>
+
+<header role="banner">
+  <div class="header-inner">
+    <a href="#" class="logo" aria-label="TrailWatch Home">
+      <div class="logo-icon" aria-hidden="true">🥾</div>
+      <span class="logo-text">Trail<span>Watch</span></span>
+    </a>
+    <div class="status-badge live" aria-live="polite" id="live-badge">
+      <span class="status-dot" aria-hidden="true"></span>
+      Live Weather
+    </div>
+    <nav aria-label="Primary navigation">
+      <button class="nav-btn active" id="nav-all" onclick="switchView('all')" aria-pressed="true">All Trails</button>
+      <button class="nav-btn" id="nav-favorites" onclick="switchView('favorites')" aria-pressed="false">Favorites</button>
+    </nav>
+  </div>
+</header>
+
+<main class="container" role="main">
+
+  <!-- Hero -->
+  <section class="hero" aria-label="Dashboard overview">
+    <div>
+      <h1 class="hero-title">Trail Condition Dashboard</h1>
+      <p class="hero-sub">Weather-inferred conditions across 30 popular trails — updated live from Open-Meteo</p>
+    </div>
+    <div class="hero-stats" role="status" aria-label="Trail statistics">
+      <div class="stat">
+        <div class="stat-num" id="stat-good">—</div>
+        <div class="stat-label">Good</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-muddy">—</div>
+        <div class="stat-label">Muddy</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-icy">—</div>
+        <div class="stat-label">Icy</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-closed">—</div>
+        <div class="stat-label">Closed</div>
+      </div>
+    </div>
+    <button class="refresh-btn" id="refresh-btn" onclick="refreshAll()" aria-label="Refresh trail conditions">
+      <span id="refresh-icon">↻</span>
+      Refresh
+    </button>
+  </section>
+
+  <!-- Loading bar -->
+  <div class="loading-bar" id="loading-bar" style="display:none;" role="progressbar" aria-label="Loading trail data"></div>
+
+  <!-- Filters -->
+  <div class="filters" role="toolbar" aria-label="Trail filters">
+    <span class="filter-label" id="diff-label">Difficulty</span>
+    <div class="filter-group" role="group" aria-labelledby="diff-label">
+      <button class="filter-chip active" onclick="setFilter('difficulty','all',this)" aria-pressed="true">All</button>
+      <button class="filter-chip" onclick="setFilter('difficulty','easy',this)" aria-pressed="false">Easy</button>
+      <button class="filter-chip" onclick="setFilter('difficulty','moderate',this)" aria-pressed="false">Moderate</button>
+      <button class="filter-chip" onclick="setFilter('difficulty','hard',this)" aria-pressed="false">Hard</button>
+    </div>
+    <div class="filter-sep" role="separator"></div>
+    <span class="filter-label" id="region-label">Region</span>
+    <div class="filter-group" role="group" aria-labelledby="region-label">
+      <button class="filter-chip active" onclick="setFilter('region','all',this)" aria-pressed="true">All</button>
+      <button class="filter-chip" onclick="setFilter('region','us-west',this)" aria-pressed="false">US West</button>
+      <button class="filter-chip" onclick="setFilter('region','us-east',this)" aria-pressed="false">US East</button>
+      <button class="filter-chip" onclick="setFilter('region','europe',this)" aria-pressed="false">Europe</button>
+    </div>
+    <div class="filter-sep" role="separator"></div>
+    <span class="filter-label" id="cond-label">Condition</span>
+    <div class="filter-group" role="group" aria-labelledby="cond-label">
+      <button class="filter-chip active" onclick="setFilter('condition','all',this)" aria-pressed="true">All</button>
+      <button class="filter-chip" onclick="setFilter('condition','good',this)" aria-pressed="false">Good</button>
+      <button class="filter-chip" onclick="setFilter('condition','muddy',this)" aria-pressed="false">Muddy</button>
+      <button class="filter-chip" onclick="setFilter('condition','icy',this)" aria-pressed="false">Icy</button>
+    </div>
+    <div class="search-box" role="search">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input type="search" id="search-input" placeholder="Search trails..." aria-label="Search trails" oninput="applyFilters()" />
+    </div>
+  </div>
+
+  <!-- Section heading -->
+  <div class="section-heading">
+    <span class="section-title" id="section-title">All Trails</span>
+    <span class="section-count" id="section-count" aria-live="polite">Loading...</span>
+  </div>
+
+  <!-- Trail grid -->
+  <div class="trail-grid" id="trail-grid" role="list" aria-label="Trail cards"></div>
+
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-text" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <div>
+        <div class="trail-location" id="modal-location" style="margin-bottom:0.25rem;font-size:0.8rem;color:var(--muted)"></div>
+        <h2 class="modal-title" id="modal-title-text"></h2>
+      </div>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close detail panel">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-section-title">Current Condition</div>
+        <div class="condition-alert" id="modal-condition-alert" role="status"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Trail Info</div>
+        <div class="info-grid" id="modal-info-grid"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-title">3-Day Weather Forecast</div>
+        <div class="weather-grid" id="modal-weather-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+  'use strict';
+
+  // ─── Trail database ─────────────────────────────────────────────────────────
+  const TRAILS = [
+    { id:1, name:'Angels Landing', location:'Zion NP, Utah', region:'us-west', difficulty:'hard', length:8.7, elevation:1488, lat:37.2690, lon:-112.9481, icon:'⛰️' },
+    { id:2, name:'The Narrows', location:'Zion NP, Utah', region:'us-west', difficulty:'moderate', length:16, elevation:91, lat:37.2982, lon:-112.9462, icon:'🏞️' },
+    { id:3, name:'Bright Angel Trail', location:'Grand Canyon, Arizona', region:'us-west', difficulty:'hard', length:17.7, elevation:1311, lat:36.0544, lon:-112.1401, icon:'🌵' },
+    { id:4, name:'Half Dome', location:'Yosemite, California', region:'us-west', difficulty:'hard', length:24.5, elevation:1448, lat:37.7459, lon:-119.5332, icon:'🪨' },
+    { id:5, name:'Mirror Lake Loop', location:'Yosemite, California', region:'us-west', difficulty:'easy', length:8, elevation:30, lat:37.7327, lon:-119.5086, icon:'🏔️' },
+    { id:6, name:'Emerald Lake', location:'Rocky Mountain NP, Colorado', region:'us-west', difficulty:'easy', length:5.9, elevation:270, lat:40.3134, lon:-105.6477, icon:'💧' },
+    { id:7, name:'Longs Peak', location:'Rocky Mountain NP, Colorado', region:'us-west', difficulty:'hard', length:24.4, elevation:1677, lat:40.2550, lon:-105.6152, icon:'🏔️' },
+    { id:8, name:'Grinnell Glacier', location:'Glacier NP, Montana', region:'us-west', difficulty:'moderate', length:17.6, elevation:762, lat:48.7496, lon:-113.7181, icon:'🧊' },
+    { id:9, name:'Cascade Canyon', location:'Grand Teton NP, Wyoming', region:'us-west', difficulty:'moderate', length:16, elevation:580, lat:43.7904, lon:-110.7282, icon:'🌊' },
+    { id:10, name:'Enchantments', location:'Okanogan-Wenatchee NF, WA', region:'us-west', difficulty:'hard', length:27.4, elevation:1524, lat:47.5157, lon:-120.8320, icon:'✨' },
+    { id:11, name:'Appalachian Trail — Blood Mountain', location:'Chattahoochee NF, Georgia', region:'us-east', difficulty:'moderate', length:8.4, elevation:363, lat:34.6286, lon:-83.9410, icon:'🌲' },
+    { id:12, name:'Franconia Ridge Loop', location:'White Mountains, NH', region:'us-east', difficulty:'hard', length:12.9, elevation:1036, lat:44.1440, lon:-71.6943, icon:'🌿' },
+    { id:13, name:'Old Rag Mountain', location:'Shenandoah NP, Virginia', region:'us-east', difficulty:'hard', length:14.8, elevation:728, lat:38.5621, lon:-78.2984, icon:'🪨' },
+    { id:14, name:'Alum Cave Trail', location:'Great Smoky Mountains, TN', region:'us-east', difficulty:'moderate', length:9.2, elevation:701, lat:35.6255, lon:-83.4519, icon:'🌫️' },
+    { id:15, name:'Precipice Trail', location:'Acadia NP, Maine', region:'us-east', difficulty:'hard', length:5, elevation:305, lat:44.3532, lon:-68.2140, icon:'🦅' },
+    { id:16, name:'Mount Lafayette', location:'White Mountains, NH', region:'us-east', difficulty:'hard', length:13.4, elevation:960, lat:44.1608, lon:-71.6432, icon:'🌬️' },
+    { id:17, name:'Bear Mountain', location:'Harriman SP, New York', region:'us-east', difficulty:'moderate', length:12.1, elevation:427, lat:41.3156, lon:-74.0029, icon:'🐻' },
+    { id:18, name:'Katahdin — Knife Edge', location:'Baxter SP, Maine', region:'us-east', difficulty:'hard', length:12.9, elevation:1067, lat:45.9044, lon:-68.9213, icon:'🔪' },
+    { id:19, name:'Chamonix — Aiguille Rouge', location:'Chamonix, France', region:'europe', difficulty:'hard', length:18, elevation:1800, lat:45.9237, lon:6.8694, icon:'🗼' },
+    { id:20, name:'Tour du Mont Blanc — Segment', location:'Alps, France/Italy', region:'europe', difficulty:'moderate', length:20, elevation:1050, lat:45.8745, lon:6.9523, icon:'⛷️' },
+    { id:21, name:'Trolltunga', location:'Hardanger, Norway', region:'europe', difficulty:'hard', length:27, elevation:900, lat:60.1238, lon:6.7392, icon:'🏔️' },
+    { id:22, name:'Kjeragbolten', location:'Lysefjord, Norway', region:'europe', difficulty:'hard', length:10, elevation:622, lat:59.0339, lon:6.5745, icon:'🪨' },
+    { id:23, name:'Dolomites — Tre Cime Loop', location:'South Tyrol, Italy', region:'europe', difficulty:'moderate', length:9.5, elevation:440, lat:46.6177, lon:12.3040, icon:'🦷' },
+    { id:24, name:'Picos de Europa', location:'Asturias, Spain', region:'europe', difficulty:'hard', length:16, elevation:1200, lat:43.1946, lon:-4.8480, icon:'🌄' },
+    { id:25, name:'Gorges du Verdon', location:'Provence, France', region:'europe', difficulty:'moderate', length:21, elevation:300, lat:43.7554, lon:6.3755, icon:'💎' },
+    { id:26, name:'Snowdon — Pyg Track', location:'Snowdonia, Wales', region:'europe', difficulty:'moderate', length:10, elevation:945, lat:53.0685, lon:-4.0763, icon:'🏴󠁧󠁢󠁷󠁬󠁳󠁿' },
+    { id:27, name:'Ben Nevis — Mountain Track', location:'Fort William, Scotland', region:'europe', difficulty:'hard', length:17, elevation:1343, lat:56.7969, lon:-5.0035, icon:'🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
+    { id:28, name:'Zermatt — Matterhorn Glacier', location:'Valais, Switzerland', region:'europe', difficulty:'hard', length:12, elevation:750, lat:45.9763, lon:7.6586, icon:'🗻' },
+    { id:29, name:'Black Forest — Westweg', location:'Baden-Württemberg, Germany', region:'europe', difficulty:'moderate', length:15, elevation:490, lat:47.9990, lon:8.2093, icon:'🌲' },
+    { id:30, name:'Rila Lakes Circuit', location:'Rila, Bulgaria', region:'europe', difficulty:'moderate', length:14, elevation:640, lat:42.1780, lon:23.3131, icon:'🏊' },
+  ];
+
+  // ─── State ───────────────────────────────────────────────────────────────────
+  const state = {
+    conditions: {},
+    weather: {},
+    favorites: new Set(JSON.parse(localStorage.getItem('tw-favs') || '[]')),
+    filters: { difficulty: 'all', region: 'all', condition: 'all' },
+    view: 'all',
+    loading: false,
+    selectedTrail: null,
+  };
+
+  // ─── Condition algorithm ─────────────────────────────────────────────────────
+  function inferCondition(weather) {
+    if (!weather) return { status: 'loading', label: 'Fetching...', detail: '' };
+    const { precip, temp, snow } = weather;
+    if (snow > 5 && temp < 2) return { status: 'icy', label: 'Icy', detail: `${snow.toFixed(1)}cm snow, ${temp.toFixed(0)}°C` };
+    if (temp < 0) return { status: 'icy', label: 'Icy', detail: `Temp ${temp.toFixed(0)}°C below freezing` };
+    if (precip > 20) return { status: 'closed', label: 'Closed — Heavy Rain', detail: `${precip.toFixed(1)}mm rain` };
+    if (precip > 5) return { status: 'muddy', label: 'Muddy', detail: `${precip.toFixed(1)}mm recent rain` };
+    return { status: 'good', label: 'Good', detail: `${temp.toFixed(0)}°C, ${precip.toFixed(1)}mm` };
+  }
+
+  // ─── Weather fetch ───────────────────────────────────────────────────────────
+  async function fetchWeather(trail) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${trail.lat}&longitude=${trail.lon}&daily=precipitation_sum,temperature_2m_max,snowfall_sum&forecast_days=3&timezone=auto`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const d = data.daily;
+      return {
+        days: d.time.map((t, i) => ({
+          date: t,
+          temp: d.temperature_2m_max[i],
+          precip: d.precipitation_sum[i],
+          snow: d.snowfall_sum[i],
+        })),
+        precip: d.precipitation_sum[0] || 0,
+        temp: d.temperature_2m_max[0] || 10,
+        snow: d.snowfall_sum[0] || 0,
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ─── Batch load weather ──────────────────────────────────────────────────────
+  async function loadAll() {
+    if (state.loading) return;
+    state.loading = true;
+    showLoading(true);
+
+    const btn = document.getElementById('refresh-btn');
+    btn.disabled = true;
+    btn.classList.add('spinning');
+
+    const BATCH = 5;
+    for (let i = 0; i < TRAILS.length; i += BATCH) {
+      const batch = TRAILS.slice(i, i + BATCH);
+      await Promise.all(batch.map(async trail => {
+        const w = await fetchWeather(trail);
+        state.weather[trail.id] = w;
+        state.conditions[trail.id] = inferCondition(w ? { precip: w.precip, temp: w.temp, snow: w.snow } : null);
+        updateCard(trail.id);
+      }));
+      updateStats();
+    }
+
+    state.loading = false;
+    showLoading(false);
+    btn.disabled = false;
+    btn.classList.remove('spinning');
+    updateStats();
+    showToast('Trail conditions updated', '✅');
+  }
+
+  async function refreshAll() {
+    state.conditions = {};
+    state.weather = {};
+    renderCards();
+    await loadAll();
+  }
+
+  // ─── Render cards ────────────────────────────────────────────────────────────
+  function getVisibleTrails() {
+    let trails = TRAILS;
+
+    if (state.view === 'favorites') {
+      trails = trails.filter(t => state.favorites.has(t.id));
+    }
+
+    const search = document.getElementById('search-input').value.toLowerCase().trim();
+    if (search) {
+      trails = trails.filter(t =>
+        t.name.toLowerCase().includes(search) ||
+        t.location.toLowerCase().includes(search)
+      );
+    }
+
+    if (state.filters.difficulty !== 'all') {
+      trails = trails.filter(t => t.difficulty === state.filters.difficulty);
+    }
+    if (state.filters.region !== 'all') {
+      trails = trails.filter(t => t.region === state.filters.region);
+    }
+    if (state.filters.condition !== 'all') {
+      trails = trails.filter(t => {
+        const c = state.conditions[t.id];
+        return c && c.status === state.filters.condition;
+      });
+    }
+
+    return trails;
+  }
+
+  function renderCards() {
+    const grid = document.getElementById('trail-grid');
+    const trails = getVisibleTrails();
+
+    if (trails.length === 0) {
+      const msg = state.view === 'favorites'
+        ? `<div class="fav-empty"><div style="font-size:2.5rem;margin-bottom:0.75rem">⭐</div><h3>No favorites yet</h3><p style="font-size:0.875rem;margin-top:0.25rem">Click the star on any trail card to save it here</p></div>`
+        : `<div class="empty-state"><div class="icon">🔍</div><h3>No trails match your filters</h3><p>Try adjusting your search or filters</p></div>`;
+      grid.innerHTML = msg;
+      document.getElementById('section-count').textContent = '0 trails';
+      return;
+    }
+
+    grid.innerHTML = trails.map(t => buildCard(t)).join('');
+    document.getElementById('section-count').textContent = `${trails.length} trail${trails.length !== 1 ? 's' : ''}`;
+  }
+
+  function buildCard(trail) {
+    const cond = state.conditions[trail.id] || { status: 'loading', label: 'Loading...', detail: '' };
+    const isFav = state.favorites.has(trail.id);
+    const diffClass = trail.difficulty;
+    const regionLabel = { 'us-west': 'US West', 'us-east': 'US East', 'europe': 'Europe' }[trail.region] || trail.region;
+
+    const condIcons = { good: '🌿', muddy: '💧', icy: '❄️', closed: '⛔', loading: '⏳' };
+
+    return `
+      <article class="trail-card" role="listitem" tabindex="0"
+        aria-label="${trail.name}, ${trail.location}, condition: ${cond.label}"
+        onclick="openModal(${trail.id})"
+        onkeydown="if(event.key==='Enter'||event.key===' '){openModal(${trail.id})}"
+        data-id="${trail.id}">
+        <div class="card-header">
+          <div class="trail-icon ${cond.status}" aria-hidden="true">${condIcons[cond.status] || '⏳'}</div>
+          <div class="trail-meta">
+            <div class="trail-name">${trail.name}</div>
+            <div class="trail-location">${trail.location}</div>
+          </div>
+          <button class="fav-btn ${isFav ? 'active' : ''}"
+            onclick="toggleFav(event,${trail.id})"
+            aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}: ${trail.name}"
+            aria-pressed="${isFav}">
+            ${isFav ? '⭐' : '☆'}
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="trail-tags">
+            <span class="tag ${diffClass}">${trail.difficulty.charAt(0).toUpperCase() + trail.difficulty.slice(1)}</span>
+            <span class="tag region">${regionLabel}</span>
+          </div>
+          <div class="trail-stats">
+            <div class="trail-stat">
+              <span class="trail-stat-val">${trail.length} km</span>
+              <span class="trail-stat-lbl">Distance</span>
+            </div>
+            <div class="trail-stat">
+              <span class="trail-stat-val">${trail.elevation}m</span>
+              <span class="trail-stat-lbl">Elevation</span>
+            </div>
+          </div>
+        </div>
+        <div class="condition-bar">
+          <span class="condition-dot ${cond.status}" aria-hidden="true"></span>
+          <span class="condition-text ${cond.status}">${cond.label}</span>
+          ${cond.detail ? `<span class="condition-detail">${cond.detail}</span>` : ''}
+        </div>
+      </article>`;
+  }
+
+  function updateCard(id) {
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if (!el) return;
+    const trail = TRAILS.find(t => t.id === id);
+    if (!trail) return;
+    const newHtml = buildCard(trail);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = newHtml;
+    const newCard = tmp.firstElementChild;
+    newCard.style.animationName = 'none';
+    el.replaceWith(newCard);
+  }
+
+  // ─── Stats ───────────────────────────────────────────────────────────────────
+  function updateStats() {
+    const counts = { good: 0, muddy: 0, icy: 0, closed: 0 };
+    for (const c of Object.values(state.conditions)) {
+      if (c && counts[c.status] !== undefined) counts[c.status]++;
+    }
+    document.getElementById('stat-good').textContent = counts.good;
+    document.getElementById('stat-muddy').textContent = counts.muddy;
+    document.getElementById('stat-icy').textContent = counts.icy;
+    document.getElementById('stat-closed').textContent = counts.closed;
+  }
+
+  // ─── Filters ─────────────────────────────────────────────────────────────────
+  function setFilter(type, value, btn) {
+    state.filters[type] = value;
+    // Update active chip in the group
+    const parent = btn.closest('.filter-group');
+    parent.querySelectorAll('.filter-chip').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    renderCards();
+  }
+
+  // ─── View switcher ───────────────────────────────────────────────────────────
+  function switchView(view) {
+    state.view = view;
+    document.getElementById('nav-all').classList.toggle('active', view === 'all');
+    document.getElementById('nav-favorites').classList.toggle('active', view === 'favorites');
+    document.getElementById('nav-all').setAttribute('aria-pressed', view === 'all');
+    document.getElementById('nav-favorites').setAttribute('aria-pressed', view === 'favorites');
+    document.getElementById('section-title').textContent = view === 'favorites' ? 'Favorited Trails' : 'All Trails';
+    renderCards();
+  }
+
+  // ─── Favorites ───────────────────────────────────────────────────────────────
+  function toggleFav(e, id) {
+    e.stopPropagation();
+    const trail = TRAILS.find(t => t.id === id);
+    if (!trail) return;
+    if (state.favorites.has(id)) {
+      state.favorites.delete(id);
+      showToast(`Removed "${trail.name}" from favorites`, '☆');
+    } else {
+      state.favorites.add(id);
+      showToast(`Added "${trail.name}" to favorites`, '⭐');
+    }
+    localStorage.setItem('tw-favs', JSON.stringify([...state.favorites]));
+    updateCard(id);
+    if (state.view === 'favorites') renderCards();
+  }
+
+  // ─── Modal ───────────────────────────────────────────────────────────────────
+  function openModal(id) {
+    const trail = TRAILS.find(t => t.id === id);
+    if (!trail) return;
+    state.selectedTrail = id;
+
+    const cond = state.conditions[id] || { status: 'loading', label: 'Loading...', detail: '' };
+    const w = state.weather[id];
+
+    document.getElementById('modal-location').textContent = trail.location;
+    document.getElementById('modal-title-text').textContent = trail.name;
+
+    // Condition alert
+    const alerts = {
+      good: '🌿 Trail conditions are great — enjoy your hike!',
+      muddy: '💧 Muddy conditions — waterproof boots recommended. Stay on trail.',
+      icy: '❄️ Icy conditions — crampons or microspikes required.',
+      closed: '⛔ Trail is closed due to severe weather. Do not attempt.',
+      loading: '⏳ Fetching live weather data...',
+    };
+    const alertEl = document.getElementById('modal-condition-alert');
+    alertEl.className = `condition-alert ${cond.status}`;
+    alertEl.textContent = alerts[cond.status] || cond.label;
+
+    // Info grid
+    const regionLabel = { 'us-west': 'US West', 'us-east': 'US East', 'europe': 'Europe' }[trail.region] || trail.region;
+    document.getElementById('modal-info-grid').innerHTML = `
+      <div class="info-item"><div class="info-item-label">Distance</div><div class="info-item-val">${trail.length} km</div></div>
+      <div class="info-item"><div class="info-item-label">Elevation Gain</div><div class="info-item-val">${trail.elevation}m</div></div>
+      <div class="info-item"><div class="info-item-label">Difficulty</div><div class="info-item-val">${trail.difficulty.charAt(0).toUpperCase() + trail.difficulty.slice(1)}</div></div>
+      <div class="info-item"><div class="info-item-label">Region</div><div class="info-item-val">${regionLabel}</div></div>
+    `;
+
+    // Weather grid
+    if (w && w.days) {
+      const dayNames = ['Today', 'Tomorrow', 'Day 3'];
+      document.getElementById('modal-weather-grid').innerHTML = w.days.map((d, i) => `
+        <div class="weather-card">
+          <div class="weather-day">${dayNames[i] || d.date}</div>
+          <div class="weather-temp" style="color: ${d.temp < 0 ? 'var(--accent)' : d.temp > 25 ? 'var(--accent2)' : 'var(--text)'}">${d.temp !== null ? d.temp.toFixed(0) + '°C' : 'N/A'}</div>
+          <div class="weather-precip">💧 ${d.precip !== null ? d.precip.toFixed(1) + 'mm' : 'N/A'}</div>
+          ${d.snow > 0 ? `<div class="weather-snow">❄️ ${d.snow.toFixed(1)}cm</div>` : ''}
+        </div>
+      `).join('');
+    } else {
+      document.getElementById('modal-weather-grid').innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:0.875rem;text-align:center;padding:1rem">Weather data loading...</div>`;
+    }
+
+    const overlay = document.getElementById('modal');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Trap focus
+    const modalBox = document.getElementById('modal-box');
+    const focusable = modalBox.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length) focusable[0].focus();
+  }
+
+  function closeModal(e) {
+    if (e && e.target !== document.getElementById('modal')) return;
+    document.getElementById('modal').classList.remove('open');
+    document.body.style.overflow = '';
+    state.selectedTrail = null;
+  }
+
+  // Keyboard close
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.getElementById('modal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  });
+
+  // ─── Loading indicator ───────────────────────────────────────────────────────
+  function showLoading(show) {
+    document.getElementById('loading-bar').style.display = show ? 'block' : 'none';
+  }
+
+  // ─── Toast ───────────────────────────────────────────────────────────────────
+  function showToast(msg, icon) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.setAttribute('role', 'status');
+    toast.innerHTML = `<span class="toast-icon" aria-hidden="true">${icon}</span>${msg}`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => toast.classList.add('show'));
+    });
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  // ─── Init ────────────────────────────────────────────────────────────────────
+  function init() {
+    renderCards();
+    loadAll();
+  }
+
+  init();
+</script>
+</body>
+</html>

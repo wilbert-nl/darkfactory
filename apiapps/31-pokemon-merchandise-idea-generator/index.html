@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokeMerch — Pokemon Merchandise Idea Generator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08);
+      --accent: #1db954;
+      --accent2: #ff6b6b;
+      --text: #ffffff;
+      --muted: #9ca3af;
+      --radius: 12px;
+      --font-display: 'Bebas Neue', Impact, sans-serif;
+      --font-body: 'Figtree', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--surface) 0%, #1e2235 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .logo-text {
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: none;
+    }
+
+    @media (min-width: 640px) { .tagline { display: block; } }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 2.5rem 1rem 2rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 0.6rem;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 520px;
+      margin: 0 auto 1.8rem;
+    }
+
+    /* ── Search panel ── */
+    .search-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"], select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+    }
+
+    select option { background: var(--surface2); }
+
+    /* ── Autocomplete ── */
+    .autocomplete-wrap { position: relative; }
+
+    .suggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      z-index: 200;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .suggestions.open { display: block; animation: fadeDown 0.15s ease; }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .suggestion-item {
+      padding: 0.55rem 0.9rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover, .suggestion-item.focused { background: var(--surface); }
+
+    .suggestion-id {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #8b85ff);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-accent2 {
+      background: linear-gradient(135deg, var(--accent2), #ff8fab);
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 0.4rem 0.85rem;
+      font-size: 0.8rem;
+    }
+
+    /* ── Pokemon card ── */
+    #pokemon-display {
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .pokemon-header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .pokemon-sprite-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .pokemon-sprite {
+      width: 120px;
+      height: 120px;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 4px 16px rgba(168, 85, 247, 0.4));
+      transition: transform 0.3s;
+    }
+
+    .pokemon-sprite:hover { transform: scale(1.1) rotate(-3deg); }
+
+    .pokemon-sprite-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(168,85,247,0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .pokemon-info { flex: 1; min-width: 200px; }
+
+    .pokemon-number {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.2rem;
+    }
+
+    .pokemon-name {
+      font-size: 2rem;
+      font-weight: 800;
+      text-transform: capitalize;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    .type-badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+
+    .type-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .pokemon-stats-row {
+      display: flex;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 1rem; font-weight: 700; color: var(--green); }
+
+    .pokemon-abilities {
+      margin-top: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .pokemon-abilities strong { color: var(--text); }
+
+    /* ── Ideas grid ── */
+    .ideas-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .ideas-header h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .ideas-header h2 span { color: var(--accent); }
+
+    .ideas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+
+    .idea-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      animation: fadeIn 0.4s ease both;
+    }
+
+    .idea-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 32px rgba(168, 85, 247, 0.15);
+    }
+
+    .idea-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .idea-category {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .idea-title {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text);
+    }
+
+    .idea-tagline {
+      font-size: 0.88rem;
+      color: var(--accent2);
+      font-style: italic;
+      font-weight: 600;
+    }
+
+    .idea-description {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .idea-mockup {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-left: 3px solid var(--accent);
+    }
+
+    .idea-mockup strong {
+      color: var(--yellow);
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .idea-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .idea-platform {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover { border-color: var(--green); color: var(--green); }
+    .copy-btn.copied { border-color: var(--green); background: rgba(67, 217, 173, 0.1); color: var(--green); }
+
+    /* ── Loading / error states ── */
+    .status-msg {
+      text-align: center;
+      padding: 2.5rem;
+      color: var(--muted);
+      display: none;
+    }
+
+    .status-msg.visible { display: block; }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: rgba(244, 63, 94, 0.08);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      color: var(--accent2);
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .error-box.visible { display: block; animation: fadeIn 0.3s ease; }
+
+    /* ── Popular picks ── */
+    .popular-section {
+      margin-bottom: 2rem;
+    }
+
+    .popular-section h3 {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .popular-chips {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 0.35rem 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      text-transform: capitalize;
+      color: var(--text);
+    }
+
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(168, 85, 247, 0.08);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Type colors ── */
+    .type-fire    { background: rgba(255,100,50,0.2);  color: #ff7043; }
+    .type-water   { background: rgba(60,130,255,0.2);  color: #4fc3f7; }
+    .type-grass   { background: rgba(76,175,80,0.2);   color: #81c784; }
+    .type-electric{ background: rgba(247,201,72,0.2);  color: var(--yellow); }
+    .type-psychic { background: rgba(255,101,132,0.2); color: #f48fb1; }
+    .type-ice     { background: rgba(100,220,255,0.2); color: #80deea; }
+    .type-dragon  { background: rgba(108,99,255,0.2);  color: var(--accent); }
+    .type-dark    { background: rgba(50,50,80,0.4);    color: #b0bec5; }
+    .type-fairy   { background: rgba(255,150,200,0.2); color: #f8bbd0; }
+    .type-fighting{ background: rgba(200,80,50,0.2);   color: #ef9a9a; }
+    .type-poison  { background: rgba(150,80,200,0.2);  color: #ce93d8; }
+    .type-ground  { background: rgba(200,160,80,0.2);  color: #ffcc80; }
+    .type-flying  { background: rgba(150,180,255,0.2); color: #90caf9; }
+    .type-bug     { background: rgba(140,195,60,0.2);  color: #c5e1a5; }
+    .type-rock    { background: rgba(160,140,100,0.2); color: #d7ccc8; }
+    .type-ghost   { background: rgba(90,70,140,0.2);   color: #b39ddb; }
+    .type-steel   { background: rgba(160,175,200,0.2); color: #b0bec5; }
+    .type-normal  { background: rgba(160,160,160,0.2); color: #eeeeee; }
+
+    /* ── Category colors ── */
+    .cat-apparel    { background: rgba(168,85,247,0.15); color: var(--accent); }
+    .cat-accessories{ background: rgba(244,63,94,0.15); color: var(--accent2); }
+    .cat-home       { background: rgba(67,217,173,0.15); color: var(--green); }
+    .cat-stationery { background: rgba(247,201,72,0.15); color: var(--yellow); }
+    .cat-drinkware  { background: rgba(100,200,255,0.15); color: #64c8ff; }
+    .cat-art        { background: rgba(200,100,255,0.15); color: #c864ff; }
+    .cat-kids       { background: rgba(255,160,100,0.15); color: #ffa064; }
+    .cat-lifestyle  { background: rgba(160,255,100,0.15); color: #a0ff64; }
+
+    /* ── Scroll animation ── */
+    .idea-card:nth-child(1) { animation-delay: 0.05s; }
+    .idea-card:nth-child(2) { animation-delay: 0.1s; }
+    .idea-card:nth-child(3) { animation-delay: 0.15s; }
+    .idea-card:nth-child(4) { animation-delay: 0.2s; }
+    .idea-card:nth-child(5) { animation-delay: 0.25s; }
+    .idea-card:nth-child(6) { animation-delay: 0.3s; }
+    .idea-card:nth-child(7) { animation-delay: 0.35s; }
+    .idea-card:nth-child(8) { animation-delay: 0.4s; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* === Media v2 Design System === */
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 700px 500px at 70% -10%, rgba(29,185,84,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
+    h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent); }
+    h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .race, .game, .match, .quiz, .joke, .anime, .pokemon, .trivia,
+    [class*="card"], [class*="item"], [class*="result"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: transform 0.2s, background 0.2s;
+      animation: mediaFade 0.4s ease both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 999px;
+      padding: 0.75rem 2rem;
+      font-family: var(--font-body);
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { transform: scale(1.03); filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .genre, .category, .label, .type, .team, .circuit, .difficulty {
+      display: inline-block;
+      background: rgba(29,185,84,0.12);
+      border: 1px solid rgba(29,185,84,0.25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .score, .rating, .stat, .number, .count, .position, .lap, .correct {
+      font-family: var(--font-mono);
+      font-size: 1.8rem;
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    .live, .trending, .new { color: var(--accent2); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+    @keyframes mediaFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .live::before { content: '● '; animation: livePulse 1.5s ease infinite; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo" href="app.html" aria-label="PokeMerch home">
+      <div class="logo-icon" aria-hidden="true">⚡</div>
+      <span class="logo-text">PokeMerch</span>
+    </a>
+    <span class="tagline">Turn any Pokémon into merchandise gold</span>
+  </header>
+
+  <main>
+    <section class="hero" aria-label="Introduction">
+      <h1>Generate <span>Merchandise Ideas</span><br>for Any Pokémon</h1>
+      <p>Pick a Pokémon, get 6–8 ready-to-list product concepts for Etsy, Redbubble, and Shopify — instantly.</p>
+    </section>
+
+    <section class="search-panel" aria-label="Pokemon selector">
+      <div class="search-row">
+        <div class="field">
+          <label for="pokemon-input">Search Pokémon</label>
+          <div class="autocomplete-wrap">
+            <input
+              type="text"
+              id="pokemon-input"
+              placeholder="e.g. Charizard, Pikachu, Eevee…"
+              autocomplete="off"
+              aria-label="Search Pokémon by name"
+              aria-autocomplete="list"
+              aria-controls="suggestions-list"
+            />
+            <ul id="suggestions-list" class="suggestions" role="listbox" aria-label="Pokémon suggestions"></ul>
+          </div>
+        </div>
+
+        <div class="field" style="max-width:160px">
+          <label for="type-filter">Filter by Type</label>
+          <select id="type-filter" aria-label="Filter Pokémon by type">
+            <option value="">All Types</option>
+            <option value="fire">🔥 Fire</option>
+            <option value="water">💧 Water</option>
+            <option value="grass">🌿 Grass</option>
+            <option value="electric">⚡ Electric</option>
+            <option value="psychic">🔮 Psychic</option>
+            <option value="ice">❄️ Ice</option>
+            <option value="dragon">🐉 Dragon</option>
+            <option value="dark">🌑 Dark</option>
+            <option value="fairy">✨ Fairy</option>
+            <option value="fighting">🥊 Fighting</option>
+            <option value="poison">☠️ Poison</option>
+            <option value="ground">🌍 Ground</option>
+            <option value="flying">🦅 Flying</option>
+            <option value="bug">🐛 Bug</option>
+            <option value="rock">🪨 Rock</option>
+            <option value="ghost">👻 Ghost</option>
+            <option value="steel">⚙️ Steel</option>
+            <option value="normal">⭕ Normal</option>
+          </select>
+        </div>
+
+        <div class="field" style="max-width:140px; justify-content:flex-end">
+          <label>&nbsp;</label>
+          <a href="app.html" class="btn btn-primary" id="generate-btn" role="button" aria-label="Generate merchandise ideas">
+            <span>✨</span> Generate
+          </a>
+        </div>
+
+        <div class="field" style="max-width:140px; justify-content:flex-end">
+          <label>&nbsp;</label>
+          <a href="app.html" class="btn btn-secondary" id="random-btn" role="button" aria-label="Pick a random Pokémon">
+            <span>🎲</span> Random
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="popular-section" aria-label="Popular Pokémon picks">
+      <h3>Popular Picks</h3>
+      <div class="popular-chips" id="popular-chips" role="group" aria-label="Popular Pokémon quick-select">
+        <button class="chip" data-pokemon="pikachu">⚡ Pikachu</button>
+        <button class="chip" data-pokemon="charizard">🔥 Charizard</button>
+        <button class="chip" data-pokemon="mewtwo">🔮 Mewtwo</button>
+        <button class="chip" data-pokemon="eevee">🌟 Eevee</button>
+        <button class="chip" data-pokemon="gengar">👻 Gengar</button>
+        <button class="chip" data-pokemon="snorlax">😴 Snorlax</button>
+        <button class="chip" data-pokemon="lucario">💎 Lucario</button>
+        <button class="chip" data-pokemon="umbreon">🌑 Umbreon</button>
+        <button class="chip" data-pokemon="bulbasaur">🌿 Bulbasaur</button>
+        <button class="chip" data-pokemon="dragonite">🐉 Dragonite</button>
+      </div>
+    </section>
+
+    <div class="status-msg" id="loading-msg" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Fetching Pokémon data…</p>
+    </div>
+
+    <div class="error-box" id="error-box" role="alert" aria-live="assertive"></div>
+
+    <section id="pokemon-display" aria-label="Pokémon details and merchandise ideas">
+      <div class="pokemon-header" id="pokemon-header"></div>
+
+      <div class="ideas-header">
+        <h2>Merchandise Ideas for <span id="ideas-pokemon-name">—</span></h2>
+        <button class="btn btn-accent2 btn-sm" id="copy-all-btn" aria-label="Copy all ideas to clipboard">
+          📋 Copy All
+        </button>
+      </div>
+
+      <div class="ideas-grid" id="ideas-grid" role="list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Data from <a href="https://pokeapi.co" target="_blank" rel="noopener">PokéAPI</a> · Ideas are rule-based suggestions · Not affiliated with Nintendo or The Pokémon Company</p>
+  </footer>
+
+  <script>
+    'use strict';
+
+    /* ── Constants ── */
+    const POKEAPI = `https://pokeapi.co/api/v2`;
+    const SPRITE_BASE = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon`;
+
+    /* ── Type metadata ── */
+    const TYPE_META = {
+      fire:     { emoji: '🔥', palette: 'warm reds and oranges', vibe: 'fierce, passionate, energetic', adjectives: ['blazing', 'fiery', 'scorching', 'radiant'] },
+      water:    { emoji: '💧', palette: 'ocean blues and teals', vibe: 'calm, flowing, refreshing', adjectives: ['aqua', 'serene', 'tidal', 'oceanic'] },
+      grass:    { emoji: '🌿', palette: 'lush greens and earthy tones', vibe: 'natural, peaceful, organic', adjectives: ['verdant', 'lush', 'botanical', 'earthy'] },
+      electric: { emoji: '⚡', palette: 'electric yellows and whites', vibe: 'energetic, bold, shocking', adjectives: ['electric', 'vivid', 'charged', 'sparkling'] },
+      psychic:  { emoji: '🔮', palette: 'mystic pinks and purples', vibe: 'mysterious, ethereal, powerful', adjectives: ['mystic', 'cosmic', 'ethereal', 'transcendent'] },
+      ice:      { emoji: '❄️', palette: 'frosty blues and whites', vibe: 'cool, crisp, serene', adjectives: ['frosty', 'crystalline', 'arctic', 'glacial'] },
+      dragon:   { emoji: '🐉', palette: 'regal blues and deep purples', vibe: 'majestic, powerful, legendary', adjectives: ['majestic', 'legendary', 'regal', 'mythic'] },
+      dark:     { emoji: '🌑', palette: 'deep blacks and dark greys', vibe: 'edgy, mysterious, rebellious', adjectives: ['shadow', 'dark', 'nightfall', 'void'] },
+      fairy:    { emoji: '✨', palette: 'pastel pinks and whites', vibe: 'whimsical, cute, magical', adjectives: ['enchanted', 'dreamy', 'whimsical', 'sparkly'] },
+      fighting: { emoji: '🥊', palette: 'bold reds and golds', vibe: 'strong, disciplined, fierce', adjectives: ['fierce', 'warrior', 'power', 'champion'] },
+      poison:   { emoji: '☠️', palette: 'deep purples and acid greens', vibe: 'edgy, gothic, mysterious', adjectives: ['toxic', 'venomous', 'gothic', 'shadowy'] },
+      ground:   { emoji: '🌍', palette: 'earthy browns and sandy tones', vibe: 'rugged, sturdy, natural', adjectives: ['rugged', 'earthy', 'terrain', 'ancient'] },
+      flying:   { emoji: '🦅', palette: 'sky blues and cloud whites', vibe: 'free, soaring, adventurous', adjectives: ['soaring', 'sky-high', 'free', 'breezy'] },
+      bug:      { emoji: '🐛', palette: 'nature greens and forest hues', vibe: 'quirky, nature-loving, unique', adjectives: ['wild', 'crawling', 'hive', 'woven'] },
+      rock:     { emoji: '🪨', palette: 'stone greys and mineral tones', vibe: 'tough, timeless, ancient', adjectives: ['ancient', 'stone', 'titan', 'enduring'] },
+      ghost:    { emoji: '👻', palette: 'eerie purples and misty greys', vibe: 'spooky, mysterious, ethereal', adjectives: ['haunted', 'spectral', 'phantom', 'cursed'] },
+      steel:    { emoji: '⚙️', palette: 'metallic silvers and blues', vibe: 'sleek, industrial, futuristic', adjectives: ['forged', 'iron', 'chrome', 'armored'] },
+      normal:   { emoji: '⭕', palette: 'warm neutrals and creams', vibe: 'classic, versatile, friendly', adjectives: ['classic', 'timeless', 'everyday', 'iconic'] },
+    };
+
+    /* ── Merchandise templates ── */
+    const MERCH_TEMPLATES = [
+      {
+        id: 'tshirt',
+        category: 'apparel',
+        icon: '👕',
+        label: 'T-Shirt',
+        platform: 'Redbubble · Merch by Amazon',
+        title: (name, type, adj) => `"${cap(adj[0])} ${cap(name)}" Unisex T-Shirt`,
+        tagline: (name, type) => `${TYPE_META[type]?.emoji || '✨'} Wear your power — ${cap(name)} style`,
+        description: (name, type, meta, abilities) => {
+          const ab = abilities[0] ? ` featuring the legendary ${cap(abilities[0])} ability` : '';
+          return `A minimalist graphic tee celebrating ${cap(name)}'s ${meta.vibe} energy${ab}. Perfect for fans who want to show off their favorite Pokémon with a design that works for everyday wear. Printed on premium soft cotton.`;
+        },
+        mockup: (name, type, meta) => `Front: large stylized ${cap(name)} silhouette in ${meta.palette} gradient on a dark background. Back: small type text with Pokémon number and type icon.`,
+      },
+      {
+        id: 'hoodie',
+        category: 'apparel',
+        icon: '🧥',
+        label: 'Hoodie',
+        platform: 'Printful · Redbubble',
+        title: (name, type, adj) => `${cap(name)} ${cap(adj[1] || adj[0])} Pullover Hoodie`,
+        tagline: (name, type) => `Stay cozy, stay ${TYPE_META[type]?.adjectives?.[2] || 'fierce'}`,
+        description: (name, type, meta, abilities) => `Cozy pullover hoodie with a bold ${cap(name)} design inspired by its ${meta.vibe} character. Great for colder months and Pokémon fan conventions. Available in multiple colors that complement ${meta.palette}.`,
+        mockup: (name, type, meta) => `Center chest: ${cap(name)} face/icon in ${meta.palette}. Left sleeve: subtle type symbol print. Inside hood: hidden Pokémon pattern for a fun surprise detail.`,
+      },
+      {
+        id: 'mug',
+        category: 'drinkware',
+        icon: '☕',
+        label: 'Coffee Mug',
+        platform: 'Etsy · Zazzle',
+        title: (name, type, adj) => `${cap(name)} ${cap(adj[2] || adj[0])} 11oz Coffee Mug`,
+        tagline: (name, type) => `Start every morning with ${TYPE_META[type]?.emoji || '☕'} ${cap(name)} energy`,
+        description: (name, type, meta, abilities) => `Ceramic coffee mug featuring ${cap(name)} art wrapped around the body. The color palette is inspired by its ${type} typing — ${meta.palette}. Microwave and dishwasher safe. A must-have for Pokémon fans who need their daily caffeine ritual.`,
+        mockup: (name, type, meta) => `Wrap-around print: illustrated ${cap(name)} scene with type-themed background in ${meta.palette}. Handle: color-matched to primary type. Inner rim: contrasting accent color.`,
+      },
+      {
+        id: 'sticker',
+        category: 'stationery',
+        icon: '🏷️',
+        label: 'Sticker Pack',
+        platform: 'Etsy · Redbubble',
+        title: (name, type, adj) => `${cap(name)} ${cap(adj[3] || adj[0])} Sticker Pack (5-pack)`,
+        tagline: (name, type) => `Stick it everywhere — ${cap(name)} vibes only`,
+        description: (name, type, meta, abilities) => `A pack of 5 premium die-cut vinyl stickers featuring ${cap(name)} in various poses and expressions. Weatherproof and UV-resistant, perfect for laptops, water bottles, and notebooks. Each sticker captures a different aspect of ${cap(name)}'s ${meta.vibe} personality.`,
+        mockup: (name, type, meta) => `5 sticker designs: (1) classic pose, (2) ${TYPE_META[type]?.emoji || '✨'} type move action, (3) chibi cute version, (4) type symbol badge, (5) retro game sprite tribute. All in ${meta.palette} color scheme.`,
+      },
+      {
+        id: 'tote',
+        category: 'accessories',
+        icon: '👜',
+        label: 'Canvas Tote Bag',
+        platform: 'Printful · Printify',
+        title: (name, type, adj) => `${cap(name)} ${cap(type)} Type Canvas Tote Bag`,
+        tagline: (name, type) => `${TYPE_META[type]?.emoji || '🎒'} Carry your adventure`,
+        description: (name, type, meta, abilities) => `Eco-friendly heavy canvas tote bag with a stylish ${cap(name)} illustration. Perfect for shopping, the gym, or daily carry. The design draws from ${cap(name)}'s signature ${meta.palette} and ${meta.vibe} character to create something fans will actually want to use daily.`,
+        mockup: (name, type, meta) => `Front: large minimalist ${cap(name)} line-art illustration in a contrasting color on natural canvas. Inside: full-color lining with repeating ${cap(name)} pattern. Handles: color-matched webbing.`,
+      },
+      {
+        id: 'poster',
+        category: 'art',
+        icon: '🖼️',
+        label: 'Art Print / Poster',
+        platform: 'Etsy · Society6',
+        title: (name, type, adj) => `${cap(name)} — ${cap(adj[0])} Art Print (Multiple Sizes)`,
+        tagline: (name, type) => `Museum-quality fan art for your walls`,
+        description: (name, type, meta, abilities) => `High-quality art print featuring ${cap(name)} in an illustrated style inspired by its ${type} typing and ${meta.vibe} essence. Available in 5x7, 8x10, and 11x14 inch sizes. Perfect for nurseries, game rooms, and Pokémon shrines. Printed on archival-grade matte paper.`,
+        mockup: (name, type, meta) => `Japanese-inspired art style with ${cap(name)} as the centerpiece. Background: atmospheric ${meta.palette} gradient. Frame: optional white mat border. Bottom: ${cap(name)} name in stylized typography.`,
+      },
+      {
+        id: 'phonecase',
+        category: 'accessories',
+        icon: '📱',
+        label: 'Phone Case',
+        platform: 'Redbubble · CaseApp',
+        title: (name, type, adj) => `${cap(name)} ${cap(adj[1] || adj[0])} Phone Case (All Models)`,
+        tagline: (name, type) => `${TYPE_META[type]?.emoji || '✨'} Protect your device in style`,
+        description: (name, type, meta, abilities) => `Slim, protective phone case featuring vibrant ${cap(name)} artwork. The design wraps around the edges for full coverage and a premium look. Compatible with all major iPhone and Samsung models. The ${meta.palette} palette makes it instantly recognizable to fellow fans.`,
+        mockup: (name, type, meta) => `Full-bleed ${cap(name)} illustration extending to case edges. Color scheme: ${meta.palette} base with contrasting ${cap(name)} in focus. Camera cutouts designed as ${type}-type symbols.`,
+      },
+      {
+        id: 'pillow',
+        category: 'home',
+        icon: '🛋️',
+        label: 'Throw Pillow',
+        platform: 'Society6 · Redbubble',
+        title: (name, type, adj) => `${cap(name)} ${cap(adj[2] || 'cozy')} Throw Pillow`,
+        tagline: (name, type) => `${TYPE_META[type]?.emoji || '✨'} Level up your living space`,
+        description: (name, type, meta, abilities) => `Plush throw pillow featuring a cute ${cap(name)} design on both sides. The ${meta.palette} color palette ties into any Pokémon-themed room perfectly. Stuffed with premium polyester fill for comfort. Removable cover is machine washable.`,
+        mockup: (name, type, meta) => `Double-sided design: front shows ${cap(name)} in a cozy, relaxed pose; back shows the ${type}-type pattern. Edges: piped in a complementary color from the ${meta.palette} palette.`,
+      },
+      {
+        id: 'notebook',
+        category: 'stationery',
+        icon: '📓',
+        label: 'Spiral Notebook',
+        platform: 'Redbubble · Zazzle',
+        title: (name, type, adj) => `${cap(name)} ${cap(adj[3] || adj[0])} Ruled Notebook`,
+        tagline: (name, type) => `Write your trainer journal in style`,
+        description: (name, type, meta, abilities) => `Ruled spiral notebook with a ${cap(name)}-themed cover, perfect for journaling, note-taking, or sketching Pokémon fan art. 120 ruled pages, durable cover laminate. The design features ${meta.palette} tones reflecting ${cap(name)}'s ${type} spirit.`,
+        mockup: (name, type, meta) => `Cover: ${cap(name)} profile art on a textured ${meta.palette} background. Spine: ${type}-type symbol stacked vertically. Interior first page: decorative ${cap(name)} watermark in pale ink.`,
+      },
+    ];
+
+    /* ── State ── */
+    let allPokemonNames = [];
+    let currentPokemon = null;
+    let suggestFocusIndex = -1;
+
+    /* ── Utils ── */
+    const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+    const $ = id => document.getElementById(id);
+
+    function showLoading(visible) {
+      $('loading-msg').classList.toggle('visible', visible);
+    }
+
+    function showError(msg) {
+      const box = $('error-box');
+      box.textContent = msg;
+      box.classList.toggle('visible', !!msg);
+    }
+
+    /* ── Fetch all Pokémon names for autocomplete ── */
+    async function loadPokemonList() {
+      try {
+        const res = await fetch(`${POKEAPI}/pokemon?limit=1025`);
+        if (!res.ok) throw new Error('Failed to load Pokémon list');
+        const data = await res.json();
+        allPokemonNames = data.results.map(p => p.name);
+      } catch (e) {
+        console.warn('Could not preload Pokémon list — autocomplete unavailable');
+      }
+    }
+
+    /* ── Autocomplete ── */
+    const input = $('pokemon-input');
+    const suggestionsList = $('suggestions-list');
+
+    function getSuggestions(query) {
+      if (!query || query.length < 2) return [];
+      const q = query.toLowerCase();
+      return allPokemonNames.filter(n => n.startsWith(q)).slice(0, 8)
+        .concat(allPokemonNames.filter(n => n.includes(q) && !n.startsWith(q)).slice(0, 4));
+    }
+
+    function renderSuggestions(items) {
+      suggestionsList.innerHTML = '';
+      suggestFocusIndex = -1;
+      if (!items.length) {
+        suggestionsList.classList.remove('open');
+        return;
+      }
+      items.forEach((name, i) => {
+        const li = document.createElement('li');
+        li.className = 'suggestion-item';
+        li.setAttribute('role', 'option');
+        li.setAttribute('id', `sug-${i}`);
+        const id = allPokemonNames.indexOf(name) + 1;
+        li.innerHTML = `<span>${cap(name)}</span><span class="suggestion-id">#${String(id).padStart(4, '0')}</span>`;
+        li.addEventListener('mousedown', e => {
+          e.preventDefault();
+          selectPokemon(name);
+        });
+        suggestionsList.appendChild(li);
+      });
+      suggestionsList.classList.add('open');
+    }
+
+    input.addEventListener('input', () => {
+      const q = input.value.trim();
+      renderSuggestions(getSuggestions(q));
+    });
+
+    input.addEventListener('keydown', e => {
+      const items = suggestionsList.querySelectorAll('.suggestion-item');
+      if (!items.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        suggestFocusIndex = Math.min(suggestFocusIndex + 1, items.length - 1);
+        updateSuggestFocus(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        suggestFocusIndex = Math.max(suggestFocusIndex - 1, -1);
+        updateSuggestFocus(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (suggestFocusIndex >= 0 && items[suggestFocusIndex]) {
+          const name = items[suggestFocusIndex].querySelector('span').textContent.toLowerCase();
+          selectPokemon(name);
+        } else {
+          generateFromInput();
+        }
+      } else if (e.key === 'Escape') {
+        suggestionsList.classList.remove('open');
+      }
+    });
+
+    function updateSuggestFocus(items) {
+      items.forEach((el, i) => el.classList.toggle('focused', i === suggestFocusIndex));
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.autocomplete-wrap')) {
+        suggestionsList.classList.remove('open');
+      }
+    });
+
+    function selectPokemon(name) {
+      input.value = cap(name);
+      suggestionsList.classList.remove('open');
+      fetchAndRender(name.toLowerCase());
+    }
+
+    /* ── Type filter filtering ── */
+    $('type-filter').addEventListener('change', () => {
+      const type = $('type-filter').value;
+      if (!type || !allPokemonNames.length) return;
+      // pick random pokémon of that type from known type-associations
+      const typed = TYPE_STARTERS[type];
+      if (typed && typed.length) {
+        const pick = typed[Math.floor(Math.random() * typed.length)];
+        input.value = cap(pick);
+        fetchAndRender(pick);
+      }
+    });
+
+    /* ── Type-to-example Pokémon map (for filter) ── */
+    const TYPE_STARTERS = {
+      fire:     ['charizard','arcanine','flareon','typhlosion','blaziken','infernape','heatran'],
+      water:    ['blastoise','vaporeon','lapras','gyarados','feraligatr','milotic','swampert'],
+      grass:    ['venusaur','leafeon','roserade','sceptile','serperior','decidueye','torterra'],
+      electric: ['pikachu','raichu','jolteon','ampharos','luxray','electivire','zeraora'],
+      psychic:  ['mewtwo','alakazam','espeon','gardevoir','gallade','reuniclus','gothitelle'],
+      ice:      ['articuno','lapras','glaceon','mamoswine','froslass','cryogonal','walrein'],
+      dragon:   ['dragonite','charizard','flygon','salamence','garchomp','hydreigon','goodra'],
+      dark:     ['umbreon','tyranitar','absol','honchkrow','zoroark','darkrai','hydreigon'],
+      fairy:    ['clefable','sylveon','togekiss','gardevoir','mimikyu','zacian','primarina'],
+      fighting: ['machamp','hitmonlee','lucario','gallade','conkeldurr','mienshao','bewear'],
+      poison:   ['gengar','nidoking','weezing','crobat','toxapex','vileplume','salazzle'],
+      ground:   ['sandslash','dugtrio','garchomp','krookodile','hippowdon','mudsdale','flygon'],
+      flying:   ['pidgeot','aerodactyl','skarmory','swellow','staraptor','togekiss','noivern'],
+      bug:      ['butterfree','scyther','heracross','beedrill','volcarona','galvantula','frosmoth'],
+      rock:     ['geodude','rhydon','aerodactyl','tyranitar','aurorus','lycanroc','dracozolt'],
+      ghost:    ['gengar','haunter','misdreavus','banette','spiritomb','chandelure','dragapult'],
+      steel:    ['steelix','skarmory','metagross','lucario','bisharp','corviknight','zacian'],
+      normal:   ['snorlax','eevee','porygon','tauros','kangaskhan','staraptor','bouffalant'],
+    };
+
+    /* ── Generate button ── */
+    $('generate-btn').addEventListener('click', generateFromInput);
+    $('random-btn').addEventListener('click', pickRandom);
+
+    function generateFromInput() {
+      const name = input.value.trim().toLowerCase().replace(/\s+/g, '-');
+      if (!name) {
+        showError('Please enter a Pokémon name first.');
+        return;
+      }
+      showError('');
+      fetchAndRender(name);
+    }
+
+    function pickRandom() {
+      if (!allPokemonNames.length) {
+        showError('Pokémon list not loaded yet. Try again in a moment.');
+        return;
+      }
+      const pick = allPokemonNames[Math.floor(Math.random() * 1025)];
+      input.value = cap(pick);
+      showError('');
+      fetchAndRender(pick);
+    }
+
+    /* ── Popular chips ── */
+    document.querySelectorAll('#popular-chips .chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.pokemon;
+        input.value = cap(name);
+        showError('');
+        fetchAndRender(name);
+      });
+    });
+
+    /* ── Fetch Pokémon data ── */
+    async function fetchAndRender(nameOrId) {
+      showLoading(true);
+      showError('');
+      $('pokemon-display').style.display = 'none';
+
+      try {
+        const res = await fetch(`${POKEAPI}/pokemon/${nameOrId}`);
+        if (!res.ok) {
+          if (res.status === 404) throw new Error(`"${cap(nameOrId)}" not found. Check the spelling and try again.`);
+          throw new Error(`API error ${res.status}. Please try again.`);
+        }
+        const data = await res.json();
+        currentPokemon = data;
+        renderPokemon(data);
+      } catch (e) {
+        showError(`⚠️ ${e.message}`);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    /* ── Render Pokémon header ── */
+    function renderPokemon(data) {
+      const name = data.name;
+      const id = data.id;
+      const types = data.types.map(t => t.type.name);
+      const primaryType = types[0];
+      const abilities = data.abilities.map(a => a.ability.name.replace(/-/g, ' '));
+      const stats = data.stats;
+      const hp = stats.find(s => s.stat.name === 'hp')?.base_stat || 0;
+      const atk = stats.find(s => s.stat.name === 'attack')?.base_stat || 0;
+      const spd = stats.find(s => s.stat.name === 'speed')?.base_stat || 0;
+      const spriteUrl = `${SPRITE_BASE}/${id}.png`;
+
+      const typeBadges = types.map(t =>
+        `<span class="type-badge type-${t}" aria-label="${t} type">${TYPE_META[t]?.emoji || ''} ${cap(t)}</span>`
+      ).join('');
+
+      $('pokemon-header').innerHTML = `
+        <div class="pokemon-sprite-wrap">
+          <img
+            class="pokemon-sprite"
+            src="${spriteUrl}"
+            alt="${cap(name)} sprite"
+            width="120" height="120"
+            loading="eager"
+            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>❓</text></svg>'"
+          />
+          <div class="pokemon-sprite-glow" aria-hidden="true"></div>
+        </div>
+        <div class="pokemon-info">
+          <p class="pokemon-number">#${String(id).padStart(4, '0')} · ${types.map(t => TYPE_META[t]?.emoji || '').join(' ')}</p>
+          <h2 class="pokemon-name">${cap(name)}</h2>
+          <div class="type-badges" role="list" aria-label="Types">${typeBadges}</div>
+          <div class="pokemon-stats-row">
+            <div class="stat-item"><span class="stat-label">HP</span><span class="stat-value">${hp}</span></div>
+            <div class="stat-item"><span class="stat-label">Attack</span><span class="stat-value">${atk}</span></div>
+            <div class="stat-item"><span class="stat-label">Speed</span><span class="stat-value">${spd}</span></div>
+          </div>
+          <p class="pokemon-abilities">
+            <strong>Abilities:</strong> ${abilities.map(cap).join(', ')}
+          </p>
+        </div>
+      `;
+
+      $('ideas-pokemon-name').textContent = cap(name);
+      renderIdeas(name, primaryType, types, abilities);
+
+      $('pokemon-display').style.display = 'block';
+      $('pokemon-display').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /* ── Render merchandise ideas ── */
+    function renderIdeas(name, primaryType, allTypes, abilities) {
+      const meta = TYPE_META[primaryType] || TYPE_META['normal'];
+      const adjectives = meta.adjectives;
+      const grid = $('ideas-grid');
+      grid.innerHTML = '';
+
+      // Pick 6-8 templates (always include variety)
+      const templates = shuffleArray([...MERCH_TEMPLATES]).slice(0, 7);
+
+      templates.forEach((tpl, idx) => {
+        const title = tpl.title(name, primaryType, adjectives);
+        const tagline = tpl.tagline(name, primaryType);
+        const description = tpl.description(name, primaryType, meta, abilities);
+        const mockup = tpl.mockup(name, primaryType, meta);
+        const listingText = buildListingText(title, tagline, description, tpl.platform, name, primaryType, allTypes);
+
+        const card = document.createElement('article');
+        card.className = 'idea-card';
+        card.setAttribute('role', 'listitem');
+        card.setAttribute('aria-label', `${title} merchandise idea`);
+        card.innerHTML = `
+          <div class="idea-card-header">
+            <span class="idea-category cat-${tpl.category}" aria-label="Category: ${tpl.category}">
+              ${tpl.icon} ${cap(tpl.category)}
+            </span>
+          </div>
+          <h3 class="idea-title">${title}</h3>
+          <p class="idea-tagline">"${tagline}"</p>
+          <p class="idea-description">${description}</p>
+          <div class="idea-mockup">
+            <strong>🎨 Mockup Description</strong>
+            ${mockup}
+          </div>
+          <div class="idea-footer">
+            <span class="idea-platform">📦 ${tpl.platform}</span>
+            <button
+              class="copy-btn"
+              aria-label="Copy ${title} listing text to clipboard"
+              data-listing="${encodeURIComponent(listingText)}"
+            >
+              📋 Copy Listing
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Wire copy buttons
+      grid.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const text = decodeURIComponent(btn.dataset.listing);
+          copyToClipboard(text, btn);
+        });
+      });
+    }
+
+    /* ── Build listing-ready text ── */
+    function buildListingText(title, tagline, description, platform, name, type, allTypes) {
+      const tags = buildTags(name, type, allTypes);
+      return `TITLE: ${title}\n\nTAGLINE: "${tagline}"\n\nDESCRIPTION:\n${description}\n\nKEYWORDS / TAGS:\n${tags}\n\nPLATFORM: ${platform}`;
+    }
+
+    function buildTags(name, type, allTypes) {
+      const base = [
+        cap(name), `${cap(name)} merch`, `${cap(name)} gift`,
+        `pokemon ${type}`, `${type} type pokemon`, `pokemon fan gift`,
+        `pokemon merchandise`, `anime merch`, `pokemon lover gift`,
+        ...allTypes.map(t => `${t} type`),
+        TYPE_META[type]?.adjectives?.join(', ') || '',
+      ].filter(Boolean);
+      return base.join(', ');
+    }
+
+    /* ── Copy All ── */
+    $('copy-all-btn').addEventListener('click', () => {
+      const btn = $('copy-all-btn');
+      const cards = $('ideas-grid').querySelectorAll('.copy-btn');
+      const all = Array.from(cards).map(b => decodeURIComponent(b.dataset.listing)).join(`\n\n${'─'.repeat(60)}\n\n`);
+      copyToClipboard(all, btn);
+    });
+
+    /* ── Clipboard helper ── */
+    function copyToClipboard(text, btn) {
+      if (!navigator.clipboard) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showCopied(btn);
+        } catch (e) {
+          console.warn('Copy fallback failed:', e);
+        }
+        return;
+      }
+      navigator.clipboard.writeText(text).then(() => showCopied(btn)).catch(e => console.warn('Clipboard write failed:', e));
+    }
+
+    function showCopied(btn) {
+      const orig = btn.innerHTML;
+      btn.classList.add('copied');
+      btn.innerHTML = '✅ Copied!';
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = orig;
+        btn.disabled = false;
+      }, 2000);
+    }
+
+    /* ── Shuffle array (Fisher-Yates) ── */
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    /* ── Init ── */
+    loadPokemonList();
+  </script>
+</body>
+</html>

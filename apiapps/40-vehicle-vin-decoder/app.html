@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIN Decoder — Vehicle Specification Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ── N9 Edge-aligned nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-badge {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-head {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-3);
+}
+
+/* VIN Input */
+.vin-input-wrap {
+  position: relative;
+}
+
+.vin-input {
+  width: 100%;
+  font-family: 'Courier New', 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-3);
+  padding-right: 3.5rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.vin-input::placeholder {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+.vin-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.12);
+}
+.vin-input.is-valid {
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 3px oklch(55% 0.14 155 / 0.10);
+}
+.vin-input.is-invalid {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px oklch(55% 0.20 25 / 0.10);
+}
+
+.vin-counter {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--text-xs);
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+.vin-counter.complete { color: var(--color-success); }
+.vin-counter.over { color: var(--color-danger); }
+
+.vin-validation {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-2);
+  min-height: 1.2rem;
+  line-height: 1.4;
+}
+.vin-validation.valid { color: var(--color-success); }
+.vin-validation.invalid { color: var(--color-danger); }
+
+/* VIN segments diagram */
+.vin-segments {
+  display: flex;
+  gap: 3px;
+  margin-top: var(--space-3);
+}
+
+.vin-seg {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.vin-seg-chars {
+  display: flex;
+  gap: 2px;
+}
+
+.vin-char-cell {
+  width: 22px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.vin-char-cell.filled { color: var(--color-ink); }
+.vin-char-cell.seg-wmi { border-color: oklch(52% 0.14 155 / 0.5); background: oklch(52% 0.14 155 / 0.06); }
+.vin-char-cell.seg-wmi.filled { color: var(--color-accent); }
+.vin-char-cell.seg-vds { border-color: oklch(62% 0.15 72 / 0.5); background: oklch(62% 0.15 72 / 0.06); }
+.vin-char-cell.seg-vds.filled { color: var(--color-warn); }
+.vin-char-cell.seg-vis { border-color: oklch(55% 0.14 155 / 0.5); background: oklch(55% 0.14 155 / 0.06); }
+.vin-char-cell.seg-vis.filled { color: var(--color-success); }
+
+.vin-seg-bar {
+  height: 3px;
+  border-radius: 2px;
+}
+.vin-seg-bar.wmi { background: var(--color-accent); }
+.vin-seg-bar.vds { background: var(--color-warn); }
+.vin-seg-bar.vis { background: var(--color-success); }
+
+.vin-seg-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-ink-muted);
+  text-align: center;
+  margin-top: 2px;
+}
+
+.vin-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.65rem;
+  color: var(--color-ink-muted);
+}
+.legend-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-dot.wmi { background: var(--color-accent); }
+.legend-dot.vds { background: var(--color-warn); }
+.legend-dot.vis { background: var(--color-success); }
+
+.btn-decode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+}
+.btn-decode:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.3);
+}
+.btn-decode:active { transform: translateY(0); box-shadow: none; }
+.btn-decode:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Example VINs */
+.sidebar-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar-section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+.example-chips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.example-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  text-align: left;
+}
+.example-chip:hover {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+.chip-vin {
+  font-family: monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+.chip-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* History */
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.history-item:hover {
+  background: oklch(90% 0.018 95);
+  border-left-color: var(--color-accent-line);
+}
+.history-item.active {
+  background: var(--color-accent-subtle);
+  border-left-color: var(--color-accent);
+}
+
+.history-vin {
+  font-family: monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.history-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-del {
+  background: none;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  line-height: 1;
+  transition: color 0.12s;
+  flex-shrink: 0;
+}
+.history-del:hover { color: var(--color-danger); }
+
+.history-empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.7;
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-8);
+}
+
+/* Empty state — anatomy diagram */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: var(--space-8);
+  text-align: center;
+  gap: var(--space-6);
+}
+
+.empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.empty-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  max-width: 340px;
+  line-height: 1.65;
+}
+
+/* VIN anatomy diagram */
+.anatomy {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 560px;
+  width: 100%;
+}
+
+.anatomy-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-4);
+}
+
+.anatomy-vin {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  flex-wrap: nowrap;
+  margin-bottom: var(--space-4);
+}
+
+.anatomy-char {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.anatomy-char-box {
+  width: 30px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+
+.anatomy-char-box.seg-wmi {
+  border-color: oklch(52% 0.14 155 / 0.5);
+  background: oklch(52% 0.14 155 / 0.08);
+  color: var(--color-accent);
+}
+.anatomy-char-box.seg-vds {
+  border-color: oklch(62% 0.15 72 / 0.5);
+  background: oklch(62% 0.15 72 / 0.08);
+  color: var(--color-warn);
+}
+.anatomy-char-box.seg-vis {
+  border-color: oklch(55% 0.14 155 / 0.5);
+  background: oklch(55% 0.14 155 / 0.08);
+  color: var(--color-success);
+}
+
+.anatomy-char-pos {
+  font-size: 0.55rem;
+  color: var(--color-ink-muted);
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.anatomy-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.anatomy-legend-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--color-paper);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.anatomy-legend-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.anatomy-legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.anatomy-legend-dot.wmi { background: var(--color-accent); }
+.anatomy-legend-dot.vds { background: var(--color-warn); }
+.anatomy-legend-dot.vis { background: var(--color-success); }
+
+.anatomy-legend-name {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.anatomy-legend-pos {
+  font-size: 0.65rem;
+  color: var(--color-ink-muted);
+  font-family: monospace;
+}
+
+.anatomy-legend-desc {
+  font-size: 0.65rem;
+  color: var(--color-ink-muted);
+  line-height: 1.4;
+}
+
+/* Loading skeletons */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg,
+    var(--color-border) 25%,
+    var(--color-paper-2) 50%,
+    var(--color-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+.skeleton-block { height: 16px; }
+.skeleton-block.tall { height: 80px; }
+.skeleton-block.medium { height: 40px; }
+
+/* Results */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.results { animation: fadeUp 0.3s ease forwards; }
+
+/* Vehicle summary card */
+.vehicle-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.vehicle-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: var(--space-4);
+}
+
+.vehicle-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 20px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.badge-body {
+  background: oklch(52% 0.14 155 / 0.10);
+  border: 1px solid oklch(52% 0.14 155 / 0.25);
+  color: var(--color-accent);
+}
+.badge-fuel {
+  background: oklch(62% 0.15 72 / 0.10);
+  border: 1px solid oklch(62% 0.15 72 / 0.25);
+  color: var(--color-warn);
+}
+.badge-drive {
+  background: oklch(55% 0.20 25 / 0.08);
+  border: 1px solid oklch(55% 0.20 25 / 0.20);
+  color: var(--color-danger);
+}
+.badge-type {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+}
+
+.vehicle-meta {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+}
+.vehicle-meta strong { color: var(--color-ink); font-weight: 600; }
+
+/* Spec sections */
+.spec-section {
+  margin-bottom: var(--space-6);
+}
+
+.spec-section-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.spec-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.spec-key {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-muted);
+}
+
+.spec-val {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+  line-height: 1.3;
+}
+
+/* Recalls section */
+.recalls-section {
+  margin-bottom: var(--space-6);
+}
+
+.recalls-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.recalls-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.recalls-count-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: 20px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.recalls-count-badge.none {
+  background: oklch(55% 0.14 155 / 0.10);
+  border: 1px solid oklch(55% 0.14 155 / 0.25);
+  color: var(--color-success);
+}
+.recalls-count-badge.has {
+  background: oklch(55% 0.20 25 / 0.10);
+  border: 1px solid oklch(55% 0.20 25 / 0.25);
+  color: var(--color-danger);
+}
+
+.recall-no-issues {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: oklch(55% 0.14 155 / 0.06);
+  border: 1px solid oklch(55% 0.14 155 / 0.20);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-success);
+  font-weight: 500;
+}
+
+.recall-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.recall-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Accordion recall cards */
+.recall-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.recall-item {
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.recall-item-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper-2);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+.recall-item-btn:hover { background: oklch(55% 0.20 25 / 0.05); }
+
+.recall-item-component {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  flex: 1;
+}
+
+.recall-item-action {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+}
+
+.recall-item-body {
+  display: none;
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-paper);
+}
+.recall-item-body.open { display: block; }
+
+.recall-item-body p {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.65;
+  margin-bottom: var(--space-3);
+}
+.recall-item-body p:last-child { margin-bottom: 0; }
+.recall-item-body strong { color: var(--color-ink); font-weight: 600; }
+
+/* Export row */
+.export-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.btn-secondary:hover {
+  border-color: var(--color-accent-line);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+/* Error state */
+.error-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: oklch(55% 0.20 25 / 0.06);
+  border: 1px solid oklch(55% 0.20 25 / 0.25);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+  line-height: 1.6;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+    max-height: none;
+  }
+
+  .sidebar-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+
+  .spec-grid { grid-template-columns: 1fr 1fr; }
+
+  .anatomy-legend { grid-template-columns: 1fr; }
+  .anatomy-vin { gap: 2px; }
+  .anatomy-char-box { width: 22px; height: 28px; font-size: 0.65rem; }
+
+  .nav-badge { display: none; }
+}
+
+@media (max-width: 480px) {
+  .spec-grid { grid-template-columns: 1fr; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  .spinner, .recall-spinner { animation: none; }
+  .btn-decode:hover { transform: none; box-shadow: none; }
+  .toast { transition: opacity 0.15s ease; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Edge-aligned nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">VIN<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Vehicle Decoder</span>
+  <span class="nav-badge">FREE · NHTSA API</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="VIN input and history">
+
+    <!-- VIN input -->
+    <div class="sidebar-head">
+      <p class="sidebar-title">Decode a VIN</p>
+
+      <div class="vin-input-wrap">
+        <label for="vin-input" class="sr-only">Enter 17-character Vehicle Identification Number</label>
+        <input
+          type="text"
+          class="vin-input"
+          id="vin-input"
+          placeholder="Enter 17-char VIN…"
+          maxlength="17"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          aria-describedby="vin-validation"
+        />
+        <span class="vin-counter" id="vin-counter" aria-live="polite">0/17</span>
+      </div>
+
+      <!-- VIN segment visualizer -->
+      <div class="vin-segments" id="vin-segments" aria-label="VIN segment breakdown" aria-hidden="true">
+        <div class="vin-seg">
+          <div class="vin-seg-chars" id="seg-wmi"></div>
+          <div class="vin-seg-bar wmi"></div>
+          <span class="vin-seg-label">WMI 1–3</span>
+        </div>
+        <div class="vin-seg">
+          <div class="vin-seg-chars" id="seg-vds"></div>
+          <div class="vin-seg-bar vds"></div>
+          <span class="vin-seg-label">VDS 4–9</span>
+        </div>
+        <div class="vin-seg">
+          <div class="vin-seg-chars" id="seg-vis"></div>
+          <div class="vin-seg-bar vis"></div>
+          <span class="vin-seg-label">VIS 10–17</span>
+        </div>
+      </div>
+
+      <div class="vin-legend" aria-hidden="true">
+        <span class="legend-item"><span class="legend-dot wmi"></span>World Manufacturer</span>
+        <span class="legend-item"><span class="legend-dot vds"></span>Vehicle Descriptor</span>
+        <span class="legend-item"><span class="legend-dot vis"></span>Vehicle Identifier</span>
+      </div>
+
+      <div id="vin-validation" class="vin-validation" role="status" aria-live="polite">
+        17 alphanumeric characters — no I, O, or Q
+      </div>
+
+      <button class="btn-decode" id="btn-decode" disabled aria-label="Decode VIN">
+        <span id="btn-label">Decode VIN</span>
+      </button>
+    </div>
+
+    <!-- Example VINs -->
+    <div class="sidebar-section">
+      <p class="sidebar-section-label">Example VINs</p>
+      <div class="example-chips">
+        <button class="example-chip" data-vin="1HGBH41JXMN109186" aria-label="Load 2021 Honda Civic VIN">
+          <span class="chip-vin">1HGBH41JXMN109186</span>
+          <span class="chip-desc">Honda Civic</span>
+        </button>
+        <button class="example-chip" data-vin="2T1BURHE0JC062816" aria-label="Load Toyota Corolla VIN">
+          <span class="chip-vin">2T1BURHE0JC062816</span>
+          <span class="chip-desc">Toyota Corolla</span>
+        </button>
+        <button class="example-chip" data-vin="1FTFW1ET5DFC10312" aria-label="Load Ford F-150 VIN">
+          <span class="chip-vin">1FTFW1ET5DFC10312</span>
+          <span class="chip-desc">Ford F-150</span>
+        </button>
+        <button class="example-chip" data-vin="WBAVA37598NL24078" aria-label="Load BMW 3 Series VIN">
+          <span class="chip-vin">WBAVA37598NL24078</span>
+          <span class="chip-desc">BMW 3 Series</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="sidebar-section" style="border-bottom:none; padding-bottom: var(--space-2);">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <p class="sidebar-section-label">Recent lookups</p>
+        <button class="history-del" id="btn-clear-history" style="font-size:0.65rem; padding: 2px 6px;" aria-label="Clear all history">Clear all</button>
+      </div>
+    </div>
+    <div class="sidebar-scroll">
+      <div id="history-list" role="list" aria-label="VIN lookup history"></div>
+    </div>
+
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Vehicle decode results">
+    <div class="main-scroll" id="main-scroll">
+
+      <!-- Empty state -->
+      <div class="empty-state" id="empty-state">
+        <p class="empty-title">Enter a VIN to begin</p>
+        <p class="empty-sub">Decode any US vehicle — get complete specs, recall status, and plant information powered by the NHTSA database.</p>
+
+        <div class="anatomy">
+          <p class="anatomy-label">VIN anatomy — what each section means</p>
+          <div class="anatomy-vin" aria-label="Sample VIN breakdown">
+            <!-- WMI: chars 1-3 -->
+            <div class="anatomy-char"><div class="anatomy-char-box seg-wmi">1</div><span class="anatomy-char-pos">1</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-wmi">H</div><span class="anatomy-char-pos">2</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-wmi">G</div><span class="anatomy-char-pos">3</span></div>
+            <!-- VDS: chars 4-9 -->
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vds">B</div><span class="anatomy-char-pos">4</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vds">H</div><span class="anatomy-char-pos">5</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vds">4</div><span class="anatomy-char-pos">6</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vds">1</div><span class="anatomy-char-pos">7</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vds">J</div><span class="anatomy-char-pos">8</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vds">X</div><span class="anatomy-char-pos">9</span></div>
+            <!-- VIS: chars 10-17 -->
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vis">M</div><span class="anatomy-char-pos">10</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vis">N</div><span class="anatomy-char-pos">11</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vis">1</div><span class="anatomy-char-pos">12</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vis">0</div><span class="anatomy-char-pos">13</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vis">9</div><span class="anatomy-char-pos">14</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vis">1</div><span class="anatomy-char-pos">15</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vis">8</div><span class="anatomy-char-pos">16</span></div>
+            <div class="anatomy-char"><div class="anatomy-char-box seg-vis">6</div><span class="anatomy-char-pos">17</span></div>
+          </div>
+          <div class="anatomy-legend">
+            <div class="anatomy-legend-item">
+              <div class="anatomy-legend-head">
+                <span class="anatomy-legend-dot wmi"></span>
+                <span class="anatomy-legend-name">WMI (1–3)</span>
+              </div>
+              <span class="anatomy-legend-pos">World Manufacturer Identifier</span>
+              <span class="anatomy-legend-desc">Country of origin, manufacturer, and vehicle division.</span>
+            </div>
+            <div class="anatomy-legend-item">
+              <div class="anatomy-legend-head">
+                <span class="anatomy-legend-dot vds"></span>
+                <span class="anatomy-legend-name">VDS (4–9)</span>
+              </div>
+              <span class="anatomy-legend-pos">Vehicle Descriptor Section</span>
+              <span class="anatomy-legend-desc">Body style, engine type, restraints. Position 9 is the check digit.</span>
+            </div>
+            <div class="anatomy-legend-item">
+              <div class="anatomy-legend-head">
+                <span class="anatomy-legend-dot vis"></span>
+                <span class="anatomy-legend-name">VIS (10–17)</span>
+              </div>
+              <span class="anatomy-legend-pos">Vehicle Identifier Section</span>
+              <span class="anatomy-legend-desc">Position 10 = model year, 11 = assembly plant, 12–17 = serial number.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading state -->
+      <div id="loading-state" style="display:none; padding: var(--space-8);">
+        <div style="display:flex; flex-direction:column; gap: var(--space-4);">
+          <div class="skeleton skeleton-block tall" style="border-radius: var(--radius-lg);"></div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-3);">
+            <div class="skeleton skeleton-block medium"></div>
+            <div class="skeleton skeleton-block medium"></div>
+            <div class="skeleton skeleton-block medium"></div>
+            <div class="skeleton skeleton-block medium"></div>
+            <div class="skeleton skeleton-block medium"></div>
+            <div class="skeleton skeleton-block medium"></div>
+          </div>
+          <div class="skeleton skeleton-block" style="width:60%;"></div>
+          <div class="skeleton skeleton-block" style="width:80%;"></div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="results-state" style="display:none;" class="results" aria-live="polite">
+
+        <!-- Vehicle summary card -->
+        <div class="vehicle-card" id="vehicle-card">
+          <h1 class="vehicle-name" id="vehicle-name">—</h1>
+          <div class="vehicle-badges" id="vehicle-badges"></div>
+          <p class="vehicle-meta" id="vehicle-meta"></p>
+        </div>
+
+        <!-- Engine section -->
+        <div class="spec-section" id="section-engine" style="display:none">
+          <p class="spec-section-title">Engine &amp; Performance</p>
+          <div class="spec-grid" id="grid-engine"></div>
+        </div>
+
+        <!-- Transmission section -->
+        <div class="spec-section" id="section-transmission" style="display:none">
+          <p class="spec-section-title">Transmission &amp; Drivetrain</p>
+          <div class="spec-grid" id="grid-transmission"></div>
+        </div>
+
+        <!-- Body section -->
+        <div class="spec-section" id="section-body" style="display:none">
+          <p class="spec-section-title">Body &amp; Dimensions</p>
+          <div class="spec-grid" id="grid-body"></div>
+        </div>
+
+        <!-- Manufacturer section -->
+        <div class="spec-section" id="section-manufacturer" style="display:none">
+          <p class="spec-section-title">Manufacturer &amp; Origin</p>
+          <div class="spec-grid" id="grid-manufacturer"></div>
+        </div>
+
+        <!-- Recalls section -->
+        <div class="recalls-section">
+          <div class="recalls-header">
+            <p class="recalls-title">Safety Recalls</p>
+            <span class="recalls-count-badge" id="recalls-badge" style="display:none;"></span>
+          </div>
+          <div id="recalls-content">
+            <div class="recall-loading">
+              <span class="recall-spinner"></span>
+              Checking for recalls…
+            </div>
+          </div>
+        </div>
+
+        <!-- Export row -->
+        <div class="export-row">
+          <button class="btn-secondary" id="btn-copy-text" aria-label="Copy vehicle summary as text">
+            &#128203; Copy summary
+          </button>
+          <button class="btn-secondary" id="btn-download-json" aria-label="Download full decoded data as JSON">
+            &#8659; Download JSON
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Error state -->
+      <div id="error-state" style="display:none; padding: var(--space-8);">
+        <div class="error-box" role="alert">
+          <span aria-hidden="true">&#9888;</span>
+          <span id="error-msg"></span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const API_DECODE  = vin => `https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/${encodeURIComponent(vin)}?format=json`;
+  const API_RECALLS = (make, model, year) =>
+    `https://api.nhtsa.gov/recalls/recallsByVehicle?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${encodeURIComponent(year)}`;
+
+  const HISTORY_KEY = 'vin-decoder-history-v1';
+  const MAX_HISTORY = 8;
+  const ILLEGAL_RE  = /[IOQ]/i;
+  const VALID_RE    = /^[A-HJ-NPR-Z0-9]+$/i;
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  const vinInput      = document.getElementById('vin-input');
+  const vinCounter    = document.getElementById('vin-counter');
+  const vinValidation = document.getElementById('vin-validation');
+  const btnDecode     = document.getElementById('btn-decode');
+  const btnLabel      = document.getElementById('btn-label');
+  const segWmi        = document.getElementById('seg-wmi');
+  const segVds        = document.getElementById('seg-vds');
+  const segVis        = document.getElementById('seg-vis');
+  const historyList   = document.getElementById('history-list');
+  const btnClearHist  = document.getElementById('btn-clear-history');
+  const emptyState    = document.getElementById('empty-state');
+  const loadingState  = document.getElementById('loading-state');
+  const resultsState  = document.getElementById('results-state');
+  const errorState    = document.getElementById('error-state');
+  const errorMsg      = document.getElementById('error-msg');
+  const vehicleName   = document.getElementById('vehicle-name');
+  const vehicleBadges = document.getElementById('vehicle-badges');
+  const vehicleMeta   = document.getElementById('vehicle-meta');
+  const recallsContent= document.getElementById('recalls-content');
+  const recallsBadge  = document.getElementById('recalls-badge');
+  const btnCopyText   = document.getElementById('btn-copy-text');
+  const btnDownJSON   = document.getElementById('btn-download-json');
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let lastData   = null;
+  let lastVin    = '';
+  let activeVin  = '';
+
+  // ── VIN segment cell builder ───────────────────────────────────────────────
+  function buildSegCells() {
+    for (let i = 1; i <= 17; i++) {
+      const cell = document.createElement('span');
+      const cls = i <= 3 ? 'seg-wmi' : i <= 9 ? 'seg-vds' : 'seg-vis';
+      cell.className = `vin-char-cell ${cls}`;
+      cell.id = `vc${i}`;
+      cell.textContent = '·';
+      if (i <= 3) segWmi.appendChild(cell);
+      else if (i <= 9) segVds.appendChild(cell);
+      else segVis.appendChild(cell);
+    }
+  }
+  buildSegCells();
+
+  function updateSegCells(vin) {
+    for (let i = 1; i <= 17; i++) {
+      const cell = document.getElementById(`vc${i}`);
+      const ch = vin[i - 1];
+      if (ch) { cell.textContent = ch; cell.classList.add('filled'); }
+      else     { cell.textContent = '·'; cell.classList.remove('filled'); }
+    }
+  }
+
+  // ── VIN validation ─────────────────────────────────────────────────────────
+  function validateVin(vin) {
+    const v = vin.toUpperCase();
+    if (!v.length) return { ok: false, msg: '17 alphanumeric characters — no I, O, or Q', cls: '' };
+    if (v.length < 17) return { ok: false, msg: `${17 - v.length} more character${17 - v.length > 1 ? 's' : ''} needed`, cls: '' };
+    if (ILLEGAL_RE.test(v)) return { ok: false, msg: 'VIN cannot contain I, O, or Q', cls: 'invalid' };
+    if (!VALID_RE.test(v)) return { ok: false, msg: 'VIN contains invalid characters', cls: 'invalid' };
+    return { ok: true, msg: '✓ Valid format — ready to decode', cls: 'valid' };
+  }
+
+  function onVinInput() {
+    // Sanitise: remove invalid chars, uppercase, clamp to 17
+    let raw = vinInput.value.replace(/[^A-HJ-NPR-Z0-9]/gi, '').toUpperCase().slice(0, 17);
+    if (raw !== vinInput.value) {
+      const sel = vinInput.selectionStart;
+      vinInput.value = raw;
+      vinInput.setSelectionRange(sel, sel);
+    }
+
+    const len = raw.length;
+    vinCounter.textContent = `${len}/17`;
+    vinCounter.className = `vin-counter${len === 17 ? ' complete' : len > 0 ? '' : ''}`;
+
+    updateSegCells(raw);
+
+    const v = validateVin(raw);
+    vinValidation.textContent = v.msg;
+    vinValidation.className = `vin-validation ${v.cls}`;
+
+    vinInput.className = `vin-input${len === 17 ? (v.cls === 'invalid' ? ' is-invalid' : ' is-valid') : ''}`;
+    btnDecode.disabled = !v.ok;
+  }
+
+  vinInput.addEventListener('input', onVinInput);
+  vinInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !btnDecode.disabled) btnDecode.click();
+  });
+
+  // ── Example VIN chips ──────────────────────────────────────────────────────
+  document.querySelectorAll('.example-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const vin = btn.dataset.vin;
+      vinInput.value = vin;
+      onVinInput();
+      if (!btnDecode.disabled) doDecodeVin(vin);
+    });
+  });
+
+  // ── Decode button ──────────────────────────────────────────────────────────
+  btnDecode.addEventListener('click', () => {
+    const vin = vinInput.value.toUpperCase();
+    if (validateVin(vin).ok) doDecodeVin(vin);
+  });
+
+  async function doDecodeVin(vin) {
+    activeVin = vin;
+    showState('loading');
+    setDecoding(true);
+
+    try {
+      const res = await fetch(API_DECODE(vin));
+      if (!res.ok) throw new Error(`NHTSA API returned ${res.status}`);
+      const json = await res.json();
+
+      // The decodevinvalues endpoint returns Results array with one object
+      const raw = json.Results && json.Results[0];
+      if (!raw) throw new Error('No data returned from NHTSA');
+
+      // Check error code — 0 means success, but also check for missing core fields
+      const errCode = String(raw.ErrorCode || '');
+      if (errCode && errCode !== '0' && !raw.Make && !raw.Model) {
+        throw new Error(`VIN decode error (code ${errCode}): ${raw.ErrorText || 'Invalid or unrecognised VIN'}`);
+      }
+
+      lastData = raw;
+      lastVin  = vin;
+      renderResults(vin, raw);
+      saveHistory(vin, raw);
+      renderHistory();
+      showState('results');
+      fetchRecalls(raw.Make, raw.Model, raw.ModelYear);
+
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setDecoding(false);
+    }
+  }
+
+  function setDecoding(on) {
+    if (on) {
+      btnLabel.innerHTML = '<span class="spinner"></span> Decoding…';
+      btnDecode.disabled = true;
+    } else {
+      btnLabel.textContent = 'Decode VIN';
+      const v = validateVin(vinInput.value);
+      btnDecode.disabled = !v.ok;
+    }
+  }
+
+  // ── Render results ─────────────────────────────────────────────────────────
+  function renderResults(vin, d) {
+    const year  = d.ModelYear || '';
+    const make  = d.Make      || '';
+    const model = d.Model     || '';
+    const trim  = d.Trim      || d.Series || '';
+
+    // Vehicle name
+    vehicleName.textContent = [year, make, model, trim].filter(Boolean).join(' ') || vin;
+
+    // Badges
+    vehicleBadges.innerHTML = '';
+    const addBadge = (text, cls) => {
+      if (!text || isNA(text)) return;
+      const span = document.createElement('span');
+      span.className = `badge ${cls}`;
+      span.textContent = text;
+      vehicleBadges.appendChild(span);
+    };
+    addBadge(d.BodyClass, 'badge-body');
+    addBadge(d.FuelTypePrimary, 'badge-fuel');
+    addBadge(d.DriveType, 'badge-drive');
+    addBadge(d.VehicleType, 'badge-type');
+
+    // Meta
+    const metaParts = [];
+    if (d.Manufacturer && !isNA(d.Manufacturer)) metaParts.push(`<strong>${esc(d.Manufacturer)}</strong>`);
+    if (d.PlantCity && !isNA(d.PlantCity)) {
+      const plant = [d.PlantCity, d.PlantState || d.PlantCountry].filter(x => x && !isNA(x)).join(', ');
+      metaParts.push(`Assembled in ${esc(plant)}`);
+    } else if (d.PlantCountry && !isNA(d.PlantCountry)) {
+      metaParts.push(`Assembled in ${esc(d.PlantCountry)}`);
+    }
+    metaParts.push(`VIN: <span style="font-family:monospace;font-size:0.85em;letter-spacing:0.05em">${esc(vin)}</span>`);
+    vehicleMeta.innerHTML = metaParts.join(' &nbsp;·&nbsp; ');
+
+    // Spec sections
+    renderSpecSection('section-engine', 'grid-engine', [
+      ['Cylinders',    d.EngineCylinders],
+      ['Displacement', d.DisplacementL ? `${parseFloat(d.DisplacementL).toFixed(1)}L` : null],
+      ['Horsepower',   d.EngineHP ? `${d.EngineHP} hp` : null],
+      ['Fuel Type',    d.FuelTypePrimary],
+      ['Engine Model', d.EngineModel],
+      ['Engine Manufacturer', d.EngineManufacturer],
+    ]);
+
+    renderSpecSection('section-transmission', 'grid-transmission', [
+      ['Transmission',   d.TransmissionStyle],
+      ['Drive Type',     d.DriveType],
+      ['Number of Speeds', d.TransmissionSpeeds],
+      ['ABS',            d.ABS],
+      ['ESC',            d.ESC],
+      ['TPMS',           d.TPMS],
+    ]);
+
+    renderSpecSection('section-body', 'grid-body', [
+      ['Body Class',   d.BodyClass],
+      ['Vehicle Type', d.VehicleType],
+      ['Doors',        d.Doors],
+      ['GVWR',         d.GVWR],
+      ['Wheelbase (in)', d.WheelBaseInches],
+      ['Trim',         d.Trim || d.Series],
+    ]);
+
+    renderSpecSection('section-manufacturer', 'grid-manufacturer', [
+      ['Make',           d.Make],
+      ['Manufacturer',   d.Manufacturer],
+      ['Plant City',     d.PlantCity],
+      ['Plant State',    d.PlantState],
+      ['Plant Country',  d.PlantCountry],
+      ['Model Year',     d.ModelYear],
+    ]);
+  }
+
+  function renderSpecSection(sectionId, gridId, pairs) {
+    const section = document.getElementById(sectionId);
+    const grid    = document.getElementById(gridId);
+    const filtered = pairs.filter(([, v]) => v && !isNA(v));
+    if (!filtered.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    grid.innerHTML = filtered.map(([k, v]) => `
+      <div class="spec-card">
+        <span class="spec-key">${esc(k)}</span>
+        <span class="spec-val">${esc(String(v))}</span>
+      </div>
+    `).join('');
+  }
+
+  // ── Recalls ────────────────────────────────────────────────────────────────
+  async function fetchRecalls(make, model, year) {
+    recallsBadge.style.display = 'none';
+    recallsContent.innerHTML = `
+      <div class="recall-loading">
+        <span class="recall-spinner"></span>
+        Checking for safety recalls…
+      </div>`;
+
+    if (!make || isNA(make) || !model || isNA(model) || !year || isNA(year)) {
+      recallsContent.innerHTML = `<p style="font-size:var(--text-sm);color:var(--color-ink-muted);">Cannot check recalls — make/model/year unavailable.</p>`;
+      return;
+    }
+
+    try {
+      const res = await fetch(API_RECALLS(make, model, year));
+      if (!res.ok) throw new Error(`${res.status}`);
+      const json = await res.json();
+      const recalls = json.results || [];
+
+      recallsBadge.style.display = 'inline-flex';
+
+      if (recalls.length === 0) {
+        recallsBadge.className = 'recalls-count-badge none';
+        recallsBadge.textContent = '0 recalls';
+        recallsContent.innerHTML = `
+          <div class="recall-no-issues">
+            &#10003; No active recalls found for ${esc(year)} ${esc(make)} ${esc(model)}
+          </div>`;
+        return;
+      }
+
+      recallsBadge.className = 'recalls-count-badge has';
+      recallsBadge.textContent = `${recalls.length} recall${recalls.length > 1 ? 's' : ''}`;
+
+      const accordion = document.createElement('div');
+      accordion.className = 'recall-accordion';
+
+      recalls.slice(0, 15).forEach((r, idx) => {
+        const item = document.createElement('div');
+        item.className = 'recall-item';
+
+        const component = r.Component || r.NHTSAActionNumber || 'Unknown Component';
+        const body = document.createElement('div');
+        body.className = 'recall-item-body';
+        body.id = `recall-body-${idx}`;
+
+        let bodyHTML = '';
+        if (r.Subject)      bodyHTML += `<p><strong>Subject:</strong> ${esc(r.Subject)}</p>`;
+        if (r.Summary || r.Description) bodyHTML += `<p><strong>Description:</strong> ${esc(r.Summary || r.Description)}</p>`;
+        if (r.Consequence)  bodyHTML += `<p><strong>Consequence:</strong> ${esc(r.Consequence)}</p>`;
+        if (r.Remedy || r.RemedyDescription) bodyHTML += `<p><strong>Remedy:</strong> ${esc(r.Remedy || r.RemedyDescription)}</p>`;
+        if (r.NHTSAActionNumber) bodyHTML += `<p style="color:var(--color-ink-muted);font-size:var(--text-xs);">NHTSA #${esc(r.NHTSAActionNumber)}</p>`;
+        body.innerHTML = bodyHTML || '<p>No additional details available.</p>';
+
+        const btn = document.createElement('button');
+        btn.className = 'recall-item-btn';
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('aria-controls', `recall-body-${idx}`);
+        btn.innerHTML = `
+          <span class="recall-item-component">${esc(component)}</span>
+          <span class="recall-item-action">Details &#9660;</span>`;
+
+        btn.addEventListener('click', () => {
+          const open = body.classList.toggle('open');
+          btn.setAttribute('aria-expanded', String(open));
+          btn.querySelector('.recall-item-action').innerHTML = open ? 'Close &#9650;' : 'Details &#9660;';
+        });
+
+        item.appendChild(btn);
+        item.appendChild(body);
+        accordion.appendChild(item);
+      });
+
+      recallsContent.innerHTML = '';
+      recallsContent.appendChild(accordion);
+
+    } catch (err) {
+      recallsContent.innerHTML = `<p style="font-size:var(--text-sm);color:var(--color-ink-muted);">Could not load recall data: ${esc(err.message)}</p>`;
+    }
+  }
+
+  // ── State management ───────────────────────────────────────────────────────
+  function showState(state) {
+    emptyState.style.display   = state === 'empty'   ? '' : 'none';
+    loadingState.style.display = state === 'loading' ? '' : 'none';
+    resultsState.style.display = state === 'results' ? '' : 'none';
+    errorState.style.display   = state === 'error'   ? '' : 'none';
+
+    if (state === 'results' || state === 'error') {
+      document.getElementById('main-scroll').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    showState('error');
+  }
+
+  // ── History ────────────────────────────────────────────────────────────────
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function saveHistory(vin, d) {
+    const hist = loadHistory().filter(h => h.vin !== vin);
+    hist.unshift({
+      vin,
+      label: [d.ModelYear, d.Make, d.Model].filter(x => x && !isNA(x)).join(' ') || vin,
+    });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(0, MAX_HISTORY)));
+  }
+
+  function renderHistory() {
+    const hist = loadHistory();
+    if (!hist.length) {
+      historyList.innerHTML = `<div class="history-empty">No lookups yet.<br>Decoded VINs appear here.</div>`;
+      return;
+    }
+
+    historyList.innerHTML = '';
+    hist.forEach(h => {
+      const item = document.createElement('div');
+      item.className = 'history-item' + (h.vin === activeVin ? ' active' : '');
+      item.role = 'listitem';
+      item.tabIndex = 0;
+      item.setAttribute('aria-label', `Load ${h.vin} — ${h.label}`);
+      item.innerHTML = `
+        <span class="history-vin">${esc(h.vin)}</span>
+        <span class="history-desc">${esc(h.label)}</span>
+        <button class="history-del" aria-label="Remove ${esc(h.vin)} from history" title="Remove">✕</button>`;
+
+      item.addEventListener('click', e => {
+        if (e.target.classList.contains('history-del')) {
+          e.stopPropagation();
+          const updated = loadHistory().filter(x => x.vin !== h.vin);
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+          renderHistory();
+          return;
+        }
+        vinInput.value = h.vin;
+        onVinInput();
+        doDecodeVin(h.vin);
+      });
+
+      item.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+      });
+
+      historyList.appendChild(item);
+    });
+  }
+
+  btnClearHist.addEventListener('click', () => {
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+    showToast('History cleared');
+  });
+
+  // ── Export ─────────────────────────────────────────────────────────────────
+  btnCopyText.addEventListener('click', () => {
+    if (!lastData) return;
+    const d = lastData;
+    const lines = [
+      `VIN: ${lastVin}`,
+      `Vehicle: ${[d.ModelYear, d.Make, d.Model, d.Trim || d.Series].filter(x=>x&&!isNA(x)).join(' ')}`,
+      `Body: ${d.BodyClass || '—'}`,
+      `Engine: ${d.DisplacementL ? parseFloat(d.DisplacementL).toFixed(1) + 'L' : ''} ${d.EngineCylinders ? 'V'+d.EngineCylinders : ''} ${d.FuelTypePrimary || ''}`.trim() || '—',
+      `Transmission: ${d.TransmissionStyle || '—'}`,
+      `Drive: ${d.DriveType || '—'}`,
+      `GVWR: ${d.GVWR || '—'}`,
+      `Manufacturer: ${d.Manufacturer || '—'}`,
+      `Plant: ${[d.PlantCity, d.PlantState || d.PlantCountry].filter(x=>x&&!isNA(x)).join(', ') || '—'}`,
+    ].join('\n');
+
+    navigator.clipboard.writeText(lines)
+      .then(() => showToast('Summary copied to clipboard', 'success'))
+      .catch(() => showToast('Could not copy — try manual selection', 'error'));
+  });
+
+  btnDownJSON.addEventListener('click', () => {
+    if (!lastData) return;
+    const blob = new Blob([JSON.stringify(lastData, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `vin-${lastVin}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('JSON download started', 'success');
+  });
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+  }
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function isNA(val) {
+    if (val == null) return true;
+    const s = String(val).trim().toLowerCase();
+    return s === '' || s === 'not applicable' || s === 'null' || s === 'n/a' || s === '—';
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  renderHistory();
+  showState('empty');
+  vinInput.focus();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Repo Monitor — Candidate Watchlist for Recruiters</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --border: rgba(255,255,255,0.08);
+      --accent: #ffffff;
+      --accent2: #3b82f6;
+      --text: #ededed;
+      --muted: #6b7280;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ─── Scrollbar ─── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ─── Layout ─── */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 260px 1fr 300px;
+      grid-template-rows: 60px 1fr;
+      grid-template-areas:
+        "nav header header"
+        "nav main sidebar";
+      min-height: 100vh;
+    }
+
+    /* ─── Top bar ─── */
+    .topbar {
+      grid-area: header;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-right: auto;
+    }
+
+    .rate-limit-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .rate-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    .rate-dot.warn { background: var(--yellow); }
+    .rate-dot.bad { background: var(--accent2); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ─── Left nav ─── */
+    .sidenav {
+      grid-area: nav;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .brand-text { font-size: 13px; font-weight: 700; line-height: 1.2; }
+    .brand-sub { font-size: 10px; color: var(--muted); font-weight: 400; }
+
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 0 20px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      cursor: pointer;
+      border-radius: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(0,229,255, 0.12); color: var(--accent); border-left: 3px solid var(--accent); padding-left: 17px; }
+
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 1px 6px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    /* ─── Add candidate form ─── */
+    .add-candidate-form {
+      margin: 16px 12px 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .add-candidate-form label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .input-field {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255, 0.15);
+    }
+
+    .input-field::placeholder { color: var(--muted); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.1s, box-shadow 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(0,229,255, 0.45); }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+    .btn-danger {
+      background: rgba(124,58,237, 0.15);
+      color: var(--accent2);
+      border: 1px solid rgba(124,58,237, 0.3);
+    }
+
+    .btn-danger:hover { background: rgba(124,58,237, 0.25); }
+
+    .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
+
+    /* ─── Candidate list in nav ─── */
+    .candidate-list { margin-top: 12px; flex: 1; overflow-y: auto; }
+
+    .candidate-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .candidate-nav-item:hover { background: var(--surface2); }
+    .candidate-nav-item.active { background: rgba(0,229,255, 0.1); }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .avatar-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      background: var(--surface2);
+    }
+
+    .candidate-nav-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .candidate-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .candidate-status-dot.active { background: var(--green); }
+    .candidate-status-dot.loading { background: var(--yellow); animation: pulse 1s infinite; }
+
+    /* ─── Main content ─── */
+    .main-content {
+      grid-area: main;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    /* ─── Views ─── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ─── Page header ─── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .page-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ─── Stats row ─── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .stat-value.accent { color: var(--accent); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.yellow { color: var(--yellow); }
+    .stat-value.pink { color: var(--accent2); }
+
+    /* ─── Candidate dashboard card ─── */
+    .candidate-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .candidate-card:hover { border-color: var(--accent); box-shadow: 0 4px 20px rgba(0,229,255, 0.1); }
+
+    .candidate-card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .candidate-avatar-lg {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--surface2);
+    }
+
+    .candidate-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
+
+    .candidate-info { flex: 1; min-width: 0; }
+
+    .candidate-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .candidate-gh-link {
+      font-size: 11px;
+      color: var(--accent);
+      text-decoration: none;
+      background: rgba(0,229,255, 0.12);
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+
+    .candidate-gh-link:hover { background: rgba(0,229,255, 0.25); }
+
+    .candidate-bio {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .candidate-meta-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .candidate-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .mini-stat {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: center;
+    }
+
+    .mini-stat-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .mini-stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ─── Activity bar chart ─── */
+    .activity-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 50px;
+      margin: 12px 0 6px;
+    }
+
+    .activity-bar {
+      flex: 1;
+      background: var(--surface2);
+      border-radius: 3px 3px 0 0;
+      position: relative;
+      transition: background 0.2s;
+      cursor: pointer;
+      min-height: 4px;
+    }
+
+    .activity-bar:hover { background: var(--accent); }
+
+    .activity-bar-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(180deg, var(--accent), rgba(0,229,255, 0.4));
+      border-radius: 3px 3px 0 0;
+      transition: height 0.4s ease;
+    }
+
+    /* ─── Top repos ─── */
+    .repo-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .repo-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      transition: border-color 0.15s;
+    }
+
+    .repo-item:hover { border-color: var(--border); }
+
+    .repo-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .repo-name:hover { text-decoration: underline; }
+
+    .repo-lang {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .lang-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent2);
+      flex-shrink: 0;
+    }
+
+    .repo-stars {
+      font-size: 12px;
+      color: var(--yellow);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      white-space: nowrap;
+    }
+
+    /* ─── Notes ─── */
+    .notes-area {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 12px;
+      width: 100%;
+      resize: vertical;
+      min-height: 56px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+
+    .notes-area:focus { border-color: var(--accent); }
+    .notes-area::placeholder { color: var(--muted); }
+
+    /* ─── Alert badges ─── */
+    .alert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(247, 201, 72, 0.12);
+      border: 1px solid rgba(247, 201, 72, 0.3);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: var(--yellow);
+      font-weight: 600;
+    }
+
+    .alert-badge.new-repo {
+      background: rgba(67, 217, 173, 0.1);
+      border-color: rgba(67, 217, 173, 0.3);
+      color: var(--green);
+    }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      grid-area: sidebar;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ─── Trending item ─── */
+    .trending-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .trending-item:last-child { border-bottom: none; }
+
+    .trending-repo-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .trending-repo-name:hover { text-decoration: underline; }
+
+    .trending-desc {
+      font-size: 11px;
+      color: var(--muted);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .trending-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ─── Feed ─── */
+    .commit-feed { display: flex; flex-direction: column; gap: 0; }
+
+    .commit-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      animation: fadeIn 0.25s ease;
+    }
+
+    .commit-item:last-child { border-bottom: none; }
+
+    .commit-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--surface2);
+    }
+
+    .commit-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .commit-body { flex: 1; min-width: 0; }
+
+    .commit-header {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .commit-author {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .commit-repo {
+      font-size: 11px;
+      color: var(--accent);
+      background: rgba(0,229,255, 0.1);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+
+    .commit-time { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    .commit-msg {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ─── Release alerts ─── */
+    .release-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .release-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .release-tag {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .release-repo {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .release-name {
+      font-size: 11px;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .release-date { font-size: 10px; color: var(--muted); }
+
+    /* ─── Empty state ─── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .empty-sub {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 280px;
+    }
+
+    /* ─── Skeleton loader ─── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ─── Toast ─── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+      pointer-events: all;
+      max-width: 320px;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes toastOut {
+      to { opacity: 0; transform: translateY(12px) scale(0.95); }
+    }
+
+    .toast.success { border-color: rgba(67, 217, 173, 0.4); }
+    .toast.error { border-color: rgba(124,58,237, 0.4); }
+    .toast.info { border-color: rgba(0,229,255, 0.4); }
+
+    /* ─── Progress / spinner ─── */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ─── Card actions ─── */
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    /* ─── Candidate detail view ─── */
+    .profile-header-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .profile-body { flex: 1; min-width: 0; }
+
+    .profile-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .profile-login {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .profile-bio {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .section-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ─── Divider ─── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    /* ─── Tab bar ─── */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      text-align: center;
+    }
+
+    .tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* ─── Alerts panel ─── */
+    .alerts-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .alerts-header {
+      padding: 14px 18px;
+      background: rgba(247, 201, 72, 0.06);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--yellow);
+    }
+
+    .alert-row {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .alert-row:last-child { border-bottom: none; }
+
+    .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    .alert-content { flex: 1; }
+
+    .alert-msg { font-size: 13px; color: var(--text); }
+
+    .alert-time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── Threshold slider ─── */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .slider-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 900px) {
+      .app-shell {
+        grid-template-columns: 220px 1fr;
+        grid-template-areas:
+          "nav header"
+          "nav main";
+      }
+
+      .sidebar { display: none; }
+      .two-col { grid-template-columns: 1fr; }
+      .candidate-stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 600px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "header"
+          "main";
+      }
+
+      .sidenav { display: none; }
+    }
+
+    /* ─── Loading overlay ─── */
+    .loading-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 24px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ─── Lang colors ─── */
+    .lang-JavaScript { background: #f7df1e; }
+    .lang-TypeScript { background: #3178c6; }
+    .lang-Python { background: #3572A5; }
+    .lang-Rust { background: #dea584; }
+    .lang-Go { background: #00add8; }
+    .lang-Java { background: #b07219; }
+    .lang-C { background: #555; }
+    .lang-CPP { background: #f34b7d; }
+    .lang-Ruby { background: #701516; }
+    .lang-PHP { background: #4f5d95; }
+    .lang-Swift { background: #ffac45; }
+    .lang-Kotlin { background: #a97bff; }
+    .lang-Dart { background: #00b4ab; }
+    .lang-CSS { background: #563d7c; }
+    .lang-HTML { background: #e34c26; }
+    .lang-Shell { background: #89e051; }
+    .lang-Vue { background: #41b883; }
+
+/* === Dev Tools v2 Design System === */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.6;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+
+.container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.card, .result, .item, .output, .repo, .job, .post, .user, .avatar-container, .profile,
+[class*="card"], [class*="result"], [class*="item"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  animation: toolsFade 0.25s ease both;
+}
+.card:hover, .item:hover { background: var(--surface2); }
+
+.code, .value, pre, code, .mono, .username, .repo-name, .hash {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  color: var(--text);
+}
+
+img.avatar, .avatar img, [class*="avatar"] img, .profile-img {
+  border-radius: 50%;
+  border: 2px solid var(--border);
+}
+
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.65rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.3);
+}
+
+button, .btn, input[type="submit"], input[type="button"] {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.5rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+button:hover { opacity: 0.9; }
+button:active { transform: scale(0.97); }
+
+.tag, .badge, .label, .tech, .language, .skill, .type {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+}
+
+.stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.stat { font-family: var(--font-mono); }
+.stat-value { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+.stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+
+.valid, .open, .active, .remote, .hiring { color: var(--green); }
+.closed, .inactive { color: var(--red); }
+.pending, .warning { color: var(--yellow); }
+
+table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-weight: 600; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+@keyframes toolsFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- ─── Left Nav ─── -->
+    <nav class="sidenav" aria-label="Primary navigation">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🔭</div>
+        <div>
+          <div class="brand-text">RepoRadar</div>
+          <div class="brand-sub">Candidate Monitor</div>
+        </div>
+      </div>
+
+      <div class="nav-section-label">Navigation</div>
+      <button class="nav-item active" data-view="dashboard" onclick="showView('dashboard')" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">📊</span>
+        Dashboard
+        <span class="nav-badge" id="badge-candidates">0</span>
+      </button>
+      <button class="nav-item" data-view="feed" onclick="showView('feed')">
+        <span class="nav-icon" aria-hidden="true">⚡</span>
+        Activity Feed
+      </button>
+      <button class="nav-item" data-view="alerts" onclick="showView('alerts')">
+        <span class="nav-icon" aria-hidden="true">🔔</span>
+        Alerts
+        <span class="nav-badge" id="badge-alerts" style="background:var(--yellow);color:#000;display:none">0</span>
+      </button>
+      <button class="nav-item" data-view="settings" onclick="showView('settings')">
+        <span class="nav-icon" aria-hidden="true">⚙️</span>
+        Settings
+      </button>
+
+      <div style="margin-top:20px; padding:0 12px;">
+        <div class="add-candidate-form">
+          <label for="username-input">Add Candidate</label>
+          <div class="input-row">
+            <input
+              class="input-field"
+              id="username-input"
+              type="text"
+              placeholder="github-username"
+              aria-label="GitHub username to add"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button class="btn btn-primary" id="add-btn" onclick="addCandidate()" aria-label="Add candidate">
+              +
+            </button>
+          </div>
+          <div id="add-error" style="font-size:11px;color:var(--accent2);margin-top:6px;display:none"></div>
+        </div>
+      </div>
+
+      <div class="nav-section-label" style="margin-top:20px;">Watchlist</div>
+      <div class="candidate-list" id="candidate-list" role="list"></div>
+    </nav>
+
+    <!-- ─── Top Bar ─── -->
+    <header class="topbar" role="banner">
+      <h1 class="topbar-title">GitHub Candidate Monitor</h1>
+      <div class="rate-limit-badge" id="rate-badge" aria-live="polite">
+        <div class="rate-dot" id="rate-dot"></div>
+        <span id="rate-text">API Ready</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="refreshAll()" id="refresh-btn" aria-label="Refresh all candidates">
+        ↻ Refresh
+      </button>
+    </header>
+
+    <!-- ─── Main ─── -->
+    <main class="main-content" id="main-content" role="main">
+
+      <!-- Dashboard -->
+      <section class="view active" id="view-dashboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Candidate Dashboard</div>
+            <div class="page-sub">Track GitHub activity across your talent watchlist</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="document.getElementById('username-input').focus()">+ Add Candidate</button>
+        </div>
+
+        <div class="stats-row" id="global-stats">
+          <div class="stat-card">
+            <div class="stat-label">Candidates</div>
+            <div class="stat-value accent" id="stat-total">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Stars</div>
+            <div class="stat-value yellow" id="stat-stars">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active (7d)</div>
+            <div class="stat-value green" id="stat-active">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Alerts</div>
+            <div class="stat-value pink" id="stat-alerts">0</div>
+          </div>
+        </div>
+
+        <div id="dashboard-cards">
+          <div class="empty-state" id="dashboard-empty">
+            <div class="empty-icon">🔭</div>
+            <div class="empty-title">No candidates yet</div>
+            <div class="empty-sub">Add a GitHub username using the sidebar to start monitoring developer activity.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Activity Feed -->
+      <section class="view" id="view-feed">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Activity Feed</div>
+            <div class="page-sub">Recent commits across all monitored candidates</div>
+          </div>
+        </div>
+        <div id="feed-content">
+          <div class="empty-state">
+            <div class="empty-icon">⚡</div>
+            <div class="empty-title">No activity yet</div>
+            <div class="empty-sub">Add candidates to see their recent commits here.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Alerts -->
+      <section class="view" id="view-alerts">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Alerts</div>
+            <div class="page-sub">New repos, release activity, and commit spikes</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="clearAlerts()">Clear All</button>
+        </div>
+        <div id="alerts-content">
+          <div class="empty-state">
+            <div class="empty-icon">🔔</div>
+            <div class="empty-title">No alerts yet</div>
+            <div class="empty-sub">Alerts appear when candidates push new repos, releases, or exceed your commit threshold.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="view" id="view-settings">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Settings</div>
+            <div class="page-sub">Configure alert thresholds and preferences</div>
+          </div>
+        </div>
+        <div class="section-card" style="max-width:480px">
+          <div class="section-card-title">🔔 Alert Thresholds</div>
+
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Weekly commit spike threshold</div>
+            <div class="slider-row">
+              <input type="range" id="threshold-slider" min="3" max="30" value="10" oninput="updateThreshold(this.value)" aria-label="Commit threshold" />
+              <div class="slider-val"><span id="threshold-val">10</span> commits</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted)">Alert when a candidate makes more than this many commits in a week.</div>
+          </div>
+
+          <hr class="divider" />
+
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">New repo alert</div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="checkbox" id="new-repo-toggle" checked onchange="saveSettings()" aria-label="Alert on new repo" style="accent-color:var(--accent);width:14px;height:14px;" />
+              <label for="new-repo-toggle" style="font-size:13px;cursor:pointer">Alert when candidate creates a new public repo</label>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Release alert</div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="checkbox" id="release-toggle" checked onchange="saveSettings()" aria-label="Alert on new release" style="accent-color:var(--accent);width:14px;height:14px;" />
+              <label for="release-toggle" style="font-size:13px;cursor:pointer">Alert when candidate publishes a new release</label>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All Watchlist Data</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ─── Right Sidebar: Trending ─── -->
+    <aside class="sidebar" aria-label="GitHub trending">
+      <div class="sidebar-section">
+        <div class="sidebar-title">
+          <span>🔥</span> Trending Repos
+        </div>
+        <div id="trending-list">
+          <div class="loading-overlay">
+            <div class="spinner"></div>
+            Fetching trending...
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">
+          <span>📦</span> Recent Releases
+        </div>
+        <div id="releases-list">
+          <div style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0">
+            Add candidates to see their releases.
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+  <script>
+    // ─── State ─────────────────────────────────────────────────────────────────
+    const GH_API = `https://api.github.com`;
+    let candidates = JSON.parse(localStorage.getItem(`rr-candidates`) || `[]`);
+    let alerts = JSON.parse(localStorage.getItem(`rr-alerts`) || `[]`);
+    let settings = JSON.parse(localStorage.getItem(`rr-settings`) || `{"threshold":10,"newRepo":true,"release":true}`);
+    let rateLimit = { remaining: 60, limit: 60 };
+    let loadedData = {}; // username -> { user, repos, commits, releases }
+
+    // ─── Init ──────────────────────────────────────────────────────────────────
+    function init() {
+      document.getElementById(`threshold-slider`).value = settings.threshold;
+      document.getElementById(`threshold-val`).textContent = settings.threshold;
+      document.getElementById(`new-repo-toggle`).checked = settings.newRepo !== false;
+      document.getElementById(`release-toggle`).checked = settings.release !== false;
+
+      document.getElementById(`username-input`).addEventListener(`keydown`, e => {
+        if (e.key === `Enter`) addCandidate();
+      });
+
+      renderCandidateNav();
+      updateGlobalStats();
+      loadTrending();
+
+      if (candidates.length > 0) {
+        loadAllCandidates();
+      }
+
+      updateAlertsBadge();
+    }
+
+    // ─── API helpers ──────────────────────────────────────────────────────────
+    async function ghFetch(path) {
+      const res = await fetch(`${GH_API}${path}`);
+      const remaining = res.headers.get(`X-RateLimit-Remaining`);
+      const limit = res.headers.get(`X-RateLimit-Limit`);
+      if (remaining !== null) {
+        rateLimit.remaining = parseInt(remaining, 10);
+        rateLimit.limit = parseInt(limit, 10) || 60;
+        updateRateBadge();
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `HTTP ${res.status}`);
+      }
+      return res.json();
+    }
+
+    function updateRateBadge() {
+      const dot = document.getElementById(`rate-dot`);
+      const txt = document.getElementById(`rate-text`);
+      const pct = rateLimit.remaining / rateLimit.limit;
+      txt.textContent = `${rateLimit.remaining}/${rateLimit.limit} API`;
+      dot.className = `rate-dot` + (pct < 0.1 ? ` bad` : pct < 0.3 ? ` warn` : ``);
+    }
+
+    // ─── View routing ────────────────────────────────────────────────────────
+    function showView(id) {
+      document.querySelectorAll(`.view`).forEach(el => el.classList.remove(`active`));
+      document.getElementById(`view-${id}`).classList.add(`active`);
+      document.querySelectorAll(`.nav-item`).forEach(el => {
+        el.classList.toggle(`active`, el.dataset.view === id);
+        el.setAttribute(`aria-current`, el.dataset.view === id ? `page` : `false`);
+      });
+      if (id === `feed`) renderFeed();
+      if (id === `alerts`) renderAlerts();
+    }
+
+    // ─── Add candidate ───────────────────────────────────────────────────────
+    async function addCandidate() {
+      const input = document.getElementById(`username-input`);
+      const errEl = document.getElementById(`add-error`);
+      const btn = document.getElementById(`add-btn`);
+      const username = input.value.trim().toLowerCase();
+
+      errEl.style.display = `none`;
+      if (!username) return;
+
+      if (candidates.includes(username)) {
+        errEl.textContent = `Already watching ${username}`;
+        errEl.style.display = `block`;
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<div class="spinner"></div>`;
+
+      try {
+        const user = await ghFetch(`/users/${username}`);
+        candidates.push(username);
+        saveCandidates();
+        input.value = ``;
+        renderCandidateNav();
+        updateGlobalStats();
+        toast(`Added ${user.login} to watchlist`, `success`);
+
+        // Load full data
+        await loadCandidate(username);
+        renderDashboard();
+        renderFeed();
+        renderReleases();
+      } catch (e) {
+        errEl.textContent = e.message.includes(`Not Found`) ? `User "${username}" not found on GitHub.` : e.message;
+        errEl.style.display = `block`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `+`;
+      }
+    }
+
+    // ─── Load candidate data ─────────────────────────────────────────────────
+    async function loadCandidate(username) {
+      const dot = document.getElementById(`dot-${username}`);
+      if (dot) dot.className = `candidate-status-dot loading`;
+
+      try {
+        const [user, repos, releases] = await Promise.all([
+          ghFetch(`/users/${username}`),
+          ghFetch(`/users/${username}/repos?sort=stars&per_page=10&type=public`),
+          fetchReleasesForUser(username),
+        ]);
+
+        const topRepo = repos[0];
+        let commits = [];
+        if (topRepo) {
+          commits = await ghFetch(`/repos/${username}/${topRepo.name}/commits?per_page=10`).catch(() => []);
+        }
+
+        const prevData = loadedData[username];
+        loadedData[username] = { user, repos, commits, releases, loadedAt: Date.now() };
+
+        // Check alerts
+        checkAlerts(username, prevData, loadedData[username]);
+
+        if (dot) dot.className = `candidate-status-dot active`;
+        return loadedData[username];
+      } catch (e) {
+        if (dot) dot.className = `candidate-status-dot`;
+        console.warn(`Failed to load ${username}: ${e.message}`);
+        return null;
+      }
+    }
+
+    async function fetchReleasesForUser(username) {
+      // Get repos first if we have them
+      const data = loadedData[username];
+      const repos = data ? data.repos : await ghFetch(`/users/${username}/repos?sort=stars&per_page=5&type=public`).catch(() => []);
+      const releasePromises = repos.slice(0, 3).map(r =>
+        ghFetch(`/repos/${username}/${r.name}/releases?per_page=2`)
+          .then(rels => rels.map(rel => ({ ...rel, repoName: r.name, ownerLogin: username })))
+          .catch(() => [])
+      );
+      const nested = await Promise.all(releasePromises);
+      return nested.flat().sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+    }
+
+    async function loadAllCandidates() {
+      for (const u of candidates) {
+        await loadCandidate(u);
+      }
+      renderDashboard();
+      renderFeed();
+      renderReleases();
+    }
+
+    // ─── Alerts logic ────────────────────────────────────────────────────────
+    function checkAlerts(username, prev, curr) {
+      if (!curr) return;
+
+      // New repo alert
+      if (settings.newRepo && prev && prev.repos) {
+        const prevIds = new Set(prev.repos.map(r => r.id));
+        const newRepos = curr.repos.filter(r => !prevIds.has(r.id));
+        newRepos.forEach(r => {
+          addAlert(`new-repo`, `🆕 ${username} created a new repo: ${r.name}`, username);
+        });
+      }
+
+      // Release alert
+      if (settings.release && prev && prev.releases) {
+        const prevIds = new Set(prev.releases.map(r => r.id));
+        const newRels = curr.releases.filter(r => !prevIds.has(r.id));
+        newRels.forEach(r => {
+          addAlert(`release`, `🚀 ${username}/${r.repoName} released ${r.tag_name}`, username);
+        });
+      }
+
+      // Commit spike alert
+      if (curr.commits && curr.commits.length >= settings.threshold) {
+        addAlert(`spike`, `⚡ ${username} has ${curr.commits.length}+ recent commits — high activity!`, username);
+      }
+    }
+
+    function addAlert(type, msg, username) {
+      const a = { id: Date.now() + Math.random(), type, msg, username, time: new Date().toISOString() };
+      alerts.unshift(a);
+      if (alerts.length > 50) alerts = alerts.slice(0, 50);
+      localStorage.setItem(`rr-alerts`, JSON.stringify(alerts));
+      updateAlertsBadge();
+      updateGlobalStats();
+    }
+
+    function updateAlertsBadge() {
+      const badge = document.getElementById(`badge-alerts`);
+      const count = alerts.length;
+      badge.textContent = count;
+      badge.style.display = count > 0 ? `inline-flex` : `none`;
+      document.getElementById(`stat-alerts`).textContent = count;
+    }
+
+    function clearAlerts() {
+      alerts = [];
+      localStorage.setItem(`rr-alerts`, `[]`);
+      updateAlertsBadge();
+      renderAlerts();
+      toast(`Alerts cleared`, `info`);
+    }
+
+    // ─── Render: nav list ────────────────────────────────────────────────────
+    function renderCandidateNav() {
+      const list = document.getElementById(`candidate-list`);
+      document.getElementById(`badge-candidates`).textContent = candidates.length;
+
+      if (candidates.length === 0) {
+        list.innerHTML = `<div style="padding:12px 20px;font-size:11px;color:var(--muted)">No candidates added yet.</div>`;
+        return;
+      }
+
+      list.innerHTML = candidates.map(u => {
+        const d = loadedData[u];
+        const avatarUrl = d ? d.user.avatar_url : ``;
+        const initials = u.slice(0, 2).toUpperCase();
+        return `
+          <div class="candidate-nav-item" role="listitem" onclick="scrollToCandidate('${u}')" tabindex="0"
+               onkeydown="if(event.key==='Enter')scrollToCandidate('${u}')"
+               aria-label="Go to ${u}">
+            <div class="avatar">
+              ${avatarUrl
+                ? `<img src="${avatarUrl}" alt="${u}" loading="lazy" />`
+                : `<div class="avatar-placeholder">${initials}</div>`}
+            </div>
+            <div class="candidate-nav-name">${u}</div>
+            <div class="candidate-status-dot loading" id="dot-${u}"></div>
+          </div>
+        `;
+      }).join(``);
+    }
+
+    // ─── Render: dashboard ───────────────────────────────────────────────────
+    function renderDashboard() {
+      const container = document.getElementById(`dashboard-cards`);
+      const empty = document.getElementById(`dashboard-empty`);
+
+      updateGlobalStats();
+
+      if (candidates.length === 0) {
+        container.innerHTML = ``;
+        empty.style.display = `flex`;
+        return;
+      }
+
+      empty.style.display = `none`;
+      container.innerHTML = candidates.map(u => buildCandidateCard(u)).join(``);
+    }
+
+    function buildCandidateCard(username) {
+      const d = loadedData[username];
+
+      if (!d) {
+        return `
+          <div class="candidate-card" id="card-${username}">
+            <div class="loading-overlay">
+              <div class="spinner"></div>
+              Loading ${username}...
+            </div>
+          </div>
+        `;
+      }
+
+      const { user, repos, commits, releases } = d;
+      const topRepos = repos.slice(0, 3);
+      const totalStars = repos.reduce((s, r) => s + r.stargazers_count, 0);
+      const lastCommitTime = commits[0] ? timeAgo(commits[0].commit.author.date) : `No commits`;
+      const hasAlert = alerts.some(a => a.username === username);
+
+      const activityBars = buildActivityBars(commits);
+      const langDot = (lang) => {
+        const cls = lang ? lang.replace(/[^a-zA-Z]/g, ``) : ``;
+        return `<span class="lang-dot ${cls ? `lang-${cls}` : ``}" style="${!cls ? `background:var(--muted)` : ``}"></span>`;
+      };
+
+      return `
+        <div class="candidate-card" id="card-${username}" role="article" aria-label="Candidate ${username}">
+          <div class="candidate-card-header">
+            <div class="candidate-avatar-lg">
+              <img src="${user.avatar_url}" alt="${user.login}" loading="lazy" />
+            </div>
+            <div class="candidate-info">
+              <div class="candidate-name">
+                ${user.name || user.login}
+                <a href="https://github.com/${user.login}" target="_blank" rel="noopener noreferrer"
+                   class="candidate-gh-link" aria-label="View ${user.login} on GitHub">@${user.login}</a>
+                ${hasAlert ? `<span class="alert-badge">🔔 Alert</span>` : ``}
+              </div>
+              ${user.bio ? `<div class="candidate-bio" title="${user.bio}">${user.bio}</div>` : ``}
+              <div class="candidate-meta-chips">
+                ${user.location ? `<div class="chip">📍 ${user.location}</div>` : ``}
+                ${user.company ? `<div class="chip">🏢 ${user.company.replace(/^@/, ``)}</div>` : ``}
+                <div class="chip">📅 Joined ${new Date(user.created_at).getFullYear()}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="candidate-stats-grid">
+            <div class="mini-stat">
+              <div class="mini-stat-val" style="color:var(--yellow)">⭐ ${fmtNum(totalStars)}</div>
+              <div class="mini-stat-label">Total Stars</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat-val" style="color:var(--accent)">${fmtNum(user.public_repos)}</div>
+              <div class="mini-stat-label">Public Repos</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat-val" style="color:var(--green)">${fmtNum(user.followers)}</div>
+              <div class="mini-stat-label">Followers</div>
+            </div>
+            <div class="mini-stat">
+              <div class="mini-stat-val" style="color:var(--muted);font-size:12px">${lastCommitTime}</div>
+              <div class="mini-stat-label">Last Commit</div>
+            </div>
+          </div>
+
+          <!-- Commit activity chart -->
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Recent commit activity (top repo)</div>
+          <div class="activity-chart" role="img" aria-label="Commit activity chart">
+            ${activityBars}
+          </div>
+
+          <!-- Top repos -->
+          ${topRepos.length > 0 ? `
+            <div style="font-size:11px;color:var(--muted);margin:8px 0 6px">Top repositories</div>
+            <div class="repo-list">
+              ${topRepos.map(r => `
+                <div class="repo-item">
+                  <a href="${r.html_url}" target="_blank" rel="noopener noreferrer"
+                     class="repo-name" aria-label="${r.name} repository">${r.name}</a>
+                  ${r.language ? `<div class="repo-lang">${langDot(r.language)} ${r.language}</div>` : ``}
+                  <div class="repo-stars">⭐ ${fmtNum(r.stargazers_count)}</div>
+                </div>
+              `).join(``)}
+            </div>
+          ` : ``}
+
+          <!-- Notes -->
+          <div style="margin-top:12px">
+            <label for="notes-${username}" style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Recruiter notes</label>
+            <textarea
+              id="notes-${username}"
+              class="notes-area"
+              placeholder="Add your notes about this candidate..."
+              aria-label="Notes for ${username}"
+              oninput="saveNote('${username}', this.value)"
+            >${getNotes(username)}</textarea>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm" onclick="refreshCandidate('${username}')" aria-label="Refresh ${username}">
+              ↻ Refresh
+            </button>
+            <a href="https://github.com/${username}" target="_blank" rel="noopener noreferrer"
+               class="btn btn-ghost btn-sm" aria-label="View ${username} profile">
+              View Profile
+            </a>
+            <button class="btn btn-danger btn-sm" onclick="removeCandidate('${username}')"
+                    aria-label="Remove ${username} from watchlist">
+              Remove
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function buildActivityBars(commits) {
+      // Map commits to hourly buckets across 10 slots
+      const now = Date.now();
+      const slots = 12;
+      const buckets = Array(slots).fill(0);
+      const windowMs = 7 * 24 * 60 * 60 * 1000;
+      const bucketMs = windowMs / slots;
+
+      commits.forEach(c => {
+        const t = new Date(c.commit.author.date).getTime();
+        const diff = now - t;
+        if (diff >= 0 && diff < windowMs) {
+          const idx = Math.min(Math.floor(diff / bucketMs), slots - 1);
+          buckets[slots - 1 - idx]++;
+        }
+      });
+
+      const max = Math.max(...buckets, 1);
+      return buckets.map((v, i) => {
+        const pct = Math.max((v / max) * 100, 5);
+        return `
+          <div class="activity-bar" title="${v} commit${v !== 1 ? `s` : ``}" style="height:100%">
+            <div class="activity-bar-fill" style="height:${pct}%"></div>
+          </div>
+        `;
+      }).join(``);
+    }
+
+    // ─── Render: feed ────────────────────────────────────────────────────────
+    function renderFeed() {
+      const container = document.getElementById(`feed-content`);
+      const allCommits = [];
+
+      candidates.forEach(u => {
+        const d = loadedData[u];
+        if (!d || !d.commits) return;
+        const topRepo = d.repos[0];
+        if (!topRepo) return;
+        d.commits.forEach(c => {
+          allCommits.push({
+            author: c.commit.author.name,
+            login: u,
+            avatar: d.user.avatar_url,
+            repo: topRepo.name,
+            repoOwner: u,
+            msg: c.commit.message.split(`\n`)[0].slice(0, 80),
+            date: c.commit.author.date,
+            sha: c.sha.slice(0, 7),
+            url: c.html_url,
+          });
+        });
+      });
+
+      if (allCommits.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚡</div>
+            <div class="empty-title">No activity yet</div>
+            <div class="empty-sub">Add candidates to see their recent commits here.</div>
+          </div>
+        `;
+        return;
+      }
+
+      allCommits.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      container.innerHTML = `
+        <div class="section-card">
+          <div class="section-card-title">⚡ Recent Commits</div>
+          <div class="commit-feed">
+            ${allCommits.slice(0, 30).map(c => `
+              <div class="commit-item">
+                <div class="commit-avatar">
+                  <img src="${c.avatar}" alt="${c.login}" loading="lazy" />
+                </div>
+                <div class="commit-body">
+                  <div class="commit-header">
+                    <span class="commit-author">${c.login}</span>
+                    <span class="commit-repo">${c.repoOwner}/${c.repo}</span>
+                    <span class="commit-time">${timeAgo(c.date)}</span>
+                  </div>
+                  <div class="commit-msg">
+                    <a href="${c.url}" target="_blank" rel="noopener noreferrer"
+                       style="color:var(--muted);text-decoration:none;" aria-label="View commit ${c.sha}">
+                      <code style="color:var(--accent);font-size:10px">${c.sha}</code>
+                      ${c.msg}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            `).join(``)}
+          </div>
+        </div>
+      `;
+    }
+
+    // ─── Render: alerts ──────────────────────────────────────────────────────
+    function renderAlerts() {
+      const container = document.getElementById(`alerts-content`);
+      if (alerts.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔔</div>
+            <div class="empty-title">No alerts</div>
+            <div class="empty-sub">Alerts appear when candidates push new repos, releases, or exceed your commit threshold.</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="alerts-panel">
+          <div class="alerts-header">🔔 Active Alerts (${alerts.length})</div>
+          ${alerts.map(a => `
+            <div class="alert-row">
+              <div class="alert-icon">
+                ${a.type === `spike` ? `⚡` : a.type === `release` ? `🚀` : `🆕`}
+              </div>
+              <div class="alert-content">
+                <div class="alert-msg">${a.msg}</div>
+                <div class="alert-time">${timeAgo(a.time)}</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="dismissAlert('${a.id}')" aria-label="Dismiss alert">✕</button>
+            </div>
+          `).join(``)}
+        </div>
+      `;
+    }
+
+    function dismissAlert(id) {
+      alerts = alerts.filter(a => String(a.id) !== String(id));
+      localStorage.setItem(`rr-alerts`, JSON.stringify(alerts));
+      updateAlertsBadge();
+      renderAlerts();
+    }
+
+    // ─── Render: trending ────────────────────────────────────────────────────
+    async function loadTrending() {
+      const container = document.getElementById(`trending-list`);
+      try {
+        const data = await ghFetch(`/search/repositories?q=stars:>10000&sort=stars&order=desc&per_page=8`);
+        const items = data.items || [];
+        if (items.length === 0) {
+          container.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0">No trending data.</div>`;
+          return;
+        }
+        container.innerHTML = items.map(r => `
+          <div class="trending-item">
+            <a href="${r.html_url}" target="_blank" rel="noopener noreferrer"
+               class="trending-repo-name" aria-label="${r.full_name} on GitHub">
+              ${r.full_name}
+            </a>
+            ${r.description ? `<div class="trending-desc">${r.description}</div>` : ``}
+            <div class="trending-meta">
+              ${r.language ? `<span>• ${r.language}</span>` : ``}
+              <span>⭐ ${fmtNum(r.stargazers_count)}</span>
+              <span>🍴 ${fmtNum(r.forks_count)}</span>
+            </div>
+          </div>
+        `).join(``);
+      } catch (e) {
+        container.innerHTML = `<div style="font-size:12px;color:var(--accent2);text-align:center;padding:16px 0">Failed to load trending: ${e.message}</div>`;
+      }
+    }
+
+    // ─── Render: releases ────────────────────────────────────────────────────
+    function renderReleases() {
+      const container = document.getElementById(`releases-list`);
+      const allReleases = [];
+
+      candidates.forEach(u => {
+        const d = loadedData[u];
+        if (!d || !d.releases) return;
+        d.releases.forEach(r => allReleases.push(r));
+      });
+
+      if (allReleases.length === 0) {
+        container.innerHTML = `<div style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0">No releases found.</div>`;
+        return;
+      }
+
+      allReleases.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+
+      container.innerHTML = allReleases.slice(0, 6).map(r => `
+        <div class="release-item">
+          <div class="release-header">
+            <span class="release-tag">${r.tag_name}</span>
+            <span class="release-repo">${r.ownerLogin}/${r.repoName}</span>
+          </div>
+          ${r.name ? `<div class="release-name">${r.name}</div>` : ``}
+          <div class="release-date">${r.published_at ? timeAgo(r.published_at) : `Unknown date`}</div>
+        </div>
+      `).join(``);
+    }
+
+    // ─── Actions ─────────────────────────────────────────────────────────────
+    function scrollToCandidate(username) {
+      showView(`dashboard`);
+      setTimeout(() => {
+        const el = document.getElementById(`card-${username}`);
+        if (el) el.scrollIntoView({ behavior: `smooth`, block: `start` });
+      }, 50);
+    }
+
+    async function refreshCandidate(username) {
+      toast(`Refreshing ${username}...`, `info`);
+      await loadCandidate(username);
+      renderDashboard();
+      renderFeed();
+      renderReleases();
+      toast(`${username} updated`, `success`);
+    }
+
+    async function refreshAll() {
+      const btn = document.getElementById(`refresh-btn`);
+      btn.disabled = true;
+      btn.innerHTML = `<div class="spinner"></div> Refreshing`;
+      toast(`Refreshing all candidates...`, `info`);
+      await loadAllCandidates();
+      btn.disabled = false;
+      btn.innerHTML = `↻ Refresh`;
+      toast(`All candidates refreshed`, `success`);
+    }
+
+    function removeCandidate(username) {
+      candidates = candidates.filter(u => u !== username);
+      delete loadedData[username];
+      saveCandidates();
+      renderCandidateNav();
+      renderDashboard();
+      renderFeed();
+      renderReleases();
+      updateGlobalStats();
+      toast(`Removed ${username} from watchlist`, `info`);
+    }
+
+    // ─── Notes ───────────────────────────────────────────────────────────────
+    function getNotes(username) {
+      const notes = JSON.parse(localStorage.getItem(`rr-notes`) || `{}`);
+      return notes[username] || ``;
+    }
+
+    function saveNote(username, value) {
+      const notes = JSON.parse(localStorage.getItem(`rr-notes`) || `{}`);
+      notes[username] = value;
+      localStorage.setItem(`rr-notes`, JSON.stringify(notes));
+    }
+
+    // ─── Settings ────────────────────────────────────────────────────────────
+    function updateThreshold(val) {
+      document.getElementById(`threshold-val`).textContent = val;
+      settings.threshold = parseInt(val, 10);
+      saveSettings();
+    }
+
+    function saveSettings() {
+      settings.threshold = parseInt(document.getElementById(`threshold-slider`).value, 10);
+      settings.newRepo = document.getElementById(`new-repo-toggle`).checked;
+      settings.release = document.getElementById(`release-toggle`).checked;
+      localStorage.setItem(`rr-settings`, JSON.stringify(settings));
+      toast(`Settings saved`, `success`);
+    }
+
+    function clearAllData() {
+      if (!confirm(`This will remove all candidates, notes, and alerts. Continue?`)) return;
+      candidates = [];
+      alerts = [];
+      loadedData = {};
+      localStorage.removeItem(`rr-candidates`);
+      localStorage.removeItem(`rr-alerts`);
+      localStorage.removeItem(`rr-notes`);
+      renderCandidateNav();
+      renderDashboard();
+      renderFeed();
+      renderAlerts();
+      renderReleases();
+      updateAlertsBadge();
+      toast(`All data cleared`, `info`);
+    }
+
+    // ─── Stats ───────────────────────────────────────────────────────────────
+    function updateGlobalStats() {
+      const weekMs = 7 * 24 * 60 * 60 * 1000;
+      let totalStars = 0;
+      let activeCount = 0;
+
+      candidates.forEach(u => {
+        const d = loadedData[u];
+        if (!d) return;
+        totalStars += d.repos.reduce((s, r) => s + r.stargazers_count, 0);
+        if (d.commits.length > 0) {
+          const lastCommit = new Date(d.commits[0].commit.author.date).getTime();
+          if (Date.now() - lastCommit < weekMs) activeCount++;
+        }
+      });
+
+      document.getElementById(`stat-total`).textContent = candidates.length;
+      document.getElementById(`stat-stars`).textContent = fmtNum(totalStars);
+      document.getElementById(`stat-active`).textContent = activeCount;
+      document.getElementById(`stat-alerts`).textContent = alerts.length;
+    }
+
+    // ─── Storage ─────────────────────────────────────────────────────────────
+    function saveCandidates() {
+      localStorage.setItem(`rr-candidates`, JSON.stringify(candidates));
+    }
+
+    // ─── Utilities ───────────────────────────────────────────────────────────
+    function fmtNum(n) {
+      if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+      if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+      return String(n);
+    }
+
+    function timeAgo(iso) {
+      const diff = Date.now() - new Date(iso).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return `just now`;
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      if (days < 30) return `${days}d ago`;
+      const months = Math.floor(days / 30);
+      if (months < 12) return `${months}mo ago`;
+      return `${Math.floor(months / 12)}y ago`;
+    }
+
+    function toast(msg, type = `info`) {
+      const container = document.getElementById(`toast-container`);
+      const el = document.createElement(`div`);
+      el.className = `toast ${type}`;
+      const icons = { success: `✅`, error: `❌`, info: `ℹ️` };
+      el.innerHTML = `<span>${icons[type] || ``}</span><span>${msg}</span>`;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 3100);
+    }
+
+    // ─── Boot ────────────────────────────────────────────────────────────────
+    init();
+  </script>
+</body>
+</html>

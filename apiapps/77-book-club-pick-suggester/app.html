@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pageturner — Book Club Pick Suggester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── N9 Edge-aligned nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.sidebar-head {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+
+.sidebar-title small {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 400;
+  margin-top: 2px;
+  letter-spacing: 0;
+}
+
+/* Field label */
+.field-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+/* Input */
+.input-text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-text:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.input-text::placeholder { color: var(--color-ink-muted); }
+
+/* ── Genre chips ── */
+.chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.chip:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.chip.selected {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+}
+
+/* ── Pace selector ── */
+.pace-chips { display: flex; gap: var(--space-2); }
+.pace-chip {
+  flex: 1;
+  text-align: center;
+  padding: var(--space-2) var(--space-2);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.pace-chip:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.pace-chip.selected {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+}
+
+/* ── History list ── */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.history-item {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  animation: item-in 0.18s ease;
+}
+
+@keyframes item-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.history-item-info { flex: 1; min-width: 0; }
+.history-item-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+.history-item-stars {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  margin-top: 2px;
+}
+
+.btn-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.btn-icon:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
+
+/* Add to history form */
+.add-history-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+}
+
+.star-input {
+  display: flex;
+  gap: var(--space-1);
+}
+.star-btn {
+  background: none;
+  border: none;
+  font-size: var(--text-lg);
+  cursor: pointer;
+  color: var(--color-border);
+  transition: color 0.1s ease;
+  line-height: 1;
+  padding: 0;
+}
+.star-btn.lit { color: var(--color-accent); }
+
+/* ── Sidebar footer / CTA ── */
+.sidebar-footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28); }
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Section header ── */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.section-count {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+}
+
+/* ── Book grid ── */
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+/* ── Skeleton cards ── */
+.skeleton-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-paper-2);
+}
+
+.skeleton-cover {
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: linear-gradient(90deg, var(--color-paper-2) 25%, var(--color-border) 50%, var(--color-paper-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-body {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-paper-2) 25%, var(--color-border) 50%, var(--color-paper-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+.skeleton-line.short { width: 60%; }
+.skeleton-line.shorter { width: 40%; }
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* ── Book card ── */
+.book-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-paper-2);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  position: relative;
+}
+.book-card:hover {
+  border-color: var(--color-accent-line);
+  box-shadow: 0 4px 16px oklch(52% 0.14 155 / 0.12);
+  transform: translateY(-2px);
+}
+.book-card.in-shortlist {
+  border-color: var(--color-accent);
+}
+
+.book-cover-wrap {
+  width: 100%;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  background: var(--color-paper);
+  position: relative;
+}
+
+.book-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.book-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-paper-2) 0%, var(--color-paper) 100%);
+}
+
+.cover-initial {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.book-body {
+  padding: var(--space-3);
+}
+
+.book-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: var(--space-1);
+}
+
+.book-author {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+
+.book-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.book-year {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  padding: 1px var(--space-2);
+}
+
+.book-pages {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  padding: 1px var(--space-2);
+}
+
+.book-rating {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-accent);
+  margin-left: auto;
+}
+
+.book-subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.subject-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 100px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+/* Shortlist badge */
+.shortlist-badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 100px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  padding: var(--space-16);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-ink-muted);
+  grid-column: 1 / -1;
+}
+
+.empty-state-icon {
+  font-size: 2.5rem;
+  opacity: 0.4;
+}
+
+.empty-state-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.empty-state-sub {
+  font-size: var(--text-sm);
+  max-width: 280px;
+  line-height: 1.65;
+}
+
+/* ── Detail overlay ── */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: oklch(18% 0.04 155 / 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.detail-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.detail-panel {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+  position: relative;
+  transform: scale(0.96) translateY(8px);
+  transition: transform 0.2s ease;
+  box-shadow: 0 20px 60px oklch(18% 0.04 155 / 0.2);
+}
+.detail-overlay.open .detail-panel {
+  transform: scale(1) translateY(0);
+}
+
+.detail-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.detail-close:hover { color: var(--color-ink); border-color: var(--color-accent-line); }
+
+.detail-layout {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.detail-cover {
+  width: 120px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-paper-2);
+  aspect-ratio: 2/3;
+}
+
+.detail-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-cover-initial {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  opacity: 0.6;
+}
+
+.detail-info { flex: 1; min-width: 0; }
+
+.detail-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  line-height: 1.2;
+  margin-bottom: var(--space-2);
+  padding-right: var(--space-8);
+}
+
+.detail-author {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+.detail-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.detail-badge {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  padding: var(--space-1) var(--space-3);
+}
+
+.detail-desc {
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  line-height: 1.65;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.detail-subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.detail-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.btn-secondary:hover { border-color: var(--color-accent-line); background: var(--color-accent-subtle); color: var(--color-accent); }
+
+.btn-shortlist-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.btn-shortlist-add:hover { opacity: 0.85; }
+.btn-shortlist-add.remove {
+  background: var(--color-paper-2);
+  color: var(--color-danger);
+  border: 1px solid oklch(55% 0.20 25 / 0.25);
+}
+.btn-shortlist-add.remove:hover { background: oklch(55% 0.20 25 / 0.06); border-color: var(--color-danger); }
+
+/* ── Shortlist horizontal row ── */
+.shortlist-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper-2);
+  padding: var(--space-4);
+}
+
+.shortlist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.shortlist-row {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.shortlist-book {
+  flex-shrink: 0;
+  width: 120px;
+  position: relative;
+}
+
+.shortlist-cover {
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-paper);
+  margin-bottom: var(--space-2);
+}
+
+.shortlist-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shortlist-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-paper-2);
+}
+
+.shortlist-initial {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  opacity: 0.6;
+}
+
+.shortlist-book-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: var(--space-1);
+}
+
+.shortlist-vote-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.vote-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  min-width: 16px;
+  text-align: center;
+}
+
+.btn-vote {
+  height: 20px;
+  padding: 0 var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.btn-vote:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+
+.btn-remove-shortlist {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  border: none;
+  color: var(--color-paper);
+  font-size: 10px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.shortlist-book:hover .btn-remove-shortlist { opacity: 1; }
+
+.shortlist-empty {
+  padding: var(--space-6);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  width: 100%;
+}
+
+/* ── Share button ── */
+.btn-share {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.btn-share:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+
+/* ── Reading history timeline ── */
+.past-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.past-pick {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  position: relative;
+}
+
+.past-pick::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: -12px;
+  width: 1px;
+  background: var(--color-border);
+}
+.past-pick:last-child::before { display: none; }
+
+.past-pick-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  font-weight: 700;
+  margin-top: 0;
+}
+
+.past-pick-info { flex: 1; min-width: 0; }
+.past-pick-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.past-pick-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+.past-pick-stars {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  margin-top: 2px;
+}
+.past-pick-date {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 60vh;
+  }
+
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+
+  .books-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .detail-layout { flex-direction: column; }
+  .detail-cover { width: 80px; }
+}
+
+@media (max-width: 480px) {
+  .books-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .book-card { transition: border-color 0.12s ease; }
+  .book-card:hover { transform: none; }
+  .skeleton-cover, .skeleton-line { animation: none; background: var(--color-paper-2); }
+  .detail-panel { transition: none; }
+  .btn-primary:hover { transform: none; box-shadow: none; }
+  @keyframes item-in { from { opacity: 1; } }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Edge-aligned nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Pageturner<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Book Club Pick Suggester</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Club preferences">
+    <div class="sidebar-head">
+      <p class="sidebar-title">
+        Club Settings
+        <small>Set preferences, then find books</small>
+      </p>
+    </div>
+
+    <div class="sidebar-scroll">
+
+      <!-- Club name -->
+      <div>
+        <label class="field-label" for="club-name">Club name</label>
+        <input
+          type="text"
+          class="input-text"
+          id="club-name"
+          placeholder="e.g. The Midnight Readers"
+          maxlength="80"
+          aria-label="Book club name"
+        >
+      </div>
+
+      <!-- Genre chips -->
+      <div>
+        <label class="field-label">Genres &amp; themes</label>
+        <div class="chips-wrap" id="genre-chips" role="group" aria-label="Genre preferences">
+          <!-- Built by JS -->
+        </div>
+      </div>
+
+      <!-- Reading pace -->
+      <div>
+        <label class="field-label">Reading pace</label>
+        <div class="pace-chips" role="group" aria-label="Reading pace preference">
+          <button class="pace-chip selected" data-pace="short" aria-pressed="true">Short&nbsp;&lt;250&nbsp;pg</button>
+          <button class="pace-chip" data-pace="medium" aria-pressed="false">Medium&nbsp;250–400</button>
+          <button class="pace-chip" data-pace="long" aria-pressed="false">Long&nbsp;400+</button>
+        </div>
+      </div>
+
+      <!-- Reading history -->
+      <div>
+        <label class="field-label">Reading history</label>
+
+        <!-- Add history entry form -->
+        <div class="add-history-form" id="add-history-form">
+          <input
+            type="text"
+            class="input-text"
+            id="hist-title-input"
+            placeholder="Book title…"
+            maxlength="120"
+            aria-label="Title for history entry"
+            style="font-size: var(--text-xs);"
+          >
+          <div style="display:flex; gap:var(--space-2); align-items:center;">
+            <div class="star-input" id="star-input" role="group" aria-label="Rating">
+              <button class="star-btn" data-star="1" aria-label="1 star">★</button>
+              <button class="star-btn" data-star="2" aria-label="2 stars">★</button>
+              <button class="star-btn" data-star="3" aria-label="3 stars">★</button>
+              <button class="star-btn" data-star="4" aria-label="4 stars">★</button>
+              <button class="star-btn" data-star="5" aria-label="5 stars">★</button>
+            </div>
+            <button
+              class="btn-primary"
+              id="btn-add-hist"
+              style="width:auto; padding:var(--space-1) var(--space-3); font-size:var(--text-xs);"
+              aria-label="Add book to history"
+            >Add</button>
+          </div>
+        </div>
+
+        <!-- History list -->
+        <div class="history-list" id="history-list" style="margin-top: var(--space-3);" aria-live="polite" aria-label="Past picks">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div><!-- /sidebar-scroll -->
+
+    <!-- CTA -->
+    <div class="sidebar-footer">
+      <button class="btn-primary" id="btn-find" aria-label="Find book suggestions">
+        Find Books
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Book suggestions">
+    <div class="main-scroll" id="main-scroll">
+
+      <!-- Shortlist section -->
+      <section aria-label="Shortlist">
+        <div class="shortlist-section">
+          <div class="shortlist-head">
+            <span class="section-title" style="font-size: var(--text-base);">Shortlist</span>
+            <div style="display:flex;gap:var(--space-2);align-items:center;">
+              <span class="section-count" id="shortlist-count">0 books</span>
+              <button class="btn-share" id="btn-share" aria-label="Share shortlist">
+                Share
+              </button>
+            </div>
+          </div>
+          <div class="shortlist-row" id="shortlist-row" aria-live="polite" aria-label="Shortlisted books">
+            <div class="shortlist-empty" id="shortlist-empty">
+              Add books to shortlist to put them up for a vote.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Suggestions section -->
+      <section aria-label="Book suggestions">
+        <div class="section-head">
+          <h2 class="section-title">Suggestions</h2>
+          <span class="section-count" id="suggest-count">0 books</span>
+        </div>
+        <div class="books-grid" id="books-grid" aria-live="polite" aria-label="Suggested books">
+          <div class="empty-state">
+            <div class="empty-state-icon" aria-hidden="true">📚</div>
+            <p class="empty-state-title">Ready to discover?</p>
+            <p class="empty-state-sub">Select genres and a reading pace, then click Find Books to get personalized suggestions.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Past picks timeline -->
+      <section aria-label="Club reading history" id="past-section" style="display:none;">
+        <div class="section-head">
+          <h2 class="section-title">Past Picks</h2>
+          <span class="section-count" id="past-count">0 books</span>
+        </div>
+        <div class="past-timeline" id="past-timeline">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+    </div><!-- /main-scroll -->
+  </main>
+
+</div><!-- /app-shell -->
+
+<!-- Book detail overlay -->
+<div class="detail-overlay" id="detail-overlay" role="dialog" aria-modal="true" aria-label="Book details">
+  <div class="detail-panel" id="detail-panel">
+    <button class="detail-close" id="detail-close" aria-label="Close details">✕</button>
+    <div id="detail-content"><!-- Populated by JS --></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+// ── Helpers ───────────────────────────────────────────────────
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escAttr = (s) => String(s ?? '').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+
+// ── Constants ─────────────────────────────────────────────────
+const GENRES = [
+  'Literary Fiction', 'Mystery', 'Science Fiction', 'Historical',
+  'Biography', 'Fantasy', 'Non-Fiction', 'Short Stories', 'Classics', 'Romance'
+];
+
+const GENRE_SUBJECTS = {
+  'Literary Fiction': 'literary_fiction',
+  'Mystery': 'mystery_and_detective_stories',
+  'Science Fiction': 'science_fiction',
+  'Historical': 'historical_fiction',
+  'Biography': 'biography',
+  'Fantasy': 'fantasy_fiction',
+  'Non-Fiction': 'nonfiction',
+  'Short Stories': 'short_stories',
+  'Classics': 'classics',
+  'Romance': 'romance'
+};
+
+// ── State ─────────────────────────────────────────────────────
+let state = {
+  clubName: '',
+  genres: [],
+  pace: 'short',
+  history: [],         // { title, date, rating, author? }
+  shortlist: [],       // normalized book objects
+  votes: {},           // { bookKey: count }
+  suggestions: []      // normalized book objects
+};
+
+// ── Storage ───────────────────────────────────────────────────
+const STORAGE_KEY = 'pageturner_v1';
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      clubName: state.clubName,
+      genres: state.genres,
+      pace: state.pace,
+      history: state.history,
+      shortlist: state.shortlist,
+      votes: state.votes,
+      suggestions: state.suggestions
+    }));
+  } catch { /* quota exceeded – silent */ }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    Object.assign(state, saved);
+  } catch { /* corrupt data – ignore */ }
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+// ── Genre chips ───────────────────────────────────────────────
+function buildGenreChips() {
+  const container = document.getElementById('genre-chips');
+  container.innerHTML = '';
+  GENRES.forEach(g => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (state.genres.includes(g) ? ' selected' : '');
+    btn.textContent = g;
+    btn.setAttribute('aria-pressed', state.genres.includes(g) ? 'true' : 'false');
+    btn.addEventListener('click', () => toggleGenre(g, btn));
+    container.appendChild(btn);
+  });
+}
+
+function toggleGenre(g, btn) {
+  const idx = state.genres.indexOf(g);
+  if (idx === -1) {
+    state.genres.push(g);
+    btn.classList.add('selected');
+    btn.setAttribute('aria-pressed', 'true');
+  } else {
+    state.genres.splice(idx, 1);
+    btn.classList.remove('selected');
+    btn.setAttribute('aria-pressed', 'false');
+  }
+  saveState();
+}
+
+// ── Pace selector ─────────────────────────────────────────────
+function initPace() {
+  document.querySelectorAll('.pace-chip').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.pace === state.pace);
+    btn.setAttribute('aria-pressed', btn.dataset.pace === state.pace ? 'true' : 'false');
+    btn.addEventListener('click', () => {
+      state.pace = btn.dataset.pace;
+      document.querySelectorAll('.pace-chip').forEach(b => {
+        b.classList.toggle('selected', b.dataset.pace === state.pace);
+        b.setAttribute('aria-pressed', b.dataset.pace === state.pace ? 'true' : 'false');
+      });
+      saveState();
+    });
+  });
+}
+
+// ── Star rating input ─────────────────────────────────────────
+let selectedRating = 0;
+function initStars() {
+  document.querySelectorAll('#star-input .star-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.dataset.star);
+      selectedRating = selectedRating === val ? 0 : val;
+      updateStarDisplay();
+    });
+    btn.addEventListener('mouseover', () => {
+      const val = parseInt(btn.dataset.star);
+      document.querySelectorAll('#star-input .star-btn').forEach((b, i) => {
+        b.style.color = i < val ? 'var(--color-accent)' : '';
+      });
+    });
+    btn.addEventListener('mouseout', updateStarDisplay);
+  });
+}
+
+function updateStarDisplay() {
+  document.querySelectorAll('#star-input .star-btn').forEach((b, i) => {
+    b.classList.toggle('lit', i < selectedRating);
+    b.style.color = '';
+  });
+}
+
+// ── Reading history ───────────────────────────────────────────
+function renderHistoryList() {
+  const container = document.getElementById('history-list');
+  if (!state.history.length) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = '';
+  state.history.forEach((entry, idx) => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const stars = entry.rating ? '★'.repeat(entry.rating) + '☆'.repeat(5 - entry.rating) : '—';
+    item.innerHTML = `
+      <div class="history-item-info">
+        <div class="history-item-title">${esc(entry.title)}</div>
+        <div class="history-item-meta">${esc(entry.date || '')}</div>
+        <div class="history-item-stars" aria-label="${entry.rating || 0} stars">${stars}</div>
+      </div>
+      <button class="btn-icon" aria-label="Remove ${esc(entry.title)} from history" data-idx="${idx}">×</button>
+    `;
+    item.querySelector('.btn-icon').addEventListener('click', () => removeHistoryItem(idx));
+    container.appendChild(item);
+  });
+
+  renderPastTimeline();
+}
+
+function addHistoryItem() {
+  const titleInput = document.getElementById('hist-title-input');
+  const title = titleInput.value.trim();
+  if (!title) { toast('Enter a book title first', 'error'); return; }
+  const entry = {
+    title,
+    date: new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }),
+    rating: selectedRating
+  };
+  state.history.unshift(entry);
+  saveState();
+  titleInput.value = '';
+  selectedRating = 0;
+  updateStarDisplay();
+  renderHistoryList();
+  toast(`"${title}" added to history`, 'success');
+}
+
+function removeHistoryItem(idx) {
+  state.history.splice(idx, 1);
+  saveState();
+  renderHistoryList();
+}
+
+// ── Past picks timeline in main ───────────────────────────────
+function renderPastTimeline() {
+  const section = document.getElementById('past-section');
+  const timeline = document.getElementById('past-timeline');
+  const countEl = document.getElementById('past-count');
+
+  if (!state.history.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  countEl.textContent = `${state.history.length} book${state.history.length !== 1 ? 's' : ''}`;
+  timeline.innerHTML = '';
+
+  state.history.forEach((entry, i) => {
+    const stars = entry.rating ? '★'.repeat(entry.rating) : '—';
+    const item = document.createElement('div');
+    item.className = 'past-pick';
+    item.innerHTML = `
+      <div class="past-pick-dot" aria-hidden="true">${i + 1}</div>
+      <div class="past-pick-info">
+        <div class="past-pick-title">${esc(entry.title)}</div>
+        ${entry.author ? `<div class="past-pick-meta">by ${esc(entry.author)}</div>` : ''}
+        <div class="past-pick-stars" aria-label="${entry.rating || 0} stars">${stars}</div>
+      </div>
+      <div class="past-pick-date">${esc(entry.date || '')}</div>
+    `;
+    timeline.appendChild(item);
+  });
+}
+
+// ── Club name ─────────────────────────────────────────────────
+function initClubName() {
+  const input = document.getElementById('club-name');
+  input.value = state.clubName;
+  input.addEventListener('input', () => {
+    state.clubName = input.value;
+    saveState();
+  });
+}
+
+// ── Normalize book object ─────────────────────────────────────
+function normalizeDoc(doc) {
+  return {
+    key: doc.key,
+    title: doc.title || 'Unknown Title',
+    author: (doc.author_name && doc.author_name[0]) ? doc.author_name[0] : 'Unknown Author',
+    year: doc.first_publish_year || null,
+    coverId: doc.cover_i || null,
+    subjects: (doc.subject || []).slice(0, 12),
+    pages: doc.number_of_pages_median || null,
+    rating: doc.ratings_average ? Math.round(doc.ratings_average * 10) / 10 : null
+  };
+}
+
+// ── Fetch from Open Library ───────────────────────────────────
+async function fetchBooks() {
+  const genres = state.genres.length ? state.genres : ['Literary Fiction'];
+
+  // Pick up to 2 genres to query
+  const subjects = genres.slice(0, 2).map(g => GENRE_SUBJECTS[g] || g.replace(/\s+/g, '_').toLowerCase());
+
+  const seen = new Set();
+  let results = [];
+
+  for (const subject of subjects) {
+    const url = `https://openlibrary.org/search.json?subject=${encodeURIComponent(subject)}&limit=20&fields=key,title,author_name,first_publish_year,cover_i,subject,number_of_pages_median,ratings_average`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) continue;
+    const data = await res.json();
+    (data.docs || []).forEach(doc => {
+      if (!seen.has(doc.key)) {
+        seen.add(doc.key);
+        results.push(normalizeDoc(doc));
+      }
+    });
+  }
+
+  // Filter by pace
+  results = results.filter(book => {
+    if (!book.pages) return true;
+    if (state.pace === 'short') return book.pages < 250;
+    if (state.pace === 'medium') return book.pages >= 250 && book.pages <= 400;
+    if (state.pace === 'long') return book.pages > 400;
+    return true;
+  });
+
+  return results.slice(0, 18);
+}
+
+// ── Find Books ────────────────────────────────────────────────
+async function findBooks() {
+  const btn = document.getElementById('btn-find');
+  btn.disabled = true;
+  btn.textContent = 'Searching…';
+
+  const grid = document.getElementById('books-grid');
+  const countEl = document.getElementById('suggest-count');
+
+  // Show skeletons
+  grid.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const sk = document.createElement('div');
+    sk.className = 'skeleton-card';
+    sk.innerHTML = `<div class="skeleton-cover"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div>`;
+    grid.appendChild(sk);
+  }
+
+  countEl.textContent = 'Loading…';
+
+  try {
+    const books = await fetchBooks();
+    state.suggestions = books;
+    saveState();
+    renderSuggestions();
+    toast(`Found ${books.length} book${books.length !== 1 ? 's' : ''}`, 'success');
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon" aria-hidden="true">⚠</div><p class="empty-state-title">Couldn't load books</p><p class="empty-state-sub">Check your connection and try again.</p></div>`;
+    countEl.textContent = 'Error';
+    toast('Network error — try again', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Find Books';
+  }
+}
+
+// ── Render suggestions grid ───────────────────────────────────
+function renderSuggestions() {
+  const grid = document.getElementById('books-grid');
+  const countEl = document.getElementById('suggest-count');
+  grid.innerHTML = '';
+
+  if (!state.suggestions.length) {
+    countEl.textContent = '0 books';
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon" aria-hidden="true">📭</div><p class="empty-state-title">No results</p><p class="empty-state-sub">Try different genres or reading pace.</p></div>`;
+    return;
+  }
+
+  countEl.textContent = `${state.suggestions.length} book${state.suggestions.length !== 1 ? 's' : ''}`;
+
+  state.suggestions.forEach(book => {
+    grid.appendChild(buildBookCard(book));
+  });
+}
+
+// ── Build book card ───────────────────────────────────────────
+function buildBookCard(book) {
+  const card = document.createElement('div');
+  const inShortlist = state.shortlist.some(b => b.key === book.key);
+  card.className = 'book-card' + (inShortlist ? ' in-shortlist' : '');
+  card.setAttribute('role', 'article');
+  card.setAttribute('aria-label', book.title);
+  card.setAttribute('tabindex', '0');
+
+  const coverUrl = book.coverId ? `https://covers.openlibrary.org/b/id/${book.coverId}-M.jpg` : null;
+  const initial = (book.title || '?')[0].toUpperCase();
+  const subjects = (book.subjects || []).slice(0, 3);
+
+  card.innerHTML = `
+    ${inShortlist ? '<div class="shortlist-badge" aria-hidden="true">Shortlisted</div>' : ''}
+    <div class="book-cover-wrap">
+      ${coverUrl
+        ? `<img class="book-cover-img" src="${esc(coverUrl)}" alt="Cover of ${esc(book.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">\n        <div class="book-cover-placeholder" style="display:none;"><span class="cover-initial" aria-hidden="true">${esc(initial)}</span></div>`
+        : `<div class="book-cover-placeholder"><span class="cover-initial" aria-hidden="true">${esc(initial)}</span></div>`
+      }
+    </div>
+    <div class="book-body">
+      <div class="book-title">${esc(book.title)}</div>
+      <div class="book-author">${esc(book.author)}</div>
+      <div class="book-meta-row">
+        ${book.year ? `<span class="book-year">${book.year}</span>` : ''}
+        ${book.pages ? `<span class="book-pages">${book.pages}&nbsp;pg</span>` : ''}
+        ${book.rating ? `<span class="book-rating">★ ${book.rating}</span>` : ''}
+      </div>
+      ${subjects.length ? `<div class="book-subjects">${subjects.map(s => `<span class="subject-tag">${esc(s)}</span>`).join('')}</div>` : ''}
+    </div>
+  `;
+
+  card.addEventListener('click', () => openDetail(book));
+  card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(book); } });
+
+  return card;
+}
+
+// ── Book detail overlay ───────────────────────────────────────
+let currentDetailBook = null;
+
+async function openDetail(book) {
+  currentDetailBook = book;
+  const overlay = document.getElementById('detail-overlay');
+  const content = document.getElementById('detail-content');
+  const inShortlist = state.shortlist.some(b => b.key === book.key);
+
+  const coverUrl = book.coverId ? `https://covers.openlibrary.org/b/id/${book.coverId}-L.jpg` : null;
+  const initial = (book.title || '?')[0].toUpperCase();
+  const subjects = book.subjects || [];
+
+  content.innerHTML = `
+    <div class="detail-layout">
+      <div class="detail-cover">
+        ${coverUrl
+          ? `<img src="${esc(coverUrl)}" alt="Cover of ${esc(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">\n          <div class="detail-cover-placeholder" style="display:none;"><span class="detail-cover-initial">${esc(initial)}</span></div>`
+          : `<div class="detail-cover-placeholder"><span class="detail-cover-initial">${esc(initial)}</span></div>`
+        }
+      </div>
+      <div class="detail-info">
+        <h2 class="detail-title">${esc(book.title)}</h2>
+        <p class="detail-author">by ${esc(book.author)}</p>
+        <div class="detail-meta-row">
+          ${book.year ? `<span class="detail-badge">${book.year}</span>` : ''}
+          ${book.pages ? `<span class="detail-badge">${book.pages} pages</span>` : ''}
+          ${book.rating ? `<span class="detail-badge">★ ${book.rating}</span>` : ''}
+        </div>
+        ${subjects.length ? `<div class="detail-subjects">${subjects.map(s => `<span class="subject-tag">${esc(s)}</span>`).join('')}</div>` : ''}
+        <div class="detail-actions">
+          <button
+            class="btn-shortlist-add ${inShortlist ? 'remove' : ''}"
+            id="detail-sl-btn"
+            onclick="toggleShortlist(currentDetailBook)"
+          >${inShortlist ? 'Remove from Shortlist' : '+ Add to Shortlist'}</button>
+          <a class="btn-secondary" href="https://openlibrary.org${escAttr(book.key)}" target="_blank" rel="noopener noreferrer">Open Library ↗</a>
+        </div>
+      </div>
+    </div>
+    <div class="detail-desc" id="detail-desc">Loading description…</div>
+  `;
+
+  overlay.classList.add('open');
+  document.getElementById('detail-close').focus();
+
+  // Fetch description async
+  fetchDescription(book.key);
+}
+
+async function fetchDescription(key) {
+  const descEl = document.getElementById('detail-desc');
+  if (!descEl) return;
+  try {
+    const res = await fetch(`https://openlibrary.org${key}.json`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) { descEl.textContent = 'No description available.'; return; }
+    const data = await res.json();
+    let desc = '';
+    if (typeof data.description === 'string') desc = data.description;
+    else if (data.description && typeof data.description.value === 'string') desc = data.description.value;
+    // Trim markdown links
+    desc = desc.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/----------+[\s\S]*/g, '').trim();
+    if (!desc) desc = 'No description available.';
+    descEl.textContent = desc.length > 800 ? desc.slice(0, 800) + '…' : desc;
+  } catch {
+    if (descEl) descEl.textContent = 'No description available.';
+  }
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+  currentDetailBook = null;
+}
+
+document.getElementById('detail-close').addEventListener('click', closeDetail);
+document.getElementById('detail-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('detail-overlay')) closeDetail();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+
+// ── Shortlist ─────────────────────────────────────────────────
+function toggleShortlist(book) {
+  if (!book) return;
+  const idx = state.shortlist.findIndex(b => b.key === book.key);
+  if (idx === -1) {
+    if (state.shortlist.length >= 6) {
+      toast('Shortlist is full (max 6 books)', 'error');
+      return;
+    }
+    state.shortlist.push(book);
+    if (!state.votes[book.key]) state.votes[book.key] = 0;
+    toast(`"${book.title}" added to shortlist`, 'success');
+  } else {
+    state.shortlist.splice(idx, 1);
+    toast(`"${book.title}" removed from shortlist`);
+  }
+  saveState();
+  renderShortlist();
+  renderSuggestions();
+
+  // Update detail panel button if open
+  const slBtn = document.getElementById('detail-sl-btn');
+  if (slBtn && currentDetailBook && currentDetailBook.key === book.key) {
+    const nowIn = state.shortlist.some(b => b.key === book.key);
+    slBtn.textContent = nowIn ? 'Remove from Shortlist' : '+ Add to Shortlist';
+    slBtn.className = 'btn-shortlist-add' + (nowIn ? ' remove' : '');
+  }
+}
+
+function renderShortlist() {
+  const row = document.getElementById('shortlist-row');
+  const countEl = document.getElementById('shortlist-count');
+  const emptyEl = document.getElementById('shortlist-empty');
+  countEl.textContent = `${state.shortlist.length} book${state.shortlist.length !== 1 ? 's' : ''}`;
+
+  if (!state.shortlist.length) {
+    row.innerHTML = '';
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'shortlist-empty';
+    emptyDiv.id = 'shortlist-empty';
+    emptyDiv.textContent = 'Add books to shortlist to put them up for a vote.';
+    row.appendChild(emptyDiv);
+    return;
+  }
+
+  row.innerHTML = '';
+
+  state.shortlist.forEach(book => {
+    const coverUrl = book.coverId ? `https://covers.openlibrary.org/b/id/${book.coverId}-S.jpg` : null;
+    const initial = (book.title || '?')[0].toUpperCase();
+    const votes = state.votes[book.key] || 0;
+
+    const item = document.createElement('div');
+    item.className = 'shortlist-book';
+    item.innerHTML = `
+      <button class="btn-remove-shortlist" aria-label="Remove ${esc(book.title)} from shortlist" data-key="${escAttr(book.key)}">×</button>
+      <div class="shortlist-cover">
+        ${coverUrl
+          ? `<img src="${esc(coverUrl)}" alt="${esc(book.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">\n          <div class="shortlist-placeholder" style="display:none;"><span class="shortlist-initial">${esc(initial)}</span></div>`
+          : `<div class="shortlist-placeholder"><span class="shortlist-initial">${esc(initial)}</span></div>`
+        }
+      </div>
+      <div class="shortlist-book-title" title="${esc(book.title)}">${esc(book.title)}</div>
+      <div class="shortlist-vote-row">
+        <button class="btn-vote" aria-label="Vote for ${esc(book.title)}" data-key="${escAttr(book.key)}">+1</button>
+        <span class="vote-count" aria-label="${votes} votes">${votes}</span>
+      </div>
+    `;
+
+    item.querySelector('.btn-remove-shortlist').addEventListener('click', e => {
+      e.stopPropagation();
+      toggleShortlist(book);
+    });
+
+    item.querySelector('.btn-vote').addEventListener('click', e => {
+      e.stopPropagation();
+      state.votes[book.key] = (state.votes[book.key] || 0) + 1;
+      saveState();
+      renderShortlist();
+      toast(`Vote for "${book.title}"!`, 'success');
+    });
+
+    row.appendChild(item);
+  });
+}
+
+// ── Share shortlist ───────────────────────────────────────────
+document.getElementById('btn-share').addEventListener('click', () => {
+  if (!state.shortlist.length) {
+    toast('Add books to shortlist first', 'error');
+    return;
+  }
+  const club = state.clubName ? `${state.clubName} — ` : '';
+  const lines = state.shortlist.map((b, i) => `${i + 1}. ${b.title} by ${b.author}${state.votes[b.key] ? ` (${state.votes[b.key]} votes)` : ''}`);
+  const text = `${club}Book Club Shortlist:\n\n${lines.join('\n')}`;
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Shortlist copied to clipboard!', 'success'))
+    .catch(() => {
+      // Fallback: open share URL
+      const encoded = encodeURIComponent(text);
+      window.open(`mailto:?subject=${encodeURIComponent(club + 'Book Club Shortlist')}&body=${encoded}`);
+    });
+});
+
+// ── Event wiring ──────────────────────────────────────────────
+document.getElementById('btn-find').addEventListener('click', findBooks);
+document.getElementById('btn-add-hist').addEventListener('click', addHistoryItem);
+
+document.getElementById('hist-title-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addHistoryItem();
+});
+
+// ── Init ──────────────────────────────────────────────────────
+function init() {
+  loadState();
+  initClubName();
+  buildGenreChips();
+  initPace();
+  initStars();
+  renderHistoryList();
+  renderShortlist();
+
+  if (state.suggestions.length) {
+    renderSuggestions();
+  }
+}
+
+init();
+</script>
+</body>
+</html>

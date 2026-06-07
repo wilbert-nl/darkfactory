@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalPulse — News Digest for Brokers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep { width: 1px; height: 16px; background: var(--color-border); flex-shrink: 0; }
+.nav-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Sidebar sections ── */
+.sb-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.sb-section-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* Location */
+.location-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.input-text {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 0.15s ease;
+  min-width: 0;
+}
+.input-text:focus { outline: none; border-color: var(--color-accent); }
+.input-text::placeholder { color: var(--color-ink-muted); }
+
+.btn-icon {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+.btn-icon:hover { opacity: 0.85; }
+.btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.location-status {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+  min-height: 16px;
+}
+.location-status.ok { color: var(--color-success); }
+.location-status.err { color: var(--color-danger); }
+
+.radius-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.radius-row label { font-size: var(--text-xs); color: var(--color-ink-muted); flex-shrink: 0; }
+.input-range {
+  flex: 1;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+.radius-val {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Keywords */
+.keyword-input-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.keyword-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: 20px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-accent);
+}
+.chip-remove {
+  cursor: pointer;
+  line-height: 1;
+  font-size: 14px;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+.chip-remove:hover { color: var(--color-danger); }
+
+/* Feed categories */
+.feed-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.feed-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.feed-item input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  width: 14px; height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.feed-item-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  flex: 1;
+}
+.feed-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Clients */
+.clients-list { display: flex; flex-direction: column; gap: var(--space-1); }
+.client-add-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.client-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.client-item:hover { background: var(--color-paper); }
+.client-item.active {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-line);
+}
+.client-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+.client-name {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.client-del {
+  background: none;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.12s;
+}
+.client-del:hover { color: var(--color-danger); }
+.client-none {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-3) 0;
+}
+
+/* Digest settings */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.settings-field label {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-1);
+}
+.input-select {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.input-select:focus { outline: none; border-color: var(--color-accent); }
+
+/* Fetch button */
+.btn-fetch {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.btn-fetch:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28);
+}
+.btn-fetch:active { transform: translateY(0); box-shadow: none; }
+.btn-fetch:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* Tabs */
+.tabs-bar {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-6);
+  background: var(--color-paper);
+  flex-shrink: 0;
+  gap: 0;
+}
+.tab-btn {
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--color-ink); }
+.tab-btn.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 600;
+}
+
+.tab-panel {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+.tab-panel.active { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* ── Articles / Empty states ── */
+.panel-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-4);
+  padding: var(--space-16);
+  color: var(--color-ink-muted);
+}
+.panel-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.panel-empty-sub { font-size: var(--text-base); max-width: 320px; line-height: 1.65; }
+
+/* Loading state */
+.loading-bar {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.loading-bar.show { display: flex; }
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Article cards */
+.articles-grid { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.article-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: card-in 0.2s ease;
+  transition: box-shadow 0.15s ease;
+}
+.article-card:hover {
+  box-shadow: 0 2px 12px oklch(18% 0.04 155 / 0.08);
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.article-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.badge-realestate { background: oklch(88% 0.04 155); color: oklch(38% 0.14 155); }
+.badge-business   { background: oklch(88% 0.04 72);  color: oklch(42% 0.12 72);  }
+.badge-government { background: oklch(88% 0.03 225); color: oklch(40% 0.12 225); }
+.badge-construction { background: oklch(88% 0.04 45); color: oklch(40% 0.12 45); }
+.badge-demo       { background: var(--color-paper-2); color: var(--color-ink-muted); }
+
+.article-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.article-meta-sep { opacity: 0.4; }
+
+.article-headline {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-decoration: none;
+}
+.article-headline:hover { color: var(--color-accent); }
+
+.article-excerpt {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.65;
+}
+
+/* Keyword highlight */
+.kw-match {
+  background: oklch(88% 0.06 155 / 0.5);
+  color: oklch(38% 0.14 155);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.article-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  white-space: nowrap;
+}
+.btn-ghost:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+.btn-ghost.active {
+  color: var(--color-accent);
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+
+.tag-client-select {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+.tag-client-select:focus { outline: none; border-color: var(--color-accent); }
+
+.tagged-client-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-accent);
+  margin-left: auto;
+}
+
+/* ── Saved tab ── */
+.saved-article-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.saved-headline {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-decoration: none;
+}
+.saved-headline:hover { color: var(--color-accent); }
+.notes-textarea {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+  min-height: 60px;
+  transition: border-color 0.15s ease;
+}
+.notes-textarea:focus { outline: none; border-color: var(--color-accent); }
+.notes-textarea::placeholder { color: var(--color-ink-muted); }
+.saved-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Digest builder ── */
+.digest-header-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  flex-wrap: wrap;
+}
+.digest-field { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; min-width: 140px; }
+.digest-field label { font-size: var(--text-xs); color: var(--color-ink-muted); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.digest-preview-box {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  min-height: 200px;
+}
+.digest-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28);
+}
+.digest-article-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.digest-article-row input[type="checkbox"] {
+  accent-color: var(--color-accent);
+  width: 14px; height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.digest-article-title {
+  flex: 1;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.digest-article-client {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error   { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+    max-height: none;
+  }
+  .sidebar-scroll { overflow: visible; }
+  .main { overflow: visible; }
+  .tab-panel { overflow: visible; }
+  .tabs-bar { padding: 0 var(--space-4); overflow-x: auto; }
+  .tab-panel { padding: var(--space-4); }
+  .article-card { padding: var(--space-3) var(--space-4); }
+  .digest-header-row { flex-direction: column; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .article-card { animation: none; }
+  .btn-fetch:hover { transform: none; box-shadow: none; }
+  .spinner { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Local<span>Pulse</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-label">News Digest for Brokers</span>
+  <a href="../index.html" class="nav-back" aria-label="Back to home">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Digest configuration">
+    <div class="sidebar-scroll">
+
+      <!-- Location -->
+      <div class="sb-section">
+        <div class="sb-section-title">Location</div>
+        <div class="location-row">
+          <input type="text" class="input-text" id="location-input" placeholder="City, state or zip" aria-label="Location">
+          <button class="btn-icon" id="btn-locate" aria-label="Look up location">Find</button>
+        </div>
+        <div class="location-status" id="location-status" aria-live="polite"></div>
+        <div class="radius-row">
+          <label for="radius-range">Radius</label>
+          <input type="range" class="input-range" id="radius-range" min="5" max="100" step="5" value="25" aria-label="Search radius in miles">
+          <span class="radius-val" id="radius-val">25 mi</span>
+        </div>
+      </div>
+
+      <!-- Keywords -->
+      <div class="sb-section">
+        <div class="sb-section-title">Keywords</div>
+        <div class="keyword-input-row">
+          <input type="text" class="input-text" id="keyword-input" placeholder="Add keyword…" aria-label="Keyword to add" maxlength="40">
+          <button class="btn-icon" id="btn-add-kw" aria-label="Add keyword">+</button>
+        </div>
+        <div class="keyword-chips" id="keyword-chips" aria-label="Active keywords"></div>
+      </div>
+
+      <!-- Feed Categories -->
+      <div class="sb-section">
+        <div class="sb-section-title">Feed Categories</div>
+        <div class="feed-list">
+          <label class="feed-item">
+            <input type="checkbox" id="feed-realestate" checked aria-label="Real estate feed">
+            <span class="feed-item-label">Real Estate</span>
+            <span class="feed-badge">RSS</span>
+          </label>
+          <label class="feed-item">
+            <input type="checkbox" id="feed-business" checked aria-label="Local business feed">
+            <span class="feed-item-label">Local Business</span>
+            <span class="feed-badge">RSS</span>
+          </label>
+          <label class="feed-item">
+            <input type="checkbox" id="feed-government" checked aria-label="Government feed">
+            <span class="feed-item-label">Government</span>
+            <span class="feed-badge">RSS</span>
+          </label>
+          <label class="feed-item">
+            <input type="checkbox" id="feed-construction" checked aria-label="Construction feed">
+            <span class="feed-item-label">Construction &amp; Zoning</span>
+            <span class="feed-badge">Demo</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Saved Clients -->
+      <div class="sb-section">
+        <div class="sb-section-title">Clients</div>
+        <div class="client-add-row">
+          <input type="text" class="input-text" id="client-input" placeholder="Client name…" maxlength="60" aria-label="New client name">
+          <button class="btn-icon" id="btn-add-client" aria-label="Add client">+</button>
+        </div>
+        <div class="clients-list" id="clients-list" aria-label="Saved clients"></div>
+      </div>
+
+      <!-- Digest Settings -->
+      <div class="sb-section">
+        <div class="sb-section-title">Digest Settings</div>
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label for="max-articles">Max articles</label>
+            <select class="input-select" id="max-articles" aria-label="Maximum articles per digest">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+          <div class="settings-field">
+            <label for="digest-freq">Frequency</label>
+            <select class="input-select" id="digest-freq" aria-label="Digest frequency">
+              <option value="daily" selected>Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-fetch" id="btn-fetch" aria-label="Fetch news digest">
+          <span id="fetch-icon">⟳</span>
+          <span id="fetch-label">Fetch Digest</span>
+        </button>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="News digest">
+
+    <!-- Tabs -->
+    <div class="tabs-bar" role="tablist" aria-label="Digest sections">
+      <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-digest" data-tab="digest">
+        Today's Digest
+        <span id="digest-count-badge"></span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-saved" data-tab="saved">
+        Saved Articles
+        <span id="saved-count-badge"></span>
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-builder" data-tab="builder">
+        Digest Builder
+      </button>
+    </div>
+
+    <!-- Tab: Today's Digest -->
+    <div class="tab-panel active" id="tab-digest" role="tabpanel" aria-label="Today's digest">
+      <div class="loading-bar" id="loading-bar" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <span id="loading-msg">Fetching feeds…</span>
+      </div>
+      <div id="digest-content">
+        <div class="panel-empty" id="digest-empty">
+          <p class="panel-empty-title">Ready to pull news</p>
+          <p class="panel-empty-sub">Configure your location, keywords, and feed categories in the sidebar, then click Fetch Digest.</p>
+        </div>
+        <div class="articles-grid" id="articles-grid" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Saved Articles -->
+    <div class="tab-panel" id="tab-saved" role="tabpanel" aria-label="Saved articles">
+      <div class="panel-empty" id="saved-empty">
+        <p class="panel-empty-title">No saved articles</p>
+        <p class="panel-empty-sub">Bookmark articles from the digest using the Save button to build a curated library here.</p>
+      </div>
+      <div class="articles-grid" id="saved-grid" style="display:none;"></div>
+    </div>
+
+    <!-- Tab: Digest Builder -->
+    <div class="tab-panel" id="tab-builder" role="tabpanel" aria-label="Digest builder">
+      <div class="digest-header-row">
+        <div class="digest-field">
+          <label for="digest-client-select">Client</label>
+          <select class="input-select" id="digest-client-select" aria-label="Select client for digest">
+            <option value="">— All saved articles —</option>
+          </select>
+        </div>
+        <div class="digest-field">
+          <label for="digest-subject">Subject line</label>
+          <input type="text" class="input-text" id="digest-subject" placeholder="Your weekly local news digest" aria-label="Email subject line" value="Your local market news digest">
+        </div>
+        <button class="btn-icon" id="btn-build-digest" aria-label="Build digest preview">Build Preview</button>
+      </div>
+
+      <div class="panel-empty" id="builder-empty">
+        <p class="panel-empty-title">No articles selected</p>
+        <p class="panel-empty-sub">Save articles from the digest tab, then select them here to build a client email.</p>
+      </div>
+
+      <div id="builder-content" style="display:none; flex-direction:column; gap: var(--space-4);">
+        <div class="articles-grid" id="builder-article-list"></div>
+
+        <div id="digest-preview-section" style="display:none; flex-direction:column; gap: var(--space-3);">
+          <div class="sb-section-title">Email Preview</div>
+          <div class="digest-preview-box" id="digest-preview"></div>
+          <div class="digest-actions">
+            <button class="btn-primary" id="btn-copy-text">Copy as Text</button>
+            <button class="btn-primary" id="btn-copy-html">Copy as HTML</button>
+            <button class="btn-ghost" id="btn-export-save" style="color:var(--color-accent);">Export &amp; Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+// ── Constants & Config ─────────────────────────────────────────
+const FEEDS = {
+  realestate: {
+    name: 'Real Estate',
+    url: 'https://feeds.feedburner.com/RealEstateNews',
+    badge: 'realestate',
+  },
+  business: {
+    name: 'Local Business',
+    url: 'https://hnrss.org/frontpage',
+    badge: 'business',
+  },
+  government: {
+    name: 'Government',
+    url: 'https://www.govinfo.gov/rss/news.xml',
+    badge: 'government',
+  },
+  construction: {
+    name: 'Construction & Zoning',
+    url: null, // demo only
+    badge: 'construction',
+  },
+};
+
+const DEMO_ARTICLES = [
+  {
+    id: 'demo-1',
+    category: 'realestate',
+    title: 'Local Housing Market Sees Surge in First-Time Buyer Activity',
+    excerpt: 'Mortgage rate adjustments and expanded down-payment assistance programs have drawn a wave of first-time buyers to the local market. Brokers report a 22% uptick in showing requests over the past three weeks.',
+    source: 'Real Estate News',
+    published: new Date(Date.now() - 2 * 3600000).toISOString(),
+    url: '#',
+  },
+  {
+    id: 'demo-2',
+    category: 'construction',
+    title: 'City Council Approves Mixed-Use Zoning Overlay for Downtown Corridor',
+    excerpt: 'The planning commission voted 6-2 to approve a new mixed-use overlay district allowing residential construction above ground-floor retail along the main downtown corridor. The change is expected to add up to 340 new housing units.',
+    source: 'Construction & Zoning',
+    published: new Date(Date.now() - 5 * 3600000).toISOString(),
+    url: '#',
+  },
+  {
+    id: 'demo-3',
+    category: 'business',
+    title: 'Regional Insurance Carrier Announces Rate Adjustments for High-Risk Areas',
+    excerpt: 'Following updated flood and wind hazard maps, a major regional carrier announced premium adjustments affecting properties in three ZIP codes. Independent brokers are advising clients to review current policies before the effective date.',
+    source: 'Local Business',
+    published: new Date(Date.now() - 8 * 3600000).toISOString(),
+    url: '#',
+  },
+  {
+    id: 'demo-4',
+    category: 'government',
+    title: 'New Environmental Impact Study Opens Public Comment Period for Industrial Site',
+    excerpt: 'A 60-day public comment window is now open for the proposed redevelopment of a former industrial property near the river district. Planners say the site could support up to 800,000 square feet of commercial space if remediation is approved.',
+    source: 'Government',
+    published: new Date(Date.now() - 12 * 3600000).toISOString(),
+    url: '#',
+  },
+  {
+    id: 'demo-5',
+    category: 'construction',
+    title: 'Permit Applications for Single-Family Homes Rise for Third Consecutive Month',
+    excerpt: 'Building permit data released by the county shows single-family permit applications climbed 11% month-over-month in the latest reporting period. Construction costs remain elevated but developers cite strong pre-sale demand.',
+    source: 'Construction & Zoning',
+    published: new Date(Date.now() - 18 * 3600000).toISOString(),
+    url: '#',
+  },
+  {
+    id: 'demo-6',
+    category: 'realestate',
+    title: 'Commercial Real Estate Vacancies Stabilize as Hybrid Work Policies Settle',
+    excerpt: 'Office vacancy rates in the metro area held steady at 14.8% last quarter, the first such plateau in two years. Property managers and brokers attribute the stabilization to companies finalizing hybrid work policies and right-sizing their footprints.',
+    source: 'Real Estate News',
+    published: new Date(Date.now() - 24 * 3600000).toISOString(),
+    url: '#',
+  },
+  {
+    id: 'demo-7',
+    category: 'government',
+    title: 'State Legislature Advances Property Tax Relief Bill for Seniors and Veterans',
+    excerpt: 'A bipartisan bill offering expanded property tax exemptions for qualifying seniors and veterans passed out of committee and heads to the full chamber for a vote. Housing advocates say the relief could affect tens of thousands of households across the state.',
+    source: 'Government',
+    published: new Date(Date.now() - 30 * 3600000).toISOString(),
+    url: '#',
+  },
+  {
+    id: 'demo-8',
+    category: 'business',
+    title: 'National Title Company Opens Regional Office, Plans to Hire 40 Staff',
+    excerpt: 'A national title insurance and settlement services company has signed a lease for a 6,000-square-foot office in the business district and announced plans to hire 40 local staff members over the next 18 months.',
+    source: 'Local Business',
+    published: new Date(Date.now() - 36 * 3600000).toISOString(),
+    url: '#',
+  },
+];
+
+// ── Utilities ──────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtTime = (iso) => {
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 60000);
+    if (diff < 60)   return diff <= 1 ? 'just now' : `${diff}m ago`;
+    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch { return ''; }
+};
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+// ── LocalStorage persistence ───────────────────────────────────
+const store = {
+  get: (k, def = null) => {
+    try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : def; } catch { return def; }
+  },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+// ── App State ──────────────────────────────────────────────────
+let state = {
+  location: store.get('lp_location', { query: '', name: '', lat: null, lon: null }),
+  radius: store.get('lp_radius', 25),
+  keywords: store.get('lp_keywords', ['zoning', 'development', 'construction']),
+  feedPrefs: store.get('lp_feedprefs', { realestate: true, business: true, government: true, construction: true }),
+  clients: store.get('lp_clients', []),
+  selectedClient: store.get('lp_selected_client', null),
+  maxArticles: store.get('lp_max_articles', 10),
+  digestFreq: store.get('lp_digest_freq', 'daily'),
+  savedArticles: store.get('lp_saved_articles', []),
+  digestArticles: [], // current fetch results (not persisted)
+};
+
+function saveState() {
+  store.set('lp_location',        { query: state.location.query, name: state.location.name, lat: state.location.lat, lon: state.location.lon });
+  store.set('lp_radius',          state.radius);
+  store.set('lp_keywords',        state.keywords);
+  store.set('lp_feedprefs',       state.feedPrefs);
+  store.set('lp_clients',         state.clients);
+  store.set('lp_selected_client', state.selectedClient);
+  store.set('lp_max_articles',    state.maxArticles);
+  store.set('lp_digest_freq',     state.digestFreq);
+  store.set('lp_saved_articles',  state.savedArticles);
+}
+
+// ── Location ───────────────────────────────────────────────────
+const locationInput = document.getElementById('location-input');
+const locationStatus = document.getElementById('location-status');
+const btnLocate = document.getElementById('btn-locate');
+const radiusRange = document.getElementById('radius-range');
+const radiusVal = document.getElementById('radius-val');
+
+// Init from state
+locationInput.value = state.location.query || '';
+radiusRange.value = state.radius;
+radiusVal.textContent = `${state.radius} mi`;
+if (state.location.name) {
+  locationStatus.textContent = `Location: ${state.location.name}`;
+  locationStatus.className = 'location-status ok';
+}
+
+radiusRange.addEventListener('input', () => {
+  state.radius = Number(radiusRange.value);
+  radiusVal.textContent = `${state.radius} mi`;
+  saveState();
+});
+
+btnLocate.addEventListener('click', async () => {
+  const q = locationInput.value.trim();
+  if (!q) { toast('Enter a city, state, or zip code', 'error'); return; }
+
+  btnLocate.disabled = true;
+  btnLocate.textContent = '…';
+  locationStatus.textContent = 'Looking up…';
+  locationStatus.className = 'location-status';
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('Lookup failed');
+    const data = await res.json();
+
+    if (!data.length) {
+      locationStatus.textContent = 'Location not found. Try a different search.';
+      locationStatus.className = 'location-status err';
+      state.location = { query: q, name: '', lat: null, lon: null };
+    } else {
+      const place = data[0];
+      const name = place.display_name.split(',').slice(0, 2).join(',').trim();
+      state.location = { query: q, name, lat: parseFloat(place.lat), lon: parseFloat(place.lon) };
+      locationStatus.textContent = `Location: ${name}`;
+      locationStatus.className = 'location-status ok';
+      toast(`Location set to ${name}`, 'success');
+    }
+    saveState();
+  } catch {
+    locationStatus.textContent = 'Lookup failed. Check your connection.';
+    locationStatus.className = 'location-status err';
+  } finally {
+    btnLocate.disabled = false;
+    btnLocate.textContent = 'Find';
+  }
+});
+
+locationInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') btnLocate.click();
+});
+
+// ── Keywords ───────────────────────────────────────────────────
+const keywordInput = document.getElementById('keyword-input');
+const btnAddKw = document.getElementById('btn-add-kw');
+const keywordChips = document.getElementById('keyword-chips');
+
+function renderKeywords() {
+  keywordChips.innerHTML = '';
+  for (const kw of state.keywords) {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `${esc(kw)}<button class="chip-remove" aria-label="Remove ${esc(kw)}">×</button>`;
+    chip.querySelector('.chip-remove').addEventListener('click', () => {
+      state.keywords = state.keywords.filter(k => k !== kw);
+      saveState();
+      renderKeywords();
+    });
+    keywordChips.appendChild(chip);
+  }
+}
+
+function addKeyword() {
+  const kw = keywordInput.value.trim().toLowerCase();
+  if (!kw) return;
+  if (state.keywords.includes(kw)) { toast('Keyword already added', 'error'); return; }
+  if (state.keywords.length >= 20) { toast('Maximum 20 keywords', 'error'); return; }
+  state.keywords.push(kw);
+  saveState();
+  renderKeywords();
+  keywordInput.value = '';
+  keywordInput.focus();
+}
+
+btnAddKw.addEventListener('click', addKeyword);
+keywordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addKeyword(); });
+renderKeywords();
+
+// ── Feed category checkboxes ───────────────────────────────────
+['realestate', 'business', 'government', 'construction'].forEach(cat => {
+  const el = document.getElementById(`feed-${cat}`);
+  el.checked = state.feedPrefs[cat] !== false;
+  el.addEventListener('change', () => {
+    state.feedPrefs[cat] = el.checked;
+    saveState();
+  });
+});
+
+// ── Clients ────────────────────────────────────────────────────
+const clientInput = document.getElementById('client-input');
+const btnAddClient = document.getElementById('btn-add-client');
+const clientsList = document.getElementById('clients-list');
+
+function renderClients() {
+  clientsList.innerHTML = '';
+  if (!state.clients.length) {
+    clientsList.innerHTML = '<div class="client-none">No clients yet. Add one above.</div>';
+    updateDigestClientSelect();
+    return;
+  }
+  for (const c of state.clients) {
+    const item = document.createElement('div');
+    item.className = 'client-item' + (state.selectedClient === c.id ? ' active' : '');
+    item.innerHTML = `
+      <span class="client-dot" aria-hidden="true"></span>
+      <span class="client-name" title="${esc(c.name)}">${esc(c.name)}</span>
+      <button class="client-del" aria-label="Remove ${esc(c.name)}">×</button>
+    `;
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('client-del')) return;
+      state.selectedClient = state.selectedClient === c.id ? null : c.id;
+      saveState();
+      renderClients();
+      toast(state.selectedClient === c.id ? `Now tagging to: ${c.name}` : 'Client deselected');
+    });
+    item.querySelector('.client-del').addEventListener('click', () => {
+      if (!confirm(`Remove client "${c.name}"?`)) return;
+      state.clients = state.clients.filter(x => x.id !== c.id);
+      if (state.selectedClient === c.id) state.selectedClient = null;
+      saveState();
+      renderClients();
+    });
+    clientsList.appendChild(item);
+  }
+  updateDigestClientSelect();
+}
+
+function addClient() {
+  const name = clientInput.value.trim();
+  if (!name) return;
+  if (state.clients.length >= 10) { toast('Maximum 10 clients', 'error'); return; }
+  if (state.clients.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+    toast('Client already exists', 'error'); return;
+  }
+  state.clients.push({ id: uid(), name });
+  saveState();
+  renderClients();
+  clientInput.value = '';
+  clientInput.focus();
+}
+
+btnAddClient.addEventListener('click', addClient);
+clientInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addClient(); });
+renderClients();
+
+function updateDigestClientSelect() {
+  const sel = document.getElementById('digest-client-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— All saved articles —</option>';
+  for (const c of state.clients) {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    if (c.id === cur) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+// ── Digest settings ────────────────────────────────────────────
+const maxArticlesEl = document.getElementById('max-articles');
+const digestFreqEl = document.getElementById('digest-freq');
+
+maxArticlesEl.value = state.maxArticles;
+digestFreqEl.value = state.digestFreq;
+
+maxArticlesEl.addEventListener('change', () => {
+  state.maxArticles = Number(maxArticlesEl.value);
+  saveState();
+});
+digestFreqEl.addEventListener('change', () => {
+  state.digestFreq = digestFreqEl.value;
+  saveState();
+});
+
+// ── Highlight keywords in text ─────────────────────────────────
+function highlightKeywords(text, keywords) {
+  if (!keywords.length) return esc(text);
+  const escaped = esc(text);
+  let result = escaped;
+  const sorted = [...keywords].sort((a, b) => b.length - a.length);
+  for (const kw of sorted) {
+    const re = new RegExp(`(?<![\\w])(${esc(kw)})(?![\\w])`, 'gi');
+    result = result.replace(re, '<mark class="kw-match">$1</mark>');
+  }
+  return result;
+}
+
+// ── RSS Parsing ────────────────────────────────────────────────
+function parseRSS(xmlText, category, feedName) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, 'text/xml');
+    const items = Array.from(doc.querySelectorAll('item'));
+    return items.slice(0, 12).map(item => {
+      const title = item.querySelector('title')?.textContent?.trim() || 'Untitled';
+      const link  = item.querySelector('link')?.textContent?.trim() || '#';
+      let desc    = item.querySelector('description')?.textContent?.trim() || '';
+      const pub   = item.querySelector('pubDate')?.textContent?.trim() || new Date().toISOString();
+
+      // Strip HTML tags from description
+      const tmpDiv = document.createElement('div');
+      tmpDiv.innerHTML = desc;
+      desc = tmpDiv.textContent?.trim() || desc;
+
+      // Trim to ~200 chars
+      if (desc.length > 220) desc = desc.slice(0, 217) + '…';
+
+      return {
+        id: uid(),
+        category,
+        title,
+        excerpt: desc,
+        source: feedName,
+        published: new Date(pub).toISOString(),
+        url: link,
+      };
+    }).filter(a => a.title && a.title !== 'Untitled');
+  } catch {
+    return [];
+  }
+}
+
+// ── Fetch a single RSS via allorigins.win ──────────────────────
+async function fetchFeed(feedUrl, category, feedName) {
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
+  const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const contents = data.contents || '';
+  return parseRSS(contents, category, feedName);
+}
+
+// ── Demo articles filtered by selected categories ──────────────
+function getDemoArticles(categories) {
+  return DEMO_ARTICLES.filter(a => categories.includes(a.category));
+}
+
+// ── Score article relevance by keywords ───────────────────────
+function scoreArticle(article, keywords) {
+  if (!keywords.length) return 1;
+  const text = `${article.title} ${article.excerpt}`.toLowerCase();
+  let score = 0;
+  for (const kw of keywords) {
+    if (text.includes(kw.toLowerCase())) score++;
+  }
+  return score;
+}
+
+// ── Main fetch logic ───────────────────────────────────────────
+const btnFetch = document.getElementById('btn-fetch');
+const fetchIcon = document.getElementById('fetch-icon');
+const fetchLabel = document.getElementById('fetch-label');
+const loadingBar = document.getElementById('loading-bar');
+const loadingMsg = document.getElementById('loading-msg');
+
+btnFetch.addEventListener('click', runFetch);
+
+async function runFetch() {
+  // Determine active categories
+  const activeCats = Object.entries(state.feedPrefs)
+    .filter(([, v]) => v)
+    .map(([k]) => k);
+
+  if (!activeCats.length) {
+    toast('Select at least one feed category', 'error');
+    return;
+  }
+
+  // UI feedback
+  btnFetch.disabled = true;
+  fetchIcon.textContent = '…';
+  fetchLabel.textContent = 'Fetching…';
+  loadingBar.classList.add('show');
+
+  const digEmpty = document.getElementById('digest-empty');
+  const artGrid  = document.getElementById('articles-grid');
+  digEmpty.style.display = 'none';
+  artGrid.style.display  = 'none';
+  artGrid.innerHTML = '';
+
+  let allArticles = [];
+  const fetchPromises = [];
+
+  for (const cat of activeCats) {
+    const feed = FEEDS[cat];
+    if (!feed.url) {
+      // Demo-only category
+      const demos = getDemoArticles([cat]);
+      allArticles.push(...demos);
+      continue;
+    }
+    fetchPromises.push(
+      fetchFeed(feed.url, cat, feed.name)
+        .then(articles => {
+          allArticles.push(...articles);
+          loadingMsg.textContent = `Loaded ${feed.name}…`;
+        })
+        .catch(() => {
+          // Fallback to demo articles for this category
+          const demos = getDemoArticles([cat]);
+          allArticles.push(...demos);
+          loadingMsg.textContent = `${feed.name}: using demo data`;
+        })
+    );
+  }
+
+  await Promise.allSettled(fetchPromises);
+
+  // Deduplicate by title
+  const seen = new Set();
+  allArticles = allArticles.filter(a => {
+    const key = a.title.toLowerCase().slice(0, 60);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Score and sort
+  const scored = allArticles.map(a => ({ ...a, _score: scoreArticle(a, state.keywords) }));
+  scored.sort((a, b) => {
+    if (b._score !== a._score) return b._score - a._score;
+    return new Date(b.published) - new Date(a.published);
+  });
+
+  const limited = scored.slice(0, state.maxArticles);
+
+  loadingBar.classList.remove('show');
+  btnFetch.disabled = false;
+  fetchIcon.textContent = '⟳';
+  fetchLabel.textContent = 'Fetch Digest';
+
+  if (!limited.length) {
+    digEmpty.style.display = '';
+    digEmpty.querySelector('.panel-empty-title').textContent = 'No articles found';
+    digEmpty.querySelector('.panel-empty-sub').textContent = 'Try adjusting your keywords or feed categories and fetch again.';
+    return;
+  }
+
+  state.digestArticles = limited;
+  renderDigestArticles(limited);
+
+  // Update badge
+  const badge = document.getElementById('digest-count-badge');
+  badge.textContent = ` (${limited.length})`;
+
+  toast(`Loaded ${limited.length} articles`, 'success');
+}
+
+// ── Render digest articles ─────────────────────────────────────
+function renderDigestArticles(articles) {
+  const grid = document.getElementById('articles-grid');
+  const digEmpty = document.getElementById('digest-empty');
+  grid.innerHTML = '';
+
+  if (!articles.length) {
+    digEmpty.style.display = '';
+    grid.style.display = 'none';
+    return;
+  }
+
+  digEmpty.style.display = 'none';
+  grid.style.display = 'flex';
+
+  for (const article of articles) {
+    grid.appendChild(buildArticleCard(article));
+  }
+}
+
+function buildArticleCard(article) {
+  const isSaved = state.savedArticles.some(a => a.id === article.id);
+  const savedA  = state.savedArticles.find(a => a.id === article.id);
+  const taggedClient = savedA?.clientId
+    ? state.clients.find(c => c.id === savedA.clientId)
+    : null;
+
+  const card = document.createElement('div');
+  card.className = 'article-card';
+  card.dataset.id = article.id;
+
+  const clientOptions = state.clients.map(c =>
+    `<option value="${esc(c.id)}" ${savedA?.clientId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`
+  ).join('');
+
+  const headline = highlightKeywords(article.title, state.keywords);
+  const excerpt  = highlightKeywords(article.excerpt || '', state.keywords);
+
+  card.innerHTML = `
+    <div class="article-card-top">
+      <span class="source-badge badge-${esc(article.category)}">${esc(article.source)}</span>
+      <span class="article-meta">
+        <span>${fmtTime(article.published)}</span>
+        ${article.url && article.url !== '#' ? `<span class="article-meta-sep">·</span><a href="${esc(article.url)}" target="_blank" rel="noopener" class="article-meta">View source ↗</a>` : ''}
+      </span>
+    </div>
+    <a href="${esc(article.url)}" target="_blank" rel="noopener" class="article-headline">${headline}</a>
+    <p class="article-excerpt">${excerpt}</p>
+    <div class="article-card-actions">
+      <button class="btn-ghost btn-save-art ${isSaved ? 'active' : ''}" aria-label="${isSaved ? 'Unsave article' : 'Save article'}">
+        ${isSaved ? '★ Saved' : '☆ Save'}
+      </button>
+      ${state.clients.length ? `
+        <select class="tag-client-select" aria-label="Tag article to client">
+          <option value="">Tag to client…</option>
+          ${clientOptions}
+        </select>
+      ` : ''}
+      ${taggedClient ? `<span class="tagged-client-badge">→ ${esc(taggedClient.name)}</span>` : ''}
+    </div>
+  `;
+
+  // Save button
+  const saveBtn = card.querySelector('.btn-save-art');
+  saveBtn.addEventListener('click', () => toggleSaveArticle(article, saveBtn, card));
+
+  // Tag client select
+  const tagSel = card.querySelector('.tag-client-select');
+  if (tagSel) {
+    tagSel.addEventListener('change', () => {
+      tagArticleToClient(article.id, tagSel.value, card);
+    });
+  }
+
+  return card;
+}
+
+function toggleSaveArticle(article, btn, card) {
+  const idx = state.savedArticles.findIndex(a => a.id === article.id);
+  if (idx >= 0) {
+    state.savedArticles.splice(idx, 1);
+    btn.textContent = '☆ Save';
+    btn.classList.remove('active');
+    toast('Article removed from saved');
+  } else {
+    state.savedArticles.push({ ...article, clientId: null, notes: '' });
+    btn.textContent = '★ Saved';
+    btn.classList.add('active');
+    toast('Article saved', 'success');
+  }
+  saveState();
+  updateSavedBadge();
+  renderSavedArticles();
+  renderBuilderList();
+}
+
+function tagArticleToClient(articleId, clientId, card) {
+  const idx = state.savedArticles.findIndex(a => a.id === articleId);
+  if (idx < 0) {
+    // Auto-save article when tagging
+    const article = state.digestArticles.find(a => a.id === articleId);
+    if (article) {
+      state.savedArticles.push({ ...article, clientId: clientId || null, notes: '' });
+      toast('Article saved and tagged', 'success');
+    }
+  } else {
+    state.savedArticles[idx].clientId = clientId || null;
+    if (clientId) {
+      const c = state.clients.find(c => c.id === clientId);
+      toast(`Tagged to ${c?.name || 'client'}`, 'success');
+    } else {
+      toast('Client tag removed');
+    }
+  }
+  saveState();
+  updateSavedBadge();
+  renderSavedArticles();
+  renderBuilderList();
+
+  // Refresh save button state
+  const saveBtn = card?.querySelector('.btn-save-art');
+  if (saveBtn) {
+    saveBtn.textContent = '★ Saved';
+    saveBtn.classList.add('active');
+  }
+}
+
+// ── Saved articles ─────────────────────────────────────────────
+function updateSavedBadge() {
+  const n = state.savedArticles.length;
+  document.getElementById('saved-count-badge').textContent = n ? ` (${n})` : '';
+}
+
+function renderSavedArticles() {
+  const grid  = document.getElementById('saved-grid');
+  const empty = document.getElementById('saved-empty');
+
+  if (!state.savedArticles.length) {
+    grid.style.display  = 'none';
+    empty.style.display = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  grid.style.display  = 'flex';
+  grid.innerHTML = '';
+
+  for (const article of state.savedArticles) {
+    const client = article.clientId ? state.clients.find(c => c.id === article.clientId) : null;
+    const clientOptions = state.clients.map(c =>
+      `<option value="${esc(c.id)}" ${article.clientId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`
+    ).join('');
+
+    const card = document.createElement('div');
+    card.className = 'saved-article-card';
+    card.dataset.id = article.id;
+    card.innerHTML = `
+      <div class="article-card-top">
+        <span class="source-badge badge-${esc(article.category)}">${esc(article.source)}</span>
+        <span class="article-meta">${fmtTime(article.published)}
+          ${client ? `<span class="article-meta-sep">·</span><span style="color:var(--color-accent);font-weight:600;">${esc(client.name)}</span>` : ''}
+        </span>
+      </div>
+      <a href="${esc(article.url)}" target="_blank" rel="noopener" class="saved-headline">${esc(article.title)}</a>
+      <textarea class="notes-textarea" placeholder="Notes for this article…" aria-label="Notes" rows="2">${esc(article.notes || '')}</textarea>
+      <div class="saved-actions">
+        ${state.clients.length ? `
+          <select class="tag-client-select" aria-label="Tag to client">
+            <option value="">Tag to client…</option>
+            ${clientOptions}
+          </select>
+        ` : ''}
+        <button class="btn-ghost btn-unsave" style="margin-left:auto;" aria-label="Remove from saved">Remove</button>
+      </div>
+    `;
+
+    // Notes auto-save
+    const textarea = card.querySelector('.notes-textarea');
+    textarea.addEventListener('input', () => {
+      const idx = state.savedArticles.findIndex(a => a.id === article.id);
+      if (idx >= 0) { state.savedArticles[idx].notes = textarea.value; saveState(); }
+    });
+
+    // Tag client
+    const tagSel = card.querySelector('.tag-client-select');
+    if (tagSel) {
+      tagSel.addEventListener('change', () => {
+        const idx = state.savedArticles.findIndex(a => a.id === article.id);
+        if (idx >= 0) {
+          state.savedArticles[idx].clientId = tagSel.value || null;
+          saveState();
+          const c = state.clients.find(c => c.id === tagSel.value);
+          toast(tagSel.value ? `Tagged to ${c?.name || 'client'}` : 'Tag removed', 'success');
+          renderSavedArticles();
+          renderBuilderList();
+        }
+      });
+    }
+
+    // Remove
+    card.querySelector('.btn-unsave').addEventListener('click', () => {
+      state.savedArticles = state.savedArticles.filter(a => a.id !== article.id);
+      saveState();
+      updateSavedBadge();
+      renderSavedArticles();
+      renderBuilderList();
+      toast('Article removed');
+    });
+
+    grid.appendChild(card);
+  }
+}
+
+// ── Digest Builder ─────────────────────────────────────────────
+function renderBuilderList() {
+  const builderEmpty   = document.getElementById('builder-empty');
+  const builderContent = document.getElementById('builder-content');
+  const list           = document.getElementById('builder-article-list');
+  const previewSection = document.getElementById('digest-preview-section');
+
+  if (!state.savedArticles.length) {
+    builderEmpty.style.display = '';
+    builderContent.style.display = 'none';
+    previewSection.style.display = 'none';
+    return;
+  }
+
+  builderEmpty.style.display = 'none';
+  builderContent.style.display = 'flex';
+  list.innerHTML = '';
+
+  for (const article of state.savedArticles) {
+    const client = article.clientId ? state.clients.find(c => c.id === article.clientId) : null;
+    const row = document.createElement('div');
+    row.className = 'digest-article-row';
+    row.innerHTML = `
+      <input type="checkbox" checked aria-label="Include ${esc(article.title)}" data-art-id="${esc(article.id)}">
+      <span class="source-badge badge-${esc(article.category)}" style="flex-shrink:0;">${esc(article.source)}</span>
+      <span class="digest-article-title" title="${esc(article.title)}">${esc(article.title)}</span>
+      ${client ? `<span class="digest-article-client">${esc(client.name)}</span>` : ''}
+    `;
+    list.appendChild(row);
+  }
+}
+
+document.getElementById('btn-build-digest').addEventListener('click', buildDigestPreview);
+
+function buildDigestPreview() {
+  const previewSection = document.getElementById('digest-preview-section');
+  const previewBox     = document.getElementById('digest-preview');
+  const subject        = document.getElementById('digest-subject').value.trim() || 'Your local news digest';
+  const clientId       = document.getElementById('digest-client-select').value;
+  const client         = clientId ? state.clients.find(c => c.id === clientId) : null;
+
+  // Get checked articles
+  const checkboxes = document.querySelectorAll('#builder-article-list input[type="checkbox"]');
+  const selected = [];
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const article = state.savedArticles.find(a => a.id === cb.dataset.artId);
+      if (article) selected.push(article);
+    }
+  });
+
+  if (!selected.length) {
+    toast('Select at least one article to build the digest', 'error');
+    return;
+  }
+
+  // Filter by client if selected
+  const articles = clientId
+    ? selected.filter(a => a.clientId === clientId)
+    : selected;
+
+  if (!articles.length) {
+    toast('No articles tagged to this client. Tag articles first or select "All saved articles"', 'error');
+    return;
+  }
+
+  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const greeting = client ? `Dear ${client.name},` : 'Dear Client,';
+  const location = state.location.name ? ` for ${state.location.name}` : '';
+  const freqLabel = state.digestFreq === 'weekly' ? 'weekly' : 'daily';
+
+  let text = `${subject}\n`;
+  text += `─────────────────────────────────\n`;
+  text += `${greeting}\n\n`;
+  text += `Here is your ${freqLabel} local market news digest${location} for ${today}.\n\n`;
+
+  for (let i = 0; i < articles.length; i++) {
+    const a = articles[i];
+    const clientTag = a.clientId && !clientId
+      ? ` [${state.clients.find(c => c.id === a.clientId)?.name || ''}]`
+      : '';
+    text += `${i + 1}. ${a.title}${clientTag}\n`;
+    text += `   Source: ${a.source} · ${fmtTime(a.published)}\n`;
+    if (a.excerpt) text += `   ${a.excerpt}\n`;
+    if (a.notes)   text += `   Note: ${a.notes}\n`;
+    if (a.url && a.url !== '#') text += `   Read more: ${a.url}\n`;
+    text += '\n';
+  }
+
+  text += `─────────────────────────────────\n`;
+  text += `This digest was prepared by your broker. For questions, reply to this email.\n`;
+
+  previewBox.textContent = text;
+  previewSection.style.display = 'flex';
+
+  // Store for copy
+  previewSection.dataset.text = text;
+  previewSection.dataset.articles = JSON.stringify(articles.map(a => ({
+    title: a.title,
+    source: a.source,
+    excerpt: a.excerpt,
+    url: a.url,
+    notes: a.notes,
+  })));
+
+  toast('Digest preview built', 'success');
+}
+
+document.getElementById('btn-copy-text').addEventListener('click', () => {
+  const text = document.getElementById('digest-preview').textContent;
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Copied as plain text', 'success'))
+    .catch(() => toast('Copy failed — select text manually', 'error'));
+});
+
+document.getElementById('btn-copy-html').addEventListener('click', () => {
+  const subject  = document.getElementById('digest-subject').value.trim() || 'Your local news digest';
+  const previewSection = document.getElementById('digest-preview-section');
+  let articles;
+  try { articles = JSON.parse(previewSection.dataset.articles || '[]'); } catch { articles = []; }
+
+  const clientId = document.getElementById('digest-client-select').value;
+  const client   = clientId ? state.clients.find(c => c.id === clientId) : null;
+  const greeting = client ? `Dear ${client.name},` : 'Dear Client,';
+  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const location = state.location.name ? ` for ${state.location.name}` : '';
+  const freqLabel = state.digestFreq === 'weekly' ? 'weekly' : 'daily';
+
+  const articlesHtml = articles.map((a, i) => `
+    <div style="margin-bottom:20px;padding:16px;background:#f9f9f7;border-left:3px solid #4a8c6a;border-radius:4px;">
+      <p style="font-size:13px;color:#666;margin:0 0 6px;">${esc(a.source)}</p>
+      <p style="font-size:18px;font-weight:600;color:#1a2e25;margin:0 0 8px;">${i + 1}. ${esc(a.title)}</p>
+      ${a.excerpt ? `<p style="font-size:14px;color:#555;margin:0 0 8px;line-height:1.6;">${esc(a.excerpt)}</p>` : ''}
+      ${a.notes   ? `<p style="font-size:13px;color:#4a8c6a;margin:0 0 8px;font-style:italic;">Note: ${esc(a.notes)}</p>` : ''}
+      ${a.url && a.url !== '#' ? `<a href="${esc(a.url)}" style="font-size:13px;color:#4a8c6a;">Read more →</a>` : ''}
+    </div>
+  `).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${esc(subject)}</title></head>
+<body style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:24px;color:#1a2e25;background:#fff;">
+  <h1 style="font-size:28px;font-weight:400;margin:0 0 4px;letter-spacing:-0.02em;">${esc(subject)}</h1>
+  <p style="font-size:13px;color:#888;margin:0 0 24px;">${today}</p>
+  <p style="font-size:15px;margin:0 0 24px;">${esc(greeting)}</p>
+  <p style="font-size:15px;color:#555;margin:0 0 24px;">Here is your ${esc(freqLabel)} local market news digest${esc(location)}.</p>
+  ${articlesHtml}
+  <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;">
+  <p style="font-size:13px;color:#888;line-height:1.5;">This digest was prepared by your broker. Reply to this email with any questions.</p>
+</body></html>`;
+
+  navigator.clipboard.writeText(html)
+    .then(() => toast('Copied as HTML', 'success'))
+    .catch(() => toast('Copy failed', 'error'));
+});
+
+document.getElementById('btn-export-save').addEventListener('click', () => {
+  const text = document.getElementById('digest-preview').textContent;
+  if (!text.trim()) { toast('Build a preview first', 'error'); return; }
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `digest-${new Date().toISOString().slice(0, 10)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Digest exported as .txt', 'success');
+});
+
+// ── Tab switching ──────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+    const panelId = 'tab-' + btn.dataset.tab;
+    const panel   = document.getElementById(panelId);
+    if (panel) panel.classList.add('active');
+
+    // Refresh panels on switch
+    if (btn.dataset.tab === 'saved')   renderSavedArticles();
+    if (btn.dataset.tab === 'builder') renderBuilderList();
+  });
+});
+
+// ── Init ──────────────────────────────────────────────────────
+updateSavedBadge();
+renderSavedArticles();
+renderBuilderList();
+updateDigestClientSelect();
+</script>
+</body>
+</html>

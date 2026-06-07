@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inflation Rate Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c10;
+      --surface: #0e1318;
+      --surface2: #141a21;
+      --border: rgba(255,255,255,0.08);
+      --accent: #00d4aa;
+      --accent2: #f59e0b;
+      --text: #e6edf3;
+      --muted: #6b7280;
+      --green: #26a69a;
+      --yellow: #f59e0b;
+      --radius: 6px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    header h1 { font-size: 20px; font-weight: 700; }
+    header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .header-right {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .last-updated { font-size: 12px; color: var(--muted); }
+    .badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    /* ── Layout ── */
+    .main {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: grid;
+      gap: 24px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon {
+      width: 22px; height: 22px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+
+    /* ── Status / Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--muted);
+      transition: all .3s;
+    }
+    .status-bar.loading { border-color: var(--accent); color: var(--text); }
+    .status-bar.error { border-color: var(--accent2); color: var(--accent2); }
+    .status-bar.success { border-color: var(--green); color: var(--green); }
+
+    /* ── League Table ── */
+    .league-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 700px) { .league-grid { grid-template-columns: 1fr; } }
+
+    .league-table {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .league-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .league-label.high { color: var(--accent2); }
+    .league-label.low { color: var(--green); }
+
+    .league-row {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color .2s, transform .15s;
+    }
+    .league-row:hover { border-color: var(--accent); transform: translateX(3px); }
+    .rank {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      width: 20px;
+      text-align: center;
+    }
+    .country-flag { font-size: 20px; }
+    .country-name { flex: 1; font-size: 14px; font-weight: 500; }
+    .country-rate {
+      font-size: 15px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .rate-high { color: var(--accent2); }
+    .rate-low { color: var(--green); }
+    .rate-mid { color: var(--yellow); }
+
+    /* ── Trend Chart ── */
+    .chart-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+      align-items: center;
+    }
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: border-color .2s;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      font-family: var(--font);
+    }
+    .btn:hover { opacity: .85; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    .svg-chart-wrap {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 12px 12px 8px;
+    }
+    .svg-chart-wrap svg {
+      width: 100%;
+      display: block;
+    }
+
+    /* ── Comparison ── */
+    .comparison-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+      align-items: center;
+    }
+    .compare-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      animation: fadeIn .2s;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+    .chip-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1;
+      padding: 0 0 0 2px;
+      transition: color .2s;
+    }
+    .chip-remove:hover { color: var(--accent2); }
+
+    .compare-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .compare-bar-row {
+      display: grid;
+      grid-template-columns: 180px 1fr 80px;
+      align-items: center;
+      gap: 12px;
+    }
+    @media (max-width: 600px) { .compare-bar-row { grid-template-columns: 120px 1fr 60px; } }
+    .bar-label { font-size: 14px; font-weight: 500; text-align: right; }
+    .bar-track {
+      height: 28px;
+      background: var(--surface2);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width .8s cubic-bezier(.22,.61,.36,1);
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,.9);
+    }
+    .bar-val { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* ── Calculators ── */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 800px) { .calc-grid { grid-template-columns: 1fr; } }
+
+    .calc-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .calc-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .calc-emoji { font-size: 18px; }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    input[type="number"], input[type="text"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      font-family: var(--font);
+      width: 100%;
+      transition: border-color .2s;
+    }
+    input[type="number"]:focus, input[type="text"]:focus { border-color: var(--accent); }
+
+    .result-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      min-height: 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: border-color .3s;
+    }
+    .result-box.has-result { border-color: var(--accent); }
+    .result-number {
+      font-size: 28px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .result-label { font-size: 12px; color: var(--muted); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 9px 14px;
+      background: none;
+      border: none;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeIn .25s; }
+
+    /* ── Skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── Tooltip ── */
+    .tooltip-wrap { position: relative; display: inline-flex; }
+    .tooltip-text {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 10;
+      pointer-events: none;
+      color: var(--text);
+    }
+    .tooltip-wrap:hover .tooltip-text { display: block; }
+
+    /* ── Empty / Error states ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── Pulse dot ── */
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+      display: inline-block;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── SVG text ── */
+    .svg-axis text { font-family: var(--font); }
+
+/* ── Finance design system v2 ── */
+body { font-family: 'Inter', system-ui, sans-serif; }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(0,212,170,.065) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,.9) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+h1, h2 {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+[class*="price"],[class*="value"],[class*="amount"],[class*="rate"],
+[class*="stat"],[class*="metric"],[class*="kpi"],td,code,.number {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+}
+.card,[class*="card"],[class*="metric-card"],[class*="stat-card"] {
+  border-left: 3px solid var(--accent) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+}
+table { border-collapse: collapse; width: 100%; }
+thead th {
+  font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
+  text-align: right; white-space: nowrap; position: sticky; top: 0; background: var(--bg);
+}
+thead th:first-child { text-align: left; }
+tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background 120ms; }
+tbody tr:hover { background: rgba(255,255,255,.04); }
+td { padding: 6px 12px; text-align: right; vertical-align: middle; white-space: nowrap; font-size: 13px; }
+td:first-child { text-align: left; color: var(--text); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+@keyframes slideUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+@keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.5);} 50%{box-shadow:0 0 0 6px rgba(0,212,170,0);} }
+.card,[class*="card"],[class*="result"],[class*="item"] { animation: slideUp .35s ease both; }
+.card:nth-child(2),[class*="item"]:nth-child(2){animation-delay:.05s}
+.card:nth-child(3),[class*="item"]:nth-child(3){animation-delay:.1s}
+.card:nth-child(4){animation-delay:.15s}
+tbody tr { animation: slideUp .2s ease both; }
+tbody tr:nth-child(2){animation-delay:.03s} tbody tr:nth-child(3){animation-delay:.06s}
+button,[class*="btn"] { transition: all .15s; }
+button:hover,[class*="btn"]:hover {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0,212,170,.15) !important;
+}
+input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 2px rgba(0,212,170,.2); }
+[class*="positive"],[class*="gain"],[class*="up"] { color:var(--green)!important; }
+[class*="negative"],[class*="loss"],[class*="down"] { color:#ef5350!important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true">📈</div>
+  <div>
+    <h1>Inflation Rate Dashboard</h1>
+    <p>Real-time CPI data via World Bank API — for financial advisors</p>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">Loading data…</span>
+    <span class="badge"><span class="pulse-dot" style="margin-right:5px"></span>Live</span>
+  </div>
+</header>
+
+<main class="main" role="main">
+
+  <!-- Status bar -->
+  <div class="status-bar loading" id="statusBar" role="status" aria-live="polite">
+    <span class="spinner" id="statusSpinner"></span>
+    <span id="statusMsg">Fetching inflation data for 24 countries…</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="league"      onclick="switchTab('league')">🏆 League Table</button>
+    <button class="tab-btn"        role="tab" aria-selected="false" data-tab="trend"       onclick="switchTab('trend')">📊 5-Year Trend</button>
+    <button class="tab-btn"        role="tab" aria-selected="false" data-tab="compare"     onclick="switchTab('compare')">⚖️ Compare</button>
+    <button class="tab-btn"        role="tab" aria-selected="false" data-tab="calculators" onclick="switchTab('calculators')">🧮 Calculators</button>
+  </div>
+
+  <!-- Tab: League Table -->
+  <div class="tab-panel active" id="tab-league" role="tabpanel">
+    <div class="card">
+      <div class="card-title"><span class="icon">🏆</span>Global Inflation League Table</div>
+      <div id="leagueContent">
+        <div class="league-grid">
+          <div>
+            <div class="league-label high">▲ Highest Inflation</div>
+            <div class="league-table" id="highTable">
+              <div style="height:48px" class="skeleton"></div>
+              <div style="height:48px" class="skeleton"></div>
+              <div style="height:48px" class="skeleton"></div>
+              <div style="height:48px" class="skeleton"></div>
+              <div style="height:48px" class="skeleton"></div>
+            </div>
+          </div>
+          <div>
+            <div class="league-label low">▼ Lowest Inflation</div>
+            <div class="league-table" id="lowTable">
+              <div style="height:48px" class="skeleton"></div>
+              <div style="height:48px" class="skeleton"></div>
+              <div style="height:48px" class="skeleton"></div>
+              <div style="height:48px" class="skeleton"></div>
+              <div style="height:48px" class="skeleton"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: 5-Year Trend -->
+  <div class="tab-panel" id="tab-trend" role="tabpanel">
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span>5-Year Inflation Trend</div>
+      <div class="chart-controls">
+        <div class="field" style="flex-direction:row;align-items:center;gap:8px">
+          <label for="trendCountry" style="font-size:12px;color:var(--muted);white-space:nowrap">Country:</label>
+          <select id="trendCountry" onchange="renderTrendChart()" aria-label="Select country for trend chart">
+            <option value="">— Loading… —</option>
+          </select>
+        </div>
+      </div>
+      <div class="svg-chart-wrap" id="trendChartWrap">
+        <div class="empty-state"><div class="icon">📊</div><p>Select a country to view trend</p></div>
+      </div>
+      <div id="trendStats" style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+
+  <!-- Tab: Compare -->
+  <div class="tab-panel" id="tab-compare" role="tabpanel">
+    <div class="card">
+      <div class="card-title"><span class="icon">⚖️</span>Country Comparison</div>
+      <div class="comparison-header">
+        <select id="compareSelect" aria-label="Add country to compare">
+          <option value="">Add a country…</option>
+        </select>
+        <button class="btn btn-sm" onclick="addCompareCountry()" aria-label="Add selected country">+ Add</button>
+        <button class="btn btn-sm btn-outline" onclick="clearCompare()" aria-label="Clear all comparisons">Clear</button>
+      </div>
+      <div class="compare-chips" id="compareChips"></div>
+      <div id="compareBars">
+        <div class="empty-state"><div class="icon">⚖️</div><p>Add countries above to compare inflation rates</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Calculators -->
+  <div class="tab-panel" id="tab-calculators" role="tabpanel">
+    <div class="card">
+      <div class="card-title"><span class="icon">🧮</span>Inflation Calculators</div>
+      <div class="calc-grid">
+
+        <!-- Purchasing Power -->
+        <div class="calc-card">
+          <div class="calc-title"><span class="calc-emoji">💰</span>Purchasing Power Calculator</div>
+          <div class="field-group">
+            <div class="field">
+              <label for="ppCountry">Country</label>
+              <select id="ppCountry" aria-label="Country for purchasing power calculation">
+                <option value="">— Loading… —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ppAmount">Amount ($)</label>
+              <input type="number" id="ppAmount" value="100" min="1" step="1" aria-label="Starting amount in dollars" />
+            </div>
+            <div class="field">
+              <label for="ppYear">Starting Year</label>
+              <input type="number" id="ppYear" value="2020" min="2000" max="2024" step="1" aria-label="Starting year" />
+            </div>
+          </div>
+          <button class="btn" style="width:100%;margin-bottom:12px" onclick="calcPurchasingPower()" aria-label="Calculate purchasing power">Calculate</button>
+          <div class="result-box" id="ppResult">
+            <div class="result-label">Enter values and click Calculate</div>
+          </div>
+        </div>
+
+        <!-- Real Return -->
+        <div class="calc-card">
+          <div class="calc-title"><span class="calc-emoji">📈</span>Real Return Calculator</div>
+          <div class="field-group">
+            <div class="field">
+              <label for="rrCountry">Country</label>
+              <select id="rrCountry" aria-label="Country for real return calculation">
+                <option value="">— Loading… —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="nominalReturn">Nominal Return (%)</label>
+              <input type="number" id="nominalReturn" value="7" step="0.1" aria-label="Nominal return percentage" />
+            </div>
+          </div>
+          <button class="btn" style="width:100%;margin-bottom:12px" onclick="calcRealReturn()" aria-label="Calculate real return">Calculate</button>
+          <div class="result-box" id="rrResult">
+            <div class="result-label">Enter values and click Calculate</div>
+          </div>
+        </div>
+
+        <!-- Savings Impact -->
+        <div class="calc-card">
+          <div class="calc-title"><span class="calc-emoji">🏦</span>Savings Erosion Calculator</div>
+          <div class="field-group">
+            <div class="field">
+              <label for="seCountry">Country</label>
+              <select id="seCountry" aria-label="Country for savings erosion calculation">
+                <option value="">— Loading… —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="savingsAmount">Savings Amount ($)</label>
+              <input type="number" id="savingsAmount" value="10000" min="1" step="100" aria-label="Savings amount" />
+            </div>
+            <div class="field">
+              <label for="savingsYears">Years</label>
+              <input type="number" id="savingsYears" value="5" min="1" max="30" step="1" aria-label="Number of years" />
+            </div>
+          </div>
+          <button class="btn" style="width:100%;margin-bottom:12px" onclick="calcSavingsErosion()" aria-label="Calculate savings erosion">Calculate</button>
+          <div class="result-box" id="seResult">
+            <div class="result-label">Enter values and click Calculate</div>
+          </div>
+        </div>
+
+        <!-- Debt Impact -->
+        <div class="calc-card">
+          <div class="calc-title"><span class="calc-emoji">💳</span>Debt Relief via Inflation</div>
+          <div class="field-group">
+            <div class="field">
+              <label for="diCountry">Country</label>
+              <select id="diCountry" aria-label="Country for debt impact calculation">
+                <option value="">— Loading… —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="debtAmount">Debt Amount ($)</label>
+              <input type="number" id="debtAmount" value="50000" min="1" step="1000" aria-label="Debt amount" />
+            </div>
+            <div class="field">
+              <label for="debtYears">Years</label>
+              <input type="number" id="debtYears" value="10" min="1" max="30" step="1" aria-label="Number of years" />
+            </div>
+          </div>
+          <button class="btn" style="width:100%;margin-bottom:12px" onclick="calcDebtImpact()" aria-label="Calculate debt relief">Calculate</button>
+          <div class="result-box" id="diResult">
+            <div class="result-label">Enter values and click Calculate</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── Country list (24 countries with ISO2 codes and flags) ──
+  const COUNTRIES = [
+    { iso2: 'US', name: 'United States',    flag: '🇺🇸' },
+    { iso2: 'GB', name: 'United Kingdom',   flag: '🇬🇧' },
+    { iso2: 'DE', name: 'Germany',          flag: '🇩🇪' },
+    { iso2: 'FR', name: 'France',           flag: '🇫🇷' },
+    { iso2: 'JP', name: 'Japan',            flag: '🇯🇵' },
+    { iso2: 'CN', name: 'China',            flag: '🇨🇳' },
+    { iso2: 'BR', name: 'Brazil',           flag: '🇧🇷' },
+    { iso2: 'IN', name: 'India',            flag: '🇮🇳' },
+    { iso2: 'AU', name: 'Australia',        flag: '🇦🇺' },
+    { iso2: 'CA', name: 'Canada',           flag: '🇨🇦' },
+    { iso2: 'MX', name: 'Mexico',           flag: '🇲🇽' },
+    { iso2: 'ZA', name: 'South Africa',     flag: '🇿🇦' },
+    { iso2: 'TR', name: 'Turkey',           flag: '🇹🇷' },
+    { iso2: 'AR', name: 'Argentina',        flag: '🇦🇷' },
+    { iso2: 'NG', name: 'Nigeria',          flag: '🇳🇬' },
+    { iso2: 'EG', name: 'Egypt',            flag: '🇪🇬' },
+    { iso2: 'KR', name: 'South Korea',      flag: '🇰🇷' },
+    { iso2: 'IT', name: 'Italy',            flag: '🇮🇹' },
+    { iso2: 'ES', name: 'Spain',            flag: '🇪🇸' },
+    { iso2: 'NL', name: 'Netherlands',      flag: '🇳🇱' },
+    { iso2: 'SE', name: 'Sweden',           flag: '🇸🇪' },
+    { iso2: 'CH', name: 'Switzerland',      flag: '🇨🇭' },
+    { iso2: 'SG', name: 'Singapore',        flag: '🇸🇬' },
+    { iso2: 'PL', name: 'Poland',           flag: '🇵🇱' },
+  ];
+
+  // ── State ──
+  const state = {
+    data: {},          // { iso2: { name, flag, latest, history: [{year, value}] } }
+    loaded: 0,
+    total: COUNTRIES.length,
+    compareList: [],   // iso2 array
+  };
+
+  // ── Color palette for charts ──
+  const PALETTE = [
+    '#6c63ff','#ff6584','#43d9ad','#f7c948',
+    '#4fc3f7','#ff9800','#e91e63','#69f0ae',
+  ];
+
+  // ── Utilities ──
+  function fmt(val, dec = 2) {
+    if (val === null || val === undefined || isNaN(val)) return 'N/A';
+    return `${val >= 0 ? '' : ''}${Number(val).toFixed(dec)}%`;
+  }
+
+  function fmtMoney(val) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(val);
+  }
+
+  function rateColor(v) {
+    if (v === null || isNaN(v)) return 'var(--muted)';
+    if (v > 10) return 'var(--accent2)';
+    if (v < 3)  return 'var(--green)';
+    return 'var(--yellow)';
+  }
+
+  function rateClass(v) {
+    if (v === null || isNaN(v)) return '';
+    if (v > 10) return 'rate-high';
+    if (v < 3)  return 'rate-low';
+    return 'rate-mid';
+  }
+
+  function countryByIso(iso2) {
+    return COUNTRIES.find(c => c.iso2 === iso2);
+  }
+
+  // ── Tab switching ──
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      const active = b.dataset.tab === name;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', String(active));
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => {
+      p.classList.toggle('active', p.id === `tab-${name}`);
+    });
+  }
+
+  // ── Fetch one country ──
+  async function fetchCountry(iso2) {
+    const url = `https://api.worldbank.org/v2/country/${iso2}/indicator/FP.CPI.TOTL.ZG?format=json&mrv=6`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const rows = (json[1] || []).filter(r => r.value !== null);
+      if (!rows.length) return null;
+      const sorted = rows.sort((a, b) => Number(a.date) - Number(b.date));
+      return {
+        latest: sorted[sorted.length - 1].value,
+        latestYear: sorted[sorted.length - 1].date,
+        history: sorted.map(r => ({ year: Number(r.date), value: r.value })),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Populate selects ──
+  function populateSelects() {
+    const sorted = Object.entries(state.data)
+      .sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+    const ids = ['trendCountry', 'compareSelect', 'ppCountry', 'rrCountry', 'seCountry', 'diCountry'];
+    ids.forEach(id => {
+      const sel = document.getElementById(id);
+      const prev = sel.value;
+      const placeholder = id === 'compareSelect' ? 'Add a country…' : '— Select country —';
+      sel.innerHTML = `<option value="">${placeholder}</option>` +
+        sorted.map(([iso2, d]) =>
+          `<option value="${iso2}">${d.flag} ${d.name} (${fmt(d.latest)})</option>`
+        ).join('');
+      if (prev && state.data[prev]) sel.value = prev;
+    });
+
+    // Auto-select US for trend
+    const tc = document.getElementById('trendCountry');
+    if (!tc.value && state.data['US']) {
+      tc.value = 'US';
+      renderTrendChart();
+    }
+  }
+
+  // ── League table ──
+  function renderLeague() {
+    const entries = Object.entries(state.data)
+      .filter(([, d]) => d.latest !== null && !isNaN(d.latest))
+      .sort((a, b) => b[1].latest - a[1].latest);
+
+    const top5 = entries.slice(0, 5);
+    const bot5 = [...entries].slice(-5).reverse();
+
+    function row(iso2, d, rank) {
+      return `<div class="league-row" role="button" tabindex="0"
+          onclick="leagueClick('${iso2}')"
+          onkeydown="if(event.key==='Enter')leagueClick('${iso2}')"
+          title="Click to see trend for ${d.name}">
+        <span class="rank">${rank}</span>
+        <span class="country-flag">${d.flag}</span>
+        <span class="country-name">${d.name}</span>
+        <span class="country-rate ${rateClass(d.latest)}">${fmt(d.latest)}</span>
+      </div>`;
+    }
+
+    document.getElementById('highTable').innerHTML = top5.map(([iso2, d], i) => row(iso2, d, i + 1)).join('');
+    document.getElementById('lowTable').innerHTML  = bot5.map(([iso2, d], i) => row(iso2, d, i + 1)).join('');
+  }
+
+  function leagueClick(iso2) {
+    switchTab('trend');
+    const tc = document.getElementById('trendCountry');
+    tc.value = iso2;
+    renderTrendChart();
+  }
+
+  // ── SVG Trend Chart ──
+  function renderTrendChart() {
+    const iso2 = document.getElementById('trendCountry').value;
+    const wrap = document.getElementById('trendChartWrap');
+    const statsEl = document.getElementById('trendStats');
+
+    if (!iso2 || !state.data[iso2]) {
+      wrap.innerHTML = `<div class="empty-state"><div class="icon">📊</div><p>Select a country to view its 5-year trend</p></div>`;
+      statsEl.innerHTML = '';
+      return;
+    }
+
+    const d = state.data[iso2];
+    const pts = d.history;
+    if (!pts.length) {
+      wrap.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>No historical data available</p></div>`;
+      statsEl.innerHTML = '';
+      return;
+    }
+
+    const W = 800, H = 260, PAD = { top: 20, right: 20, bottom: 40, left: 54 };
+    const iW = W - PAD.left - PAD.right;
+    const iH = H - PAD.top - PAD.bottom;
+
+    const vals = pts.map(p => p.value);
+    const minV = Math.min(...vals);
+    const maxV = Math.max(...vals);
+    const vRange = maxV - minV || 1;
+
+    const xScale = i => PAD.left + (i / (pts.length - 1 || 1)) * iW;
+    const yScale = v => PAD.top + iH - ((v - minV) / vRange) * iH;
+
+    // Build polyline points
+    const linePoints = pts.map((p, i) => `${xScale(i)},${yScale(p.value)}`).join(' ');
+
+    // Area fill
+    const areaPoints = [
+      `${xScale(0)},${PAD.top + iH}`,
+      ...pts.map((p, i) => `${xScale(i)},${yScale(p.value)}`),
+      `${xScale(pts.length - 1)},${PAD.top + iH}`,
+    ].join(' ');
+
+    // Y-axis ticks
+    const yTicks = 5;
+    const yTickLines = Array.from({ length: yTicks + 1 }, (_, i) => {
+      const v = minV + (vRange * i / yTicks);
+      const y = yScale(v);
+      return `
+        <line x1="${PAD.left}" x2="${PAD.left + iW}" y1="${y}" y2="${y}" stroke="rgba(46,51,80,.6)" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="${PAD.left - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#8892b0">${v.toFixed(1)}%</text>
+      `;
+    }).join('');
+
+    // X-axis labels
+    const xLabels = pts.map((p, i) => `
+      <text x="${xScale(i)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#8892b0">${p.year}</text>
+    `).join('');
+
+    // Data points with tooltips
+    const circles = pts.map((p, i) => `
+      <circle cx="${xScale(i)}" cy="${yScale(p.value)}" r="5"
+        fill="${rateColor(p.value)}" stroke="var(--surface)" stroke-width="2">
+        <title>${p.year}: ${fmt(p.value)}</title>
+      </circle>
+    `).join('');
+
+    // Value labels above points
+    const valueLabels = pts.map((p, i) => `
+      <text x="${xScale(i)}" y="${yScale(p.value) - 10}" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="600">${p.value.toFixed(1)}%</text>
+    `).join('');
+
+    const uniqueId = `grad-${iso2}`;
+    const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Inflation trend for ${d.name}">
+      <defs>
+        <linearGradient id="${uniqueId}" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#6c63ff" stop-opacity=".35"/>
+          <stop offset="100%" stop-color="#6c63ff" stop-opacity="0"/>
+        </linearGradient>
+        <filter id="glow-${iso2}">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      ${yTickLines}
+      <polygon points="${areaPoints}" fill="url(#${uniqueId})"/>
+      <polyline points="${linePoints}" fill="none" stroke="#6c63ff" stroke-width="2.5" stroke-linejoin="round" filter="url(#glow-${iso2})"/>
+      ${circles}
+      ${valueLabels}
+      ${xLabels}
+    </svg>`;
+
+    wrap.innerHTML = svg;
+
+    // Stats below chart
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    statsEl.innerHTML = `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 18px;display:flex;gap:6px;flex-direction:column">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Avg</div>
+        <div style="font-size:18px;font-weight:700;color:var(--yellow)">${fmt(avg)}</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 18px;display:flex;gap:6px;flex-direction:column">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Peak</div>
+        <div style="font-size:18px;font-weight:700;color:var(--accent2)">${fmt(maxV)}</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 18px;display:flex;gap:6px;flex-direction:column">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Trough</div>
+        <div style="font-size:18px;font-weight:700;color:var(--green)">${fmt(minV)}</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 18px;display:flex;gap:6px;flex-direction:column">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Latest (${d.latestYear})</div>
+        <div style="font-size:18px;font-weight:700;color:${rateColor(d.latest)}">${fmt(d.latest)}</div>
+      </div>
+    `;
+  }
+
+  // ── Compare ──
+  function addCompareCountry() {
+    const sel = document.getElementById('compareSelect');
+    const iso2 = sel.value;
+    if (!iso2) return;
+    if (state.compareList.includes(iso2)) {
+      showNotice('Country already in comparison');
+      return;
+    }
+    if (state.compareList.length >= 8) {
+      showNotice('Maximum 8 countries');
+      return;
+    }
+    state.compareList.push(iso2);
+    sel.value = '';
+    renderCompare();
+  }
+
+  function removeCompareCountry(iso2) {
+    state.compareList = state.compareList.filter(c => c !== iso2);
+    renderCompare();
+  }
+
+  function clearCompare() {
+    state.compareList = [];
+    renderCompare();
+  }
+
+  function renderCompare() {
+    const chipsEl = document.getElementById('compareChips');
+    const barsEl = document.getElementById('compareBars');
+
+    if (!state.compareList.length) {
+      chipsEl.innerHTML = '';
+      barsEl.innerHTML = `<div class="empty-state"><div class="icon">⚖️</div><p>Add countries above to compare inflation rates</p></div>`;
+      return;
+    }
+
+    // Chips
+    chipsEl.innerHTML = state.compareList.map((iso2, idx) => {
+      const d = state.data[iso2];
+      if (!d) return '';
+      return `<div class="chip" style="border-color:${PALETTE[idx % PALETTE.length]}40">
+        <span>${d.flag}</span>
+        <span>${d.name}</span>
+        <button class="chip-remove" onclick="removeCompareCountry('${iso2}')" aria-label="Remove ${d.name}">&times;</button>
+      </div>`;
+    }).join('');
+
+    // Find max for bar scale
+    const maxRate = Math.max(...state.compareList.map(iso2 => {
+      const v = state.data[iso2]?.latest;
+      return (v !== null && !isNaN(v)) ? Math.abs(v) : 0;
+    }));
+
+    // Bars
+    barsEl.innerHTML = `<div class="compare-bars">` +
+      state.compareList.map((iso2, idx) => {
+        const d = state.data[iso2];
+        if (!d) return '';
+        const rate = d.latest;
+        const pct = maxRate > 0 ? (Math.abs(rate) / maxRate) * 100 : 0;
+        const color = PALETTE[idx % PALETTE.length];
+        return `<div class="compare-bar-row">
+          <div class="bar-label">${d.flag} ${d.name}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color}cc,${color})">
+              ${pct > 20 ? `<span>${fmt(rate)}</span>` : ''}
+            </div>
+          </div>
+          <div class="bar-val" style="color:${rateColor(rate)}">${fmt(rate)}</div>
+        </div>`;
+      }).join('') +
+    `</div>`;
+  }
+
+  // ── Purchasing Power ──
+  function calcPurchasingPower() {
+    const iso2 = document.getElementById('ppCountry').value;
+    const amount = parseFloat(document.getElementById('ppAmount').value);
+    const startYear = parseInt(document.getElementById('ppYear').value, 10);
+    const el = document.getElementById('ppResult');
+
+    if (!iso2 || isNaN(amount) || isNaN(startYear)) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">Please fill all fields</div>`;
+      return;
+    }
+
+    const d = state.data[iso2];
+    if (!d) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No data for selected country</div>`;
+      return;
+    }
+
+    // Get inflation data from startYear onwards
+    const relevant = d.history.filter(h => h.year >= startYear);
+    if (!relevant.length) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No data from ${startYear}</div>`;
+      return;
+    }
+
+    // Compound inflation: value = amount * product((1 + rate/100) for each year)
+    let current = amount;
+    relevant.forEach(h => { current *= (1 + h.value / 100); });
+
+    const pctChange = ((current - amount) / amount) * 100;
+    el.classList.add('has-result');
+    el.innerHTML = `
+      <div class="result-number">${fmtMoney(current)}</div>
+      <div class="result-label">${fmtMoney(amount)} in ${startYear} = ${fmtMoney(current)} today in ${d.name}</div>
+      <div style="font-size:12px;color:${current > amount ? 'var(--accent2)' : 'var(--green)'}">
+        ${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(1)}% purchasing power change
+      </div>
+    `;
+  }
+
+  // ── Real Return ──
+  function calcRealReturn() {
+    const iso2 = document.getElementById('rrCountry').value;
+    const nominal = parseFloat(document.getElementById('nominalReturn').value);
+    const el = document.getElementById('rrResult');
+
+    if (!iso2 || isNaN(nominal)) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">Please fill all fields</div>`;
+      return;
+    }
+
+    const d = state.data[iso2];
+    if (!d || d.latest === null) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No inflation data available</div>`;
+      return;
+    }
+
+    // Fisher equation: real = (1+nominal/100)/(1+inflation/100) - 1
+    const real = ((1 + nominal / 100) / (1 + d.latest / 100) - 1) * 100;
+    el.classList.add('has-result');
+    el.innerHTML = `
+      <div class="result-number" style="background:linear-gradient(135deg,${real >= 0 ? 'var(--green),var(--accent)' : 'var(--accent2),var(--yellow)'});-webkit-background-clip:text;background-clip:text">${real.toFixed(2)}%</div>
+      <div class="result-label">Real return in ${d.name} (${d.latestYear})</div>
+      <div style="font-size:12px;color:var(--muted)">${fmt(nominal)} nominal − ${fmt(d.latest)} inflation = ${fmt(real)} real</div>
+    `;
+  }
+
+  // ── Savings Erosion ──
+  function calcSavingsErosion() {
+    const iso2 = document.getElementById('seCountry').value;
+    const amount = parseFloat(document.getElementById('savingsAmount').value);
+    const years = parseInt(document.getElementById('savingsYears').value, 10);
+    const el = document.getElementById('seResult');
+
+    if (!iso2 || isNaN(amount) || isNaN(years)) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">Please fill all fields</div>`;
+      return;
+    }
+
+    const d = state.data[iso2];
+    if (!d || d.latest === null) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No inflation data available</div>`;
+      return;
+    }
+
+    const eroded = amount / Math.pow(1 + d.latest / 100, years);
+    const lost = amount - eroded;
+    el.classList.add('has-result');
+    el.innerHTML = `
+      <div class="result-number">${fmtMoney(eroded)}</div>
+      <div class="result-label">Real value of ${fmtMoney(amount)} after ${years} years at ${fmt(d.latest)} inflation</div>
+      <div style="font-size:12px;color:var(--accent2)">Purchasing power lost: ${fmtMoney(lost)}</div>
+    `;
+  }
+
+  // ── Debt Impact ──
+  function calcDebtImpact() {
+    const iso2 = document.getElementById('diCountry').value;
+    const debt = parseFloat(document.getElementById('debtAmount').value);
+    const years = parseInt(document.getElementById('debtYears').value, 10);
+    const el = document.getElementById('diResult');
+
+    if (!iso2 || isNaN(debt) || isNaN(years)) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">Please fill all fields</div>`;
+      return;
+    }
+
+    const d = state.data[iso2];
+    if (!d || d.latest === null) {
+      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No inflation data available</div>`;
+      return;
+    }
+
+    // Real value of debt decreases with inflation
+    const realDebt = debt / Math.pow(1 + d.latest / 100, years);
+    const relief = debt - realDebt;
+    const pct = (relief / debt) * 100;
+    el.classList.add('has-result');
+    el.innerHTML = `
+      <div class="result-number" style="background:linear-gradient(135deg,var(--green),var(--accent));-webkit-background-clip:text;background-clip:text">${fmtMoney(realDebt)}</div>
+      <div class="result-label">Real value of ${fmtMoney(debt)} debt after ${years} years</div>
+      <div style="font-size:12px;color:var(--green)">Inflation relief: ${fmtMoney(relief)} (${pct.toFixed(1)}% reduction)</div>
+    `;
+  }
+
+  // ── Notice toast ──
+  function showNotice(msg) {
+    const el = document.getElementById('statusBar');
+    const prev = el.className;
+    el.className = 'status-bar error';
+    document.getElementById('statusSpinner').style.display = 'none';
+    document.getElementById('statusMsg').textContent = msg;
+    setTimeout(() => {
+      if (state.loaded >= state.total) {
+        el.className = 'status-bar success';
+        document.getElementById('statusMsg').textContent = `All ${state.loaded} countries loaded`;
+      }
+    }, 2500);
+  }
+
+  // ── Status update ──
+  function updateStatus() {
+    const el = document.getElementById('statusBar');
+    const spinner = document.getElementById('statusSpinner');
+    const msg = document.getElementById('statusMsg');
+
+    if (state.loaded < state.total) {
+      el.className = 'status-bar loading';
+      spinner.style.display = '';
+      msg.textContent = `Fetching data… ${state.loaded}/${state.total} countries loaded`;
+    } else {
+      el.className = 'status-bar success';
+      spinner.style.display = 'none';
+      const successful = Object.values(state.data).filter(d => d.latest !== null).length;
+      msg.textContent = `${successful} countries loaded — World Bank CPI data (annual)`;
+      document.getElementById('lastUpdated').textContent = `Data as of ${new Date().toLocaleDateString()}`;
+    }
+  }
+
+  // ── Main data load ──
+  async function loadAll() {
+    // Fetch all countries in parallel with concurrency limit
+    const CONCURRENCY = 6;
+    const queue = [...COUNTRIES];
+    const workers = Array.from({ length: CONCURRENCY }, async () => {
+      while (queue.length) {
+        const country = queue.shift();
+        if (!country) break;
+        const result = await fetchCountry(country.iso2);
+        state.data[country.iso2] = {
+          name: country.name,
+          flag: country.flag,
+          latest: result ? result.latest : null,
+          latestYear: result ? result.latestYear : null,
+          history: result ? result.history : [],
+        };
+        state.loaded++;
+        updateStatus();
+
+        // Progressive rendering — update UI as data arrives
+        if (state.loaded % 3 === 0 || state.loaded === state.total) {
+          renderLeague();
+          populateSelects();
+          renderCompare();
+        }
+      }
+    });
+
+    await Promise.all(workers);
+    renderLeague();
+    populateSelects();
+    renderCompare();
+    renderTrendChart();
+  }
+
+  // ── Boot ──
+  loadAll();
+</script>
+</body>
+</html>

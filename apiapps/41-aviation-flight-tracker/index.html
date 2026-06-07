@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkyTrack — Aviation Flight Tracker</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --bg: #070c1a;
+      --surface: #0d1526;
+      --surface2: #141f36;
+      --border: rgba(245,158,11,0.2);
+      --accent: #f59e0b;
+      --accent2: #3b82f6;
+      --text: #e8eaf6;
+      --muted: #6b7da8;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f97316;
+      --radius: 8px;
+      --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--accent), #9c95ff);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #fff;
+    }
+
+    .logo h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .logo h1 span { color: var(--accent); }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(1.3); }
+    }
+
+    /* ── Search bar ── */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search-bar input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 8px 14px;
+      width: 220px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .search-bar input::placeholder { color: var(--muted); }
+    .search-bar input:focus { border-color: var(--accent); }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      transition: opacity 0.15s, transform 0.1s, background 0.15s;
+    }
+
+    button:hover { opacity: 0.88; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-danger { background: var(--accent2); color: #fff; }
+    .btn-sm { padding: 5px 10px; font-size: 0.75rem; }
+
+    /* ── Layout ── */
+    .main-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      grid-template-rows: 1fr;
+      min-height: 0;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 0;
+      border-bottom: 2px solid transparent;
+      padding: 12px 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: color 0.15s, border-color 0.15s;
+      transform: none !important;
+    }
+
+    .tab-btn:hover { color: var(--text); opacity: 1; }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .tab-panel.active { display: flex; }
+
+    /* ── Flight list ── */
+    .flight-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .flight-list::-webkit-scrollbar { width: 4px; }
+    .flight-list::-webkit-scrollbar-track { background: transparent; }
+    .flight-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .flight-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .flight-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--border);
+      transition: background 0.15s;
+    }
+
+    .flight-card:hover { border-color: var(--accent); }
+    .flight-card:hover::before { background: var(--accent); }
+    .flight-card.selected { border-color: var(--accent); background: rgba(74, 222, 128, 0.08); }
+    .flight-card.selected::before { background: var(--accent); }
+    .flight-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .flight-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .flight-number {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .flight-airline {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .status-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-enroute   { background: rgba(67, 217, 173, 0.15); color: var(--green); }
+    .status-delayed   { background: rgba(247, 201, 72, 0.15);  color: var(--yellow); }
+    .status-landed    { background: rgba(139, 148, 176, 0.15); color: var(--muted); }
+    .status-boarding  { background: rgba(74, 222, 128, 0.15);  color: var(--accent); }
+    .status-cancelled { background: rgba(56, 189, 248, 0.15); color: var(--accent2); }
+
+    .flight-route {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+    }
+
+    .airport-code { font-weight: 700; font-size: 0.95rem; }
+    .route-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .route-plane { font-size: 0.7rem; color: var(--accent); }
+
+    .flight-meta {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .flight-meta span { display: flex; align-items: center; gap: 3px; }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 4px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    /* ── Airport lookup panel ── */
+    .airport-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .airport-search {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .airport-search input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 9px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .airport-search input:focus { border-color: var(--accent); }
+    .airport-search input::placeholder { color: var(--muted); }
+
+    .airport-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+
+    .airport-card:hover { border-color: var(--accent); }
+
+    .airport-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .airport-code-large {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 2px;
+    }
+
+    .airport-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .info-item {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .info-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* ── Map area ── */
+    .map-container {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .map-header {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .map-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .map-stats {
+      display: flex;
+      gap: 20px;
+    }
+
+    .map-stat {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .map-stat strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    #world-map {
+      flex: 1;
+      width: 100%;
+      display: block;
+    }
+
+    /* ── Detail panel (bottom overlay) ── */
+    .detail-overlay {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: linear-gradient(0deg, var(--surface) 0%, rgba(26,29,39,0.95) 100%);
+      border-top: 1px solid var(--border);
+      padding: 16px 20px;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      z-index: 10;
+    }
+
+    .detail-overlay.open { transform: translateY(0); }
+
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .detail-flight-num {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .detail-airline {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .detail-close {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .detail-close:hover { color: var(--text); }
+
+    .detail-route {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .detail-airport {
+      text-align: center;
+    }
+
+    .detail-airport .code {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .detail-airport .city {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .detail-airport .time {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .detail-route-mid {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .detail-route-line {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+      position: relative;
+    }
+
+    .detail-route-plane {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1rem;
+      background: var(--bg);
+      padding: 0 4px;
+      transition: left 0.5s ease;
+    }
+
+    .detail-duration {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .detail-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .detail-stat {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+
+    .detail-stat .label {
+      font-size: 0.67rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .detail-stat .value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .detail-stat .unit {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 320px;
+    }
+
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success .toast-icon { color: var(--green); }
+    #toast.error   .toast-icon { color: var(--accent2); }
+    #toast.info    .toast-icon { color: var(--accent); }
+
+    .toast-icon { font-size: 1.1rem; }
+
+    /* ── SVG map styles ── */
+    .map-ocean    { fill: #0d1420; }
+    .map-land     { fill: #1a2035; stroke: #2a3050; stroke-width: 0.5; }
+    .map-graticule { fill: none; stroke: #1a2540; stroke-width: 0.3; }
+
+    .flight-path {
+      fill: none;
+      stroke-width: 1.5;
+      stroke-dasharray: 4 3;
+      stroke-linecap: round;
+      opacity: 0.5;
+      animation: dashMove 12s linear infinite;
+    }
+
+    @keyframes dashMove {
+      to { stroke-dashoffset: -100; }
+    }
+
+    .flight-path.selected {
+      stroke-width: 2.5;
+      opacity: 0.9;
+      stroke-dasharray: 6 3;
+    }
+
+    .plane-icon {
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+
+    .plane-icon:hover { filter: drop-shadow(0 0 6px var(--accent)); }
+
+    .plane-icon circle {
+      transition: r 0.2s;
+    }
+
+    .plane-icon.selected circle {
+      r: 7;
+    }
+
+    .map-tooltip {
+      position: absolute;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      color: var(--text);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 20;
+      white-space: nowrap;
+    }
+
+    .map-tooltip.visible { opacity: 1; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .main-layout { grid-template-columns: 1fr; }
+      .sidebar { max-height: 40vh; }
+      .detail-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── Skeleton loader ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      gap: 8px;
+      text-align: center;
+    }
+
+    .empty-state .icon { font-size: 2.5rem; opacity: 0.4; }
+    .empty-state p { font-size: 0.85rem; }
+
+    /* === Travel v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 800px 500px at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 400px 300px at 90% 90%, rgba(245,158,11,0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.02em; }
+    h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+    h2 { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .flight, .route, .delay, .alert, .station, .transit, .park, .trail, .ev-station, .transport,
+    [class*="card"], [class*="item"], [class*="flight"], [class*="route"], [class*="result"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      animation: boardSlide 0.35s cubic-bezier(0.4,0,0.2,1) both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { background: var(--surface2); }
+
+    .time, .code, .flight-number, .gate, .terminal, .delay-time, .duration, .distance,
+    .iss-time, .coords, .lat, .lon, .pass-time, .co2, .emission, .minutes, .seconds,
+    .countdown, .stat, .number, .metric, pre, code, .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    .big-time, .big-number, .countdown, .pass-time {
+      font-family: var(--font-mono);
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0.65rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.7rem 1.75rem;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.88rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .status, .label, .type, .mode, .line, .provider {
+      display: inline-block;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--font-mono);
+    }
+
+    .on-time, .normal, .open, .available, .active, .lower { color: var(--green); }
+    .delayed, .late, .closed, .disrupted, .higher { color: var(--red); }
+    .caution, .minor-delay, .check { color: var(--orange); }
+
+    .status-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
+    .status-fill { height: 100%; background: var(--accent2); border-radius: 2px; transition: width 0.6s ease; }
+
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(245,158,11,0.06); font-variant-numeric: tabular-nums; }
+    tr:hover td { background: var(--surface2); }
+
+    @keyframes boardSlide {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes alertBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .delayed, .alert-active, .disrupted { animation: alertBlink 1.8s ease infinite; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <span class="logo-badge">SKY</span>
+    <h1>Sky<span>Track</span> <span style="font-weight:400;color:var(--muted);font-size:0.85rem;">Aviation Flight Tracker</span></h1>
+  </div>
+  <div class="header-meta">
+    <div class="live-indicator">
+      <span class="pulse-dot"></span>
+      LIVE DATA
+    </div>
+    <div class="search-bar" role="search" aria-label="Search flights">
+      <input type="text" id="search-input" placeholder="Search flight (e.g. AA101)" aria-label="Flight number" autocomplete="off" />
+      <button class="btn-primary" id="search-btn" aria-label="Search">Search</button>
+    </div>
+    <a href="app.html" class="btn-primary" style="text-decoration:none;padding:8px 16px;font-size:0.82rem;font-weight:600;border-radius:8px;" aria-label="Open live flight tracker app">Open Live App →</a>
+  </div>
+</header>
+
+<!-- Main layout -->
+<div class="main-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Flight panel">
+    <div class="sidebar-tabs" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-flights" id="tab-btn-flights" data-tab="flights">
+        ✈ Flights
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-airports" id="tab-btn-airports" data-tab="airports">
+        ⬡ Airports
+      </button>
+    </div>
+
+    <!-- Flights tab -->
+    <div class="tab-panel active" id="tab-flights" role="tabpanel" aria-labelledby="tab-btn-flights">
+      <div class="flight-list" id="flight-list" aria-label="Active flights"></div>
+    </div>
+
+    <!-- Airports tab -->
+    <div class="tab-panel" id="tab-airports" role="tabpanel" aria-labelledby="tab-btn-airports">
+      <div class="airport-panel">
+        <div class="airport-search">
+          <input type="text" id="airport-search" placeholder="Airport code or city..." aria-label="Search airports" autocomplete="off" />
+          <button class="btn-primary btn-sm" id="airport-search-btn">Find</button>
+        </div>
+        <div id="airport-results"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Map -->
+  <section class="map-container" aria-label="World flight map">
+    <div class="map-header">
+      <span class="map-title">Live Flight Map</span>
+      <div class="map-stats">
+        <span class="map-stat">Active flights: <strong id="stat-active">0</strong></span>
+        <span class="map-stat">En Route: <strong id="stat-enroute">0</strong></span>
+        <span class="map-stat">Updates in: <strong id="stat-timer">5s</strong></span>
+        <a href="app.html" class="btn-primary" style="text-decoration:none;padding:5px 12px;font-size:0.78rem;font-weight:600;border-radius:8px;margin-left:12px;" aria-label="Open real-time flight tracker">Real-time Tracker →</a>
+      </div>
+    </div>
+
+    <svg id="world-map" viewBox="0 0 960 500" preserveAspectRatio="xMidYMid meet"
+         role="img" aria-label="World map with live flight positions">
+      <!-- Ocean background -->
+      <rect class="map-ocean" width="960" height="500"/>
+
+      <!-- Graticule (grid lines) -->
+      <g class="map-graticule">
+        <!-- Horizontal lines every 30 degrees -->
+        <line x1="0" y1="83"  x2="960" y2="83"/>
+        <line x1="0" y1="166" x2="960" y2="166"/>
+        <line x1="0" y1="250" x2="960" y2="250"/>
+        <line x1="0" y1="334" x2="960" y2="334"/>
+        <line x1="0" y1="417" x2="960" y2="417"/>
+        <!-- Vertical lines every 30 degrees -->
+        <line x1="80"  y1="0" x2="80"  y2="500"/>
+        <line x1="160" y1="0" x2="160" y2="500"/>
+        <line x1="240" y1="0" x2="240" y2="500"/>
+        <line x1="320" y1="0" x2="320" y2="500"/>
+        <line x1="400" y1="0" x2="400" y2="500"/>
+        <line x1="480" y1="0" x2="480" y2="500"/>
+        <line x1="560" y1="0" x2="560" y2="500"/>
+        <line x1="640" y1="0" x2="640" y2="500"/>
+        <line x1="720" y1="0" x2="720" y2="500"/>
+        <line x1="800" y1="0" x2="800" y2="500"/>
+        <line x1="880" y1="0" x2="880" y2="500"/>
+      </g>
+
+      <!-- Simplified continent outlines -->
+      <g class="map-land">
+        <!-- North America -->
+        <path d="M80,60 L140,50 L180,55 L220,70 L240,100 L245,130 L230,160 L210,180 L195,200 L180,220 L170,240 L155,260 L140,280 L130,260 L125,230 L110,210 L95,190 L85,170 L75,140 L70,110 L75,80 Z"/>
+        <!-- Central America -->
+        <path d="M155,260 L165,275 L160,290 L150,295 L145,285 L140,280 Z"/>
+        <!-- South America -->
+        <path d="M150,300 L175,290 L200,295 L225,310 L240,340 L245,370 L240,400 L225,425 L205,440 L185,445 L165,435 L150,415 L138,390 L135,360 L138,330 L142,310 Z"/>
+        <!-- Greenland -->
+        <path d="M195,30 L225,25 L240,35 L235,55 L215,60 L195,55 Z"/>
+        <!-- Europe -->
+        <path d="M400,60 L440,55 L470,65 L480,85 L470,105 L450,115 L430,110 L415,100 L405,80 Z"/>
+        <!-- Scandinavia -->
+        <path d="M430,40 L450,35 L465,50 L460,70 L445,75 L430,65 Z"/>
+        <!-- UK/Ireland -->
+        <path d="M390,65 L403,60 L408,72 L400,82 L388,78 Z"/>
+        <!-- Africa -->
+        <path d="M415,140 L450,135 L490,140 L515,165 L520,200 L515,240 L500,280 L480,310 L460,330 L440,340 L420,335 L400,315 L390,280 L385,240 L388,200 L395,165 Z"/>
+        <!-- Mediterranean/Middle East -->
+        <path d="M470,115 L510,110 L540,120 L550,140 L530,150 L500,148 L475,140 Z"/>
+        <!-- Asia (simplified) -->
+        <path d="M490,55 L560,45 L620,50 L670,65 L700,80 L720,100 L730,130 L720,160 L700,175 L670,180 L640,170 L610,155 L580,140 L550,130 L520,120 L500,105 L490,85 Z"/>
+        <!-- Indian Subcontinent -->
+        <path d="M580,150 L610,145 L630,160 L635,185 L620,205 L600,215 L580,205 L570,185 L572,165 Z"/>
+        <!-- Southeast Asia -->
+        <path d="M670,160 L700,155 L725,165 L730,185 L715,198 L695,195 L672,180 Z"/>
+        <!-- Japan -->
+        <path d="M740,95 L755,90 L762,105 L755,118 L742,115 Z"/>
+        <!-- Australia -->
+        <path d="M700,280 L750,270 L800,275 L830,295 L840,325 L830,355 L805,370 L770,375 L740,365 L715,345 L705,315 L700,295 Z"/>
+        <!-- New Zealand -->
+        <path d="M840,345 L850,340 L858,355 L852,368 L840,365 Z"/>
+        <!-- Russia/Siberia -->
+        <path d="M490,30 L560,20 L640,22 L720,28 L780,38 L820,50 L830,65 L800,75 L750,70 L700,60 L640,55 L580,52 L520,48 L490,42 Z"/>
+        <!-- Alaska -->
+        <path d="M45,35 L80,28 L100,38 L105,55 L90,65 L65,62 L45,52 Z"/>
+        <!-- Iceland -->
+        <path d="M338,40 L358,36 L368,48 L358,58 L338,55 Z"/>
+      </g>
+
+      <!-- Flight paths layer -->
+      <g id="flight-paths"></g>
+
+      <!-- Plane icons layer -->
+      <g id="plane-icons"></g>
+
+      <!-- Airport markers -->
+      <g id="airport-markers"></g>
+    </svg>
+
+    <!-- Map tooltip -->
+    <div class="map-tooltip" id="map-tooltip"></div>
+
+    <!-- Flight detail overlay -->
+    <div class="detail-overlay" id="detail-overlay" aria-live="polite">
+      <div class="detail-header">
+        <div>
+          <div class="detail-flight-num" id="detail-flight-num">—</div>
+          <div class="detail-airline" id="detail-airline">—</div>
+        </div>
+        <button class="detail-close" id="detail-close" aria-label="Close detail panel">✕</button>
+      </div>
+      <div class="detail-route">
+        <div class="detail-airport">
+          <div class="code" id="detail-origin-code">—</div>
+          <div class="city" id="detail-origin-city">—</div>
+          <div class="time" id="detail-dep-time">—</div>
+        </div>
+        <div class="detail-route-mid">
+          <div class="detail-route-line">
+            <span class="detail-route-plane" id="detail-route-plane">✈</span>
+          </div>
+          <span class="detail-duration" id="detail-duration">—</span>
+        </div>
+        <div class="detail-airport" style="text-align:right">
+          <div class="code" id="detail-dest-code">—</div>
+          <div class="city" id="detail-dest-city">—</div>
+          <div class="time" id="detail-arr-time">—</div>
+        </div>
+      </div>
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <div class="label">Altitude</div>
+          <div class="value" id="detail-alt">—</div>
+          <div class="unit">feet</div>
+        </div>
+        <div class="detail-stat">
+          <div class="label">Speed</div>
+          <div class="value" id="detail-speed">—</div>
+          <div class="unit">knots</div>
+        </div>
+        <div class="detail-stat">
+          <div class="label">Progress</div>
+          <div class="value" id="detail-progress">—</div>
+          <div class="unit">complete</div>
+        </div>
+        <div class="detail-stat">
+          <div class="label">ETA</div>
+          <div class="value" id="detail-eta">—</div>
+          <div class="unit">local time</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Bottom CTA -->
+<div style="position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--surface);border-top:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+  <span style="font-size:0.82rem;color:var(--muted);">This is a demo with simulated data. Access live OpenSky Network data in the full app.</span>
+  <a href="app.html" class="btn-primary" style="text-decoration:none;padding:8px 20px;font-size:0.82rem;font-weight:600;border-radius:8px;white-space:nowrap;" aria-label="Open live flight tracker with real data">Track Live Flights →</a>
+</div>
+
+<!-- Toast -->
+<div id="toast" role="alert" aria-live="polite">
+  <span class="toast-icon" id="toast-icon">✓</span>
+  <span id="toast-text"></span>
+</div>
+
+<script>
+'use strict';
+
+// ── Data ────────────────────────────────────────────────────────────────────
+
+const AIRPORTS = [
+  { code:'JFK', name:'John F. Kennedy International', city:'New York', country:'USA', lat:40.64, lon:-73.78, tz:'America/New_York', utcOffset:-5 },
+  { code:'LAX', name:'Los Angeles International',      city:'Los Angeles', country:'USA', lat:33.94, lon:-118.41, tz:'America/Los_Angeles', utcOffset:-8 },
+  { code:'LHR', name:'Heathrow Airport',               city:'London', country:'UK', lat:51.48, lon:-0.46, tz:'Europe/London', utcOffset:0 },
+  { code:'CDG', name:'Charles de Gaulle Airport',      city:'Paris', country:'France', lat:49.01, lon:2.55, tz:'Europe/Paris', utcOffset:1 },
+  { code:'DXB', name:'Dubai International Airport',    city:'Dubai', country:'UAE', lat:25.25, lon:55.36, tz:'Asia/Dubai', utcOffset:4 },
+  { code:'NRT', name:'Narita International Airport',   city:'Tokyo', country:'Japan', lat:35.76, lon:140.39, tz:'Asia/Tokyo', utcOffset:9 },
+  { code:'SIN', name:'Singapore Changi Airport',       city:'Singapore', country:'Singapore', lat:1.36, lon:103.99, tz:'Asia/Singapore', utcOffset:8 },
+  { code:'SYD', name:'Kingsford Smith Airport',        city:'Sydney', country:'Australia', lat:-33.94, lon:151.18, tz:'Australia/Sydney', utcOffset:10 },
+  { code:'FRA', name:'Frankfurt Airport',              city:'Frankfurt', country:'Germany', lat:50.04, lon:8.56, tz:'Europe/Berlin', utcOffset:1 },
+  { code:'AMS', name:'Amsterdam Airport Schiphol',     city:'Amsterdam', country:'Netherlands', lat:52.31, lon:4.77, tz:'Europe/Amsterdam', utcOffset:1 },
+  { code:'ORD', name:"O'Hare International Airport",   city:'Chicago', country:'USA', lat:41.98, lon:-87.91, tz:'America/Chicago', utcOffset:-6 },
+  { code:'ATL', name:'Hartsfield-Jackson Atlanta International', city:'Atlanta', country:'USA', lat:33.64, lon:-84.43, tz:'America/New_York', utcOffset:-5 },
+  { code:'ICN', name:'Incheon International Airport',  city:'Seoul', country:'South Korea', lat:37.46, lon:126.44, tz:'Asia/Seoul', utcOffset:9 },
+  { code:'GRU', name:'Guarulhos International Airport',city:'Sao Paulo', country:'Brazil', lat:-23.43, lon:-46.47, tz:'America/Sao_Paulo', utcOffset:-3 },
+  { code:'JNB', name:'O.R. Tambo International Airport',city:'Johannesburg', country:'South Africa', lat:-26.13, lon:28.24, tz:'Africa/Johannesburg', utcOffset:2 },
+  { code:'MEX', name:'Benito Juarez International Airport',city:'Mexico City', country:'Mexico', lat:19.44, lon:-99.07, tz:'America/Mexico_City', utcOffset:-6 },
+  { code:'MUC', name:'Munich Airport',                 city:'Munich', country:'Germany', lat:48.36, lon:11.79, tz:'Europe/Berlin', utcOffset:1 },
+  { code:'BKK', name:'Suvarnabhumi Airport',           city:'Bangkok', country:'Thailand', lat:13.68, lon:100.75, tz:'Asia/Bangkok', utcOffset:7 },
+  { code:'HKG', name:'Hong Kong International Airport',city:'Hong Kong', country:'China', lat:22.31, lon:113.92, tz:'Asia/Hong_Kong', utcOffset:8 },
+  { code:'MAD', name:'Adolfo Suarez Madrid-Barajas Airport',city:'Madrid', country:'Spain', lat:40.49, lon:-3.57, tz:'Europe/Madrid', utcOffset:1 }
+];
+
+const AIRLINES = {
+  AA: { name:'American Airlines',   iata:'AA', color:'#e01933' },
+  UA: { name:'United Airlines',     iata:'UA', color:'#003087' },
+  DL: { name:'Delta Air Lines',     iata:'DL', color:'#e01933' },
+  BA: { name:'British Airways',     iata:'BA', color:'#2e5ca5' },
+  LH: { name:'Lufthansa',           iata:'LH', color:'#05164d' },
+  EK: { name:'Emirates',            iata:'EK', color:'#d4192a' },
+  QF: { name:'Qantas',              iata:'QF', color:'#e40000' },
+  SQ: { name:'Singapore Airlines',  iata:'SQ', color:'#2b5fa5' },
+  AF: { name:'Air France',          iata:'AF', color:'#002157' },
+  KL: { name:'KLM Royal Dutch Airlines', iata:'KL', color:'#00a1de' },
+  NH: { name:'All Nippon Airways',  iata:'NH', color:'#13448f' },
+  TK: { name:'Turkish Airlines',    iata:'TK', color:'#c8102e' }
+};
+
+const MOCK_FLIGHTS_DATA = [
+  { id:'AA101',  airline:'AA', origin:'JFK', dest:'LHR', depTime:'08:30', arrTime:'20:45', duration:415, alt:38000, speed:485, status:'enroute',  progress:0.52 },
+  { id:'UA892',  airline:'UA', origin:'LAX', dest:'NRT', depTime:'11:15', arrTime:'15:30', duration:620, alt:41000, speed:510, status:'enroute',  progress:0.38 },
+  { id:'DL203',  airline:'DL', origin:'ATL', dest:'CDG', depTime:'17:50', arrTime:'08:10', duration:510, alt:35000, speed:465, status:'enroute',  progress:0.71 },
+  { id:'BA176',  airline:'BA', origin:'LHR', dest:'JFK', depTime:'09:00', arrTime:'11:50', duration:430, alt:37000, speed:490, status:'enroute',  progress:0.25 },
+  { id:'EK203',  airline:'EK', origin:'DXB', dest:'LAX', depTime:'02:25', arrTime:'06:35', duration:960, alt:43000, speed:555, status:'enroute',  progress:0.60 },
+  { id:'QF1',    airline:'QF', origin:'SYD', dest:'LHR', depTime:'16:00', arrTime:'05:00', duration:1170,alt:41000, speed:520, status:'enroute',  progress:0.45 },
+  { id:'SQ317',  airline:'SQ', origin:'SIN', dest:'JFK', depTime:'23:55', arrTime:'06:20', duration:1070,alt:40000, speed:510, status:'enroute',  progress:0.30 },
+  { id:'LH400',  airline:'LH', origin:'FRA', dest:'JFK', depTime:'10:25', arrTime:'13:05', duration:490, alt:36000, speed:475, status:'delayed',  progress:0.15 },
+  { id:'AF011',  airline:'AF', origin:'CDG', dest:'GRU', depTime:'13:30', arrTime:'22:00', duration:700, alt:39000, speed:495, status:'enroute',  progress:0.82 },
+  { id:'KL601',  airline:'KL', origin:'AMS', dest:'ICN', depTime:'11:00', arrTime:'06:05', duration:640, alt:38000, speed:485, status:'enroute',  progress:0.55 },
+  { id:'NH7',    airline:'NH', origin:'NRT', dest:'LHR', depTime:'10:30', arrTime:'15:30', duration:730, alt:41000, speed:505, status:'boarding', progress:0.00 },
+  { id:'TK001',  airline:'TK', origin:'DXB', dest:'JFK', depTime:'14:00', arrTime:'19:15', duration:690, alt:38500, speed:480, status:'enroute',  progress:0.68 },
+  { id:'DL100',  airline:'DL', origin:'JFK', dest:'HKG', depTime:'01:20', arrTime:'04:00', duration:900, alt:40000, speed:515, status:'enroute',  progress:0.42 },
+  { id:'BA15',   airline:'BA', origin:'LHR', dest:'BKK', depTime:'20:30', arrTime:'12:30', duration:680, alt:37500, speed:490, status:'enroute',  progress:0.77 },
+  { id:'UA836',  airline:'UA', origin:'ORD', dest:'MAD', depTime:'18:00', arrTime:'09:00', duration:545, alt:36000, speed:470, status:'landed',   progress:1.00 }
+];
+
+// ── Map projection helpers ─────────────────────────────────────────────────
+
+const MAP_W = 960;
+const MAP_H = 500;
+
+function lonLatToXY(lon, lat) {
+  const x = (lon + 180) * (MAP_W / 360);
+  const y = (90 - lat) * (MAP_H / 180);
+  return [x, y];
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function getAirport(code) {
+  return AIRPORTS.find(a => a.code === code);
+}
+
+function interpolatePosition(flight) {
+  const orig = getAirport(flight.origin);
+  const dest = getAirport(flight.dest);
+  if (!orig || !dest) return null;
+  const t = flight.progress;
+  const lat = lerp(orig.lat, dest.lat, t);
+  const lon = lerp(orig.lon, dest.lon, t);
+  return lonLatToXY(lon, lat);
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+
+const state = {
+  flights: MOCK_FLIGHTS_DATA.map(f => ({ ...f })),
+  selectedId: null,
+  countdown: 5
+};
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+
+let toastTimer = null;
+
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  const textEl = document.getElementById('toast-text');
+  const iconEl = document.getElementById('toast-icon');
+  el.className = `show ${type}`;
+  textEl.textContent = msg;
+  iconEl.textContent = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+// ── Flight list rendering ──────────────────────────────────────────────────
+
+function statusClass(s) {
+  const map = { enroute:'status-enroute', delayed:'status-delayed', landed:'status-landed', boarding:'status-boarding', cancelled:'status-cancelled' };
+  return map[s] || 'status-enroute';
+}
+
+function statusLabel(s) {
+  const map = { enroute:'En Route', delayed:'Delayed', landed:'Landed', boarding:'Boarding', cancelled:'Cancelled' };
+  return map[s] || s;
+}
+
+function fmtAlt(ft) { return ft.toLocaleString(); }
+
+function etaString(flight) {
+  const dest = getAirport(flight.dest);
+  if (!dest) return '--:--';
+  const remaining = (1 - flight.progress) * flight.duration;
+  const now = new Date();
+  const eta = new Date(now.getTime() + remaining * 60000);
+  const localH = (eta.getUTCHours() + 24 + dest.utcOffset) % 24;
+  const localM = eta.getUTCMinutes();
+  return `${String(localH).padStart(2,'0')}:${String(localM).padStart(2,'0')}`;
+}
+
+function renderFlightList(flights) {
+  const listEl = document.getElementById('flight-list');
+  if (flights.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><div class="icon">✈</div><p>No flights found</p></div>`;
+    return;
+  }
+  listEl.innerHTML = flights.map(f => {
+    const orig = getAirport(f.origin);
+    const dest = getAirport(f.dest);
+    const airline = AIRLINES[f.airline] || { name: f.airline };
+    const pct = Math.round(f.progress * 100);
+    const isSel = f.id === state.selectedId;
+    return `
+      <div class="flight-card ${isSel ? 'selected' : ''}" tabindex="0" role="button"
+           aria-pressed="${isSel}" aria-label="${f.id} from ${f.origin} to ${f.dest}"
+           data-id="${f.id}">
+        <div class="flight-card-header">
+          <div>
+            <div class="flight-number">${f.id}</div>
+            <div class="flight-airline">${airline.name}</div>
+          </div>
+          <span class="status-badge ${statusClass(f.status)}">${statusLabel(f.status)}</span>
+        </div>
+        <div class="flight-route">
+          <span class="airport-code">${f.origin}</span>
+          <div class="route-line">
+            <span class="route-plane">✈</span>
+          </div>
+          <span class="airport-code">${f.dest}</span>
+        </div>
+        <div class="flight-meta">
+          <span>⬆ ${fmtAlt(f.alt)} ft</span>
+          <span>↔ ${f.speed} kts</span>
+          <span>ETA ${etaString(f)}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.flight-card').forEach(card => {
+    card.addEventListener('click', () => selectFlight(card.dataset.id));
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectFlight(card.dataset.id); }
+    });
+  });
+}
+
+// ── SVG Map rendering ──────────────────────────────────────────────────────
+
+function colorForFlight(f) {
+  if (f.status === 'delayed')   return 'var(--yellow)';
+  if (f.status === 'landed')    return 'var(--muted)';
+  if (f.status === 'boarding')  return 'var(--accent)';
+  if (f.status === 'cancelled') return 'var(--accent2)';
+  return 'var(--green)';
+}
+
+function renderMap() {
+  const pathsEl  = document.getElementById('flight-paths');
+  const planesEl = document.getElementById('plane-icons');
+
+  const pathsSVG  = [];
+  const planesSVG = [];
+
+  state.flights.forEach(f => {
+    const orig = getAirport(f.origin);
+    const dest = getAirport(f.dest);
+    if (!orig || !dest) return;
+
+    const [ox, oy] = lonLatToXY(orig.lon, orig.lat);
+    const [dx, dy] = lonLatToXY(dest.lon, dest.lat);
+    const pos      = interpolatePosition(f);
+    if (!pos) return;
+
+    const [px, py] = pos;
+    const color    = colorForFlight(f);
+    const isSel    = f.id === state.selectedId;
+
+    // Bezier control point (arc over route)
+    const cpx = (ox + dx) / 2;
+    const cpy = Math.min(oy, dy) - Math.abs(dx - ox) * 0.12;
+
+    pathsSVG.push(`
+      <path class="flight-path ${isSel ? 'selected' : ''}" data-id="${f.id}"
+        d="M${ox},${oy} Q${cpx},${cpy} ${dx},${dy}"
+        stroke="${color}"/>
+    `);
+
+    // Angle for plane rotation
+    const dxn = dx - ox;
+    const dyn = dy - oy;
+    const angle = Math.atan2(dyn, dxn) * 180 / Math.PI;
+
+    if (f.status !== 'landed') {
+      planesSVG.push(`
+        <g class="plane-icon ${isSel ? 'selected' : ''}" data-id="${f.id}"
+           transform="translate(${px},${py})" style="cursor:pointer">
+          <circle cx="0" cy="0" r="${isSel ? 7 : 5}"
+            fill="${color}" fill-opacity="${isSel ? 0.3 : 0.15}"
+            stroke="${color}" stroke-width="1.5"/>
+          <text x="0" y="0" text-anchor="middle" dominant-baseline="central"
+            font-size="${isSel ? 11 : 9}" transform="rotate(${angle})"
+            fill="${color}" style="user-select:none;pointer-events:none;">✈</text>
+        </g>
+      `);
+    }
+  });
+
+  pathsEl.innerHTML  = pathsSVG.join('');
+  planesEl.innerHTML = planesSVG.join('');
+
+  // Attach events to plane icons
+  planesEl.querySelectorAll('.plane-icon').forEach(el => {
+    el.addEventListener('click', () => selectFlight(el.dataset.id));
+    el.addEventListener('mouseenter', e => showMapTooltip(e, el.dataset.id));
+    el.addEventListener('mouseleave', hideMapTooltip);
+  });
+
+  // Update stats
+  const active  = state.flights.filter(f => f.status !== 'landed').length;
+  const enroute = state.flights.filter(f => f.status === 'enroute').length;
+  document.getElementById('stat-active').textContent  = active;
+  document.getElementById('stat-enroute').textContent = enroute;
+}
+
+// ── Tooltip ────────────────────────────────────────────────────────────────
+
+function showMapTooltip(e, flightId) {
+  const f = state.flights.find(fl => fl.id === flightId);
+  if (!f) return;
+  const airline = AIRLINES[f.airline] || { name: f.airline };
+  const tt = document.getElementById('map-tooltip');
+  tt.innerHTML = `<strong>${f.id}</strong> ${f.origin} → ${f.dest}<br>${airline.name} · ${statusLabel(f.status)}`;
+  tt.className = 'map-tooltip visible';
+
+  const mapRect = document.querySelector('.map-container').getBoundingClientRect();
+  let tx = e.clientX - mapRect.left + 12;
+  let ty = e.clientY - mapRect.top  + 12;
+  if (tx + 200 > mapRect.width)  tx -= 220;
+  if (ty + 60  > mapRect.height) ty -= 70;
+  tt.style.left = `${tx}px`;
+  tt.style.top  = `${ty}px`;
+}
+
+function hideMapTooltip() {
+  document.getElementById('map-tooltip').className = 'map-tooltip';
+}
+
+// ── Detail panel ───────────────────────────────────────────────────────────
+
+function selectFlight(id) {
+  if (state.selectedId === id) {
+    state.selectedId = null;
+    closeDetail();
+  } else {
+    state.selectedId = id;
+    openDetail(id);
+  }
+  renderFlightList(state.flights);
+  renderMap();
+}
+
+function openDetail(id) {
+  const f = state.flights.find(fl => fl.id === id);
+  if (!f) return;
+
+  const airline = AIRLINES[f.airline] || { name: f.airline };
+  const orig = getAirport(f.origin);
+  const dest = getAirport(f.dest);
+
+  document.getElementById('detail-flight-num').textContent = f.id;
+  document.getElementById('detail-airline').textContent    = `${airline.name} · ${statusLabel(f.status)}`;
+  document.getElementById('detail-origin-code').textContent = f.origin;
+  document.getElementById('detail-origin-city').textContent = orig ? orig.city : f.origin;
+  document.getElementById('detail-dest-code').textContent   = f.dest;
+  document.getElementById('detail-dest-city').textContent   = dest ? dest.city : f.dest;
+  document.getElementById('detail-dep-time').textContent    = `Dep ${f.depTime}`;
+  document.getElementById('detail-arr-time').textContent    = `Arr ${f.arrTime}`;
+
+  const hrs  = Math.floor(f.duration / 60);
+  const mins = f.duration % 60;
+  document.getElementById('detail-duration').textContent = `${hrs}h ${mins}m`;
+
+  document.getElementById('detail-alt').textContent     = fmtAlt(f.alt);
+  document.getElementById('detail-speed').textContent   = f.speed;
+  document.getElementById('detail-progress').textContent = `${Math.round(f.progress * 100)}%`;
+  document.getElementById('detail-eta').textContent     = etaString(f);
+
+  // Position the plane icon on route line
+  const planePct = f.progress * 100;
+  document.getElementById('detail-route-plane').style.left = `${planePct}%`;
+
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+
+function doSearch() {
+  const q = document.getElementById('search-input').value.trim().toUpperCase();
+  if (!q) {
+    renderFlightList(state.flights);
+    showToast('Showing all flights', 'info');
+    return;
+  }
+  const results = state.flights.filter(f =>
+    f.id.includes(q) || f.origin.includes(q) || f.dest.includes(q)
+  );
+  renderFlightList(results);
+  if (results.length === 0) {
+    showToast(`No flights found for "${q}"`, 'error');
+  } else if (results.length === 1) {
+    selectFlight(results[0].id);
+    showToast(`Found ${results[0].id}`, 'success');
+  } else {
+    showToast(`${results.length} flights matched`, 'success');
+  }
+}
+
+// ── Airport lookup ─────────────────────────────────────────────────────────
+
+function doAirportSearch() {
+  const q = document.getElementById('airport-search').value.trim().toUpperCase();
+  const resultsEl = document.getElementById('airport-results');
+
+  if (!q) {
+    resultsEl.innerHTML = '';
+    showToast('Enter an airport code or city', 'info');
+    return;
+  }
+
+  const matches = AIRPORTS.filter(a =>
+    a.code.includes(q) ||
+    a.city.toUpperCase().includes(q) ||
+    a.name.toUpperCase().includes(q) ||
+    a.country.toUpperCase().includes(q)
+  );
+
+  if (matches.length === 0) {
+    resultsEl.innerHTML = `<div class="empty-state"><div class="icon">⬡</div><p>No airports found for "${q}"</p></div>`;
+    showToast(`No airports matched "${q}"`, 'error');
+    return;
+  }
+
+  const now = new Date();
+
+  resultsEl.innerHTML = matches.map(a => {
+    const localH = (now.getUTCHours() + 24 + a.utcOffset) % 24;
+    const localM = now.getUTCMinutes();
+    const timeStr = `${String(localH).padStart(2,'0')}:${String(localM).padStart(2,'0')}`;
+    const sign = a.utcOffset >= 0 ? '+' : '';
+    const flightCount = state.flights.filter(f => f.origin === a.code || f.dest === a.code).length;
+    return `
+      <div class="airport-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div class="airport-code-large">${a.code}</div>
+            <div class="airport-name">${a.name}</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px">${a.city}, ${a.country}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.4rem;font-weight:700;color:var(--text)">${timeStr}</div>
+            <div style="font-size:0.72rem;color:var(--muted)">UTC${sign}${a.utcOffset}</div>
+          </div>
+        </div>
+        <div class="airport-info-grid">
+          <div class="info-item">
+            <div class="info-label">Timezone</div>
+            <div class="info-value" style="font-size:0.78rem">${a.tz}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Tracked flights</div>
+            <div class="info-value">${flightCount}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Coordinates</div>
+            <div class="info-value" style="font-size:0.75rem">${a.lat.toFixed(2)}° ${a.lon.toFixed(2)}°</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Local time</div>
+            <div class="info-value">${timeStr}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  showToast(`Found ${matches.length} airport${matches.length > 1 ? 's' : ''}`, 'success');
+}
+
+// ── Live updates ───────────────────────────────────────────────────────────
+
+function tickFlights() {
+  state.flights.forEach(f => {
+    if (f.status === 'landed' || f.status === 'boarding' || f.status === 'cancelled') return;
+
+    // Advance progress (each tick = 5 seconds, duration in minutes)
+    const tickFraction = 5 / (f.duration * 60);
+    f.progress = Math.min(1, f.progress + tickFraction * 30); // 30x speed for demo
+
+    // Slight altitude & speed variation
+    f.alt   = Math.max(25000, f.alt   + (Math.random() - 0.5) * 300);
+    f.speed = Math.max(380,   f.speed + (Math.random() - 0.5) * 10);
+    f.alt   = Math.round(f.alt);
+    f.speed = Math.round(f.speed);
+
+    if (f.progress >= 1) {
+      f.progress = 1;
+      f.status   = 'landed';
+    }
+  });
+}
+
+function startCountdown() {
+  setInterval(() => {
+    state.countdown--;
+    if (state.countdown <= 0) {
+      state.countdown = 5;
+      tickFlights();
+      renderFlightList(state.flights);
+      renderMap();
+      if (state.selectedId) openDetail(state.selectedId);
+    }
+    document.getElementById('stat-timer').textContent = `${state.countdown}s`;
+  }, 1000);
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected','false');
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected','true');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+  });
+}
+
+// ── Airport markers on map ─────────────────────────────────────────────────
+
+function renderAirportMarkers() {
+  const markersEl = document.getElementById('airport-markers');
+  const majorCodes = ['JFK','LHR','DXB','NRT','SIN','SYD','LAX','CDG','FRA','ATL'];
+  const markers = AIRPORTS.filter(a => majorCodes.includes(a.code)).map(a => {
+    const [x, y] = lonLatToXY(a.lon, a.lat);
+    return `
+      <g>
+        <circle cx="${x}" cy="${y}" r="3" fill="var(--accent)" opacity="0.7"/>
+        <text x="${x + 5}" y="${y + 4}" font-size="6" fill="var(--muted)"
+              style="pointer-events:none;user-select:none;">${a.code}</text>
+      </g>
+    `;
+  });
+  markersEl.innerHTML = markers.join('');
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+
+function init() {
+  initTabs();
+  renderAirportMarkers();
+  renderFlightList(state.flights);
+  renderMap();
+  startCountdown();
+
+  // Search events
+  document.getElementById('search-btn').addEventListener('click', doSearch);
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+
+  // Airport search events
+  document.getElementById('airport-search-btn').addEventListener('click', doAirportSearch);
+  document.getElementById('airport-search').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doAirportSearch();
+  });
+
+  // Close detail
+  document.getElementById('detail-close').addEventListener('click', () => {
+    state.selectedId = null;
+    closeDetail();
+    renderFlightList(state.flights);
+    renderMap();
+  });
+
+  // Keyboard: Escape to close detail
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && state.selectedId) {
+      state.selectedId = null;
+      closeDetail();
+      renderFlightList(state.flights);
+      renderMap();
+    }
+  });
+
+  showToast('SkyTrack loaded — 15 flights tracked', 'success');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

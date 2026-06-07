@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gold &amp; Silver Price Alert — Jewelry Shop Tool</title>
+  <meta name="description" content="Live precious metals price tracker with custom alerts, portfolio calculator, and gold-silver ratio chart for jewelry professionals." />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    :root {
+      --bg: #080c10;
+      --surface: #0e1318;
+      --surface2: #141a21;
+      --border: rgba(255,255,255,0.08);
+      --accent: #00d4aa;
+      --accent2: #f59e0b;
+      --text: #e6edf3;
+      --muted: #6b7280;
+      --green: #26a69a;
+      --yellow: #f59e0b;
+      --radius: 6px;
+      --gold: #f7c948;
+      --silver: #c0ccd6;
+      --platinum: #b0b8c8;
+      --palladium: #c8b8d0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Layout */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--gold), #e8a030);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .currency-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .currency-select:focus { border-color: var(--accent); }
+
+    .refresh-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover { border-color: var(--accent); background: rgba(0,212,170,0.1); }
+    .refresh-btn:active { transform: scale(0.96); }
+
+    .refresh-icon { display: inline-block; transition: transform 0.5s; }
+    .refresh-btn.spinning .refresh-icon { animation: spin 0.8s linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.loading { background: var(--yellow); }
+    .status-dot.error { background: var(--accent2); animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(67,217,173,0.4); }
+      50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(67,217,173,0); }
+    }
+
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: var(--radius);
+      margin-bottom: 28px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-btn:hover { color: var(--text); background: var(--surface2); }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 2px 12px rgba(0,212,170,0.3);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeIn 0.25s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover { border-color: rgba(0,212,170,0.3); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    /* Price Grid */
+    .price-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .price-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+      transition: all 0.25s;
+    }
+
+    .price-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .price-card.gold::before { background: linear-gradient(90deg, var(--gold), #e8a030); }
+    .price-card.silver::before { background: linear-gradient(90deg, #c0ccd6, #9baab8); }
+    .price-card.platinum::before { background: linear-gradient(90deg, #b0b8c8, #8090a8); }
+    .price-card.palladium::before { background: linear-gradient(90deg, #c8b8d0, #a890b8); }
+
+    .price-card:hover {
+      border-color: rgba(0,212,170,0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .metal-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .metal-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .gold .metal-icon { background: rgba(247,201,72,0.15); }
+    .silver .metal-icon { background: rgba(192,204,214,0.15); }
+    .platinum .metal-icon { background: rgba(176,184,200,0.15); }
+    .palladium .metal-icon { background: rgba(200,184,208,0.15); }
+
+    .metal-name { font-size: 14px; font-weight: 600; }
+    .metal-symbol { font-size: 11px; color: var(--muted); font-weight: 400; }
+
+    .price-display {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .price-unit { font-size: 13px; color: var(--muted); }
+
+    .price-change {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    .price-change.up { background: rgba(67,217,173,0.12); color: var(--green); }
+    .price-change.down { background: rgba(245,158,11,0.12); color: var(--accent2); }
+    .price-change.neutral { background: rgba(136,146,176,0.12); color: var(--muted); }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, rgba(46,51,80,0.5) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer { to { background-position: -200% center; } }
+
+    .skeleton-text { height: 28px; width: 120px; }
+    .skeleton-sm { height: 14px; width: 80px; margin-top: 8px; }
+
+    /* Section headers */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    /* Alerts */
+    .alert-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    @media (max-width: 700px) {
+      .form-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="number"], input[type="text"], select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input[type="number"]:focus, input[type="text"]:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,212,170,0.15);
+    }
+
+    input::placeholder { color: var(--muted); opacity: 0.7; }
+
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,212,170,0.25);
+    }
+
+    .btn-primary:hover { background: #00b894; box-shadow: 0 4px 14px rgba(0,212,170,0.35); }
+    .btn-primary:active { transform: scale(0.97); }
+
+    .btn-danger {
+      background: rgba(245,158,11,0.12);
+      color: var(--accent2);
+      border: 1px solid rgba(245,158,11,0.25);
+    }
+
+    .btn-danger:hover { background: rgba(245,158,11,0.2); }
+
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    .alerts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .alert-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.2s;
+    }
+
+    .alert-item:hover { border-color: rgba(0,212,170,0.3); }
+
+    .alert-item.triggered {
+      border-color: rgba(245,158,11,0.4);
+      background: rgba(245,158,11,0.05);
+      animation: alertPulse 1s ease-in-out 3;
+    }
+
+    @keyframes alertPulse {
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: 0 0 0 3px rgba(245,158,11,0.25); }
+    }
+
+    .alert-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .alert-badge.above { background: rgba(67,217,173,0.12); }
+    .alert-badge.below { background: rgba(245,158,11,0.12); }
+
+    .alert-info { flex: 1; min-width: 0; }
+    .alert-title { font-size: 14px; font-weight: 600; }
+    .alert-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .alert-status {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 5px;
+    }
+
+    .alert-status.active { background: rgba(67,217,173,0.1); color: var(--green); }
+    .alert-status.triggered { background: rgba(245,158,11,0.1); color: var(--accent2); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .empty-text { font-size: 13px; }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      animation: slideUp 0.3s ease;
+      max-width: 320px;
+    }
+
+    .toast.success { border-color: rgba(67,217,173,0.3); }
+    .toast.error { border-color: rgba(245,158,11,0.3); }
+    .toast.warning { border-color: rgba(247,201,72,0.3); }
+
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes slideDown { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(16px); } }
+
+    /* Chart */
+    .chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .chart-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .chart-toggle {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      padding: 3px;
+      border-radius: 8px;
+    }
+
+    .chart-toggle button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .chart-toggle button.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .chart-toggle button:hover:not(.active) { color: var(--text); background: var(--border); }
+
+    .chart-svg-wrap { overflow-x: auto; }
+
+    svg.price-chart { width: 100%; min-height: 220px; }
+
+    /* Ratio section */
+    .ratio-display {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      background: var(--surface2);
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+
+    .ratio-number {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: -2px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .ratio-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .ratio-context {
+      flex: 1;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .ratio-context strong { color: var(--text); }
+
+    /* Portfolio */
+    .portfolio-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .portfolio-result {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .result-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .result-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .result-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .result-value.gold { color: var(--gold); }
+    .result-value.silver { color: var(--silver); }
+    .result-value.green { color: var(--green); }
+
+    /* Last updated bar */
+    .last-updated {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 28px;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .app-header { padding: 0 14px; }
+      .main { padding: 16px 14px 60px; }
+      .logo-sub { display: none; }
+      .price-display { font-size: 22px; }
+      .ratio-number { font-size: 36px; }
+    }
+
+    /* Accessibility */
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    button, a, input, select { font-family: inherit; }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Price flash animation */
+    @keyframes flashGreen {
+      0% { background: rgba(67,217,173,0.2); }
+      100% { background: transparent; }
+    }
+
+    @keyframes flashRed {
+      0% { background: rgba(245,158,11,0.2); }
+      100% { background: transparent; }
+    }
+
+    .flash-up { animation: flashGreen 0.8s ease; }
+    .flash-down { animation: flashRed 0.8s ease; }
+
+    /* ── Finance design system v2 ── */
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(0,212,170,.065) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,.9) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    h1, h2 {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    [class*="price"],[class*="value"],[class*="amount"],[class*="rate"],
+    [class*="stat"],[class*="metric"],[class*="kpi"],td,code,.number {
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+      font-variant-numeric: tabular-nums slashed-zero;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+    .card,[class*="card"],[class*="metric-card"],[class*="stat-card"] {
+      border-left: 3px solid var(--accent) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    table { border-collapse: collapse; width: 100%; }
+    thead th {
+      font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: right; white-space: nowrap; position: sticky; top: 0; background: var(--bg);
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background 120ms; }
+    tbody tr:hover { background: rgba(255,255,255,.04); }
+    td { padding: 6px 12px; text-align: right; vertical-align: middle; white-space: nowrap; font-size: 13px; }
+    td:first-child { text-align: left; color: var(--text); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.5);} 50%{box-shadow:0 0 0 6px rgba(0,212,170,0);} }
+    .card,[class*="card"],[class*="result"],[class*="item"] { animation: slideUp .35s ease both; }
+    .card:nth-child(2),[class*="item"]:nth-child(2){animation-delay:.05s}
+    .card:nth-child(3),[class*="item"]:nth-child(3){animation-delay:.1s}
+    .card:nth-child(4){animation-delay:.15s}
+    tbody tr { animation: slideUp .2s ease both; }
+    tbody tr:nth-child(2){animation-delay:.03s} tbody tr:nth-child(3){animation-delay:.06s}
+    tbody tr:nth-child(4){animation-delay:.09s}
+    button,[class*="btn"] { transition: all .15s; }
+    button:hover,[class*="btn"]:hover {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0,212,170,.15) !important;
+    }
+    input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 2px rgba(0,212,170,.2); }
+    [class*="live"],[class*="dot"],[class*="indicator"] { animation: livePulse 2s ease-in-out infinite; }
+    [class*="positive"],[class*="gain"],[class*="up"] { color:var(--green)!important; }
+    [class*="negative"],[class*="loss"],[class*="down"] { color:#ef5350!important; }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="visually-hidden">Skip to main content</a>
+
+  <header class="app-header" role="banner">
+    <a href="#" class="logo" aria-label="Gold Silver Price Alert home">
+      <div class="logo-icon" aria-hidden="true">⚜</div>
+      <div>
+        <div class="logo-text">PriceAlert Metals</div>
+        <div class="logo-sub">For Jewelry Professionals</div>
+      </div>
+    </a>
+    <div class="header-actions">
+      <div class="status-dot loading" id="statusDot" title="Connecting…" role="status" aria-label="Data connection status"></div>
+      <select class="currency-select" id="currencySelect" aria-label="Select display currency">
+        <option value="USD">USD $</option>
+        <option value="EUR">EUR €</option>
+        <option value="GBP">GBP £</option>
+        <option value="JPY">JPY ¥</option>
+        <option value="AUD">AUD A$</option>
+        <option value="CAD">CAD C$</option>
+        <option value="CHF">CHF Fr</option>
+      </select>
+      <button class="refresh-btn" id="refreshBtn" aria-label="Refresh prices">
+        <span class="refresh-icon" aria-hidden="true">⟳</span>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <main class="main" id="main-content">
+    <nav class="tabs" role="tablist" aria-label="Application sections">
+      <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-prices" id="tab-prices" data-tab="prices">
+        📈 Live Prices
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-alerts" id="tab-alerts" data-tab="alerts">
+        🔔 Price Alerts
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-portfolio" id="tab-portfolio" data-tab="portfolio">
+        💼 Portfolio
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-ratio" id="tab-ratio" data-tab="ratio">
+        ⚖️ Au:Ag Ratio
+      </button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-history" id="tab-history" data-tab="history">
+        📊 Price History
+      </button>
+    </nav>
+
+    <!-- LIVE PRICES TAB -->
+    <section class="tab-panel active" id="panel-prices" role="tabpanel" aria-labelledby="tab-prices">
+      <div class="section-title">
+        <span aria-hidden="true">✨</span>
+        Live Spot Prices
+      </div>
+      <p class="section-sub">Real-time precious metals prices — updated every 60 seconds. Prices shown per troy ounce.</p>
+
+      <div class="price-grid" id="priceGrid" aria-live="polite" aria-label="Metal spot prices">
+        <!-- Cards injected by JS -->
+        <div class="price-card gold" aria-label="Gold loading">
+          <div class="metal-header">
+            <div class="metal-icon gold">🥇</div>
+            <div>
+              <div class="metal-name">Gold</div>
+              <div class="metal-symbol">XAU / troy oz</div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-sm"></div>
+        </div>
+        <div class="price-card silver" aria-label="Silver loading">
+          <div class="metal-header">
+            <div class="metal-icon silver">🥈</div>
+            <div>
+              <div class="metal-name">Silver</div>
+              <div class="metal-symbol">XAG / troy oz</div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-sm"></div>
+        </div>
+        <div class="price-card platinum" aria-label="Platinum loading">
+          <div class="metal-header">
+            <div class="metal-icon platinum">💎</div>
+            <div>
+              <div class="metal-name">Platinum</div>
+              <div class="metal-symbol">XPT / troy oz</div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-sm"></div>
+        </div>
+        <div class="price-card palladium" aria-label="Palladium loading">
+          <div class="metal-header">
+            <div class="metal-icon palladium">⚗️</div>
+            <div>
+              <div class="metal-name">Palladium</div>
+              <div class="metal-symbol">XPD / troy oz</div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-sm"></div>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="card-header">
+          <span class="card-title">30-Day Price History</span>
+          <div class="chart-toggle">
+            <button class="active" data-metal="gold" onclick="switchChartMetal('gold')">Gold</button>
+            <button data-metal="silver" onclick="switchChartMetal('silver')">Silver</button>
+            <button data-metal="platinum" onclick="switchChartMetal('platinum')">Platinum</button>
+            <button data-metal="palladium" onclick="switchChartMetal('palladium')">Palladium</button>
+          </div>
+        </div>
+        <div class="chart-svg-wrap" id="priceChartWrap">
+          <svg class="price-chart" id="priceChart" viewBox="0 0 800 220" preserveAspectRatio="xMidYMid meet" role="img" aria-label="30-day price history chart"></svg>
+        </div>
+      </div>
+
+      <p class="last-updated" id="lastUpdated" aria-live="polite">—</p>
+    </section>
+
+    <!-- ALERTS TAB -->
+    <section class="tab-panel" id="panel-alerts" role="tabpanel" aria-labelledby="tab-alerts">
+      <div class="section-title"><span aria-hidden="true">🔔</span> Price Alerts</div>
+      <p class="section-sub">Get notified when a metal hits your target. Alerts are stored locally and checked against live prices.</p>
+
+      <div class="alert-form card">
+        <div class="card-header">
+          <span class="card-title">New Alert Rule</span>
+        </div>
+        <form id="alertForm" onsubmit="addAlert(event)" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="alertMetal">Metal</label>
+              <select id="alertMetal" required aria-required="true">
+                <option value="gold">Gold (XAU)</option>
+                <option value="silver">Silver (XAG)</option>
+                <option value="platinum">Platinum (XPT)</option>
+                <option value="palladium">Palladium (XPD)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="alertCondition">Condition</label>
+              <select id="alertCondition" required aria-required="true">
+                <option value="above">Price rises above</option>
+                <option value="below">Price falls below</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="alertThreshold">Target Price (USD/oz)</label>
+              <input type="number" id="alertThreshold" placeholder="e.g. 2100" min="0" step="0.01" required aria-required="true" />
+            </div>
+            <div class="form-group">
+              <label for="alertNote">Note (optional)</label>
+              <input type="text" id="alertNote" placeholder="e.g. Reorder threshold" maxlength="60" />
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <button type="submit" class="btn btn-primary" aria-label="Add price alert">
+                + Add Alert
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div id="alertsContainer" aria-live="polite" aria-label="Active price alerts">
+        <!-- Alerts injected here -->
+      </div>
+    </section>
+
+    <!-- PORTFOLIO TAB -->
+    <section class="tab-panel" id="panel-portfolio" role="tabpanel" aria-labelledby="tab-portfolio">
+      <div class="section-title"><span aria-hidden="true">💼</span> Portfolio Calculator</div>
+      <p class="section-sub">Enter your precious metal holdings to see current market value and suggested retail pricing.</p>
+
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+          <span class="card-title">Your Holdings</span>
+          <span style="font-size: 12px; color: var(--muted);">In troy ounces (oz)</span>
+        </div>
+        <div class="portfolio-inputs">
+          <div class="form-group">
+            <label for="portGold">Gold (oz)</label>
+            <input type="number" id="portGold" value="0" min="0" step="0.001" aria-label="Gold holdings in ounces" />
+          </div>
+          <div class="form-group">
+            <label for="portSilver">Silver (oz)</label>
+            <input type="number" id="portSilver" value="0" min="0" step="0.001" aria-label="Silver holdings in ounces" />
+          </div>
+          <div class="form-group">
+            <label for="portPlatinum">Platinum (oz)</label>
+            <input type="number" id="portPlatinum" value="0" min="0" step="0.001" aria-label="Platinum holdings in ounces" />
+          </div>
+          <div class="form-group">
+            <label for="portPalladium">Palladium (oz)</label>
+            <input type="number" id="portPalladium" value="0" min="0" step="0.001" aria-label="Palladium holdings in ounces" />
+          </div>
+          <div class="form-group">
+            <label for="markupPct">Retail Markup %</label>
+            <input type="number" id="markupPct" value="35" min="0" max="500" step="1" aria-label="Retail markup percentage" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="calcPortfolio()" aria-label="Calculate portfolio value">
+          Calculate Portfolio
+        </button>
+      </div>
+
+      <div class="portfolio-result" id="portfolioResult">
+        <!-- Results injected here -->
+      </div>
+    </section>
+
+    <!-- RATIO TAB -->
+    <section class="tab-panel" id="panel-ratio" role="tabpanel" aria-labelledby="tab-ratio">
+      <div class="section-title"><span aria-hidden="true">⚖️</span> Gold:Silver Ratio</div>
+      <p class="section-sub">The gold-to-silver ratio tells you how many ounces of silver it takes to buy one ounce of gold — a key indicator for precious metals traders.</p>
+
+      <div class="ratio-display" id="ratioDisplay">
+        <div>
+          <div class="ratio-number" id="ratioValue">—</div>
+          <div class="ratio-label">Gold:Silver Ratio</div>
+        </div>
+        <div class="ratio-context" id="ratioContext">
+          Loading live ratio…
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="card-header">
+          <span class="card-title">30-Day Ratio History</span>
+        </div>
+        <div class="chart-svg-wrap">
+          <svg class="price-chart" id="ratioChart" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet" role="img" aria-label="30-day gold silver ratio chart"></svg>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Interpretation Guide</span></div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 8px;">
+          <div class="result-card">
+            <div class="result-label">Below 50</div>
+            <div style="font-size: 13px; color: var(--green); margin-top: 6px;">Silver is historically expensive vs gold. Possible gold entry point.</div>
+          </div>
+          <div class="result-card">
+            <div class="result-label">50–80</div>
+            <div style="font-size: 13px; color: var(--yellow); margin-top: 6px;">Normal historical range. Balanced pricing between the metals.</div>
+          </div>
+          <div class="result-card">
+            <div class="result-label">Above 80</div>
+            <div style="font-size: 13px; color: var(--accent2); margin-top: 6px;">Silver is historically cheap vs gold. Potential silver opportunity.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTORY TAB -->
+    <section class="tab-panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history">
+      <div class="section-title"><span aria-hidden="true">📊</span> 30-Day Price History</div>
+      <p class="section-sub">Historical price trends over the past 30 days. Data is simulated from current spot prices using realistic market volatility patterns.</p>
+
+      <div class="chart-container">
+        <div class="card-header">
+          <span class="card-title">All Metals</span>
+          <div class="chart-toggle" id="historyToggle">
+            <button class="active" data-metal="gold" onclick="switchHistoryMetal('gold')">Gold</button>
+            <button data-metal="silver" onclick="switchHistoryMetal('silver')">Silver</button>
+            <button data-metal="platinum" onclick="switchHistoryMetal('platinum')">Platinum</button>
+            <button data-metal="palladium" onclick="switchHistoryMetal('palladium')">Palladium</button>
+          </div>
+        </div>
+        <div class="chart-svg-wrap">
+          <svg class="price-chart" id="historyChart" viewBox="0 0 800 260" preserveAspectRatio="xMidYMid meet" role="img" aria-label="30-day metal price history"></svg>
+        </div>
+      </div>
+
+      <div id="historyStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;"></div>
+    </section>
+  </main>
+
+  <div class="toast-container" id="toastContainer" aria-live="assertive" aria-atomic="true"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      // ── State ──────────────────────────────────────────────────────────────
+      const state = {
+        prices: {},          // { gold: number, silver: number, platinum: number, palladium: number }
+        prevPrices: {},
+        currency: 'USD',
+        rate: 1,
+        rates: {},
+        alerts: [],
+        history: {},         // { gold: [], silver: [], ... } arrays of {date, price}
+        activeChartMetal: 'gold',
+        activeHistoryMetal: 'gold',
+        loading: true,
+        lastUpdated: null,
+      };
+
+      const METALS = [
+        { key: 'gold',      label: 'Gold',      symbol: 'XAU', icon: '🥇', cls: 'gold' },
+        { key: 'silver',    label: 'Silver',    symbol: 'XAG', icon: '🥈', cls: 'silver' },
+        { key: 'platinum',  label: 'Platinum',  symbol: 'XPT', icon: '💎', cls: 'platinum' },
+        { key: 'palladium', label: 'Palladium', symbol: 'XPD', icon: '⚗️', cls: 'palladium' },
+      ];
+
+      const CURRENCY_SYMBOLS = {
+        USD: '$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$', CAD: 'C$', CHF: 'Fr'
+      };
+
+      const METAL_COLORS = {
+        gold: '#f7c948',
+        silver: '#c0ccd6',
+        platinum: '#b0b8c8',
+        palladium: '#c8b8d0',
+      };
+
+      // ── Utilities ──────────────────────────────────────────────────────────
+      function fmt(n, currency, decimals) {
+        const sym = CURRENCY_SYMBOLS[currency] || currency;
+        const val = typeof n === 'number' ? n : 0;
+        return `${sym}${val.toLocaleString('en-US', { minimumFractionDigits: decimals ?? 2, maximumFractionDigits: decimals ?? 2 })}`;
+      }
+
+      function fmtDate(d) {
+        return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
+      function showToast(msg, type = 'success', duration = 4000) {
+        const tc = document.getElementById('toastContainer');
+        const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+        const el = document.createElement('div');
+        el.className = `toast ${type}`;
+        el.setAttribute('role', 'alert');
+        el.innerHTML = `<span aria-hidden="true">${icons[type] || '•'}</span><span>${msg}</span>`;
+        tc.appendChild(el);
+        setTimeout(() => {
+          el.style.animation = 'slideDown 0.3s ease forwards';
+          setTimeout(() => el.remove(), 300);
+        }, duration);
+      }
+
+      function setStatus(state) {
+        const dot = document.getElementById('statusDot');
+        dot.className = `status-dot ${state}`;
+        const labels = { loading: 'Fetching data…', '': 'Live', error: 'Offline — using cached data' };
+        dot.setAttribute('title', labels[state] || 'Live');
+        dot.setAttribute('aria-label', `Connection: ${labels[state] || 'Live'}`);
+      }
+
+      // ── Data fetching ──────────────────────────────────────────────────────
+      // Detect file:// protocol — fetches will fail with console errors in this context
+      const IS_FILE_PROTOCOL = location.protocol === 'file:';
+
+      // Silently attempt a fetch; returns null on any failure without throwing
+      async function silentFetch(url, opts) {
+        if (IS_FILE_PROTOCOL) return null;
+        try {
+          const res = await fetch(url, opts);
+          if (!res.ok) return null;
+          return await res.json();
+        } catch {
+          return null;
+        }
+      }
+
+      async function fetchPrices() {
+        const btn = document.getElementById('refreshBtn');
+        btn.classList.add('spinning');
+        setStatus('loading');
+
+        try {
+          const data = await silentFetch('https://api.metals.live/v1/spot', {
+            cache: 'no-cache',
+            headers: { Accept: 'application/json' },
+          });
+
+          if (data) {
+            // API returns array of objects like [{gold: 2300, silver: 27.5, ...}]
+            const flat = Array.isArray(data) ? Object.assign({}, ...data) : data;
+
+            state.prevPrices = { ...state.prices };
+            state.prices = {
+              gold:      flat.gold      || flat.XAU || 0,
+              silver:    flat.silver    || flat.XAG || 0,
+              platinum:  flat.platinum  || flat.XPT || 0,
+              palladium: flat.palladium || flat.XPD || 0,
+            };
+
+            state.lastUpdated = new Date();
+            setStatus('');
+            showToast('Prices refreshed', 'success', 2500);
+          } else {
+            throw new Error('no data');
+          }
+        } catch {
+          setStatus('error');
+          // Fallback to realistic demo prices when API is unreachable
+          if (!state.prices.gold) {
+            state.prices = { gold: 2328.50, silver: 29.45, platinum: 987.30, palladium: 1053.80 };
+          }
+          if (!IS_FILE_PROTOCOL) {
+            showToast('Using demo prices — check your connection', 'warning', 5000);
+          }
+        } finally {
+          generateHistory();
+          btn.classList.remove('spinning');
+        }
+        return true;
+      }
+
+      async function fetchRates() {
+        const data = await silentFetch('https://open.er-api.com/v6/latest/USD');
+        if (data && data.rates) {
+          state.rates = data.rates;
+        } else {
+          // Fallback rates
+          state.rates = { USD: 1, EUR: 0.92, GBP: 0.79, JPY: 149.5, AUD: 1.53, CAD: 1.36, CHF: 0.90 };
+        }
+      }
+
+      // ── History simulation ─────────────────────────────────────────────────
+      function generateHistory() {
+        const days = 30;
+        METALS.forEach(({ key }) => {
+          const base = state.prices[key] || 100;
+          const arr = [];
+          let price = base * (0.92 + Math.random() * 0.08); // 30 days ago baseline
+          for (let i = days - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            // Simulate realistic daily moves: ±1.5% with drift toward current
+            const drift = (base - price) / (i + 1) * 0.2;
+            const change = price * (Math.random() * 0.03 - 0.015 + drift * 0.01);
+            price = Math.max(price + change, base * 0.7);
+            arr.push({ date: d.toISOString().slice(0, 10), price: parseFloat(price.toFixed(2)) });
+          }
+          // Ensure last entry = current price
+          arr[arr.length - 1].price = base;
+          state.history[key] = arr;
+        });
+      }
+
+      // ── Rendering ──────────────────────────────────────────────────────────
+      function convertPrice(usdPrice) {
+        const rate = state.rates[state.currency] || 1;
+        return usdPrice * rate;
+      }
+
+      function renderPriceCards() {
+        const grid = document.getElementById('priceGrid');
+        grid.innerHTML = '';
+
+        METALS.forEach(({ key, label, symbol, icon, cls }) => {
+          const price = state.prices[key] || 0;
+          const prev = state.prevPrices[key] || 0;
+          const converted = convertPrice(price);
+          const pctChange = prev > 0 ? ((price - prev) / prev) * 100 : 0;
+          const flashCls = prev > 0 ? (price > prev ? 'flash-up' : price < prev ? 'flash-down' : '') : '';
+          const changeCls = pctChange > 0 ? 'up' : pctChange < 0 ? 'down' : 'neutral';
+          const changeSign = pctChange > 0 ? '+' : '';
+          const changeLabel = prev > 0 ? `${changeSign}${pctChange.toFixed(2)}%` : 'Live';
+
+          const perGram = (converted / 31.1035).toFixed(2);
+          const sym = CURRENCY_SYMBOLS[state.currency] || state.currency;
+
+          const card = document.createElement('div');
+          card.className = `price-card ${cls} ${flashCls}`;
+          card.setAttribute('aria-label', `${label}: ${fmt(converted, state.currency)} per troy ounce`);
+          card.innerHTML = `
+            <div class="metal-header">
+              <div class="metal-icon ${cls}" aria-hidden="true">${icon}</div>
+              <div>
+                <div class="metal-name">${label}</div>
+                <div class="metal-symbol">${symbol} / troy oz</div>
+              </div>
+            </div>
+            <div class="price-display">${fmt(converted, state.currency)}</div>
+            <div class="price-unit">${sym}${perGram} / gram</div>
+            <div class="price-change ${changeCls}" aria-label="${changeLabel} change">
+              ${pctChange > 0 ? '▲' : pctChange < 0 ? '▼' : '—'} ${changeLabel}
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+
+        document.getElementById('lastUpdated').textContent =
+          state.lastUpdated
+            ? `Last updated: ${state.lastUpdated.toLocaleTimeString()} — prices auto-refresh every 60s`
+            : '';
+
+        renderRatio();
+        renderChart('priceChart', state.activeChartMetal, false, '0 0 800 220');
+        renderChart('historyChart', state.activeHistoryMetal, true, '0 0 800 260');
+        renderRatioChart();
+        checkAlerts();
+      }
+
+      // ── SVG chart ──────────────────────────────────────────────────────────
+      function renderChart(svgId, metalKey, showStats, viewBox) {
+        const svg = document.getElementById(svgId);
+        if (!svg) return;
+        const hist = state.history[metalKey];
+        if (!hist || hist.length === 0) return;
+
+        const W = 800, H = parseInt(viewBox.split(' ')[3]);
+        const PAD = { top: 20, right: 20, bottom: 36, left: 68 };
+        const pw = W - PAD.left - PAD.right;
+        const ph = H - PAD.top - PAD.bottom;
+
+        const prices = hist.map(d => d.price);
+        const minP = Math.min(...prices);
+        const maxP = Math.max(...prices);
+        const range = maxP - minP || 1;
+
+        const xScale = (i) => PAD.left + (i / (hist.length - 1)) * pw;
+        const yScale = (p) => PAD.top + (1 - (p - minP) / range) * ph;
+
+        const color = METAL_COLORS[metalKey];
+
+        // Build polyline points
+        const points = hist.map((d, i) => `${xScale(i)},${yScale(d.price)}`).join(' ');
+
+        // Area fill path
+        const areaPath = `M${xScale(0)},${yScale(hist[0].price)} ` +
+          hist.map((d, i) => `L${xScale(i)},${yScale(d.price)}`).join(' ') +
+          ` L${xScale(hist.length - 1)},${PAD.top + ph} L${xScale(0)},${PAD.top + ph} Z`;
+
+        // Y-axis labels
+        const yTicks = 5;
+        const yLabels = Array.from({ length: yTicks + 1 }, (_, i) => {
+          const val = minP + (range * i / yTicks);
+          const y = yScale(val);
+          return `<text x="${PAD.left - 8}" y="${y + 4}" text-anchor="end" fill="var(--muted)" font-size="11" font-family="monospace">${CURRENCY_SYMBOLS[state.currency] || '$'}${val.toLocaleString('en-US', { maximumFractionDigits: 0 })}</text>
+          <line x1="${PAD.left}" y1="${y}" x2="${PAD.left + pw}" y2="${y}" stroke="var(--border)" stroke-dasharray="4 4" stroke-width="1" />`;
+        }).join('');
+
+        // X-axis date labels (show ~6)
+        const xStep = Math.floor(hist.length / 6);
+        const xLabels = hist.filter((_, i) => i % xStep === 0).map((d, j) => {
+          const idx = j * xStep;
+          const x = xScale(idx);
+          return `<text x="${x}" y="${H - 4}" text-anchor="middle" fill="var(--muted)" font-size="11">${fmtDate(d.date)}</text>`;
+        }).join('');
+
+        const gradId = `grad-${svgId}-${metalKey}`;
+
+        svg.innerHTML = `
+          <defs>
+            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+            </linearGradient>
+          </defs>
+          ${yLabels}
+          ${xLabels}
+          <path d="${areaPath}" fill="url(#${gradId})" />
+          <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+          <circle cx="${xScale(hist.length - 1)}" cy="${yScale(hist[hist.length - 1].price)}" r="5" fill="${color}" />
+        `;
+      }
+
+      function renderRatioChart() {
+        const svg = document.getElementById('ratioChart');
+        if (!svg || !state.history.gold || !state.history.silver) return;
+
+        const ratios = state.history.gold.map((g, i) => ({
+          date: g.date,
+          ratio: state.history.silver[i] ? g.price / state.history.silver[i].price : null,
+        })).filter(r => r.ratio !== null);
+
+        const W = 800, H = 200;
+        const PAD = { top: 16, right: 20, bottom: 36, left: 56 };
+        const pw = W - PAD.left - PAD.right;
+        const ph = H - PAD.top - PAD.bottom;
+
+        const vals = ratios.map(r => r.ratio);
+        const minV = Math.min(...vals);
+        const maxV = Math.max(...vals);
+        const range = maxV - minV || 1;
+
+        const xScale = (i) => PAD.left + (i / (ratios.length - 1)) * pw;
+        const yScale = (v) => PAD.top + (1 - (v - minV) / range) * ph;
+
+        const points = ratios.map((r, i) => `${xScale(i)},${yScale(r.ratio)}`).join(' ');
+        const areaPath = `M${xScale(0)},${yScale(ratios[0].ratio)} ` +
+          ratios.map((r, i) => `L${xScale(i)},${yScale(r.ratio)}`).join(' ') +
+          ` L${xScale(ratios.length - 1)},${PAD.top + ph} L${xScale(0)},${PAD.top + ph} Z`;
+
+        const yTicks = 4;
+        const yLabels = Array.from({ length: yTicks + 1 }, (_, i) => {
+          const val = minV + (range * i / yTicks);
+          const y = yScale(val);
+          return `<text x="${PAD.left - 8}" y="${y + 4}" text-anchor="end" fill="var(--muted)" font-size="11">${val.toFixed(1)}</text>
+          <line x1="${PAD.left}" y1="${y}" x2="${PAD.left + pw}" y2="${y}" stroke="var(--border)" stroke-dasharray="4 4" stroke-width="1" />`;
+        }).join('');
+
+        const xStep = Math.floor(ratios.length / 6);
+        const xLabels = ratios.filter((_, i) => i % xStep === 0).map((r, j) => {
+          const idx = j * xStep;
+          return `<text x="${xScale(idx)}" y="${H - 4}" text-anchor="middle" fill="var(--muted)" font-size="11">${fmtDate(r.date)}</text>`;
+        }).join('');
+
+        svg.innerHTML = `
+          <defs>
+            <linearGradient id="grad-ratio" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f7c948" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#f7c948" stop-opacity="0.02"/>
+            </linearGradient>
+          </defs>
+          ${yLabels}
+          ${xLabels}
+          <path d="${areaPath}" fill="url(#grad-ratio)" />
+          <polyline points="${points}" fill="none" stroke="#f7c948" stroke-width="2.5" stroke-linejoin="round" />
+          <circle cx="${xScale(ratios.length - 1)}" cy="${yScale(ratios[ratios.length - 1].ratio)}" r="5" fill="#f7c948" />
+        `;
+      }
+
+      function renderRatio() {
+        const gold = state.prices.gold;
+        const silver = state.prices.silver;
+        if (!gold || !silver) return;
+
+        const ratio = (gold / silver).toFixed(2);
+        document.getElementById('ratioValue').textContent = ratio;
+
+        let interp = '';
+        const r = parseFloat(ratio);
+        if (r < 50) {
+          interp = `<strong>Below 50 — Historically low ratio.</strong> Silver is expensive relative to gold. This may indicate gold is undervalued or silver is due for a correction.`;
+        } else if (r <= 80) {
+          interp = `<strong>Within normal range (50–80).</strong> The current ratio of <strong>${ratio}</strong> is within historical norms, suggesting balanced pricing between gold and silver.`;
+        } else {
+          interp = `<strong>Above 80 — Historically elevated.</strong> Silver is cheap relative to gold at a ratio of <strong>${ratio}</strong>. Historically this has preceded silver outperformance.`;
+        }
+
+        document.getElementById('ratioContext').innerHTML = interp;
+      }
+
+      // ── Alerts ─────────────────────────────────────────────────────────────
+      function loadAlerts() {
+        try {
+          state.alerts = JSON.parse(localStorage.getItem('metalAlerts') || '[]');
+        } catch {
+          state.alerts = [];
+        }
+        renderAlerts();
+      }
+
+      function saveAlerts() {
+        try {
+          localStorage.setItem('metalAlerts', JSON.stringify(state.alerts));
+        } catch {
+          showToast('Could not save alert — storage unavailable', 'error');
+        }
+      }
+
+      function addAlert(e) {
+        e.preventDefault();
+        const metal = document.getElementById('alertMetal').value;
+        const condition = document.getElementById('alertCondition').value;
+        const threshold = parseFloat(document.getElementById('alertThreshold').value);
+        const note = document.getElementById('alertNote').value.trim();
+
+        if (!threshold || threshold <= 0) {
+          showToast('Please enter a valid target price', 'error');
+          document.getElementById('alertThreshold').focus();
+          return;
+        }
+
+        const alert = {
+          id: Date.now(),
+          metal,
+          condition,
+          threshold,
+          note,
+          createdAt: new Date().toISOString(),
+          triggered: false,
+        };
+
+        state.alerts.unshift(alert);
+        saveAlerts();
+        renderAlerts();
+        e.target.reset();
+        showToast(`Alert added — ${metal} ${condition} $${threshold.toLocaleString()}`, 'success');
+
+        // Immediately check
+        checkAlerts();
+      }
+
+      function removeAlert(id) {
+        state.alerts = state.alerts.filter(a => a.id !== id);
+        saveAlerts();
+        renderAlerts();
+        showToast('Alert removed', 'info', 2000);
+      }
+
+      function renderAlerts() {
+        const container = document.getElementById('alertsContainer');
+        if (state.alerts.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state" role="status">
+              <div class="empty-icon" aria-hidden="true">🔕</div>
+              <div class="empty-title">No alerts set</div>
+              <div class="empty-text">Create a price rule above to get notified when metals hit your targets.</div>
+            </div>`;
+          return;
+        }
+
+        const metalMeta = Object.fromEntries(METALS.map(m => [m.key, m]));
+
+        container.innerHTML = `<div class="alerts-list">` +
+          state.alerts.map(a => {
+            const m = metalMeta[a.metal] || {};
+            const condLabel = a.condition === 'above' ? 'rises above' : 'falls below';
+            const currentPriceRaw = state.prices[a.metal] || 0;
+            const priceDiff = a.condition === 'above'
+              ? (currentPriceRaw - a.threshold).toFixed(2)
+              : (a.threshold - currentPriceRaw).toFixed(2);
+            const proximity = currentPriceRaw > 0
+              ? `Current: $${currentPriceRaw.toLocaleString('en-US', { maximumFractionDigits: 2 })} — ${Math.abs(priceDiff) < 999999 ? `$${Math.abs(priceDiff)} ${parseFloat(priceDiff) >= 0 ? 'away' : 'past trigger'}` : ''}`
+              : '';
+
+            return `
+            <div class="alert-item ${a.triggered ? 'triggered' : ''}" role="listitem" id="alert-${a.id}">
+              <div class="alert-badge ${a.condition}" aria-hidden="true">
+                ${a.condition === 'above' ? '📈' : '📉'}
+              </div>
+              <div class="alert-info">
+                <div class="alert-title">${m.label || a.metal} ${condLabel} $${a.threshold.toLocaleString()}</div>
+                <div class="alert-meta">
+                  ${a.note ? `${a.note} · ` : ''}${proximity}
+                </div>
+              </div>
+              <span class="alert-status ${a.triggered ? 'triggered' : 'active'}">
+                ${a.triggered ? 'TRIGGERED' : 'ACTIVE'}
+              </span>
+              <button class="btn btn-danger btn-sm" onclick="removeAlert(${a.id})" aria-label="Remove alert for ${m.label || a.metal}">
+                ✕
+              </button>
+            </div>`;
+          }).join('') + `</div>`;
+      }
+
+      function checkAlerts() {
+        let anyTriggered = false;
+        state.alerts.forEach(a => {
+          const price = state.prices[a.metal];
+          if (!price) return;
+          const isTriggered = a.condition === 'above' ? price >= a.threshold : price <= a.threshold;
+          if (isTriggered && !a.triggered) {
+            a.triggered = true;
+            anyTriggered = true;
+            const metalMeta = METALS.find(m => m.key === a.metal);
+            showToast(
+              `🔔 Alert triggered! ${metalMeta ? metalMeta.label : a.metal} is $${price.toLocaleString()} — ${a.condition} $${a.threshold.toLocaleString()}`,
+              'warning',
+              8000
+            );
+          }
+        });
+        if (anyTriggered) {
+          saveAlerts();
+          renderAlerts();
+        }
+      }
+
+      // ── Portfolio ──────────────────────────────────────────────────────────
+      function calcPortfolio() {
+        const holdings = {
+          gold:      parseFloat(document.getElementById('portGold').value) || 0,
+          silver:    parseFloat(document.getElementById('portSilver').value) || 0,
+          platinum:  parseFloat(document.getElementById('portPlatinum').value) || 0,
+          palladium: parseFloat(document.getElementById('portPalladium').value) || 0,
+        };
+        const markup = (parseFloat(document.getElementById('markupPct').value) || 35) / 100;
+
+        let totalCost = 0;
+        METALS.forEach(({ key }) => {
+          totalCost += (holdings[key] || 0) * (state.prices[key] || 0);
+        });
+
+        const totalConverted = convertPrice(totalCost);
+        const retail = totalConverted * (1 + markup);
+        const margin = retail - totalConverted;
+
+        const sym = CURRENCY_SYMBOLS[state.currency] || state.currency;
+
+        const resultEl = document.getElementById('portfolioResult');
+
+        if (totalCost === 0) {
+          resultEl.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;" role="status">
+              <div class="empty-icon" aria-hidden="true">💼</div>
+              <div class="empty-title">Enter your holdings above</div>
+              <div class="empty-text">Fill in ounce amounts for each metal you hold to see portfolio value.</div>
+            </div>`;
+          return;
+        }
+
+        const rows = METALS.map(({ key, label, cls }) => {
+          const qty = holdings[key] || 0;
+          if (qty === 0) return '';
+          const val = convertPrice(qty * (state.prices[key] || 0));
+          return `
+            <div class="result-card">
+              <div class="result-label">${label}</div>
+              <div class="result-value ${cls}">${fmt(val, state.currency)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px">${qty} oz @ ${fmt(convertPrice(state.prices[key] || 0), state.currency)}</div>
+            </div>`;
+        }).join('');
+
+        resultEl.innerHTML = rows + `
+          <div class="result-card">
+            <div class="result-label">Total Cost (Spot)</div>
+            <div class="result-value">${fmt(totalConverted, state.currency)}</div>
+          </div>
+          <div class="result-card">
+            <div class="result-label">Suggested Retail (${(markup * 100).toFixed(0)}% markup)</div>
+            <div class="result-value green">${fmt(retail, state.currency)}</div>
+          </div>
+          <div class="result-card">
+            <div class="result-label">Gross Margin</div>
+            <div class="result-value" style="color: var(--yellow)">${fmt(margin, state.currency)}</div>
+          </div>`;
+
+        showToast('Portfolio calculated', 'success', 2000);
+      }
+
+      // ── Auto-refresh ───────────────────────────────────────────────────────
+      let refreshInterval = null;
+
+      function startAutoRefresh() {
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(async () => {
+          await fetchPrices();
+          renderPriceCards();
+        }, 60000);
+      }
+
+      // ── Tab switching ──────────────────────────────────────────────────────
+      function initTabs() {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            document.querySelectorAll('.tab-btn').forEach(b => {
+              b.classList.remove('active');
+              b.setAttribute('aria-selected', 'false');
+            });
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected', 'true');
+            document.getElementById(`panel-${tab}`).classList.add('active');
+          });
+        });
+
+        // Keyboard navigation for tabs
+        document.querySelector('.tabs').addEventListener('keydown', (e) => {
+          const tabs = [...document.querySelectorAll('.tab-btn')];
+          const idx = tabs.indexOf(document.activeElement);
+          if (idx === -1) return;
+          if (e.key === 'ArrowRight') { e.preventDefault(); tabs[(idx + 1) % tabs.length].focus(); }
+          if (e.key === 'ArrowLeft') { e.preventDefault(); tabs[(idx - 1 + tabs.length) % tabs.length].focus(); }
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tabs[idx].click(); }
+        });
+      }
+
+      // ── Exposed globals for inline handlers ───────────────────────────────
+      window.addAlert = addAlert;
+      window.removeAlert = removeAlert;
+      window.calcPortfolio = calcPortfolio;
+
+      window.switchChartMetal = (metal) => {
+        state.activeChartMetal = metal;
+        document.querySelectorAll('#panel-prices .chart-toggle button').forEach(b => {
+          b.classList.toggle('active', b.dataset.metal === metal);
+        });
+        renderChart('priceChart', metal, false, '0 0 800 220');
+      };
+
+      window.switchHistoryMetal = (metal) => {
+        state.activeHistoryMetal = metal;
+        document.querySelectorAll('#historyToggle button').forEach(b => {
+          b.classList.toggle('active', b.dataset.metal === metal);
+        });
+        renderChart('historyChart', metal, true, '0 0 800 260');
+        renderHistoryStats(metal);
+      };
+
+      function renderHistoryStats(metalKey) {
+        const hist = state.history[metalKey];
+        if (!hist || hist.length === 0) return;
+
+        const prices = hist.map(d => d.price);
+        const minP = Math.min(...prices);
+        const maxP = Math.max(...prices);
+        const avgP = prices.reduce((a, b) => a + b, 0) / prices.length;
+        const firstP = prices[0];
+        const lastP = prices[prices.length - 1];
+        const change30d = ((lastP - firstP) / firstP) * 100;
+        const conv = (p) => convertPrice(p);
+
+        document.getElementById('historyStats').innerHTML = `
+          <div class="result-card">
+            <div class="result-label">30-Day Low</div>
+            <div class="result-value" style="color:var(--accent2)">${fmt(conv(minP), state.currency)}</div>
+          </div>
+          <div class="result-card">
+            <div class="result-label">30-Day High</div>
+            <div class="result-value" style="color:var(--green)">${fmt(conv(maxP), state.currency)}</div>
+          </div>
+          <div class="result-card">
+            <div class="result-label">30-Day Average</div>
+            <div class="result-value">${fmt(conv(avgP), state.currency)}</div>
+          </div>
+          <div class="result-card">
+            <div class="result-label">30-Day Change</div>
+            <div class="result-value" style="color:${change30d >= 0 ? 'var(--green)' : 'var(--accent2)'}">
+              ${change30d >= 0 ? '+' : ''}${change30d.toFixed(2)}%
+            </div>
+          </div>`;
+      }
+
+      // ── Currency change ────────────────────────────────────────────────────
+      document.getElementById('currencySelect').addEventListener('change', (e) => {
+        state.currency = e.target.value;
+        if (state.prices.gold) renderPriceCards();
+      });
+
+      // ── Refresh button ─────────────────────────────────────────────────────
+      document.getElementById('refreshBtn').addEventListener('click', async () => {
+        await fetchPrices();
+        renderPriceCards();
+      });
+
+      // ── Portfolio live update ──────────────────────────────────────────────
+      ['portGold', 'portSilver', 'portPlatinum', 'portPalladium', 'markupPct'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          if (document.getElementById('portfolioResult').children.length > 0 &&
+              !document.getElementById('portfolioResult').querySelector('.empty-state')) {
+            calcPortfolio();
+          }
+        });
+      });
+
+      // ── Boot ───────────────────────────────────────────────────────────────
+      async function init() {
+        initTabs();
+        loadAlerts();
+
+        await Promise.all([fetchPrices(), fetchRates()]);
+        renderPriceCards();
+        renderHistoryStats('gold');
+        startAutoRefresh();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>

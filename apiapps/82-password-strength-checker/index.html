@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Password Strength Checker — Dark Factory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0e;
+      --surface: #0d1117;
+      --surface2: #161b22;
+      --border: rgba(255,255,255,0.08);
+      --accent: #58a6ff;
+      --accent2: #f78166;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 800px;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    header .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 229, 255, 0.15);
+      border: 1px solid rgba(0, 229, 255, 0.35);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+    header h1 {
+      font-size: clamp(24px, 4vw, 38px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--text) 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 15px;
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── Privacy notice ── */
+    .privacy-notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(67, 217, 173, 0.08);
+      border: 1px solid rgba(67, 217, 173, 0.25);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--green);
+      max-width: 800px;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+    .privacy-notice svg { flex-shrink: 0; }
+
+    /* ── Main grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 800px;
+      width: 100%;
+    }
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .full-width { grid-column: 1 / -1; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Password input area ── */
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper input[type="password"],
+    .input-wrapper input[type="text"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 18px;
+      font-family: 'Courier New', monospace;
+      padding: 14px 48px 14px 16px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      letter-spacing: 0.05em;
+    }
+    .input-wrapper input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
+    }
+    .toggle-vis {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+    .toggle-vis:hover { color: var(--text); }
+
+    /* ── Strength meter ── */
+    .strength-meter-wrap {
+      margin-top: 16px;
+    }
+    .strength-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .strength-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      transition: color 0.3s;
+    }
+    .strength-score {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .meter-segments {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+    }
+    .meter-seg {
+      height: 6px;
+      border-radius: 4px;
+      background: var(--surface2);
+      transition: background 0.4s ease, transform 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .meter-seg.active::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .meter-seg.active { transform: scaleY(1.4); }
+
+    /* strength colours */
+    .s0 .meter-seg.active { background: var(--accent2); }
+    .s1 .meter-seg.active { background: var(--accent2); }
+    .s2 .meter-seg.active { background: var(--yellow); }
+    .s3 .meter-seg.active { background: var(--accent); }
+    .s4 .meter-seg.active { background: var(--green); }
+
+    /* ── Feedback pills ── */
+    .feedback-section { margin-top: 16px; }
+    .feedback-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 32px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      animation: popIn 0.2s ease;
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .pill.warn {
+      background: rgba(247, 201, 72, 0.12);
+      border: 1px solid rgba(247, 201, 72, 0.3);
+      color: var(--yellow);
+    }
+    .pill.bad {
+      background: rgba(124, 58, 237, 0.12);
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      color: var(--accent2);
+    }
+    .pill.good {
+      background: rgba(67, 217, 173, 0.1);
+      border: 1px solid rgba(67, 217, 173, 0.25);
+      color: var(--green);
+    }
+
+    /* ── Stats grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .stat-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .stat-box .label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+    .stat-box .value {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ── Entropy bar ── */
+    .entropy-bar-wrap { margin-top: 12px; }
+    .entropy-bar-bg {
+      background: var(--surface2);
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+    }
+    .entropy-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--accent2), var(--yellow), var(--green));
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── Generator ── */
+    .gen-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s;
+    }
+    .checkbox-label:hover { color: var(--text); }
+    .checkbox-label input[type="checkbox"] {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface2);
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .checkbox-label input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .checkbox-label input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 5px;
+      height: 9px;
+      border: 2px solid #fff;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .slider-row label {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .slider-row input[type="range"] {
+      flex: 1;
+      appearance: none;
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    .slider-row input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .slider-row input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    .slider-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      min-width: 28px;
+      text-align: right;
+    }
+
+    .gen-output {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .gen-output input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      letter-spacing: 0.03em;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(0, 229, 255, 0.35);
+    }
+    .btn-ghost {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+    .btn-sm { padding: 7px 12px; font-size: 12px; }
+
+    .gen-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Passphrase ── */
+    .passphrase-output {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: 'Courier New', monospace;
+      color: var(--text);
+      min-height: 44px;
+      word-break: break-word;
+      margin-bottom: 10px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Copy toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--green);
+      color: #0f1117;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 8px;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 999;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Char analysis ── */
+    .char-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .char-row:last-child { margin-bottom: 0; }
+    .char-type {
+      font-size: 12px;
+      color: var(--muted);
+      width: 80px;
+      flex-shrink: 0;
+    }
+    .char-bar-bg {
+      flex: 1;
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .char-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+    .char-count {
+      font-size: 12px;
+      color: var(--muted);
+      width: 24px;
+      text-align: right;
+    }
+
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* === Security/Infra Tools v2 Design System === */
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; line-height: 1.6; background-image: radial-gradient(rgba(88,166,255,0.03) 1px, transparent 1px); background-size: 24px 24px; }
+    h1, h2, .title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+    h1 { font-size: clamp(1.4rem, 3vw, 1.8rem); color: var(--text); }
+    h2 { font-size: 1rem; color: var(--muted); font-weight: 500; }
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .card, .result, .item, .output, .domain, .cert, .check, .breach, .password-result, .ssl-info,
+    [class*="card"], [class*="result"], [class*="item"], [class*="check"] {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; animation: secFade 0.25s ease both;
+    }
+    .card.danger, .result.danger, .breach-found, .expired, .unsafe { border-left: 3px solid var(--red); }
+    .card.safe, .result.safe, .no-breach, .valid, .secure { border-left: 3px solid var(--green); }
+    .card.warning, .result.warning, .expiring-soon { border-left: 3px solid var(--yellow); }
+    .code, .value, pre, code, .mono, .domain-name, .hash, .password, .ip { font-family: var(--font-mono); font-size: 0.85rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.2rem 0.5rem; color: var(--text); word-break: break-all; }
+    pre, .terminal, .log { font-family: var(--font-mono); font-size: 0.82rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; overflow-x: auto; color: var(--green); line-height: 1.8; }
+    input, select, textarea { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 0.65rem 1rem; font-family: var(--font-mono); font-size: 0.88rem; width: 100%; transition: border-color 0.15s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    button, .btn, input[type="submit"], input[type="button"] { background: var(--accent); color: #000; border: none; border-radius: var(--radius); padding: 0.65rem 1.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: transform 0.1s, opacity 0.1s; }
+    button:hover { opacity: 0.9; }
+    button:active { transform: scale(0.97); }
+    .strength-bar, .meter { height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
+    .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
+    .tag, .badge, .status, .label, .tld, .registrar { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+    .available, .valid, .secure, .up, .safe, .strong { color: var(--green); }
+    .taken, .invalid, .expired, .down, .breached, .weak { color: var(--red); }
+    .expiring, .warning, .medium { color: var(--yellow); }
+    .info, .registered { color: var(--accent); }
+    .uptime-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--green); animation: pulse 2s ease infinite; }
+    .uptime-dot.down { background: var(--red); animation: none; }
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    @keyframes secFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63,185,80,0.4); } 50% { box-shadow: 0 0 0 4px rgba(63,185,80,0); } }
+    @keyframes scanLine { from { transform: translateY(-100%); } to { transform: translateY(100vh); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+      <circle cx="5" cy="5" r="5"/>
+    </svg>
+    Dark Factory
+  </div>
+  <h1>Password Strength Checker</h1>
+  <p>Real-time password analysis with entropy calculation, breach pattern detection, and secure password generation — all offline.</p>
+</header>
+
+<div class="privacy-notice" role="alert">
+  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </svg>
+  <strong>100% Private:</strong>&nbsp;Passwords are analyzed entirely in your browser. Nothing is ever sent to any server.
+</div>
+
+<main class="grid" role="main">
+
+  <!-- ── Checker card ── -->
+  <section class="card full-width" aria-label="Password checker">
+    <div class="card-title">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Analyze Password
+    </div>
+
+    <div class="input-wrapper">
+      <input type="password" id="pwInput" placeholder="Type or paste a password…" autocomplete="off" spellcheck="false" aria-label="Password to analyze" />
+      <button class="toggle-vis" id="toggleVis" aria-label="Toggle password visibility" title="Show/hide">
+        <svg id="eyeIcon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Strength meter -->
+    <div class="strength-meter-wrap">
+      <div class="strength-label-row">
+        <span class="strength-label" id="strengthLabel">Enter a password</span>
+        <span class="strength-score" id="strengthScore"></span>
+      </div>
+      <div class="meter-segments" id="meterSegs" role="meter" aria-label="Password strength" aria-valuenow="0" aria-valuemin="0" aria-valuemax="5">
+        <div class="meter-seg" data-idx="0"></div>
+        <div class="meter-seg" data-idx="1"></div>
+        <div class="meter-seg" data-idx="2"></div>
+        <div class="meter-seg" data-idx="3"></div>
+        <div class="meter-seg" data-idx="4"></div>
+      </div>
+    </div>
+
+    <!-- Feedback pills -->
+    <div class="feedback-section" aria-live="polite" aria-label="Password feedback">
+      <div class="feedback-list" id="feedbackList"></div>
+    </div>
+  </section>
+
+  <!-- ── Stats ── -->
+  <section class="card" aria-label="Password statistics">
+    <div class="card-title">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      Statistics
+    </div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="label">Length</div>
+        <div class="value" id="statLength">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="label">Entropy</div>
+        <div class="value" id="statEntropy">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="label">Crack time</div>
+        <div class="value" id="statCrack">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="label">Charset size</div>
+        <div class="value" id="statCharset">—</div>
+      </div>
+    </div>
+    <div class="entropy-bar-wrap">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+        <span style="font-size:11px;color:var(--muted)">Entropy</span>
+        <span style="font-size:11px;color:var(--muted)">128 bits max shown</span>
+      </div>
+      <div class="entropy-bar-bg">
+        <div class="entropy-bar-fill" id="entropyBar" style="width:0%"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Char analysis ── -->
+  <section class="card" aria-label="Character composition">
+    <div class="card-title">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 8v4l3 3"/>
+      </svg>
+      Character Types
+    </div>
+    <div id="charAnalysis">
+      <div class="char-row">
+        <span class="char-type">Uppercase</span>
+        <div class="char-bar-bg"><div class="char-bar-fill" id="barUpper" style="width:0%;background:var(--accent)"></div></div>
+        <span class="char-count" id="cntUpper">0</span>
+      </div>
+      <div class="char-row">
+        <span class="char-type">Lowercase</span>
+        <div class="char-bar-bg"><div class="char-bar-fill" id="barLower" style="width:0%;background:var(--green)"></div></div>
+        <span class="char-count" id="cntLower">0</span>
+      </div>
+      <div class="char-row">
+        <span class="char-type">Digits</span>
+        <div class="char-bar-bg"><div class="char-bar-fill" id="barDigit" style="width:0%;background:var(--yellow)"></div></div>
+        <span class="char-count" id="cntDigit">0</span>
+      </div>
+      <div class="char-row">
+        <span class="char-type">Symbols</span>
+        <div class="char-bar-bg"><div class="char-bar-fill" id="barSymbol" style="width:0%;background:var(--accent2)"></div></div>
+        <span class="char-count" id="cntSymbol">0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Password generator ── -->
+  <section class="card full-width" aria-label="Password generator">
+    <div class="card-title">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Password Generator
+    </div>
+
+    <div class="slider-row">
+      <label for="lengthSlider">Length</label>
+      <input type="range" id="lengthSlider" min="8" max="64" value="16" aria-label="Password length" />
+      <span class="slider-val" id="lengthVal">16</span>
+    </div>
+
+    <div class="gen-options">
+      <label class="checkbox-label">
+        <input type="checkbox" id="optUpper" checked /> Uppercase (A-Z)
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="optLower" checked /> Lowercase (a-z)
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="optDigits" checked /> Digits (0-9)
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="optSymbols" checked /> Symbols (!@#…)
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="optExcludeAmbig" /> Exclude ambiguous (0O1lI)
+      </label>
+    </div>
+
+    <div class="gen-output">
+      <input type="text" id="genOutput" readonly aria-label="Generated password" placeholder="Click Generate…" />
+      <button class="btn btn-ghost btn-sm" id="copyGenBtn" aria-label="Copy generated password">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </button>
+    </div>
+
+    <div class="gen-actions">
+      <button class="btn btn-primary" id="generateBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Generate
+      </button>
+      <button class="btn btn-ghost btn-sm" id="useGenBtn" title="Load into analyzer">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+        Analyze This
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Passphrase generator ── -->
+  <section class="card full-width" aria-label="Passphrase generator">
+    <div class="card-title">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      Passphrase Generator
+      <span style="margin-left:auto;font-size:11px;font-weight:400;color:var(--muted)">EFF-style word list</span>
+    </div>
+
+    <div class="slider-row">
+      <label for="wordCount">Words</label>
+      <input type="range" id="wordCount" min="3" max="8" value="5" aria-label="Word count" />
+      <span class="slider-val" id="wordCountVal">5</span>
+    </div>
+
+    <div class="gen-options">
+      <label class="checkbox-label">
+        <input type="checkbox" id="ppSeparator" checked /> Use separator
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ppCapitalize" checked /> Capitalize words
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ppAddNumber" checked /> Append number
+      </label>
+    </div>
+
+    <div class="passphrase-output" id="passphraseOutput" aria-live="polite">Click Generate Passphrase…</div>
+
+    <div class="gen-actions">
+      <button class="btn btn-primary" id="genPassphraseBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Generate Passphrase
+      </button>
+      <button class="btn btn-ghost btn-sm" id="copyPPBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </button>
+      <button class="btn btn-ghost btn-sm" id="usePPBtn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+        Analyze This
+      </button>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite">Copied!</div>
+
+<footer>
+  <p>Built by <a href="app.html" tabindex="-1">Dark Factory</a> &mdash; All analysis runs locally in your browser. No data leaves your device.</p>
+</footer>
+
+<script>
+'use strict';
+
+/* ── Common passwords list (top 100 of 1000) ── */
+const COMMON_PASSWORDS = new Set([
+  '123456','password','123456789','12345678','12345','1234567','1234567890',
+  'qwerty','abc123','111111','123123','admin','letmein','welcome','monkey',
+  'dragon','master','superman','michael','shadow','sunshine','princess','football',
+  'charlie','donald','password1','qwerty123','iloveyou','1q2w3e4r','000000',
+  'password123','qwertyuiop','1234','login','pass','test','guest','user',
+  'hello','baseball','ninja','mustang','joshua','thomas','hunter','ranger',
+  'harley','robert','solo','hockey','dallas','ranger','forever','trustno1',
+  'whatever','batman','summer','tigger','jordan','soccer','harley','ranger',
+  'access','thunder','555555','222222','696969','qazwsx','superman','1q2w3e',
+  'master','cheese','buster','zxcvbn','password2','asdfgh','asdfghjkl',
+  'passw0rd','12341234','654321','121212','666666','777777','123654','159753',
+  'qazwsxedc','zxcvbnm','asd123','abc1234','password12','test123','demo',
+  'service','enter','matrix','correct','horse','staple','battery','peanut',
+  'chocolate','pokemon','liverpool','chelsea','arsenal','ferrari','porsche',
+  'angel','flower','jessica','andrew','george','jordan123','liverpool1',
+]);
+
+/* ── Keyboard walk patterns ── */
+const KEYBOARD_WALKS = [
+  'qwertyuiop','asdfghjkl','zxcvbnm','qwerty','asdfgh','zxcvb',
+  '1234567890','1qaz2wsx','qazwsx','!qaz@wsx',
+  'qweasdzxc','!@#$%^&*()',
+];
+
+/* ── Dictionary words (500 common) ── */
+const DICTIONARY = new Set([
+  'the','and','for','are','but','not','you','all','can','her','was','one',
+  'our','out','day','get','has','him','his','how','man','new','now','old',
+  'see','two','way','who','boy','did','its','let','put','say','she','too',
+  'use','about','back','call','come','down','each','find','give','good',
+  'have','here','just','know','like','long','look','made','make','many',
+  'more','most','move','much','name','need','over','part','pick','play',
+  'said','same','seem','show','side','take','than','that','them','then',
+  'they','this','time','told','turn','very','want','well','went','were',
+  'what','when','where','which','will','with','word','work','year','your',
+  'able','also','away','baby','bank','base','best','blue','book','both',
+  'case','city','cold','come','cool','dark','data','dead','deal','deep',
+  'does','done','door','down','draw','drop','easy','else','even','ever',
+  'face','fact','fall','fast','feel','fill','fine','fire','fish','five',
+  'form','free','from','full','game','girl','give','glad','goes','gold',
+  'gone','grow','half','hand','hang','hard','head','hear','heat','help',
+  'hide','high','hold','home','hope','hour','huge','hunt','idea','into',
+  'iron','item','jump','keep','kill','kind','king','knew','land','last',
+  'late','lead','left','less','life','lift','line','link','list','live',
+  'load','lock','lone','lord','lose','loss','lost','loud','love','luck',
+  'mark','mass','mean','meet','mile','mind','mine','miss','mode','moon',
+  'move','must','near','next','nice','node','none','note','null','open',
+  'once','only','onto','oral','oven','over','page','paid','pass','path',
+  'peak','pick','pile','pipe','plan','plus','poem','pool','port','post',
+  'pour','prep','pull','pump','pure','push','race','rain','rank','rate',
+  'read','real','rest','rich','ride','ring','rise','risk','road','rock',
+  'roll','room','root','rose','rule','rush','safe','salt','sand','save',
+  'scan','seal','sell','send','sent','ship','shop','shot','shut','sick',
+  'sign','sink','site','size','skip','slow','snap','snow','soil','sold',
+  'sole','some','song','soon','sort','soul','soup','spot','star','stay',
+  'step','stop','such','suit','sure','swap','swim','tail','talk','tall',
+  'task','tear','tell','tend','term','test','text','thin','tied','till',
+  'tire','tool','tops','town','toys','tree','trip','true','tube','tune',
+  'type','ugly','unit','upon','user','vary','vast','verb','view','void',
+  'wait','wake','walk','wall','warm','wash','wave','weak','wear','week',
+  'wide','wind','wine','wing','wire','wise','wish','word','wore','worn',
+  'wrap','yarn','zone','zero','team','lead','code','data','file','port',
+  'host','node','http','list','name','call','chat','chat','hash','link',
+  'pass','salt','scan','seed','slip','sort','swap','sync','task','test',
+  'text','tree','type','unit','user','view','wrap','zone','auto','boot',
+  'byte','cast','copy','core','curl','date','dump','edit','exec','fail',
+  'fake','fast','flag','fork','func','hack','help','hide','hook','host',
+  'icon','idle','init','java','json','jump','kern','kill','lang','lazy',
+  'leak','lint','loop','lock','logs','loss','menu','mock','mode','null',
+  'open','page','ping','pipe','plan','plug','pool','port','post','pull',
+  'push','quit','race','rand','read','real','recv','redo','repo','rest',
+  'role','root','rout','rule','save','seed','send','skip','slow','snap',
+  'sock','spam','spec','spin','ssh','stat','stop','stub','sudo','swap',
+  'sync','tags','tail','temp','test','tick','time','todo','trim','true',
+  'tune','type','undo','unix','util','uuid','void','wait','warn','wire',
+  'with','work','wrap','xfer','yaml','python','linux','admin','apple',
+  'windows','google','amazon','facebook','twitter','github','gitlab',
+  'docker','nginx','redis','mysql','mongo','react','angular','spring',
+  'server','client','mobile','tablet','laptop','desktop','network',
+  'secure','secret','hidden','system','engine','bridge','stream','buffer',
+  'packet','socket','signal','thread','kernel','memory','module','object',
+  'schema','record','column','table','index','query','cache','store',
+  'model','layer','route','scope','stack','queue','event','timer','clock',
+]);
+
+/* ── EFF-style word list (200 words for passphrase) ── */
+const WORD_LIST = [
+  'abbey','abbot','above','abroad','absent','absurd','abyss','ache','acid',
+  'acorn','actor','adult','after','agile','alarm','album','alley','aloft',
+  'altar','ample','angel','ankle','annex','apple','apron','arctic','ardor',
+  'arena','arise','armor','arrow','atlas','attic','audit','avoid','awake',
+  'badge','bagel','baker','balmy','barge','barns','barrel','basin','batch',
+  'beach','beech','began','begin','bench','berry','birth','bison','black',
+  'blade','bland','blank','blast','blaze','bleat','blend','bless','blind',
+  'bliss','block','bloom','blown','blues','blunt','blush','board','bones',
+  'boost','booth','bound','brace','brain','brake','brand','brave','bread',
+  'bream','breed','breve','brine','bring','brisk','broad','brook','brown',
+  'brunt','brush','budge','build','bulky','bunch','bunny','burst','cable',
+  'camel','canal','candy','canoe','cargo','carry','carve','cedar','chair',
+  'chalk','charm','chase','chest','chief','child','chill','chord','chunk',
+  'civic','civil','clamp','clang','clank','clash','clasp','cleat','clerk',
+  'click','cliff','cling','clock','clone','close','cloud','clump','comet',
+  'comic','comma','coral','crane','creak','creek','crisp','cross','crown',
+  'crumb','crush','crust','crypt','curve','cycle','daisy','dance','darts',
+  'debut','decal','delta','dense','depot','depth','derby','digit','ditch',
+  'diver','dizzy','dodge','dowel','draft','drape','dream','drill','drift',
+  'drink','droop','drove','drums','dryer','dunce','eagle','early','earth',
+  'easel','elder','elite','emery','empty','entry','epoxy','erect','erupt',
+  'event','exact','exert','exist','expel','extra','exult','fable','facet',
+  'feast','fence','fetch','fiber','field','fiery','fifth','fifty','fight',
+  'filth','finch','first','fixed','flake','flame','flare','flash','flask',
+  'flair','flat','flaw','fleet','flesh','flint','float','flock','flood',
+  'floor','flora','flour','fluid','flume','flute','focal','foray','forge',
+  'foyer','frame','frank','fraud','fresh','frond','front','frost','froze',
+  'frugal','fugue','fully','fungi','funky','gains','gauze','gavel','gecko',
+  'ghost','giant','girth','gizmo','glade','gland','glare','glass','gleam',
+  'glean','glide','glint','gloom','gloss','glyph','grace','grade','grail',
+  'grain','grand','grant','graph','grasp','graze','greed','grief','grind',
+  'groan','grope','grout','guide','guile','guise','gulch','gorge','haven',
+];
+
+/* ── Utility ── */
+function secureRandom(max) {
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return arr[0] % max;
+}
+
+function pick(arr) { return arr[secureRandom(arr.length)]; }
+
+/* ── Character set size ── */
+function charsetSize(pw) {
+  let size = 0;
+  if (/[a-z]/.test(pw)) size += 26;
+  if (/[A-Z]/.test(pw)) size += 26;
+  if (/[0-9]/.test(pw)) size += 10;
+  if (/[^a-zA-Z0-9]/.test(pw)) size += 32;
+  return size || 1;
+}
+
+/* ── Entropy bits ── */
+function calcEntropy(pw) {
+  const cs = charsetSize(pw);
+  return Math.log2(cs) * pw.length;
+}
+
+/* ── Pattern detection ── */
+function detectKeyboardWalk(pw) {
+  const p = pw.toLowerCase();
+  for (const walk of KEYBOARD_WALKS) {
+    for (let i = 0; i <= walk.length - 4; i++) {
+      const seg = walk.slice(i, i + 4);
+      if (p.includes(seg)) return true;
+    }
+  }
+  return false;
+}
+
+function detectRepeats(pw) {
+  return /(.)\1{2,}/.test(pw);
+}
+
+function detectLeet(pw) {
+  return pw.toLowerCase().replace(/4/g,'a').replace(/3/g,'e').replace(/1/g,'i')
+           .replace(/0/g,'o').replace(/5/g,'s').replace(/7/g,'t');
+}
+
+function containsDictionaryWord(pw) {
+  const normalized = detectLeet(pw.toLowerCase());
+  for (const word of DICTIONARY) {
+    if (word.length >= 4 && normalized.includes(word)) return word;
+  }
+  return null;
+}
+
+/* ── Crack time estimate ── */
+function crackTime(entropy) {
+  const guessesPerSec = 1e10;
+  const seconds = Math.pow(2, entropy) / guessesPerSec;
+  if (seconds < 1) return 'Instant';
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
+  if (seconds < 2592000) return `${Math.round(seconds / 86400)}d`;
+  if (seconds < 31536000) return `${Math.round(seconds / 2592000)} months`;
+  if (seconds < 3.15e9) return `${Math.round(seconds / 31536000)}y`;
+  if (seconds < 3.15e12) return `${(seconds / 3.15e9).toFixed(1)}k years`;
+  if (seconds < 3.15e18) return 'Millions of years';
+  return 'Longer than the universe';
+}
+
+/* ── Main strength analysis ── */
+function analyzePassword(pw) {
+  if (!pw) return null;
+
+  const entropy = calcEntropy(pw);
+  const len = pw.length;
+  const upper = (pw.match(/[A-Z]/g) || []).length;
+  const lower = (pw.match(/[a-z]/g) || []).length;
+  const digit = (pw.match(/[0-9]/g) || []).length;
+  const symbol = (pw.match(/[^a-zA-Z0-9]/g) || []).length;
+  const cs = charsetSize(pw);
+
+  const warnings = [];
+  const goodPoints = [];
+  let penaltyScore = 0;
+
+  /* Check common passwords */
+  if (COMMON_PASSWORDS.has(pw.toLowerCase())) {
+    warnings.push({ type: 'bad', text: 'Extremely common password' });
+    penaltyScore += 3;
+  }
+
+  /* Length check */
+  if (len < 8) {
+    warnings.push({ type: 'bad', text: 'Too short (min 8)' });
+    penaltyScore += 2;
+  } else if (len < 12) {
+    warnings.push({ type: 'warn', text: 'Short — aim for 12+' });
+    penaltyScore += 1;
+  } else {
+    goodPoints.push({ type: 'good', text: `Good length (${len})` });
+  }
+
+  /* Keyboard walk */
+  if (detectKeyboardWalk(pw)) {
+    warnings.push({ type: 'warn', text: 'Keyboard pattern detected' });
+    penaltyScore += 2;
+  }
+
+  /* Repeats */
+  if (detectRepeats(pw)) {
+    warnings.push({ type: 'warn', text: 'Repeated characters' });
+    penaltyScore += 1;
+  }
+
+  /* Dictionary words */
+  const dictWord = containsDictionaryWord(pw);
+  if (dictWord) {
+    warnings.push({ type: 'warn', text: `Contains word "${dictWord}"` });
+    penaltyScore += 1;
+  }
+
+  /* Character variety */
+  const types = [upper > 0, lower > 0, digit > 0, symbol > 0].filter(Boolean).length;
+  if (types === 1) {
+    warnings.push({ type: 'bad', text: 'Only one character type' });
+    penaltyScore += 2;
+  } else if (types === 2) {
+    warnings.push({ type: 'warn', text: 'Mix more character types' });
+  } else if (types >= 3) {
+    goodPoints.push({ type: 'good', text: `${types} character types` });
+  }
+  if (symbol > 0) goodPoints.push({ type: 'good', text: 'Has symbols' });
+
+  /* All-numeric */
+  if (/^\d+$/.test(pw)) {
+    warnings.push({ type: 'bad', text: 'All digits — add letters' });
+    penaltyScore += 2;
+  }
+
+  /* Sequential digits/letters */
+  if (/0123|1234|2345|3456|4567|5678|6789|7890|abcd|bcde|cdef|defg/.test(pw.toLowerCase())) {
+    warnings.push({ type: 'warn', text: 'Sequential characters' });
+    penaltyScore += 1;
+  }
+
+  /* Entropy score */
+  let score;
+  if (entropy < 25) score = 0;
+  else if (entropy < 40) score = 1;
+  else if (entropy < 60) score = 2;
+  else if (entropy < 80) score = 3;
+  else score = 4;
+
+  score = Math.max(0, score - Math.floor(penaltyScore / 2));
+
+  const labels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+  const feedback = [...warnings, ...goodPoints];
+  if (feedback.length === 0 && score >= 3) {
+    feedback.push({ type: 'good', text: 'Solid password!' });
+  }
+
+  return {
+    score, entropy, len, upper, lower, digit, symbol, cs,
+    label: labels[score], crackEstimate: crackTime(entropy),
+    feedback,
+  };
+}
+
+/* ── DOM refs ── */
+const pwInput = document.getElementById('pwInput');
+const toggleVis = document.getElementById('toggleVis');
+const eyeIcon = document.getElementById('eyeIcon');
+const meterSegs = document.querySelectorAll('.meter-seg');
+const meterWrap = document.getElementById('meterSegs');
+const strengthLabel = document.getElementById('strengthLabel');
+const strengthScore = document.getElementById('strengthScore');
+const feedbackList = document.getElementById('feedbackList');
+const statLength = document.getElementById('statLength');
+const statEntropy = document.getElementById('statEntropy');
+const statCrack = document.getElementById('statCrack');
+const statCharset = document.getElementById('statCharset');
+const entropyBar = document.getElementById('entropyBar');
+const barUpper = document.getElementById('barUpper');
+const barLower = document.getElementById('barLower');
+const barDigit = document.getElementById('barDigit');
+const barSymbol = document.getElementById('barSymbol');
+const cntUpper = document.getElementById('cntUpper');
+const cntLower = document.getElementById('cntLower');
+const cntDigit = document.getElementById('cntDigit');
+const cntSymbol = document.getElementById('cntSymbol');
+const toast = document.getElementById('toast');
+
+/* ── Toggle visibility ── */
+toggleVis.addEventListener('click', () => {
+  const isPass = pwInput.type === 'password';
+  pwInput.type = isPass ? 'text' : 'password';
+  eyeIcon.innerHTML = isPass
+    ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`
+    : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+});
+
+/* ── Update UI from analysis ── */
+function updateUI(result) {
+  if (!result) {
+    /* reset */
+    meterSegs.forEach(s => { s.classList.remove('active'); });
+    meterWrap.className = 'meter-segments';
+    strengthLabel.textContent = 'Enter a password';
+    strengthLabel.style.color = '';
+    strengthScore.textContent = '';
+    feedbackList.innerHTML = '';
+    statLength.textContent = '—';
+    statEntropy.textContent = '—';
+    statCrack.textContent = '—';
+    statCharset.textContent = '—';
+    entropyBar.style.width = '0%';
+    [barUpper, barLower, barDigit, barSymbol].forEach(b => { b.style.width = '0%'; });
+    [cntUpper, cntLower, cntDigit, cntSymbol].forEach(c => { c.textContent = '0'; });
+    return;
+  }
+
+  /* Meter segments */
+  const scoreColors = ['var(--accent2)','var(--accent2)','var(--yellow)','var(--accent)','var(--green)'];
+  const scoreLabels = ['Very Weak','Weak','Fair','Strong','Very Strong'];
+  meterWrap.className = `meter-segments s${result.score}`;
+  meterSegs.forEach((seg, i) => {
+    if (i <= result.score) {
+      seg.classList.add('active');
+    } else {
+      seg.classList.remove('active');
+    }
+  });
+
+  strengthLabel.textContent = result.label;
+  strengthLabel.style.color = scoreColors[result.score];
+  strengthScore.textContent = `Score ${result.score + 1}/5`;
+  meterWrap.setAttribute('aria-valuenow', result.score + 1);
+
+  /* Feedback pills */
+  feedbackList.innerHTML = '';
+  result.feedback.forEach(f => {
+    const pill = document.createElement('span');
+    pill.className = `pill ${f.type}`;
+    const icons = {
+      bad: `<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+      warn: `<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+      good: `<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
+    };
+    pill.innerHTML = `${icons[f.type] || ''} ${f.text}`;
+    feedbackList.appendChild(pill);
+  });
+
+  /* Stats */
+  statLength.textContent = `${result.len} chars`;
+  statEntropy.textContent = `${result.entropy.toFixed(1)} bits`;
+  statCrack.textContent = result.crackEstimate;
+  statCharset.textContent = `${result.cs} chars`;
+  const pct = Math.min(100, (result.entropy / 128) * 100);
+  entropyBar.style.width = `${pct}%`;
+
+  /* Char analysis bars */
+  const total = result.len || 1;
+  barUpper.style.width = `${(result.upper / total) * 100}%`;
+  barLower.style.width = `${(result.lower / total) * 100}%`;
+  barDigit.style.width = `${(result.digit / total) * 100}%`;
+  barSymbol.style.width = `${(result.symbol / total) * 100}%`;
+  cntUpper.textContent = result.upper;
+  cntLower.textContent = result.lower;
+  cntDigit.textContent = result.digit;
+  cntSymbol.textContent = result.symbol;
+}
+
+/* ── Password input listener ── */
+pwInput.addEventListener('input', () => {
+  const pw = pwInput.value;
+  updateUI(pw ? analyzePassword(pw) : null);
+});
+
+/* ── Generator ── */
+const lengthSlider = document.getElementById('lengthSlider');
+const lengthVal = document.getElementById('lengthVal');
+const genOutput = document.getElementById('genOutput');
+const optUpper = document.getElementById('optUpper');
+const optLower = document.getElementById('optLower');
+const optDigits = document.getElementById('optDigits');
+const optSymbols = document.getElementById('optSymbols');
+const optExcludeAmbig = document.getElementById('optExcludeAmbig');
+
+lengthSlider.addEventListener('input', () => {
+  lengthVal.textContent = lengthSlider.value;
+});
+
+function generatePassword() {
+  let chars = '';
+  const ambig = 'O0Il1';
+  const exclude = optExcludeAmbig.checked;
+  let pool = '';
+
+  if (optUpper.checked) {
+    const up = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    pool += exclude ? up.split('').filter(c => !ambig.includes(c)).join('') : up;
+  }
+  if (optLower.checked) {
+    const lo = 'abcdefghijklmnopqrstuvwxyz';
+    pool += exclude ? lo.split('').filter(c => !ambig.includes(c)).join('') : lo;
+  }
+  if (optDigits.checked) {
+    const di = '0123456789';
+    pool += exclude ? di.split('').filter(c => !ambig.includes(c)).join('') : di;
+  }
+  if (optSymbols.checked) pool += '!@#$%^&*()-_=+[]{}|;:,.<>?';
+
+  if (!pool) {
+    pool = 'abcdefghijklmnopqrstuvwxyz';
+  }
+
+  const len = parseInt(lengthSlider.value, 10);
+  let result = '';
+  for (let i = 0; i < len; i++) {
+    result += pool[secureRandom(pool.length)];
+  }
+
+  /* Guarantee at least one of each selected type */
+  const ensure = [];
+  if (optUpper.checked) ensure.push('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c => !optExcludeAmbig.checked || !'O0Il1'.includes(c)));
+  if (optLower.checked) ensure.push('abcdefghijklmnopqrstuvwxyz'.split('').filter(c => !optExcludeAmbig.checked || !'O0Il1'.includes(c)));
+  if (optDigits.checked) ensure.push('0123456789'.split('').filter(c => !optExcludeAmbig.checked || !'O0Il1'.includes(c)));
+  if (optSymbols.checked) ensure.push('!@#$%^&*()-_=+[]{}|;:,.<>?'.split(''));
+
+  const arr = result.split('');
+  ensure.forEach((charSet, idx) => {
+    if (charSet.length > 0 && idx < arr.length) {
+      const pos = secureRandom(arr.length);
+      arr[pos] = pick(charSet);
+    }
+  });
+
+  genOutput.value = arr.join('');
+}
+
+document.getElementById('generateBtn').addEventListener('click', generatePassword);
+
+document.getElementById('copyGenBtn').addEventListener('click', () => {
+  if (genOutput.value) {
+    navigator.clipboard.writeText(genOutput.value).then(() => showToast('Password copied!'));
+  }
+});
+
+document.getElementById('useGenBtn').addEventListener('click', () => {
+  if (genOutput.value) {
+    pwInput.value = genOutput.value;
+    pwInput.type = 'password';
+    updateUI(analyzePassword(genOutput.value));
+    pwInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+
+/* ── Passphrase generator ── */
+const wordCountSlider = document.getElementById('wordCount');
+const wordCountVal = document.getElementById('wordCountVal');
+const ppOutput = document.getElementById('passphraseOutput');
+
+wordCountSlider.addEventListener('input', () => {
+  wordCountVal.textContent = wordCountSlider.value;
+});
+
+function generatePassphrase() {
+  const count = parseInt(wordCountSlider.value, 10);
+  const useSep = document.getElementById('ppSeparator').checked;
+  const useCapitalize = document.getElementById('ppCapitalize').checked;
+  const addNumber = document.getElementById('ppAddNumber').checked;
+  const separators = ['-', '.', '_', '~'];
+  const sep = useSep ? separators[secureRandom(separators.length)] : '';
+
+  let words = [];
+  for (let i = 0; i < count; i++) {
+    let w = WORD_LIST[secureRandom(WORD_LIST.length)];
+    if (useCapitalize) w = w.charAt(0).toUpperCase() + w.slice(1);
+    words.push(w);
+  }
+
+  let phrase = words.join(sep || '');
+  if (addNumber) {
+    const num = String(secureRandom(100)).padStart(2, '0');
+    phrase += (sep || '') + num;
+  }
+
+  ppOutput.textContent = phrase;
+}
+
+document.getElementById('genPassphraseBtn').addEventListener('click', generatePassphrase);
+
+document.getElementById('copyPPBtn').addEventListener('click', () => {
+  const txt = ppOutput.textContent;
+  if (txt && txt !== 'Click Generate Passphrase...') {
+    navigator.clipboard.writeText(txt).then(() => showToast('Passphrase copied!'));
+  }
+});
+
+document.getElementById('usePPBtn').addEventListener('click', () => {
+  const txt = ppOutput.textContent;
+  if (txt && txt !== 'Click Generate Passphrase...') {
+    pwInput.value = txt;
+    pwInput.type = 'password';
+    updateUI(analyzePassword(txt));
+    pwInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+
+/* ── Toast ── */
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => { toast.classList.remove('show'); }, 2000);
+}
+
+/* ── Keyboard navigation ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target === pwInput) {
+    pwInput.blur();
+  }
+});
+
+/* ── Init ── */
+generatePassword();
+</script>
+</body>
+</html>

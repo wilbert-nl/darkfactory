@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moon Phase Calendar for Farmers</title>
+<style>
+  :root {
+    --bg: #02091a;
+    --surface: rgba(255,255,255,0.08);
+    --surface2: rgba(255,255,255,0.13);
+    --border: rgba(255,255,255,0.16);
+    --accent: #38bdf8;
+    --accent2: #fb923c;
+    --text: rgba(255,255,255,0.95);
+    --muted: rgba(255,255,255,0.5);
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+  header span { font-size: 1.6rem; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+  .today-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; }
+  .moon-icon-big { font-size: 5rem; line-height: 1; text-align: center; min-width: 90px; }
+  .today-info h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+  .today-info .date-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 12px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; color: var(--muted); }
+  .badge.accent { border-color: var(--accent); color: var(--accent); }
+  .badge.green { border-color: var(--green); color: var(--green); }
+  .badge.yellow { border-color: var(--yellow); color: var(--yellow); }
+  .badge.pink { border-color: var(--accent2); color: var(--accent2); }
+  .illum-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .illum-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--yellow)); border-radius: 3px; transition: width 0.5s; }
+  .illum-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+  .rise-set { display: flex; flex-direction: column; gap: 8px; min-width: 130px; }
+  .rise-set-item { background: var(--surface2); border-radius: 8px; padding: 10px 14px; }
+  .rise-set-item .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .rise-set-item .time { font-size: 1rem; font-weight: 600; }
+  .upcoming { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .upcoming-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .upcoming-card .icon { font-size: 2rem; margin-bottom: 6px; }
+  .upcoming-card .phase-name { font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .upcoming-card .phase-date { font-size: 0.85rem; color: var(--accent); font-weight: 600; }
+  .upcoming-card .days-away { font-size: 0.75rem; color: var(--muted); }
+  .planting-guide { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
+  .planting-guide h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .guide-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .guide-item { background: var(--surface2); border-radius: 8px; padding: 14px; }
+  .guide-item .action { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 6px; }
+  .guide-item .crops { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-header h3 { font-size: 1.1rem; font-weight: 700; }
+  .nav-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+  .nav-btn:hover { background: var(--border); }
+  .calendar-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
+  .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
+  .weekday { text-align: center; font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; padding: 4px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day { background: var(--surface2); border-radius: 8px; padding: 8px 4px; text-align: center; min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; border: 1px solid transparent; transition: border-color 0.2s; }
+  .cal-day:hover { border-color: var(--border); }
+  .cal-day.today { border-color: var(--accent); }
+  .cal-day.other-month { opacity: 0.35; }
+  .cal-day .day-num { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+  .cal-day.today .day-num { color: var(--accent); }
+  .cal-day .moon-em { font-size: 1.3rem; line-height: 1; }
+  .cal-day .phase-short { font-size: 0.6rem; color: var(--muted); }
+  .cal-day .bio-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .crop-db { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .crop-db h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+  .crop-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .crop-tab { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 20px; padding: 4px 14px; cursor: pointer; font-size: 0.82rem; transition: all 0.2s; }
+  .crop-tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .crop-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .crop-item { background: var(--surface2); border-radius: 8px; padding: 12px 14px; }
+  .crop-item .crop-name { font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; }
+  .crop-item .crop-note { font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+  footer { text-align: center; padding: 24px; color: var(--muted); font-size: 0.78rem; border-top: 1px solid var(--border); margin-top: 24px; }
+  @media (max-width: 700px) {
+    .today-card { grid-template-columns: 1fr; }
+    .upcoming { grid-template-columns: repeat(2, 1fr); }
+    .guide-grid { grid-template-columns: 1fr; }
+    .rise-set { flex-direction: row; }
+  }
+
+    /* ── Weather design system v2 ── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(180deg, #02091a 0%, #0d1f3c 50%, #153050 100%) fixed;
+  min-height: 100vh;
+  color: rgba(255,255,255,0.9);
+}
+body::before {
+  content: '';
+  position: fixed;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,.12) 0%, transparent 70%);
+  top: -150px; right: -100px;
+  animation: floatOrb 10s ease-in-out infinite;
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251,146,60,.08) 0%, transparent 70%);
+  bottom: 8%; left: -80px;
+  animation: floatOrb 14s ease-in-out infinite reverse;
+  pointer-events: none; z-index: 0;
+}
+.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  border-radius: 20px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 8px 32px rgba(0,0,0,0.3);
+}
+h1 {
+  font-weight: 200;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  letter-spacing: -.02em;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 0 30px rgba(56,189,248,.4);
+  -webkit-text-fill-color: rgba(255,255,255,0.95);
+}
+h2, h3 { font-weight: 300; color: rgba(255,255,255,0.85); -webkit-text-fill-color: rgba(255,255,255,0.85); }
+p, label, span, td, th, li { color: rgba(255,255,255,0.8); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
+@keyframes floatOrb { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-22px) scale(1.04);} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+@keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.5);} 50%{box-shadow:0 0 0 8px rgba(251,146,60,0);} }
+.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] { animation: fadeUp .5s ease both; }
+.card:nth-child(2){animation-delay:.08s} .card:nth-child(3){animation-delay:.16s} .card:nth-child(4){animation-delay:.24s}
+[class*="alert"],[class*="warning"] { animation: alertPulse 2s ease-in-out infinite; }
+button,[class*="btn"] {
+  background: rgba(255,255,255,0.1) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.9) !important;
+  transition: all .2s;
+  border-radius: 12px;
+}
+button:hover,[class*="btn"]:hover {
+  background: rgba(56,189,248,0.2) !important;
+  border-color: rgba(56,189,248,0.5) !important;
+  box-shadow: 0 4px 20px rgba(56,189,248,.3);
+  transform: translateY(-1px);
+}
+input, select {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+input::placeholder { color: rgba(255,255,255,0.4); }
+input:focus, select:focus {
+  border-color: rgba(56,189,248,.6) !important;
+  box-shadow: 0 0 0 3px rgba(56,189,248,.2);
+  outline: none;
+}
+select option { background: #0d1f3c; color: white; }
+  </style>
+</head>
+<body>
+<header>
+  <span>🌙</span>
+  <div>
+    <h1>Moon Phase Calendar</h1>
+    <div style="font-size:0.78rem;color:var(--muted);">Biodynamic planting guide for farmers and gardeners</div>
+  </div>
+</header>
+
+<div class="container">
+  <div id="today-card" class="today-card">
+    <div class="moon-icon-big" id="todayMoonIcon">🌕</div>
+    <div class="today-info">
+      <div class="date-label" id="todayDateLabel">Loading...</div>
+      <h2 id="todayPhaseName">Full Moon</h2>
+      <div class="badges" id="todayBadges"></div>
+      <div class="illum-bar"><div class="illum-fill" id="illumFill" style="width:0%"></div></div>
+      <div class="illum-label" id="illumLabel">Illumination: 0%</div>
+    </div>
+    <div class="rise-set">
+      <div class="rise-set-item">
+        <div class="label">Moonrise</div>
+        <div class="time" id="moonriseTime">--:--</div>
+      </div>
+      <div class="rise-set-item">
+        <div class="label">Moonset</div>
+        <div class="time" id="moonsetTime">--:--</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="upcoming" id="upcomingPhases"></div>
+
+  <div class="planting-guide" id="plantingGuide">
+    <h3>🌱 Today's Planting Guide</h3>
+    <div class="guide-grid" id="guideGrid"></div>
+  </div>
+
+  <div class="calendar-section">
+    <div class="cal-header">
+      <button class="nav-btn" id="prevMonth">&#8592; Prev</button>
+      <h3 id="calMonthLabel">Month Year</h3>
+      <button class="nav-btn" id="nextMonth">Next &#8594;</button>
+    </div>
+    <div class="weekdays">
+      <div class="weekday">Sun</div><div class="weekday">Mon</div>
+      <div class="weekday">Tue</div><div class="weekday">Wed</div>
+      <div class="weekday">Thu</div><div class="weekday">Fri</div>
+      <div class="weekday">Sat</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="dot" style="background:#43d9ad"></div> Fruit/Flower day</div>
+      <div class="legend-item"><div class="dot" style="background:#f7c948"></div> Root day</div>
+      <div class="legend-item"><div class="dot" style="background:#6c63ff"></div> Leaf day</div>
+      <div class="legend-item"><div class="dot" style="background:#ff6584"></div> Rest/Barren day</div>
+    </div>
+  </div>
+
+  <div class="crop-db">
+    <h3>🌿 Crop Database — Lunar Planting Guide</h3>
+    <div class="crop-tabs" id="cropTabs"></div>
+    <div class="crop-list" id="cropList"></div>
+  </div>
+</div>
+
+<footer>Moon phases calculated using the synodic period formula. Biodynamic day types follow traditional lunar gardening principles. Data is computed locally — no API required.</footer>
+
+<script>
+// ─── Moon Phase Engine ───────────────────────────────────────────────────────
+const SYNODIC = 29.53058867;
+// Known new moon reference: Jan 6, 2000 18:14 UTC (J2000 era)
+const REF_NEW_MOON = new Date(Date.UTC(2000, 0, 6, 18, 14, 0));
+
+function julianDay(date) {
+  return date.getTime() / 86400000 + 2440587.5;
+}
+
+function moonAge(date) {
+  const jd = julianDay(date);
+  const refJd = julianDay(REF_NEW_MOON);
+  const age = ((jd - refJd) % SYNODIC + SYNODIC) % SYNODIC;
+  return age;
+}
+
+function illumination(age) {
+  return Math.round((1 - Math.cos(2 * Math.PI * age / SYNODIC)) / 2 * 100);
+}
+
+function phaseInfo(age) {
+  if (age < 1.85)    return { name: 'New Moon',        icon: '🌑', short: 'New' };
+  if (age < 7.38)    return { name: 'Waxing Crescent', icon: '🌒', short: 'WxC' };
+  if (age < 9.22)    return { name: 'First Quarter',   icon: '🌓', short: '1Q'  };
+  if (age < 14.77)   return { name: 'Waxing Gibbous',  icon: '🌔', short: 'WxG' };
+  if (age < 16.61)   return { name: 'Full Moon',       icon: '🌕', short: 'Full' };
+  if (age < 22.15)   return { name: 'Waning Gibbous',  icon: '🌖', short: 'WnG' };
+  if (age < 23.99)   return { name: 'Last Quarter',    icon: '🌗', short: '3Q'  };
+  if (age < 29.53)   return { name: 'Waning Crescent', icon: '🌘', short: 'WnC' };
+  return { name: 'New Moon', icon: '🌑', short: 'New' };
+}
+
+// Days until next specific phase (by age threshold)
+function daysUntilPhase(targetAge, fromDate) {
+  const curAge = moonAge(fromDate);
+  let diff = targetAge - curAge;
+  if (diff <= 0) diff += SYNODIC;
+  return diff;
+}
+
+// Next occurrence of key phases from a date
+function nextPhases(fromDate) {
+  const targets = [
+    { name: 'New Moon',      icon: '🌑', age: 0 },
+    { name: 'First Quarter', icon: '🌓', age: 7.38 },
+    { name: 'Full Moon',     icon: '🌕', age: 14.77 },
+    { name: 'Last Quarter',  icon: '🌗', age: 22.15 },
+  ];
+  return targets.map(t => {
+    const days = daysUntilPhase(t.age, fromDate);
+    const dt = new Date(fromDate.getTime() + days * 86400000);
+    return { ...t, days: Math.round(days), date: dt };
+  }).sort((a, b) => a.days - b.days);
+}
+
+// Biodynamic day type based on moon age (traditional approximation)
+// Cycles through Root, Leaf, Flower/Fruit, Rest roughly every 7 days
+function biodynamicType(date) {
+  const age = moonAge(date);
+  const segment = age % 7.38;
+  if (segment < 1.85)       return { type: 'Rest', color: '#ff6584', icon: '🔴' };
+  if (segment < 3.7)        return { type: 'Root', color: '#f7c948', icon: '🟡' };
+  if (segment < 5.53)       return { type: 'Leaf', color: '#6c63ff', icon: '🟣' };
+  return { type: 'Fruit/Flower', color: '#43d9ad', icon: '🟢' };
+}
+
+// Approximate moonrise/moonset (simplified — based on moon age)
+function moonRiseSet(date) {
+  const age = moonAge(date);
+  // At new moon rises at sunrise (~6am), full moon rises at sunset (~6pm)
+  const riseHour = (6 + (age / SYNODIC) * 24) % 24;
+  const setHour = (riseHour + 12.5) % 24;
+  const fmt = h => {
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    const ampm = hh < 12 ? 'AM' : 'PM';
+    const h12 = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
+    return `${h12}:${mm.toString().padStart(2, '0')} ${ampm}`;
+  };
+  return { rise: fmt(riseHour), set: fmt(setHour) };
+}
+
+// ─── Crop Database ──────────────────────────────────────────────────────────
+const CROPS = {
+  Vegetables: [
+    { name: 'Tomato',      note: 'Sow during Waxing Crescent or Waxing Gibbous. Fruit day is ideal.' },
+    { name: 'Lettuce',     note: 'Plant on Leaf days during waxing moon for lush growth.' },
+    { name: 'Carrot',      note: 'Sow on Root days, ideally during the waning moon phase.' },
+    { name: 'Potato',      note: 'Plant tubers on Root days, third quarter preferred.' },
+    { name: 'Spinach',     note: 'Leaf days with waxing moon give the best leafy growth.' },
+    { name: 'Pepper',      note: 'Fruit days during Waxing Gibbous for abundant harvest.' },
+    { name: 'Cucumber',    note: 'Fruit/Flower days, first quarter waxing moon.' },
+    { name: 'Broccoli',    note: 'Leaf or Flower days, waxing moon phase.' },
+    { name: 'Cabbage',     note: 'Leaf days, waxing moon. Harvest on waning moon.' },
+    { name: 'Radish',      note: 'Root days during waning moon for firm, pungent roots.' },
+    { name: 'Onion',       note: 'Root days, third quarter for best keeping quality.' },
+    { name: 'Garlic',      note: 'Plant cloves on Root days during waning moon.' },
+    { name: 'Beet',        note: 'Root days during waning moon phase.' },
+    { name: 'Zucchini',    note: 'Fruit days, first quarter moon for productive vines.' },
+    { name: 'Corn',        note: 'Fruit days, waxing moon for strong stalks and ears.' },
+    { name: 'Kale',        note: 'Leaf days, first or second quarter for vigorous leaves.' },
+  ],
+  Herbs: [
+    { name: 'Basil',       note: 'Flower days, waxing moon for aromatic, flavorful leaves.' },
+    { name: 'Parsley',     note: 'Leaf days, first quarter. Slow germinator — be patient.' },
+    { name: 'Cilantro',    note: 'Flower or Leaf days, waxing crescent phase.' },
+    { name: 'Mint',        note: 'Leaf days, waxing moon. Divide roots on Root days.' },
+    { name: 'Lavender',    note: 'Flower days around the full moon for best fragrance.' },
+    { name: 'Rosemary',    note: 'Flower days, waxing gibbous for woody, aromatic growth.' },
+    { name: 'Thyme',       note: 'Flower days, first quarter moon.' },
+    { name: 'Oregano',     note: 'Flower days, waxing moon for peak oil content.' },
+    { name: 'Chamomile',   note: 'Flower days, full moon for strongest medicinal quality.' },
+    { name: 'Dill',        note: 'Flower or Fruit days, waxing crescent.' },
+  ],
+  Fruits: [
+    { name: 'Strawberry',  note: 'Fruit days, first quarter for sweet, abundant berries.' },
+    { name: 'Raspberry',   note: 'Plant canes on Fruit days, waxing moon.' },
+    { name: 'Blueberry',   note: 'Fruit days during waxing gibbous phase.' },
+    { name: 'Apple',       note: 'Prune on waning moon. Graft on Fruit days, waxing moon.' },
+    { name: 'Pear',        note: 'Fruit days, second quarter for vigorous establishment.' },
+    { name: 'Melon',       note: 'Fruit days, waxing gibbous for sugary, large fruits.' },
+    { name: 'Pumpkin',     note: 'Fruit days, first quarter. Harvest at full moon.' },
+    { name: 'Grape',       note: 'Prune at new moon. Harvest grapes on Fruit days.' },
+    { name: 'Fig',         note: 'Fruit days, waxing moon. Prune during waning.' },
+    { name: 'Peach',       note: 'Fruit days, second quarter for stone fruit quality.' },
+  ],
+  Legumes: [
+    { name: 'Bean (bush)', note: 'Fruit days, first quarter for the best pod set.' },
+    { name: 'Bean (pole)', note: 'Fruit days, waxing moon for climbing vigor.' },
+    { name: 'Pea',         note: 'Fruit days, first quarter. Sow just after new moon.' },
+    { name: 'Soybean',     note: 'Fruit days, waxing crescent to first quarter.' },
+    { name: 'Lentil',      note: 'Fruit days, waxing moon phase.' },
+    { name: 'Chickpea',    note: 'Fruit or Flower days, waxing crescent.' },
+  ],
+};
+
+// Planting guide by phase
+const PHASE_GUIDE = {
+  'New Moon':        { sow: 'Leafy greens, lettuce, spinach, cabbage', transplant: 'Nothing — rest period', prune: 'Avoid pruning today', harvest: 'Root vegetables for storage' },
+  'Waxing Crescent': { sow: 'Tomatoes, peppers, beans, peas, cucumbers', transplant: 'Seedlings into garden beds', prune: 'Light shaping of fruit trees', harvest: 'Herbs for fresh use' },
+  'First Quarter':   { sow: 'Fruit crops: corn, melons, squash', transplant: 'Fruiting plants, tomatoes, peppers', prune: 'Fruit trees for shape', harvest: 'Fruits and fruiting vegetables' },
+  'Waxing Gibbous':  { sow: 'Leafy greens for last push before full moon', transplant: 'Herbs, fruiting crops', prune: 'Hedges and ornamentals', harvest: 'Fruits at peak sweetness' },
+  'Full Moon':       { sow: 'Flower seeds, herbs with high oil content', transplant: 'Most plants thrive — high moisture', prune: 'Avoid heavy pruning — sap runs high', harvest: 'Full-flavored herbs, fruits, and flowers' },
+  'Waning Gibbous':  { sow: 'Root vegetables: carrot, beet, parsnip', transplant: 'Root crops, garlic, onion sets', prune: 'Best time for hard pruning', harvest: 'Root crops for best flavor' },
+  'Last Quarter':    { sow: 'Root crops, garlic, winter crops', transplant: 'Trees, shrubs, perennials', prune: 'Hard pruning, tree surgery', harvest: 'Root vegetables for long storage' },
+  'Waning Crescent': { sow: 'Nothing — rest and prepare beds', transplant: 'Minimal activity recommended', prune: 'Clean up and compost', harvest: 'Grains, seeds, anything for drying' },
+};
+
+// ─── Render Functions ────────────────────────────────────────────────────────
+const today = new Date();
+let calYear = today.getFullYear();
+let calMonth = today.getMonth();
+
+function renderToday() {
+  const age = moonAge(today);
+  const phase = phaseInfo(age);
+  const illum = illumination(age);
+  const bio = biodynamicType(today);
+  const rs = moonRiseSet(today);
+  const guide = PHASE_GUIDE[phase.name] || PHASE_GUIDE['Full Moon'];
+
+  document.getElementById('todayMoonIcon').textContent = phase.icon;
+  document.getElementById('todayPhaseName').textContent = phase.name;
+  document.getElementById('todayDateLabel').textContent = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('illumFill').style.width = illum + '%';
+  document.getElementById('illumLabel').textContent = `Illumination: ${illum}%`;
+  document.getElementById('moonriseTime').textContent = rs.rise;
+  document.getElementById('moonsetTime').textContent = rs.set;
+
+  const badgesEl = document.getElementById('todayBadges');
+  badgesEl.innerHTML = `
+    <span class="badge accent">${phase.name}</span>
+    <span class="badge" style="border-color:${bio.color};color:${bio.color}">${bio.type} Day</span>
+    <span class="badge">${illum}% illuminated</span>
+    <span class="badge">Age: ${age.toFixed(1)} days</span>
+  `;
+
+  const guideGrid = document.getElementById('guideGrid');
+  guideGrid.innerHTML = `
+    <div class="guide-item">
+      <div class="action" style="color:var(--green)">Sow Today</div>
+      <div class="crops">${guide.sow}</div>
+    </div>
+    <div class="guide-item">
+      <div class="action" style="color:var(--accent)">Transplant</div>
+      <div class="crops">${guide.transplant}</div>
+    </div>
+    <div class="guide-item">
+      <div class="action" style="color:var(--yellow)">Prune</div>
+      <div class="crops">${guide.prune}</div>
+    </div>
+    <div class="guide-item">
+      <div class="action" style="color:var(--accent2)">Harvest</div>
+      <div class="crops">${guide.harvest}</div>
+    </div>
+  `;
+}
+
+function renderUpcoming() {
+  const phases = nextPhases(today);
+  const el = document.getElementById('upcomingPhases');
+  el.innerHTML = phases.map(p => {
+    const dateStr = p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const daysLabel = p.days === 0 ? 'Today' : p.days === 1 ? 'Tomorrow' : `In ${p.days} days`;
+    return `<div class="upcoming-card">
+      <div class="icon">${p.icon}</div>
+      <div class="phase-name">${p.name}</div>
+      <div class="phase-date">${dateStr}</div>
+      <div class="days-away">${daysLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCalendar() {
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calMonthLabel').textContent = `${monthNames[calMonth]} ${calYear}`;
+
+  const firstDay = new Date(calYear, calMonth, 1);
+  const lastDay = new Date(calYear, calMonth + 1, 0);
+  const startDow = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
+
+  let html = '';
+
+  // Fill leading blanks from previous month
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = new Date(calYear, calMonth - 1, prevLast - i);
+    html += dayCell(d, true);
+  }
+
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(calYear, calMonth, d);
+    const isToday = dt.toDateString() === today.toDateString();
+    html += dayCell(dt, false, isToday);
+  }
+
+  // Fill trailing blanks
+  const totalCells = startDow + daysInMonth;
+  const trailing = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let i = 1; i <= trailing; i++) {
+    const dt = new Date(calYear, calMonth + 1, i);
+    html += dayCell(dt, true);
+  }
+
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function dayCell(dt, otherMonth, isToday) {
+  const age = moonAge(dt);
+  const phase = phaseInfo(age);
+  const bio = biodynamicType(dt);
+  const cls = ['cal-day', otherMonth ? 'other-month' : '', isToday ? 'today' : ''].filter(Boolean).join(' ');
+  return `<div class="${cls}" title="${phase.name} - ${bio.type} day">
+    <div class="day-num">${dt.getDate()}</div>
+    <div class="moon-em">${phase.icon}</div>
+    <div class="phase-short">${phase.short}</div>
+    <div class="bio-dot" style="background:${bio.color}"></div>
+  </div>`;
+}
+
+function renderCropDB() {
+  const categories = Object.keys(CROPS);
+  let activeTab = categories[0];
+
+  const tabsEl = document.getElementById('cropTabs');
+  const listEl = document.getElementById('cropList');
+
+  function renderList(cat) {
+    listEl.innerHTML = CROPS[cat].map(c => `
+      <div class="crop-item">
+        <div class="crop-name">${c.name}</div>
+        <div class="crop-note">${c.note}</div>
+      </div>
+    `).join('');
+  }
+
+  tabsEl.innerHTML = categories.map(cat =>
+    `<div class="crop-tab${cat === activeTab ? ' active' : ''}" data-cat="${cat}">${cat}</div>`
+  ).join('');
+
+  tabsEl.addEventListener('click', e => {
+    const tab = e.target.closest('.crop-tab');
+    if (!tab) return;
+    activeTab = tab.dataset.cat;
+    tabsEl.querySelectorAll('.crop-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === activeTab));
+    renderList(activeTab);
+  });
+
+  renderList(activeTab);
+}
+
+// ─── Event Listeners ─────────────────────────────────────────────────────────
+document.getElementById('prevMonth').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderToday();
+renderUpcoming();
+renderCalendar();
+renderCropDB();
+</script>
+</body>
+</html>

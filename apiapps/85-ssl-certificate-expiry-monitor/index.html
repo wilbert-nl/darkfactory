@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSL Certificate Expiry Monitor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0e;
+      --surface: #0d1117;
+      --surface2: #161b22;
+      --border: rgba(255,255,255,0.08);
+      --accent: #58a6ff;
+      --accent2: #f78166;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --orange: #f97316;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .app-shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* ── Stats Bar ──────────────────────────────────────── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-value.green { color: var(--green); }
+    .stat-value.yellow { color: var(--yellow); }
+    .stat-value.orange { color: var(--orange); }
+    .stat-value.red { color: var(--red); }
+    .stat-value.muted { color: var(--muted); }
+
+    /* ── Controls ───────────────────────────────────────── */
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--muted);
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.6rem 0.75rem 0.6rem 2.5rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+
+    select.filter-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select.filter-select:focus { border-color: var(--accent); }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #7c74ff; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); background: rgba(0,229,255,0.08); }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid transparent;
+      padding: 0.4rem 0.6rem;
+    }
+
+    .btn-danger:hover { background: rgba(239,68,68,0.12); border-color: var(--red); }
+
+    .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+
+    /* ── Domain Grid ────────────────────────────────────── */
+    .domains-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .domain-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 1rem;
+      align-items: start;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      animation: slideIn 0.25s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .domain-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(0,229,255,0.2);
+    }
+
+    .domain-card.urgent { border-left: 3px solid var(--red); }
+    .domain-card.warning { border-left: 3px solid var(--orange); }
+    .domain-card.notice { border-left: 3px solid var(--yellow); }
+    .domain-card.good { border-left: 3px solid var(--green); }
+
+    .domain-status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .status-dot-red { background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,0.6); animation: pulse 1.5s infinite; }
+    .status-dot-orange { background: var(--orange); box-shadow: 0 0 8px rgba(249,115,22,0.4); }
+    .status-dot-yellow { background: var(--yellow); }
+    .status-dot-green { background: var(--green); }
+    .status-dot-muted { background: var(--muted); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .domain-info { min-width: 0; }
+
+    .domain-name {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .domain-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge-green { background: rgba(67,217,173,0.15); color: var(--green); border: 1px solid rgba(67,217,173,0.25); }
+    .badge-yellow { background: rgba(247,201,72,0.15); color: var(--yellow); border: 1px solid rgba(247,201,72,0.25); }
+    .badge-orange { background: rgba(249,115,22,0.15); color: var(--orange); border: 1px solid rgba(249,115,22,0.25); }
+    .badge-red { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+    .badge-gray { background: rgba(136,146,176,0.15); color: var(--muted); border: 1px solid rgba(136,146,176,0.25); }
+    .badge-accent { background: rgba(0,229,255,0.15); color: var(--accent); border: 1px solid rgba(0,229,255,0.25); }
+
+    .countdown {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .countdown.red { color: var(--red); }
+    .countdown.orange { color: var(--orange); }
+    .countdown.yellow { color: var(--yellow); }
+    .countdown.green { color: var(--green); }
+    .countdown.expired { color: var(--red); text-decoration: line-through; }
+
+    .domain-actions {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    /* ── Progress Bar ───────────────────────────────────── */
+    .cert-progress-wrap {
+      margin-top: 0.6rem;
+    }
+
+    .cert-progress-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .cert-progress {
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 4px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .cert-progress-bar {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+
+    /* ── Checklist ──────────────────────────────────────── */
+    .checklist-wrap {
+      margin-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+      display: none;
+    }
+
+    .checklist-wrap.open { display: block; }
+
+    .checklist-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .checklist-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text);
+      cursor: pointer;
+      padding: 3px 0;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+
+    .checklist-item:hover { color: var(--accent); }
+
+    .checklist-item input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .checklist-item.done { text-decoration: line-through; color: var(--muted); }
+
+    /* ── Empty State ────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      font-size: 1.1rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Modal ──────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.95) translateY(10px);
+      transition: transform 0.2s;
+    }
+
+    .modal-backdrop.open .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.15s;
+      display: flex;
+      align-items: center;
+    }
+
+    .modal-close:hover { color: var(--text); }
+    .modal-close:focus-visible { outline: 2px solid var(--accent); }
+
+    /* ── Forms ──────────────────────────────────────────── */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.65rem 0.875rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .form-input:focus { border-color: var(--accent); background: var(--surface); }
+    .form-input::placeholder { color: var(--muted); }
+    .form-input:invalid:not(:placeholder-shown) { border-color: var(--red); }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      padding-top: 0.5rem;
+    }
+
+    /* ── Toast ──────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 220px;
+      max-width: 360px;
+      animation: toastIn 0.25s ease-out;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastOut {
+      to { opacity: 0; transform: translateX(20px); }
+    }
+
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--red); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+    .toast.warn    { border-left: 3px solid var(--yellow); }
+
+    /* ── Import Modal Textarea ──────────────────────────── */
+    .csv-textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-family: 'Courier New', monospace;
+      resize: vertical;
+      min-height: 140px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .csv-textarea:focus { border-color: var(--accent); }
+    .csv-textarea::placeholder { color: var(--muted); }
+
+    /* ── Grade Badge ────────────────────────────────────── */
+    .grade-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .grade-A-plus { background: rgba(67,217,173,0.2); color: var(--green); border: 1px solid rgba(67,217,173,0.3); }
+    .grade-A      { background: rgba(67,217,173,0.12); color: var(--green); border: 1px solid rgba(67,217,173,0.2); }
+    .grade-B      { background: rgba(247,201,72,0.15); color: var(--yellow); border: 1px solid rgba(247,201,72,0.25); }
+    .grade-C      { background: rgba(249,115,22,0.15); color: var(--orange); border: 1px solid rgba(249,115,22,0.25); }
+    .grade-F      { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+    .grade-none   { background: rgba(136,146,176,0.1); color: var(--muted); border: 1px solid rgba(136,146,176,0.15); }
+
+    /* ── Section Header ─────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .count-pill {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    /* ── Divider ────────────────────────────────────────── */
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* ── No Results ─────────────────────────────────────── */
+    .no-results {
+      text-align: center;
+      padding: 2.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 640px) {
+      main { padding: 1rem; }
+      header { padding: 0 1rem; }
+      .form-row { grid-template-columns: 1fr; }
+      .domain-card { grid-template-columns: auto 1fr; }
+      .domain-actions { grid-column: 1 / -1; justify-content: flex-start; }
+      .header-actions .btn span { display: none; }
+    }
+
+    /* ── Scrollbar ──────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── Focus outlines ─────────────────────────────────── */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Shine animation for header ─────────────────────── */
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      animation: shine 3s infinite;
+    }
+    .logo-icon { position: relative; overflow: hidden; }
+    @keyframes shine {
+      0% { left: -100%; }
+      30%, 100% { left: 160%; }
+    }
+
+    /* === Security/Infra Tools v2 Design System === */
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; line-height: 1.6; background-image: radial-gradient(rgba(88,166,255,0.03) 1px, transparent 1px); background-size: 24px 24px; }
+    h1, h2, .title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+    h1 { font-size: clamp(1.4rem, 3vw, 1.8rem); color: var(--text); }
+    h2 { font-size: 1rem; color: var(--muted); font-weight: 500; }
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .card, .result, .item, .output, .domain, .cert, .check, .breach, .password-result, .ssl-info,
+    [class*="card"], [class*="result"], [class*="item"], [class*="check"] {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; animation: secFade 0.25s ease both;
+    }
+    .card.danger, .result.danger, .breach-found, .expired, .unsafe { border-left: 3px solid var(--red); }
+    .card.safe, .result.safe, .no-breach, .valid, .secure { border-left: 3px solid var(--green); }
+    .card.warning, .result.warning, .expiring-soon { border-left: 3px solid var(--yellow); }
+    .code, .value, pre, code, .mono, .domain-name, .hash, .password, .ip { font-family: var(--font-mono); font-size: 0.85rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.2rem 0.5rem; color: var(--text); word-break: break-all; }
+    pre, .terminal, .log { font-family: var(--font-mono); font-size: 0.82rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; overflow-x: auto; color: var(--green); line-height: 1.8; }
+    input, select, textarea { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 0.65rem 1rem; font-family: var(--font-mono); font-size: 0.88rem; width: 100%; transition: border-color 0.15s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    button, .btn, input[type="submit"], input[type="button"] { background: var(--accent); color: #000; border: none; border-radius: var(--radius); padding: 0.65rem 1.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: transform 0.1s, opacity 0.1s; }
+    button:hover { opacity: 0.9; }
+    button:active { transform: scale(0.97); }
+    .strength-bar, .meter { height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
+    .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
+    .tag, .badge, .status, .label, .tld, .registrar { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+    .available, .valid, .secure, .up, .safe, .strong { color: var(--green); }
+    .taken, .invalid, .expired, .down, .breached, .weak { color: var(--red); }
+    .expiring, .warning, .medium { color: var(--yellow); }
+    .info, .registered { color: var(--accent); }
+    .uptime-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--green); animation: pulse 2s ease infinite; }
+    .uptime-dot.down { background: var(--red); animation: none; }
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    @keyframes secFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63,185,80,0.4); } 50% { box-shadow: 0 0 0 4px rgba(63,185,80,0); } }
+    @keyframes scanLine { from { transform: translateY(-100%); } to { transform: translateY(100vh); } }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon" aria-hidden="true">🔒</div>
+      <span>SSL Monitor</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="btnImport" title="Import CSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Import</span>
+      </button>
+      <button class="btn btn-ghost" id="btnExport" title="Export CSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Export</span>
+      </button>
+      <button class="btn btn-primary" id="btnAdd">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Add Domain</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card">
+        <span class="stat-label">Total Domains</span>
+        <span class="stat-value muted" id="statTotal">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Healthy (&gt;60d)</span>
+        <span class="stat-value green" id="statGood">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Expiring Soon</span>
+        <span class="stat-value yellow" id="statSoon">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Critical (&lt;7d)</span>
+        <span class="stat-value red" id="statCritical">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Expired</span>
+        <span class="stat-value red" id="statExpired">0</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" class="search-input" id="searchInput" placeholder="Search domains or issuers..." aria-label="Search domains" />
+      </div>
+      <select class="filter-select" id="filterStatus" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="expired">Expired</option>
+        <option value="critical">Critical (&lt;7d)</option>
+        <option value="warning">Warning (7-30d)</option>
+        <option value="notice">Notice (30-60d)</option>
+        <option value="good">Healthy (&gt;60d)</option>
+      </select>
+      <select class="filter-select" id="sortBy" aria-label="Sort by">
+        <option value="days_asc">Days remaining ↑</option>
+        <option value="days_desc">Days remaining ↓</option>
+        <option value="name">Domain name</option>
+        <option value="added">Date added</option>
+      </select>
+    </div>
+
+    <!-- Domain List -->
+    <div class="section-header">
+      <h2 class="section-title">Certificates</h2>
+      <span class="count-pill" id="domainCount">0</span>
+    </div>
+    <div class="domains-grid" id="domainsGrid" role="list">
+      <!-- filled by JS -->
+    </div>
+  </main>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-backdrop" id="addModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Add Domain</h3>
+      <button class="modal-close" id="modalClose" aria-label="Close modal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="domainForm" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="fieldDomain">Domain <span aria-hidden="true">*</span></label>
+          <input type="text" class="form-input" id="fieldDomain" placeholder="example.com" required autocomplete="off" spellcheck="false" />
+          <span class="form-hint">Without https:// or trailing slash</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fieldExpiry">Expiry Date <span aria-hidden="true">*</span></label>
+          <input type="date" class="form-input" id="fieldExpiry" required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="fieldIssuer">Certificate Issuer</label>
+          <input type="text" class="form-input" id="fieldIssuer" placeholder="Let's Encrypt, DigiCert…" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fieldGrade">SSL Grade</label>
+          <select class="form-input" id="fieldGrade">
+            <option value="">Unknown</option>
+            <option value="A+">A+</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="F">F</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="fieldClient">Client / Project</label>
+        <input type="text" class="form-input" id="fieldClient" placeholder="Acme Corp, Project Name…" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="fieldNotes">Notes</label>
+        <input type="text" class="form-input" id="fieldNotes" placeholder="Optional notes, renewal contacts…" autocomplete="off" />
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Add Domain</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-backdrop" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="importTitle">Import CSV</h3>
+      <button class="modal-close" id="importClose" aria-label="Close import modal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">
+      Paste CSV data below. Expected columns: <strong style="color:var(--text)">domain, expiry, issuer, grade, client, notes</strong>
+    </p>
+    <div class="form-group">
+      <textarea class="csv-textarea" id="csvInput" placeholder="domain,expiry,issuer,grade,client,notes&#10;example.com,2025-12-31,Let's Encrypt,A+,Acme Corp,Main site&#10;shop.example.com,2025-08-15,DigiCert,A,Acme Corp,E-commerce"></textarea>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.875rem;color:var(--text);">
+        <input type="checkbox" id="skipHeader" checked style="accent-color:var(--accent);" /> Skip first row (header)
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-ghost" id="importCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="importConfirm">Import</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Storage ─────────────────────────────────────────────
+  const STORAGE_KEY = 'ssl_monitor_v1';
+
+  function loadDomains() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  function saveDomains(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  // ── State ────────────────────────────────────────────────
+  let domains = loadDomains();
+  let editId = null;
+
+  // Default checklist items for every domain
+  const DEFAULT_CHECKLIST = [
+    'Confirm renewal date in calendar',
+    'Verify auto-renewal is enabled',
+    'Check DNS configuration',
+    'Test renewed certificate (SSLLabs)',
+    'Notify client of renewal'
+  ];
+
+  // Seed sample data if empty
+  if (domains.length === 0) {
+    const today = new Date();
+    const addDays = (d, n) => {
+      const dt = new Date(d);
+      dt.setDate(dt.getDate() + n);
+      return dt.toISOString().split('T')[0];
+    };
+    domains = [
+      { id: uid(), domain: 'acmecorp.com', expiry: addDays(today, 5), issuer: `Let's Encrypt`, grade: 'A+', client: 'Acme Corp', notes: 'Auto-renewal failed — manual action needed', checklist: DEFAULT_CHECKLIST.map(t => ({ text: t, done: false })), addedAt: Date.now() - 9e5 },
+      { id: uid(), domain: 'shop.acmecorp.com', expiry: addDays(today, 18), issuer: 'DigiCert', grade: 'A', client: 'Acme Corp', notes: '', checklist: DEFAULT_CHECKLIST.map(t => ({ text: t, done: false })), addedAt: Date.now() - 8e5 },
+      { id: uid(), domain: 'beta.startupxyz.io', expiry: addDays(today, 45), issuer: `Let's Encrypt`, grade: 'B', client: 'StartupXYZ', notes: '', checklist: DEFAULT_CHECKLIST.map(t => ({ text: t, done: false })), addedAt: Date.now() - 7e5 },
+      { id: uid(), domain: 'client-portal.designco.nl', expiry: addDays(today, 90), issuer: 'Sectigo', grade: 'A+', client: 'DesignCo', notes: 'Wildcard cert', checklist: DEFAULT_CHECKLIST.map(t => ({ text: t, done: false })), addedAt: Date.now() - 6e5 },
+      { id: uid(), domain: 'legacy.oldsite.com', expiry: addDays(today, -3), issuer: 'GeoTrust', grade: 'C', client: 'Old Client', notes: 'Site being decommissioned', checklist: DEFAULT_CHECKLIST.map(t => ({ text: t, done: false })), addedAt: Date.now() - 5e5 }
+    ];
+    saveDomains(domains);
+  }
+
+  // ── Utilities ────────────────────────────────────────────
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function daysUntil(dateStr) {
+    const exp = new Date(dateStr);
+    exp.setHours(0, 0, 0, 0);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return Math.round((exp - now) / 864e5);
+  }
+
+  function statusOf(days) {
+    if (days < 0) return 'expired';
+    if (days < 7) return 'critical';
+    if (days < 30) return 'warning';
+    if (days < 60) return 'notice';
+    return 'good';
+  }
+
+  function colorOf(status) {
+    return { expired: 'red', critical: 'red', warning: 'orange', notice: 'yellow', good: 'green' }[status] || 'muted';
+  }
+
+  function dotClassOf(status) {
+    return { expired: 'status-dot-red', critical: 'status-dot-red', warning: 'status-dot-orange', notice: 'status-dot-yellow', good: 'status-dot-green' }[status] || 'status-dot-muted';
+  }
+
+  function cardClassOf(status) {
+    return { expired: 'urgent', critical: 'urgent', warning: 'warning', notice: 'notice', good: 'good' }[status] || '';
+  }
+
+  function fmtDate(str) {
+    if (!str) return '—';
+    const d = new Date(str);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function countdownLabel(days) {
+    if (days < 0) return `Expired ${Math.abs(days)}d ago`;
+    if (days === 0) return 'Expires today!';
+    return `${days}d remaining`;
+  }
+
+  function progressPct(domain) {
+    // Assumes 90-day cert if no start date known; show % of remaining cert life
+    const days = daysUntil(domain.expiry);
+    const total = 90; // default cert lifetime
+    const pct = Math.max(0, Math.min(100, (days / total) * 100));
+    return pct;
+  }
+
+  function esc(str) {
+    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function gradeClass(g) {
+    const map = { 'A+': 'grade-A-plus', 'A': 'grade-A', 'B': 'grade-B', 'C': 'grade-C', 'F': 'grade-F' };
+    return map[g] || 'grade-none';
+  }
+
+  // ── Toast ────────────────────────────────────────────────
+  function toast(msg, type = 'info') {
+    const icons = { success: '✓', error: '✕', info: 'ℹ', warn: '⚠' };
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.setAttribute('role', 'status');
+    el.innerHTML = `<span style="font-size:1rem">${icons[type] || 'ℹ'}</span> ${esc(msg)}`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => {
+      el.style.animation = 'toastOut 0.25s ease-out forwards';
+      setTimeout(() => el.remove(), 260);
+    }, 3200);
+  }
+
+  // ── Render ───────────────────────────────────────────────
+  function render() {
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    const filterStatus = document.getElementById('filterStatus').value;
+    const sortBy = document.getElementById('sortBy').value;
+
+    let list = domains.map(d => ({ ...d, days: daysUntil(d.expiry), status: statusOf(daysUntil(d.expiry)) }));
+
+    // Filter
+    if (q) {
+      list = list.filter(d =>
+        d.domain.toLowerCase().includes(q) ||
+        (d.issuer || '').toLowerCase().includes(q) ||
+        (d.client || '').toLowerCase().includes(q)
+      );
+    }
+    if (filterStatus) {
+      list = list.filter(d => d.status === filterStatus);
+    }
+
+    // Sort
+    list.sort((a, b) => {
+      if (sortBy === 'days_asc') return a.days - b.days;
+      if (sortBy === 'days_desc') return b.days - a.days;
+      if (sortBy === 'name') return a.domain.localeCompare(b.domain);
+      if (sortBy === 'added') return b.addedAt - a.addedAt;
+      return 0;
+    });
+
+    // Stats
+    const all = domains.map(d => ({ ...d, days: daysUntil(d.expiry), status: statusOf(daysUntil(d.expiry)) }));
+    document.getElementById('statTotal').textContent = domains.length;
+    document.getElementById('statGood').textContent = all.filter(d => d.status === 'good').length;
+    document.getElementById('statSoon').textContent = all.filter(d => d.status === 'notice' || d.status === 'warning').length;
+    document.getElementById('statCritical').textContent = all.filter(d => d.status === 'critical').length;
+    document.getElementById('statExpired').textContent = all.filter(d => d.status === 'expired').length;
+    document.getElementById('domainCount').textContent = list.length;
+
+    const grid = document.getElementById('domainsGrid');
+
+    if (domains.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">🔒</div>
+          <h3>No domains yet</h3>
+          <p>Add your first domain to start monitoring SSL certificate expiry.</p>
+          <button class="btn btn-primary" onclick="document.getElementById('btnAdd').click()">Add Domain</button>
+        </div>`;
+      return;
+    }
+
+    if (list.length === 0) {
+      grid.innerHTML = `<div class="no-results">No domains match your current filters.</div>`;
+      return;
+    }
+
+    grid.innerHTML = list.map(d => {
+      const pct = progressPct(d);
+      const color = colorOf(d.status);
+      const barColor = { red: 'var(--red)', orange: 'var(--orange)', yellow: 'var(--yellow)', green: 'var(--green)' }[color] || 'var(--muted)';
+      const badgeClass = { expired: 'badge-red', critical: 'badge-red', warning: 'badge-orange', notice: 'badge-yellow', good: 'badge-green' }[d.status] || 'badge-gray';
+      const badgeLabel = { expired: 'Expired', critical: 'Critical', warning: 'Warning', notice: 'Notice', good: 'Healthy' }[d.status] || '';
+      const checklistOpen = (d._checklistOpen) ? 'open' : '';
+      const totalChecks = (d.checklist || []).length;
+      const doneChecks = (d.checklist || []).filter(c => c.done).length;
+
+      return `
+        <div class="domain-card ${cardClassOf(d.status)}" role="listitem" data-id="${esc(d.id)}">
+          <div class="domain-status-dot ${dotClassOf(d.status)}" title="${esc(badgeLabel)}" aria-label="${esc(badgeLabel)}"></div>
+          <div class="domain-info">
+            <div class="domain-name">
+              <span>${esc(d.domain)}</span>
+              <span class="badge ${badgeClass}" aria-label="Status: ${esc(badgeLabel)}">${esc(badgeLabel)}</span>
+              ${d.grade ? `<span class="grade-badge ${gradeClass(d.grade)}" title="SSL Grade" aria-label="SSL Grade ${esc(d.grade)}">${esc(d.grade)}</span>` : ''}
+            </div>
+            <div class="domain-meta">
+              ${d.issuer ? `<span class="meta-item"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> ${esc(d.issuer)}</span>` : ''}
+              ${d.client ? `<span class="meta-item"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(d.client)}</span>` : ''}
+              <span class="meta-item"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${esc(fmtDate(d.expiry))}</span>
+              ${d.notes ? `<span class="meta-item" style="color:var(--muted);font-style:italic">${esc(d.notes)}</span>` : ''}
+            </div>
+            <span class="countdown ${color}" aria-live="polite">${esc(countdownLabel(d.days))}</span>
+            <div class="cert-progress-wrap">
+              <div class="cert-progress-label">Certificate life remaining</div>
+              <div class="cert-progress" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="${Math.round(pct)}% remaining">
+                <div class="cert-progress-bar" style="width:${pct}%;background:${barColor}"></div>
+              </div>
+            </div>
+            <div class="checklist-wrap ${checklistOpen}" id="checklist-${esc(d.id)}">
+              <div class="checklist-title">Renewal Checklist (${doneChecks}/${totalChecks})</div>
+              <div class="checklist-items">
+                ${(d.checklist || []).map((item, i) => `
+                  <label class="checklist-item ${item.done ? 'done' : ''}" title="${esc(item.text)}">
+                    <input type="checkbox" ${item.done ? 'checked' : ''} aria-label="${esc(item.text)}"
+                      onchange="toggleCheck('${esc(d.id)}', ${i}, this.checked)" />
+                    <span>${esc(item.text)}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="domain-actions">
+            <button class="btn btn-ghost btn-sm" onclick="toggleChecklist('${esc(d.id)}')" title="Toggle renewal checklist" aria-label="Toggle checklist for ${esc(d.domain)}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+              <span>${doneChecks}/${totalChecks}</span>
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="editDomain('${esc(d.id)}')" title="Edit domain" aria-label="Edit ${esc(d.domain)}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteDomain('${esc(d.id)}')" title="Delete domain" aria-label="Delete ${esc(d.domain)}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Checklist toggle ─────────────────────────────────────
+  window.toggleChecklist = function (id) {
+    const d = domains.find(x => x.id === id);
+    if (!d) return;
+    d._checklistOpen = !d._checklistOpen;
+    render();
+  };
+
+  window.toggleCheck = function (id, idx, checked) {
+    const d = domains.find(x => x.id === id);
+    if (!d || !d.checklist[idx]) return;
+    d.checklist[idx].done = checked;
+    saveDomains(domains);
+    // Re-render minimal: just update button label + class
+    const wrap = document.getElementById(`checklist-${id}`);
+    if (wrap) {
+      const doneChecks = d.checklist.filter(c => c.done).length;
+      const total = d.checklist.length;
+      const label = wrap.closest('.domain-card').querySelector('.domain-actions button:first-child span');
+      if (label) label.textContent = `${doneChecks}/${total}`;
+      const titleEl = wrap.querySelector('.checklist-title');
+      if (titleEl) titleEl.textContent = `Renewal Checklist (${doneChecks}/${total})`;
+      const item = wrap.querySelectorAll('.checklist-item')[idx];
+      if (item) {
+        if (checked) item.classList.add('done'); else item.classList.remove('done');
+      }
+    }
+    // Update stats
+    updateStats();
+  };
+
+  function updateStats() {
+    const all = domains.map(d => ({ ...d, days: daysUntil(d.expiry), status: statusOf(daysUntil(d.expiry)) }));
+    document.getElementById('statTotal').textContent = domains.length;
+    document.getElementById('statGood').textContent = all.filter(d => d.status === 'good').length;
+    document.getElementById('statSoon').textContent = all.filter(d => d.status === 'notice' || d.status === 'warning').length;
+    document.getElementById('statCritical').textContent = all.filter(d => d.status === 'critical').length;
+    document.getElementById('statExpired').textContent = all.filter(d => d.status === 'expired').length;
+  }
+
+  // ── Delete ───────────────────────────────────────────────
+  window.deleteDomain = function (id) {
+    const d = domains.find(x => x.id === id);
+    if (!d) return;
+    if (!confirm(`Remove "${d.domain}" from monitoring?`)) return;
+    domains = domains.filter(x => x.id !== id);
+    saveDomains(domains);
+    render();
+    toast(`${d.domain} removed`, 'info');
+  };
+
+  // ── Edit ─────────────────────────────────────────────────
+  window.editDomain = function (id) {
+    const d = domains.find(x => x.id === id);
+    if (!d) return;
+    editId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Domain';
+    document.getElementById('submitBtn').textContent = 'Save Changes';
+    document.getElementById('fieldDomain').value = d.domain;
+    document.getElementById('fieldExpiry').value = d.expiry;
+    document.getElementById('fieldIssuer').value = d.issuer || '';
+    document.getElementById('fieldGrade').value = d.grade || '';
+    document.getElementById('fieldClient').value = d.client || '';
+    document.getElementById('fieldNotes').value = d.notes || '';
+    openModal('addModal');
+  };
+
+  // ── Add Modal ────────────────────────────────────────────
+  document.getElementById('btnAdd').addEventListener('click', () => {
+    editId = null;
+    document.getElementById('modalTitle').textContent = 'Add Domain';
+    document.getElementById('submitBtn').textContent = 'Add Domain';
+    document.getElementById('domainForm').reset();
+    openModal('addModal');
+    setTimeout(() => document.getElementById('fieldDomain').focus(), 50);
+  });
+
+  document.getElementById('modalClose').addEventListener('click', () => closeModal('addModal'));
+  document.getElementById('cancelBtn').addEventListener('click', () => closeModal('addModal'));
+
+  document.getElementById('domainForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const domain = document.getElementById('fieldDomain').value.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+    const expiry = document.getElementById('fieldExpiry').value;
+    const issuer = document.getElementById('fieldIssuer').value.trim();
+    const grade = document.getElementById('fieldGrade').value;
+    const client = document.getElementById('fieldClient').value.trim();
+    const notes = document.getElementById('fieldNotes').value.trim();
+
+    if (!domain || !expiry) {
+      toast('Domain and expiry date are required', 'error');
+      return;
+    }
+
+    if (editId) {
+      const idx = domains.findIndex(x => x.id === editId);
+      if (idx !== -1) {
+        domains[idx] = { ...domains[idx], domain, expiry, issuer, grade, client, notes };
+        saveDomains(domains);
+        render();
+        toast(`${domain} updated`, 'success');
+      }
+    } else {
+      const newDomain = {
+        id: uid(),
+        domain,
+        expiry,
+        issuer,
+        grade,
+        client,
+        notes,
+        checklist: DEFAULT_CHECKLIST.map(t => ({ text: t, done: false })),
+        addedAt: Date.now()
+      };
+      domains.push(newDomain);
+      saveDomains(domains);
+      render();
+      toast(`${domain} added to monitoring`, 'success');
+    }
+    closeModal('addModal');
+  });
+
+  // ── Export CSV ───────────────────────────────────────────
+  document.getElementById('btnExport').addEventListener('click', () => {
+    if (domains.length === 0) { toast('No domains to export', 'warn'); return; }
+    const rows = [['domain', 'expiry', 'issuer', 'grade', 'client', 'notes']];
+    domains.forEach(d => {
+      rows.push([d.domain, d.expiry, d.issuer || '', d.grade || '', d.client || '', d.notes || '']);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ssl-monitor-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast(`Exported ${domains.length} domain${domains.length !== 1 ? 's' : ''}`, 'success');
+  });
+
+  // ── Import CSV ───────────────────────────────────────────
+  document.getElementById('btnImport').addEventListener('click', () => {
+    document.getElementById('csvInput').value = '';
+    openModal('importModal');
+    setTimeout(() => document.getElementById('csvInput').focus(), 50);
+  });
+
+  document.getElementById('importClose').addEventListener('click', () => closeModal('importModal'));
+  document.getElementById('importCancel').addEventListener('click', () => closeModal('importModal'));
+
+  document.getElementById('importConfirm').addEventListener('click', () => {
+    const raw = document.getElementById('csvInput').value.trim();
+    if (!raw) { toast('Please paste CSV data first', 'warn'); return; }
+    const skipHeader = document.getElementById('skipHeader').checked;
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    const rows = skipHeader ? lines.slice(1) : lines;
+    if (rows.length === 0) { toast('No data rows found', 'warn'); return; }
+
+    let added = 0;
+    let skipped = 0;
+    rows.forEach(line => {
+      const cols = parseCsvLine(line);
+      const domain = (cols[0] || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+      const expiry = (cols[1] || '').trim();
+      if (!domain || !expiry || !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) { skipped++; return; }
+      const exists = domains.find(d => d.domain === domain);
+      if (exists) { skipped++; return; }
+      domains.push({
+        id: uid(),
+        domain,
+        expiry,
+        issuer: (cols[2] || '').trim(),
+        grade: (cols[3] || '').trim(),
+        client: (cols[4] || '').trim(),
+        notes: (cols[5] || '').trim(),
+        checklist: DEFAULT_CHECKLIST.map(t => ({ text: t, done: false })),
+        addedAt: Date.now()
+      });
+      added++;
+    });
+
+    saveDomains(domains);
+    closeModal('importModal');
+    render();
+    if (added > 0) toast(`Imported ${added} domain${added !== 1 ? 's' : ''}${skipped ? `, ${skipped} skipped` : ''}`, 'success');
+    else toast(`No new domains imported (${skipped} skipped)`, 'warn');
+  });
+
+  function parseCsvLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  // ── Modal helpers ────────────────────────────────────────
+  function openModal(id) {
+    const el = document.getElementById(id);
+    el.classList.add('open');
+    el.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal(id) {
+    const el = document.getElementById(id);
+    el.classList.remove('open');
+    el.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  // Close on backdrop click
+  ['addModal', 'importModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal(id);
+    });
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('addModal');
+      closeModal('importModal');
+    }
+  });
+
+  // ── Search & Filter ──────────────────────────────────────
+  let searchTimer;
+  document.getElementById('searchInput').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(render, 120);
+  });
+  document.getElementById('filterStatus').addEventListener('change', render);
+  document.getElementById('sortBy').addEventListener('change', render);
+
+  // ── Initial render ───────────────────────────────────────
+  render();
+
+  // Auto-refresh stats every minute
+  setInterval(render, 60000);
+})();
+</script>
+</body>
+</html>

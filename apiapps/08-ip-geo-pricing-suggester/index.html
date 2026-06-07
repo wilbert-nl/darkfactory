@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IP Geo Pricing Suggester</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface2: #1a1a1a;
+  --border: rgba(255,255,255,0.08);
+  --accent: #ffffff;
+  --accent2: #3b82f6;
+  --text: #ededed;
+  --muted: #6b7280;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --radius: 6px;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="number"], select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input[type="number"]:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    select option {
+      background: var(--surface2);
+    }
+
+    .btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 11px 24px;
+      transition: opacity 0.2s, transform 0.1s;
+      width: 100%;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn:active { transform: scale(0.98); }
+
+    .detected-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      color: var(--green);
+      margin-top: 8px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover {
+      background: var(--surface2);
+    }
+
+    tbody tr.highlighted {
+      background: rgba(0, 229, 255, 0.1);
+      border-left: 3px solid var(--accent);
+    }
+
+    tbody td {
+      padding: 10px 12px;
+      vertical-align: middle;
+    }
+
+    .flag { font-size: 1.1rem; }
+
+    .price-suggested {
+      color: var(--green);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .price-usd {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .discount-badge {
+      display: inline-block;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 7px;
+    }
+
+    .discount-low { background: rgba(67, 217, 173, 0.15); color: var(--green); }
+    .discount-mid { background: rgba(247, 201, 72, 0.15); color: var(--yellow); }
+    .discount-high { background: rgba(124, 58, 237, 0.15); color: var(--accent2); }
+
+    .code-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      padding: 16px;
+      white-space: pre;
+      color: var(--text);
+    }
+
+    .copy-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      margin-left: 8px;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .section-header {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .tab-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.82rem;
+      padding: 6px 14px;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .status-bar {
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      gap: 12px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .status-bar.error { border-color: var(--accent2); color: var(--accent2); }
+    .status-bar.success { border-color: var(--green); color: var(--green); }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .summary-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .summary-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .summary-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.5rem; }
+      tbody td { padding: 8px 6px; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+/* === Dev Tools v2 Design System === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.6;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+h3 { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-family: var(--font-body); }
+
+.container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.card, .result, .item, .output, .box, .panel, .section, .info,
+[class*="card"], [class*="result"], [class*="item"], [class*="output"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  animation: toolsFade 0.25s ease both;
+}
+
+.code, .value, .data, pre, code, .mono, .number, .ip, .hash, .url, .phone, .email {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  color: var(--text);
+  word-break: break-all;
+}
+
+pre, .output-block, .terminal {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  color: var(--green);
+  line-height: 1.7;
+}
+
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.65rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.3);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
+}
+
+button, .btn, input[type="submit"], input[type="button"] {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.5rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+button:hover { opacity: 0.9; }
+button:active { transform: scale(0.97); }
+
+button.secondary, .btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.tag, .badge, .status, .label {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+}
+
+.valid, .success, .ok, .pass, .active { color: var(--green); }
+.invalid, .error, .fail, .danger { color: var(--red); }
+.warning, .pending { color: var(--yellow); }
+.info, .note { color: var(--accent2); }
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--green);
+  margin-right: 6px;
+}
+.status-dot.red { background: var(--red); }
+.status-dot.yellow { background: var(--yellow); }
+
+table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-weight: 600; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+tr:hover td { background: var(--surface); }
+
+@keyframes toolsFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor::after { content: '▋'; animation: blink 1s step-end infinite; color: var(--green); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>IP Geo Pricing Suggester</h1>
+      <p>Auto-detect visitor location and suggest PPP-adjusted prices for 20+ countries</p>
+    </header>
+
+    <!-- Config Card -->
+    <div class="card">
+      <div class="card-title">Configuration</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Base Price (USD)</label>
+          <input type="number" id="basePrice" value="49" min="1" max="9999" step="1" />
+        </div>
+        <div class="form-group">
+          <label>Min Discount %</label>
+          <input type="number" id="minDiscount" value="10" min="0" max="90" step="5" />
+        </div>
+        <div class="form-group">
+          <label>Max Discount %</label>
+          <input type="number" id="maxDiscount" value="70" min="10" max="95" step="5" />
+        </div>
+        <div class="form-group">
+          <label>Manual Country Override</label>
+          <select id="countryOverride">
+            <option value="">Auto-detect from IP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>&nbsp;</label>
+          <button class="btn" onclick="runSuggester()">Calculate Prices</button>
+        </div>
+      </div>
+      <div id="detectedBadge" style="margin-top:12px;display:none;">
+        <span class="detected-badge">
+          <span class="dot"></span>
+          <span id="detectedText">Detecting location...</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="statusBar" style="display:none;">
+      <span class="spinner" id="statusSpinner"></span>
+      <span id="statusText">Loading...</span>
+    </div>
+
+    <!-- Summary -->
+    <div id="summarySection" style="display:none;">
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-value" id="sumBase">—</div>
+          <div class="summary-label">Base Price (USD)</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value" id="sumCountries">—</div>
+          <div class="summary-label">Countries Covered</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value" id="sumAvgDiscount">—</div>
+          <div class="summary-label">Avg Discount</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value" id="sumDetected">—</div>
+          <div class="summary-label">Your Location</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Card -->
+    <div class="card" id="resultsCard" style="display:none;">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0;">PPP Price Table</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Country</th>
+              <th>PPP Index</th>
+              <th>Suggested Price</th>
+              <th>In USD</th>
+              <th>Discount</th>
+              <th>Stripe Code</th>
+            </tr>
+          </thead>
+          <tbody id="priceTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Snippet Card -->
+    <div class="card" id="snippetCard" style="display:none;">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0;">Embed Snippets</div>
+      </div>
+      <div class="tab-row">
+        <button class="tab active" onclick="showTab('js')">JavaScript Banner</button>
+        <button class="tab" onclick="showTab('stripe')">Stripe Webhook JSON</button>
+        <button class="tab" onclick="showTab('meta')">Meta Tags</button>
+      </div>
+      <div id="tab-js" class="tab-content active">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:0.8rem;color:var(--muted);">Paste into your pricing page</span>
+          <button class="copy-btn" onclick="copyCode('jsSnippet')">Copy</button>
+        </div>
+        <div class="code-block" id="jsSnippet"></div>
+      </div>
+      <div id="tab-stripe" class="tab-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:0.8rem;color:var(--muted);">Send as webhook payload or use with Stripe Coupons API</span>
+          <button class="copy-btn" onclick="copyCode('stripeSnippet')">Copy</button>
+        </div>
+        <div class="code-block" id="stripeSnippet"></div>
+      </div>
+      <div id="tab-meta" class="tab-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:0.8rem;color:var(--muted);">Add to your HTML head for SEO-friendly regional pricing</span>
+          <button class="copy-btn" onclick="copyCode('metaSnippet')">Copy</button>
+        </div>
+        <div class="code-block" id="metaSnippet"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // PPP index relative to USA (1.0). Lower = weaker purchasing power.
+    const PPP_DATA = [
+      { code: 'IN', name: 'India',          flag: 'IN', ppp: 0.28, currency: 'INR' },
+      { code: 'PK', name: 'Pakistan',       flag: 'PK', ppp: 0.22, currency: 'PKR' },
+      { code: 'BD', name: 'Bangladesh',     flag: 'BD', ppp: 0.20, currency: 'BDT' },
+      { code: 'NG', name: 'Nigeria',        flag: 'NG', ppp: 0.18, currency: 'NGN' },
+      { code: 'EG', name: 'Egypt',          flag: 'EG', ppp: 0.19, currency: 'EGP' },
+      { code: 'VN', name: 'Vietnam',        flag: 'VN', ppp: 0.26, currency: 'VND' },
+      { code: 'PH', name: 'Philippines',    flag: 'PH', ppp: 0.32, currency: 'PHP' },
+      { code: 'ID', name: 'Indonesia',      flag: 'ID', ppp: 0.30, currency: 'IDR' },
+      { code: 'TH', name: 'Thailand',       flag: 'TH', ppp: 0.38, currency: 'THB' },
+      { code: 'MY', name: 'Malaysia',       flag: 'MY', ppp: 0.44, currency: 'MYR' },
+      { code: 'TR', name: 'Turkey',         flag: 'TR', ppp: 0.33, currency: 'TRY' },
+      { code: 'UA', name: 'Ukraine',        flag: 'UA', ppp: 0.29, currency: 'UAH' },
+      { code: 'RO', name: 'Romania',        flag: 'RO', ppp: 0.47, currency: 'RON' },
+      { code: 'PL', name: 'Poland',         flag: 'PL', ppp: 0.52, currency: 'PLN' },
+      { code: 'CZ', name: 'Czech Republic', flag: 'CZ', ppp: 0.55, currency: 'CZK' },
+      { code: 'HU', name: 'Hungary',        flag: 'HU', ppp: 0.48, currency: 'HUF' },
+      { code: 'MX', name: 'Mexico',         flag: 'MX', ppp: 0.42, currency: 'MXN' },
+      { code: 'BR', name: 'Brazil',         flag: 'BR', ppp: 0.40, currency: 'BRL' },
+      { code: 'AR', name: 'Argentina',      flag: 'AR', ppp: 0.24, currency: 'ARS' },
+      { code: 'CO', name: 'Colombia',       flag: 'CO', ppp: 0.35, currency: 'COP' },
+      { code: 'ZA', name: 'South Africa',   flag: 'ZA', ppp: 0.36, currency: 'ZAR' },
+      { code: 'KE', name: 'Kenya',          flag: 'KE', ppp: 0.23, currency: 'KES' },
+      { code: 'GH', name: 'Ghana',          flag: 'GH', ppp: 0.21, currency: 'GHS' },
+      { code: 'RU', name: 'Russia',         flag: 'RU', ppp: 0.37, currency: 'RUB' },
+      { code: 'US', name: 'United States',  flag: 'US', ppp: 1.00, currency: 'USD' },
+      { code: 'GB', name: 'United Kingdom', flag: 'GB', ppp: 0.92, currency: 'GBP' },
+      { code: 'DE', name: 'Germany',        flag: 'DE', ppp: 0.88, currency: 'EUR' },
+      { code: 'FR', name: 'France',         flag: 'FR', ppp: 0.86, currency: 'EUR' },
+      { code: 'CA', name: 'Canada',         flag: 'CA', ppp: 0.90, currency: 'CAD' },
+      { code: 'AU', name: 'Australia',      flag: 'AU', ppp: 0.88, currency: 'AUD' },
+    ];
+
+    let detectedCountry = null;
+    let fxRates = {};
+
+    function flagEmoji(code) {
+      return code.split('').map(c => String.fromCodePoint(0x1F1E0 + c.charCodeAt(0) - 65)).join('');
+    }
+
+    function populateDropdown() {
+      const sel = document.getElementById('countryOverride');
+      PPP_DATA.sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.code;
+        opt.textContent = flagEmoji(c.flag) + ' ' + c.name;
+        sel.appendChild(opt);
+      });
+    }
+
+    function showStatus(msg, type) {
+      const bar = document.getElementById('statusBar');
+      const spin = document.getElementById('statusSpinner');
+      const txt = document.getElementById('statusText');
+      bar.style.display = 'flex';
+      bar.className = 'status-bar' + (type ? ' ' + type : '');
+      spin.style.display = type === 'success' || type === 'error' ? 'none' : 'block';
+      txt.textContent = msg;
+    }
+
+    function hideStatus() {
+      document.getElementById('statusBar').style.display = 'none';
+    }
+
+    async function detectIP() {
+      const tries = [
+        () => fetch('https://ipapi.co/json/').then(r => r.json()).then(d => ({ country: d.country_code, name: d.country_name })),
+        () => fetch('https://ipwho.is/').then(r => r.json()).then(d => ({ country: d.country_code, name: d.country })),
+      ];
+      for (const fn of tries) {
+        try {
+          const data = await fn();
+          if (data && data.country && data.country.length === 2) return data;
+        } catch (_) {}
+      }
+      return null;
+    }
+
+    async function loadFX() {
+      try {
+        const r = await fetch('https://open.er-api.com/v6/latest/USD');
+        const d = await r.json();
+        if (d && d.rates) return d.rates;
+      } catch (_) {}
+      return {};
+    }
+
+    function calcSuggestedUSD(baseUSD, pppIndex, minDisc, maxDisc) {
+      // Discount scales linearly with how weak the PPP is
+      const raw = 1 - pppIndex; // 0 = parity, close to 1 = very weak
+      const clamp = Math.min(Math.max(raw, 0), 1);
+      const discPct = minDisc + clamp * (maxDisc - minDisc);
+      const cappedDisc = Math.min(discPct, maxDisc);
+      return { usd: baseUSD * (1 - cappedDisc / 100), discPct: Math.round(cappedDisc) };
+    }
+
+    function stripeCode(countryCode, discPct) {
+      return 'PPP_' + countryCode + '_' + discPct;
+    }
+
+    function fmtPrice(amount, currency) {
+      try {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
+      } catch (_) {
+        return amount.toFixed(0) + ' ' + currency;
+      }
+    }
+
+    function discountClass(pct) {
+      if (pct < 30) return 'discount-low';
+      if (pct < 55) return 'discount-mid';
+      return 'discount-high';
+    }
+
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        const ids = ['js', 'stripe', 'meta'];
+        t.classList.toggle('active', ids[i] === id);
+      });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+    }
+
+    function copyCode(id) {
+      const el = document.getElementById(id);
+      navigator.clipboard.writeText(el.textContent).catch(() => {
+        const r = document.createRange();
+        r.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(r);
+        document.execCommand('copy');
+      });
+    }
+
+    function buildJSSnippet(rows, baseUSD) {
+      const map = JSON.stringify(
+        Object.fromEntries(rows.map(r => [r.code, { pct: r.discPct, code: r.stripe }])),
+        null, 2
+      );
+      return `<!-- IP Geo Pricing Suggester -->
+<script>
+(function() {
+  var pppMap = ${map};
+  fetch('https://ipapi.co/json/')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var entry = pppMap[d.country_code];
+      if (!entry) return;
+      var banner = document.getElementById('geo-pricing-banner');
+      if (!banner) return;
+      banner.innerHTML = 'You qualify for our ' + entry.pct + '% regional discount! '
+        + 'Use code <strong>' + entry.code + '<\/strong> at checkout.';
+      banner.style.display = 'block';
+    });
+})();
+<\/script>
+<div id="geo-pricing-banner" style="display:none;background:#6c63ff;color:#fff;padding:12px 20px;border-radius:8px;margin:16px 0;font-size:0.9rem;"></div>`;
+    }
+
+    function buildStripeJSON(rows) {
+      const coupons = rows.filter(r => r.discPct > 0).map(r => ({
+        name: r.stripe,
+        percent_off: r.discPct,
+        currency: r.currency,
+        metadata: { country: r.code, ppp_index: r.ppp }
+      }));
+      return JSON.stringify({ coupons }, null, 2);
+    }
+
+    function buildMetaTags(rows, baseUSD) {
+      return rows.map(r => {
+        const localPrice = r.localPrice ? Math.round(r.localPrice) : Math.round(r.usd);
+        return `<meta name="pricing:${r.code.toLowerCase()}" content="${r.currency} ${localPrice}" data-discount="${r.discPct}%" />`;
+      }).join('\n');
+    }
+
+    async function runSuggester() {
+      const baseUSD = parseFloat(document.getElementById('basePrice').value) || 49;
+      const minDisc = parseFloat(document.getElementById('minDiscount').value) || 10;
+      const maxDisc = parseFloat(document.getElementById('maxDiscount').value) || 70;
+      const override = document.getElementById('countryOverride').value;
+
+      showStatus('Fetching IP location and exchange rates...');
+      document.getElementById('resultsCard').style.display = 'none';
+      document.getElementById('snippetCard').style.display = 'none';
+      document.getElementById('summarySection').style.display = 'none';
+
+      const [ipData, rates] = await Promise.all([
+        override ? Promise.resolve(null) : detectIP(),
+        loadFX()
+      ]);
+
+      fxRates = rates;
+
+      let userCountry = override || (ipData && ipData.country) || 'US';
+      let userCountryName = '';
+      if (ipData && ipData.name) userCountryName = ipData.name;
+      if (override) {
+        const found = PPP_DATA.find(c => c.code === override);
+        if (found) userCountryName = found.name;
+      }
+      if (!userCountryName) {
+        const found = PPP_DATA.find(c => c.code === userCountry);
+        userCountryName = found ? found.name : userCountry;
+      }
+
+      detectedCountry = userCountry;
+
+      const badge = document.getElementById('detectedBadge');
+      const badgeText = document.getElementById('detectedText');
+      badge.style.display = 'block';
+      badgeText.textContent = (override ? 'Override: ' : 'Detected: ') + flagEmoji(userCountry) + ' ' + userCountryName;
+
+      const tableBody = document.getElementById('priceTableBody');
+      tableBody.innerHTML = '';
+
+      const rows = [];
+
+      PPP_DATA.sort((a, b) => b.ppp - a.ppp).forEach(country => {
+        const { usd, discPct } = calcSuggestedUSD(baseUSD, country.ppp, minDisc, maxDisc);
+        const rate = fxRates[country.currency] || 1;
+        const localAmount = usd * rate;
+        const stripe = stripeCode(country.code, discPct);
+        rows.push({ ...country, usd, discPct, localAmount, localPrice: localAmount, stripe });
+      });
+
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        if (row.code === userCountry) tr.classList.add('highlighted');
+        const localFmt = fmtPrice(row.localAmount, row.currency);
+        const usdFmt = '$' + row.usd.toFixed(2);
+        const dClass = discountClass(row.discPct);
+        const isUser = row.code === userCountry ? ' <span style="color:var(--accent);font-size:0.7rem;">(you)</span>' : '';
+        tr.innerHTML = `
+          <td><span class="flag">${flagEmoji(row.flag)}</span> ${row.name}${isUser}</td>
+          <td><span style="color:var(--muted);">${(row.ppp * 100).toFixed(0)}%</span></td>
+          <td><span class="price-suggested">${localFmt} ${row.currency}</span></td>
+          <td><span class="price-usd">${usdFmt}</span></td>
+          <td><span class="discount-badge ${dClass}">${row.discPct === 0 ? 'Full price' : '-' + row.discPct + '%'}</span></td>
+          <td><code style="font-size:0.75rem;color:var(--muted);">${row.stripe}</code></td>
+        `;
+        tableBody.appendChild(tr);
+      });
+
+      const avgDisc = Math.round(rows.reduce((s, r) => s + r.discPct, 0) / rows.length);
+
+      document.getElementById('sumBase').textContent = '$' + baseUSD;
+      document.getElementById('sumCountries').textContent = rows.length;
+      document.getElementById('sumAvgDiscount').textContent = avgDisc + '%';
+      document.getElementById('sumDetected').textContent = flagEmoji(userCountry) + ' ' + userCountryName;
+
+      document.getElementById('summarySection').style.display = 'block';
+      document.getElementById('resultsCard').style.display = 'block';
+      document.getElementById('snippetCard').style.display = 'block';
+
+      document.getElementById('jsSnippet').textContent = buildJSSnippet(rows, baseUSD);
+      document.getElementById('stripeSnippet').textContent = buildStripeJSON(rows);
+      document.getElementById('metaSnippet').textContent = buildMetaTags(rows, baseUSD);
+
+      showStatus('Loaded prices for ' + rows.length + ' countries. Exchange rates via open.er-api.com.', 'success');
+    }
+
+    // Init
+    populateDropdown();
+
+    // Auto-run on load with defaults
+    window.addEventListener('DOMContentLoaded', function() {
+      runSuggester();
+    });
+  </script>
+</body>
+</html>

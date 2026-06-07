@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>F1 Race Calendar Alert — Never Miss a Lap</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08);
+      --accent: #1db954;
+      --accent2: #ff6b6b;
+      --text: #ffffff;
+      --muted: #9ca3af;
+      --radius: 12px;
+      --font-display: 'Bebas Neue', Impact, sans-serif;
+      --font-body: 'Figtree', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .f1-logo {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent2) 0%, #c53030 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    header h1 span.sub {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--muted);
+      display: block;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .season-badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .tz-display {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── Main layout ─────────────────────────────────── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    /* ── Countdown hero ──────────────────────────────── */
+    .countdown-hero {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .countdown-hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent), var(--green));
+    }
+
+    .hero-flag {
+      font-size: 3rem;
+      margin-bottom: 6px;
+    }
+
+    .hero-race-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .hero-circuit {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .countdown-grid {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .countdown-unit {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .countdown-unit .num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown-unit .label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    .hero-next-session {
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .hero-next-session strong {
+      color: var(--green);
+    }
+
+    /* ── Tabs ────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 9px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Loading / Error states ──────────────────────── */
+    .state-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .state-box .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .state-box p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .state-box.error p { color: var(--accent2); }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Race cards (calendar) ───────────────────────── */
+    .races-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .race-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.15s;
+      cursor: pointer;
+    }
+
+    .race-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .race-card.next-race {
+      border-color: var(--accent2);
+    }
+
+    .race-card.next-race .race-header {
+      background: linear-gradient(90deg, rgba(244,63,94,0.15) 0%, transparent 100%);
+    }
+
+    .race-card.past-race {
+      opacity: 0.65;
+    }
+
+    .race-card.past-race:hover {
+      opacity: 1;
+    }
+
+    .race-card.expanded .race-sessions {
+      display: block;
+    }
+
+    .race-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 20px;
+    }
+
+    .race-round {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      min-width: 28px;
+    }
+
+    .race-flag {
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+
+    .race-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .race-info h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .race-info .circuit-name {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .race-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .race-date {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .race-status {
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-next { background: rgba(244,63,94,0.2); color: var(--accent2); }
+    .status-upcoming { background: rgba(168,85,247,0.2); color: var(--accent); }
+    .status-past { background: rgba(136,146,176,0.15); color: var(--muted); }
+
+    .race-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn-icon {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-icon:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .expand-chevron {
+      color: var(--muted);
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+    }
+
+    .race-card.expanded .expand-chevron {
+      transform: rotate(180deg);
+    }
+
+    /* ── Session times ───────────────────────────────── */
+    .race-sessions {
+      display: none;
+      border-top: 1px solid var(--border);
+      padding: 16px 20px;
+      background: var(--surface2);
+    }
+
+    .sessions-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .session-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .session-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .session-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .session-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-fp { background: var(--muted); }
+    .dot-quali { background: var(--yellow); }
+    .dot-sprint { background: var(--green); }
+    .dot-race { background: var(--accent2); }
+
+    .session-time {
+      text-align: right;
+    }
+
+    .session-time .local-time {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .session-time .local-date {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .session-time.past .local-time {
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+
+    .add-cal-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
+
+    .add-cal-btn:hover {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ── Results tab ─────────────────────────────────── */
+    .results-race-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .result-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .result-card-header .flag { font-size: 1.5rem; }
+
+    .result-card-header h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      flex: 1;
+    }
+
+    .result-card-header .result-date {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .podium {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      padding: 16px 20px;
+    }
+
+    .podium-place {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 14px 10px;
+      text-align: center;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+
+    .podium-place.p1 { border-color: #f6c90e; }
+    .podium-place.p2 { border-color: #c0c0c0; }
+    .podium-place.p3 { border-color: #cd7f32; }
+
+    .podium-medal {
+      font-size: 1.4rem;
+      margin-bottom: 6px;
+    }
+
+    .podium-driver {
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .podium-team {
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .podium-time {
+      font-size: 0.7rem;
+      color: var(--green);
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Standings tab ───────────────────────────────── */
+    .standings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .standings-grid { grid-template-columns: 1fr; }
+    }
+
+    .standings-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .standings-card h2 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+    }
+
+    .standings-list {
+      padding: 8px 0;
+    }
+
+    .standing-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      border-bottom: 1px solid rgba(46,51,80,0.5);
+      transition: background 0.15s;
+    }
+
+    .standing-row:last-child { border-bottom: none; }
+    .standing-row:hover { background: var(--surface2); }
+
+    .standing-pos {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--muted);
+      min-width: 20px;
+    }
+
+    .standing-pos.top3 { color: var(--yellow); }
+
+    .standing-name {
+      flex: 1;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .standing-nationality {
+      font-size: 0.8rem;
+    }
+
+    .standing-pts {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    .pts-bar-wrap {
+      width: 60px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .pts-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+
+    /* ── Toast ───────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      color: var(--text);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 320px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    #toast.success { border-color: var(--green); }
+    #toast.error { border-color: var(--accent2); }
+
+    /* ── Filter bar ──────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── Skeleton loader ─────────────────────────────── */
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+
+    /* ── Responsive tweaks ───────────────────────────── */
+    @media (max-width: 600px) {
+      .podium { grid-template-columns: 1fr; }
+      .countdown-hero { padding: 20px 16px; }
+      .tabs { flex-wrap: wrap; }
+      .race-header { gap: 10px; }
+      .race-info h3 { font-size: 0.85rem; }
+    }
+
+    /* ── Misc utils ──────────────────────────────────── */
+    .text-green { color: var(--green); }
+    .text-yellow { color: var(--yellow); }
+    .text-accent { color: var(--accent); }
+    .text-muted { color: var(--muted); }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .no-data {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 32px 16px;
+    }
+
+    /* === Media v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 700px 500px at 70% -10%, rgba(29,185,84,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
+    h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent); }
+    h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .race, .game, .match, .quiz, .joke, .anime, .pokemon, .trivia,
+    [class*="card"], [class*="item"], [class*="result"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: transform 0.2s, background 0.2s;
+      animation: mediaFade 0.4s ease both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 999px;
+      padding: 0.75rem 2rem;
+      font-family: var(--font-body);
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { transform: scale(1.03); filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .genre, .category, .label, .type, .team, .circuit, .difficulty {
+      display: inline-block;
+      background: rgba(29,185,84,0.12);
+      border: 1px solid rgba(29,185,84,0.25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .score, .rating, .stat, .number, .count, .position, .lap, .correct {
+      font-family: var(--font-mono);
+      font-size: 1.8rem;
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    .live, .trending, .new { color: var(--accent2); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+    @keyframes mediaFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .live::before { content: '● '; animation: livePulse 1.5s ease infinite; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="f1-logo" aria-hidden="true">F1</div>
+    <h1>
+      Race Calendar Alert
+      <span class="sub">Never miss a lap · 2025 Season</span>
+    </h1>
+  </div>
+  <div class="header-right">
+    <span class="season-badge">2025</span>
+    <span class="tz-display" id="tz-display">Loading timezone…</span>
+  </div>
+</header>
+
+<main class="container" role="main">
+
+  <!-- Countdown hero -->
+  <section class="countdown-hero" aria-label="Next race countdown" id="countdown-section">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <div class="spinner" id="hero-spinner" aria-label="Loading next race"></div>
+      <span class="text-muted" style="font-size:0.85rem;">Loading next race…</span>
+    </div>
+  </section>
+
+  <!-- Tabs -->
+  <nav class="tabs" role="tablist" aria-label="App sections">
+    <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="calendar" id="tab-calendar">📅 Calendar</button>
+    <button class="tab-btn"        role="tab" aria-selected="false" data-tab="results"  id="tab-results">🏁 Results</button>
+    <button class="tab-btn"        role="tab" aria-selected="false" data-tab="standings" id="tab-standings">🏆 Standings</button>
+  </nav>
+
+  <!-- Calendar tab -->
+  <section class="tab-panel active" id="panel-calendar" role="tabpanel" aria-labelledby="tab-calendar">
+    <div class="filter-bar">
+      <span class="filter-label">Show:</span>
+      <button class="filter-btn active" data-filter="all">All races</button>
+      <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+      <button class="filter-btn" data-filter="past">Past</button>
+    </div>
+    <div class="races-grid" id="races-grid">
+      <div class="state-box"><div class="spinner"></div><p>Fetching 2025 calendar…</p></div>
+    </div>
+  </section>
+
+  <!-- Results tab -->
+  <section class="tab-panel" id="panel-results" role="tabpanel" aria-labelledby="tab-results">
+    <div class="results-race-list" id="results-list">
+      <div class="state-box"><div class="spinner"></div><p>Loading recent results…</p></div>
+    </div>
+  </section>
+
+  <!-- Standings tab -->
+  <section class="tab-panel" id="panel-standings" role="tabpanel" aria-labelledby="tab-standings">
+    <div class="standings-grid" id="standings-grid">
+      <div class="state-box" style="grid-column:1/-1"><div class="spinner"></div><p>Loading standings…</p></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Toast notification -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* ── Constants ──────────────────────────────────────── */
+const API_BASE = 'https://api.jolpi.ca/ergast/f1/2025';
+const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+/* Country code → flag emoji mapping */
+const COUNTRY_FLAGS = {
+  Australia: '🇦🇺', Bahrain: '🇧🇭', 'Saudi Arabia': '🇸🇦', Japan: '🇯🇵',
+  China: '🇨🇳', USA: '🇺🇸', 'United States': '🇺🇸', Miami: '🇺🇸',
+  Italy: '🇮🇹', Monaco: '🇲🇨', Canada: '🇨🇦', Spain: '🇪🇸',
+  Austria: '🇦🇹', UK: '🇬🇧', 'United Kingdom': '🇬🇧', Hungary: '🇭🇺',
+  Belgium: '🇧🇪', Netherlands: '🇳🇱', Azerbaijan: '🇦🇿', Singapore: '🇸🇬',
+  Mexico: '🇲🇽', Brazil: '🇧🇷', Qatar: '🇶🇦', UAE: '🇦🇪',
+  'United Arab Emirates': '🇦🇪', Portugal: '🇵🇹', France: '🇫🇷',
+  Germany: '🇩🇪', Switzerland: '🇨🇭', Sweden: '🇸🇪', Finland: '🇫🇮',
+  Denmark: '🇩🇰', Norway: '🇳🇴', Russia: '🇷🇺', China: '🇨🇳',
+  Korea: '🇰🇷', India: '🇮🇳', Argentina: '🇦🇷', Turkey: '🇹🇷',
+  Morocco: '🇲🇦', 'South Africa': '🇿🇦', Bahamas: '🇧🇸'
+};
+
+const NATIONALITY_FLAGS = {
+  British: '🇬🇧', German: '🇩🇪', Dutch: '🇳🇱', Spanish: '🇪🇸',
+  Finnish: '🇫🇮', French: '🇫🇷', Australian: '🇦🇺', Brazilian: '🇧🇷',
+  Canadian: '🇨🇦', Mexican: '🇲🇽', American: '🇺🇸', Japanese: '🇯🇵',
+  Chinese: '🇨🇳', Italian: '🇮🇹', Monaco: '🇲🇨', Monegasque: '🇲🇨',
+  Danish: '🇩🇰', Swedish: '🇸🇪', Norwegian: '🇳🇴', Thai: '🇹🇭',
+  New_Zealander: '🇳🇿', Russian: '🇷🇺', Polish: '🇵🇱', Austrian: '🇦🇹',
+  Argentine: '🇦🇷', South_African: '🇿🇦', Portuguese: '🇵🇹',
+  Hungarian: '🇭🇺', Belgian: '🇧🇪', Swiss: '🇨🇭', New: '🇳🇿'
+};
+
+/* ── State ──────────────────────────────────────────── */
+const state = {
+  races: [],
+  results: [],
+  driverStandings: [],
+  constructorStandings: [],
+  currentFilter: 'all',
+  countdownTimer: null
+};
+
+/* ── Utils ──────────────────────────────────────────── */
+function getFlag(country) {
+  if (!country) return '🏁';
+  for (const key of Object.keys(COUNTRY_FLAGS)) {
+    if (country.toLowerCase().includes(key.toLowerCase())) return COUNTRY_FLAGS[key];
+  }
+  return '🏁';
+}
+
+function getNatFlag(nat) {
+  if (!nat) return '';
+  return NATIONALITY_FLAGS[nat] || '';
+}
+
+function formatLocalDateTime(utcDateStr, utcTimeStr) {
+  if (!utcDateStr || !utcTimeStr) return null;
+  const iso = `${utcDateStr}T${utcTimeStr}Z`;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
+function fmtTime(d) {
+  if (!d) return 'TBA';
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function fmtShortDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function isPast(d) {
+  return d && d < new Date();
+}
+
+function zeroPad(n) {
+  return String(n).padStart(2, '0');
+}
+
+let toastTimer = null;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ') + msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3200);
+}
+
+/* ── ICS calendar export ────────────────────────────── */
+function makeICSDate(d) {
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+function downloadICS(raceName, sessionName, startDate, durationMin = 90) {
+  const end = new Date(startDate.getTime() + durationMin * 60000);
+  const uid = `f1-${raceName.replace(/\s+/g, '-')}-${sessionName}-${Date.now()}@f1alert`;
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//F1 Race Alert//EN',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `SUMMARY:F1 ${raceName} – ${sessionName}`,
+    `DTSTART:${makeICSDate(startDate)}`,
+    `DTEND:${makeICSDate(end)}`,
+    `DESCRIPTION:Formula 1 2025 – ${raceName} ${sessionName}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT30M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:F1 ${sessionName} starts in 30 minutes!`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `f1-${raceName.replace(/\s+/g, '-')}-${sessionName}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Added ${sessionName} to calendar!`);
+}
+
+/* ── API fetch with error handling ─────────────────── */
+async function apiFetch(endpoint) {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    headers: { Accept: 'application/json' }
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
+
+/* ── Session helpers ────────────────────────────────── */
+function buildSessions(race) {
+  const sessions = [];
+
+  if (race.FirstPractice?.date) {
+    sessions.push({
+      name: 'Free Practice 1',
+      short: 'FP1',
+      dot: 'dot-fp',
+      date: race.FirstPractice.date,
+      time: race.FirstPractice.time || '00:00:00',
+      duration: 60
+    });
+  }
+  if (race.SecondPractice?.date) {
+    sessions.push({
+      name: 'Free Practice 2',
+      short: 'FP2',
+      dot: 'dot-fp',
+      date: race.SecondPractice.date,
+      time: race.SecondPractice.time || '00:00:00',
+      duration: 60
+    });
+  }
+  if (race.ThirdPractice?.date) {
+    sessions.push({
+      name: 'Free Practice 3',
+      short: 'FP3',
+      dot: 'dot-fp',
+      date: race.ThirdPractice.date,
+      time: race.ThirdPractice.time || '00:00:00',
+      duration: 60
+    });
+  }
+  if (race.Sprint?.date) {
+    sessions.push({
+      name: 'Sprint Race',
+      short: 'Sprint',
+      dot: 'dot-sprint',
+      date: race.Sprint.date,
+      time: race.Sprint.time || '00:00:00',
+      duration: 45
+    });
+  }
+  if (race.SprintQualifying?.date) {
+    sessions.push({
+      name: 'Sprint Qualifying',
+      short: 'SQ',
+      dot: 'dot-sprint',
+      date: race.SprintQualifying.date,
+      time: race.SprintQualifying.time || '00:00:00',
+      duration: 45
+    });
+  }
+  if (race.Qualifying?.date) {
+    sessions.push({
+      name: 'Qualifying',
+      short: 'Quali',
+      dot: 'dot-quali',
+      date: race.Qualifying.date,
+      time: race.Qualifying.time || '00:00:00',
+      duration: 60
+    });
+  }
+  // Race is always present
+  sessions.push({
+    name: 'Race',
+    short: 'Race',
+    dot: 'dot-race',
+    date: race.date,
+    time: race.time || '00:00:00',
+    duration: 120
+  });
+
+  return sessions;
+}
+
+/* ── Next race countdown ────────────────────────────── */
+function startCountdown(race) {
+  if (state.countdownTimer) clearInterval(state.countdownTimer);
+
+  const heroEl = document.getElementById('countdown-section');
+  const flag = getFlag(race.Circuit?.Location?.country);
+  const raceName = race.raceName;
+  const circuit = race.Circuit?.circuitName || '';
+  const location = `${race.Circuit?.Location?.locality || ''}, ${race.Circuit?.Location?.country || ''}`;
+
+  // Find next session for this race
+  const sessions = buildSessions(race);
+  const now = new Date();
+  const nextSession = sessions.find(s => {
+    const d = formatLocalDateTime(s.date, s.time);
+    return d && d > now;
+  });
+
+  heroEl.innerHTML = `
+    <div class="hero-flag">${flag}</div>
+    <div class="hero-race-name">Round ${race.round} · ${raceName}</div>
+    <div class="hero-circuit">📍 ${circuit} — ${location}</div>
+    <div class="countdown-grid" id="countdown-grid">
+      <div class="countdown-unit"><div class="num" id="cd-d">--</div><div class="label">Days</div></div>
+      <div class="countdown-unit"><div class="num" id="cd-h">--</div><div class="label">Hours</div></div>
+      <div class="countdown-unit"><div class="num" id="cd-m">--</div><div class="label">Mins</div></div>
+      <div class="countdown-unit"><div class="num" id="cd-s">--</div><div class="label">Secs</div></div>
+    </div>
+    <div class="hero-next-session" id="hero-session-info"></div>
+  `;
+
+  function tick() {
+    const now2 = new Date();
+    const raceDate = formatLocalDateTime(race.date, race.time || '00:00:00');
+    if (!raceDate) return;
+    const diff = raceDate - now2;
+    if (diff <= 0) {
+      document.getElementById('cd-d').textContent = '00';
+      document.getElementById('cd-h').textContent = '00';
+      document.getElementById('cd-m').textContent = '00';
+      document.getElementById('cd-s').textContent = '00';
+      return;
+    }
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+
+    const dEl = document.getElementById('cd-d');
+    const hEl = document.getElementById('cd-h');
+    const mEl = document.getElementById('cd-m');
+    const sEl = document.getElementById('cd-s');
+    if (dEl) dEl.textContent = zeroPad(days);
+    if (hEl) hEl.textContent = zeroPad(hours);
+    if (mEl) mEl.textContent = zeroPad(mins);
+    if (sEl) sEl.textContent = zeroPad(secs);
+  }
+
+  tick();
+  state.countdownTimer = setInterval(tick, 1000);
+
+  // Next session info
+  const sessionInfoEl = document.getElementById('hero-session-info');
+  if (sessionInfoEl && nextSession) {
+    const sessionTime = formatLocalDateTime(nextSession.date, nextSession.time);
+    sessionInfoEl.innerHTML = `Next session: <strong>${nextSession.name}</strong> — ${sessionTime ? fmtDate(sessionTime) + ' at ' + fmtTime(sessionTime) : 'TBA'}`;
+  }
+}
+
+/* ── Render calendar ────────────────────────────────── */
+function renderCalendar(filter) {
+  const grid = document.getElementById('races-grid');
+  const now = new Date();
+
+  let races = state.races;
+  if (filter === 'upcoming') races = races.filter(r => new Date(`${r.date}T${r.time || '12:00:00'}Z`) >= now);
+  if (filter === 'past') races = races.filter(r => new Date(`${r.date}T${r.time || '12:00:00'}Z`) < now);
+
+  if (!races.length) {
+    grid.innerHTML = `<div class="no-data">No races match this filter.</div>`;
+    return;
+  }
+
+  // Find the next upcoming race index in the full list
+  const nextRaceIdx = state.races.findIndex(r => new Date(`${r.date}T${r.time || '12:00:00'}Z`) >= now);
+  const nextRaceRound = nextRaceIdx >= 0 ? state.races[nextRaceIdx].round : null;
+
+  grid.innerHTML = races.map(race => {
+    const raceDate = new Date(`${race.date}T${race.time || '12:00:00'}Z`);
+    const past = raceDate < now;
+    const isNext = race.round === nextRaceRound;
+    const flag = getFlag(race.Circuit?.Location?.country);
+    const sessions = buildSessions(race);
+
+    let statusClass, statusLabel;
+    if (isNext) { statusClass = 'status-next'; statusLabel = 'NEXT'; }
+    else if (past) { statusClass = 'status-past'; statusLabel = 'DONE'; }
+    else { statusClass = 'status-upcoming'; statusLabel = 'UPCOMING'; }
+
+    const sessionsHTML = sessions.map(s => {
+      const dt = formatLocalDateTime(s.date, s.time);
+      const sessionPast = isPast(dt);
+      return `
+        <div class="session-row" role="row">
+          <div class="session-name">
+            <span class="session-dot ${s.dot}" aria-hidden="true"></span>
+            ${s.name}
+          </div>
+          <div class="session-time${sessionPast ? ' past' : ''}">
+            <div class="local-time">${dt ? fmtTime(dt) : 'TBA'}</div>
+            <div class="local-date">${dt ? fmtDate(dt) : ''}</div>
+          </div>
+          ${dt && !sessionPast ? `<button class="add-cal-btn" aria-label="Add ${s.name} to calendar" data-race="${race.raceName.replace(/"/g, '')}" data-session="${s.name}" data-iso="${dt.toISOString()}" data-dur="${s.duration}">+ Cal</button>` : ''}
+        </div>`;
+    }).join('');
+
+    return `
+      <article class="race-card${isNext ? ' next-race' : ''}${past ? ' past-race' : ''}"
+               aria-label="${race.raceName}"
+               data-round="${race.round}">
+        <div class="race-header" role="button" tabindex="0" aria-expanded="false"
+             aria-controls="sessions-${race.round}">
+          <span class="race-round">R${race.round}</span>
+          <span class="race-flag" aria-label="${race.Circuit?.Location?.country} flag">${flag}</span>
+          <div class="race-info">
+            <h3>${race.raceName}</h3>
+            <div class="circuit-name">📍 ${race.Circuit?.circuitName || ''} · ${race.Circuit?.Location?.locality || ''}</div>
+          </div>
+          <div class="race-meta">
+            <span class="race-date">${fmtShortDate(race.date)}</span>
+            <span class="race-status ${statusClass}">${statusLabel}</span>
+          </div>
+          <div class="race-actions">
+            <button class="btn-icon cal-export-btn" title="Export race weekend to calendar"
+                    aria-label="Add ${race.raceName} race to calendar"
+                    data-race="${race.raceName.replace(/"/g, '')}"
+                    data-session="Race"
+                    data-iso="${formatLocalDateTime(race.date, race.time || '12:00:00')?.toISOString() || ''}"
+                    data-dur="120">📅</button>
+            <span class="btn-icon expand-chevron" aria-hidden="true">▼</span>
+          </div>
+        </div>
+        <div class="race-sessions" id="sessions-${race.round}" role="group" aria-label="Session schedule">
+          <div class="sessions-title">Session Schedule — Your Local Time (${USER_TZ})</div>
+          <div class="session-list" role="table">
+            ${sessionsHTML}
+          </div>
+        </div>
+      </article>`;
+  }).join('');
+
+  // Attach expand/collapse events
+  grid.querySelectorAll('.race-header').forEach(header => {
+    const toggle = () => {
+      const card = header.closest('.race-card');
+      card.classList.toggle('expanded');
+      header.setAttribute('aria-expanded', card.classList.contains('expanded'));
+    };
+    header.addEventListener('click', e => {
+      if (e.target.closest('.cal-export-btn')) return;
+      toggle();
+    });
+    header.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  });
+
+  // Add to calendar buttons in session rows
+  grid.querySelectorAll('.add-cal-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const { race, session, iso, dur } = btn.dataset;
+      if (!iso) { showToast('Session time unavailable', 'error'); return; }
+      downloadICS(race, session, new Date(iso), parseInt(dur));
+    });
+  });
+
+  // Race-level calendar export
+  grid.querySelectorAll('.cal-export-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const { race, session, iso, dur } = btn.dataset;
+      if (!iso) { showToast('Race time unavailable', 'error'); return; }
+      downloadICS(race, session, new Date(iso), parseInt(dur));
+    });
+  });
+
+  // Auto-expand next race
+  const nextCard = grid.querySelector('.next-race');
+  if (nextCard) {
+    nextCard.classList.add('expanded');
+    const header = nextCard.querySelector('.race-header');
+    if (header) header.setAttribute('aria-expanded', 'true');
+  }
+}
+
+/* ── Render results ─────────────────────────────────── */
+function renderResults() {
+  const el = document.getElementById('results-list');
+  const pastRaces = state.results.filter(r => r.Results && r.Results.length);
+
+  if (!pastRaces.length) {
+    el.innerHTML = `<div class="state-box"><div class="icon">🏁</div><p>No race results available yet for 2025.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = pastRaces.slice(0, 10).map(race => {
+    const flag = getFlag(race.Circuit?.Location?.country);
+    const top3 = (race.Results || []).slice(0, 3);
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const podiumHTML = top3.map((r, i) => `
+      <div class="podium-place p${i + 1}" aria-label="Position ${i + 1}: ${r.Driver?.givenName} ${r.Driver?.familyName}">
+        <div class="podium-medal">${medals[i]}</div>
+        <div class="podium-driver">${r.Driver?.givenName?.charAt(0)}. ${r.Driver?.familyName || ''}</div>
+        <div class="podium-team">${r.Constructor?.name || ''}</div>
+        <div class="podium-time">${i === 0 ? (r.FastestLap?.Time?.time || r.Time?.time || 'Winner') : '+' + (r.Time?.time || '--')}</div>
+      </div>`).join('');
+
+    return `
+      <article class="result-card" aria-label="${race.raceName} results">
+        <div class="result-card-header">
+          <span class="flag" aria-hidden="true">${flag}</span>
+          <h3>Round ${race.round} · ${race.raceName}</h3>
+          <span class="result-date">${fmtShortDate(race.date)}</span>
+        </div>
+        <div class="podium" role="list" aria-label="Podium">
+          ${podiumHTML}
+        </div>
+      </article>`;
+  }).join('');
+}
+
+/* ── Render standings ───────────────────────────────── */
+function renderStandings() {
+  const grid = document.getElementById('standings-grid');
+  const ds = state.driverStandings;
+  const cs = state.constructorStandings;
+
+  if (!ds.length && !cs.length) {
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1"><div class="icon">🏆</div><p>Standings not yet available.</p></div>`;
+    return;
+  }
+
+  const maxDriverPts = ds.length ? parseFloat(ds[0].points) : 1;
+  const maxConPts = cs.length ? parseFloat(cs[0].points) : 1;
+
+  const driverRows = ds.slice(0, 10).map((d, i) => {
+    const natFlag = getNatFlag(d.Driver?.nationality);
+    const pct = Math.round((parseFloat(d.points) / maxDriverPts) * 100);
+    return `
+      <div class="standing-row" role="row" tabindex="0">
+        <span class="standing-pos${i < 3 ? ' top3' : ''}">${d.position}</span>
+        <span class="standing-nationality" aria-hidden="true">${natFlag}</span>
+        <span class="standing-name">${d.Driver?.givenName?.charAt(0)}. ${d.Driver?.familyName || ''}</span>
+        <div class="pts-bar-wrap"><div class="pts-bar" style="width:${pct}%"></div></div>
+        <span class="standing-pts">${d.points}</span>
+      </div>`;
+  }).join('');
+
+  const conRows = cs.slice(0, 10).map((c, i) => {
+    const pct = Math.round((parseFloat(c.points) / maxConPts) * 100);
+    return `
+      <div class="standing-row" role="row" tabindex="0">
+        <span class="standing-pos${i < 3 ? ' top3' : ''}">${c.position}</span>
+        <span class="standing-name">${c.Constructor?.name || ''}</span>
+        <div class="pts-bar-wrap"><div class="pts-bar" style="width:${pct}%"></div></div>
+        <span class="standing-pts">${c.points}</span>
+      </div>`;
+  }).join('');
+
+  grid.innerHTML = `
+    <div class="standings-card">
+      <h2>👤 Driver Championship</h2>
+      <div class="standings-list" role="table">${driverRows || '<div class="no-data">No data</div>'}</div>
+    </div>
+    <div class="standings-card">
+      <h2>🏎️ Constructor Championship</h2>
+      <div class="standings-list" role="table">${conRows || '<div class="no-data">No data</div>'}</div>
+    </div>`;
+}
+
+/* ── Tabs ────────────────────────────────────────────── */
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      const panel = document.getElementById(`panel-${btn.dataset.tab}`);
+      if (panel) panel.classList.add('active');
+    });
+  });
+}
+
+/* ── Filter ──────────────────────────────────────────── */
+function initFilters() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.currentFilter = btn.dataset.filter;
+      renderCalendar(state.currentFilter);
+    });
+  });
+}
+
+/* ── Main data load ─────────────────────────────────── */
+async function loadAll() {
+  // Update timezone display
+  const tzEl = document.getElementById('tz-display');
+  if (tzEl) tzEl.textContent = USER_TZ;
+
+  // Parallel fetches
+  const [racesData, resultsData, driverStData, conStData] = await Promise.allSettled([
+    apiFetch('/races.json'),
+    apiFetch('/results.json?limit=200'),
+    apiFetch('/driverStandings.json'),
+    apiFetch('/constructorStandings.json')
+  ]);
+
+  /* ── Calendar ── */
+  if (racesData.status === 'fulfilled') {
+    const races = racesData.value?.MRData?.RaceTable?.Races || [];
+    state.races = races;
+
+    if (races.length) {
+      // Find next upcoming race
+      const now = new Date();
+      const nextRace = races.find(r => new Date(`${r.date}T${r.time || '12:00:00'}Z`) >= now);
+      if (nextRace) startCountdown(nextRace);
+      else {
+        // Season over
+        const hero = document.getElementById('countdown-section');
+        hero.innerHTML = `<div class="hero-flag">🏁</div><div class="hero-race-name">2025 Season Complete</div><div class="hero-circuit">All races finished — see results below</div>`;
+      }
+      renderCalendar(state.currentFilter);
+    } else {
+      document.getElementById('races-grid').innerHTML = `<div class="state-box error"><div class="icon">⚠️</div><p>Could not load calendar data.</p></div>`;
+    }
+  } else {
+    document.getElementById('races-grid').innerHTML = `<div class="state-box error"><div class="icon">⚠️</div><p>Failed to fetch race calendar. Please try refreshing.</p></div>`;
+    document.getElementById('countdown-section').innerHTML = `<div class="state-box error" style="margin:0"><div class="icon">⚠️</div><p>Could not load next race data.</p></div>`;
+    showToast('Failed to load F1 calendar', 'error');
+  }
+
+  /* ── Results ── */
+  if (resultsData.status === 'fulfilled') {
+    const races = resultsData.value?.MRData?.RaceTable?.Races || [];
+    // Sort descending by round
+    state.results = [...races].sort((a, b) => parseInt(b.round) - parseInt(a.round));
+    renderResults();
+  } else {
+    document.getElementById('results-list').innerHTML = `<div class="state-box error"><div class="icon">⚠️</div><p>Could not load results. Try again later.</p></div>`;
+  }
+
+  /* ── Driver standings ── */
+  if (driverStData.status === 'fulfilled') {
+    const lists = driverStData.value?.MRData?.StandingsTable?.StandingsLists || [];
+    state.driverStandings = lists[0]?.DriverStandings || [];
+  }
+
+  /* ── Constructor standings ── */
+  if (conStData.status === 'fulfilled') {
+    const lists = conStData.value?.MRData?.StandingsTable?.StandingsLists || [];
+    state.constructorStandings = lists[0]?.ConstructorStandings || [];
+  }
+
+  renderStandings();
+}
+
+/* ── Boot ────────────────────────────────────────────── */
+initTabs();
+initFilters();
+loadAll().catch(err => {
+  console.error('Boot error:', err);
+  showToast('Something went wrong loading data', 'error');
+});
+</script>
+</body>
+</html>

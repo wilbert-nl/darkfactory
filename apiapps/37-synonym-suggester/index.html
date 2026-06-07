@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synonym Suggester — Write with Confidence</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --border: rgba(255,255,255,0.08);
+      --accent: #ffffff;
+      --accent2: #3b82f6;
+      --text: #ededed;
+      --muted: #6b7280;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── layout ── */
+    .app-shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .tagline {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mode-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .mode-btn {
+      padding: 6px 14px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .mode-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .mode-btn:hover:not(.active) {
+      color: var(--text);
+      background: rgba(0,229,255, 0.12);
+    }
+
+    /* ── main content ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+
+    /* ── left panel ── */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .search-wrap {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      max-width: 400px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 8px 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255, 0.15);
+    }
+
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #7c74ff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,229,255, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    /* ── quick lookup mode ── */
+    #quick-mode {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .lookup-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .lookup-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .word-input-wrap {
+      position: relative;
+      flex: 1;
+    }
+
+    .word-input-wrap input {
+      width: 100%;
+      font-size: 1rem;
+      padding: 10px 40px 10px 14px;
+    }
+
+    .clear-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      line-height: 1;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .word-input-wrap input:not(:placeholder-shown) + .clear-btn { opacity: 1; }
+    .clear-btn:hover { color: var(--text); }
+
+    .pos-filter {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pos-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 500;
+      margin-right: 2px;
+    }
+
+    .pos-chip {
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pos-chip:hover { color: var(--text); border-color: var(--accent); }
+    .pos-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .results-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    /* ── word definition card ── */
+    .definition-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      animation: slideIn 0.25s ease-out;
+    }
+
+    .def-word {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .def-phonetic {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .def-meanings {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .def-pos {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+    }
+
+    .def-text {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── word strength meter ── */
+    .strength-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .strength-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .strength-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .strength-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .strength-val {
+      font-size: 0.72rem;
+      font-weight: 700;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* ── synonym/antonym sections ── */
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .words-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .word-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.18s;
+      position: relative;
+    }
+
+    .word-chip:hover {
+      border-color: var(--accent);
+      background: rgba(0,229,255, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .word-chip.ant {
+      border-color: rgba(124,58,237, 0.3);
+    }
+
+    .word-chip.ant:hover {
+      border-color: var(--accent2);
+      background: rgba(124,58,237, 0.1);
+    }
+
+    .word-chip .score-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+    /* ── empty / loading ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      color: var(--muted);
+      text-align: center;
+      padding: 40px;
+    }
+
+    .empty-icon { font-size: 48px; opacity: 0.3; }
+    .empty-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+    .empty-sub { font-size: 0.85rem; }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── writing assistant mode ── */
+    #writing-mode {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #writing-mode.active { display: flex; }
+    #quick-mode.hidden { display: none; }
+
+    .editor-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .formality-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.82rem;
+      padding: 6px 12px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .formality-select:focus { border-color: var(--accent); }
+
+    .word-count {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .editable-text {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: var(--text);
+      outline: none;
+      overflow-y: auto;
+      cursor: text;
+      transition: border-color 0.2s;
+      min-height: 120px;
+    }
+
+    .editable-text:focus { border-color: var(--border); }
+    .editable-text:empty::before {
+      content: attr(data-placeholder);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .editable-text .clickable-word {
+      display: inline;
+      cursor: pointer;
+      border-radius: 3px;
+      padding: 1px 2px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .editable-text .clickable-word:hover {
+      background: rgba(0,229,255, 0.2);
+      color: #fff;
+    }
+
+    .editable-text .clickable-word.selected {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .hint-bar {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-family: monospace;
+      color: var(--text);
+    }
+
+    /* ── right panel ── */
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .right-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .right-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    /* ── recent words ── */
+    .recent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .recent-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.18s;
+      gap: 8px;
+    }
+
+    .recent-item:hover {
+      border-color: var(--accent);
+      background: rgba(0,229,255, 0.08);
+    }
+
+    .recent-word {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .recent-count {
+      font-size: 0.72rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ── nuance card ── */
+    .nuance-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      animation: slideIn 0.2s ease-out;
+    }
+
+    .nuance-word {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .nuance-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .formality-badge {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 6px;
+    }
+
+    .badge-formal { background: rgba(0,229,255, 0.2); color: var(--accent); }
+    .badge-casual { background: rgba(67, 217, 173, 0.15); color: var(--green); }
+    .badge-neutral { background: rgba(247, 201, 72, 0.15); color: var(--yellow); }
+
+    /* ── replace btn in writing mode ── */
+    .replace-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      background: rgba(0,229,255, 0.15);
+      border: 1px solid rgba(0,229,255, 0.3);
+      border-radius: 5px;
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      margin-top: 6px;
+    }
+
+    .replace-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* ── toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 0.85rem;
+      color: var(--text);
+      z-index: 999;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── animations ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .loading-pulse { animation: pulse 1.2s ease-in-out infinite; }
+
+    /* ── error state ── */
+    .error-msg {
+      background: rgba(124,58,237, 0.1);
+      border: 1px solid rgba(124,58,237, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: var(--accent2);
+    }
+
+    /* ── no results ── */
+    .no-results {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 20px;
+    }
+
+    /* ── responsive ── */
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .right-panel { border-right: none; border-top: 1px solid var(--border); max-height: 280px; }
+    }
+
+/* === Dev Tools v2 Design System === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.6;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+
+.container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.card, .result, .item, .output, .barcode-result, .vin-result, .isbn-result, .rhyme, .synonym,
+[class*="card"], [class*="result"], [class*="item"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  animation: toolsFade 0.25s ease both;
+}
+
+.code, .value, pre, code, .mono, .barcode, .isbn, .vin, .word {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  color: var(--text);
+  word-break: break-all;
+}
+
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.65rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.3);
+}
+
+button, .btn, input[type="submit"], input[type="button"] {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.5rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+button:hover { opacity: 0.9; }
+button:active { transform: scale(0.97); }
+
+.tag, .badge, .status, .label, .part-of-speech, .section-header {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+}
+
+.valid, .found, .success { color: var(--green); }
+.invalid, .not-found, .error { color: var(--red); }
+.warning { color: var(--yellow); }
+
+/* Word list / rhyme list */
+.word-list, .rhyme-list, .synonym-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+}
+.word-list li, .rhyme-list li, .synonym-list li {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.word-list li:hover, .rhyme-list li:hover, .synonym-list li:hover { border-color: rgba(255,255,255,0.3); }
+
+table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-weight: 600; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+@keyframes toolsFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header>
+    <div class="logo">
+      <div class="logo-icon" aria-hidden="true">✦</div>
+      <div>
+        <div>Synonym Suggester</div>
+        <div class="tagline">Write naturally in English</div>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="mode-toggle" role="group" aria-label="Mode selector">
+        <button class="mode-btn active" id="btn-quick" aria-pressed="true" onclick="switchMode('quick')">Quick Lookup</button>
+        <button class="mode-btn" id="btn-writing" aria-pressed="false" onclick="switchMode('writing')">Writing Assistant</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT: Quick lookup + Writing editor -->
+    <div class="left-panel">
+
+      <!-- QUICK LOOKUP MODE -->
+      <div id="quick-mode">
+        <div class="lookup-header">
+          <div class="lookup-row">
+            <div class="word-input-wrap">
+              <input
+                type="text"
+                id="word-input"
+                placeholder="Enter a word…"
+                aria-label="Word to look up"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button class="clear-btn" aria-label="Clear input" onclick="clearWordInput()">✕</button>
+            </div>
+            <button class="btn btn-primary" id="lookup-btn" onclick="lookupWord()" aria-label="Look up synonyms">
+              <span>Look Up</span>
+            </button>
+          </div>
+          <div class="pos-filter" role="group" aria-label="Filter by part of speech">
+            <span class="pos-label">Filter:</span>
+            <button class="pos-chip active" data-pos="all" onclick="setPosFilter(this)" aria-pressed="true">All</button>
+            <button class="pos-chip" data-pos="n" onclick="setPosFilter(this)" aria-pressed="false">Noun</button>
+            <button class="pos-chip" data-pos="v" onclick="setPosFilter(this)" aria-pressed="false">Verb</button>
+            <button class="pos-chip" data-pos="adj" onclick="setPosFilter(this)" aria-pressed="false">Adj</button>
+            <button class="pos-chip" data-pos="adv" onclick="setPosFilter(this)" aria-pressed="false">Adv</button>
+          </div>
+        </div>
+
+        <div class="results-scroll" id="quick-results" aria-live="polite">
+          <div class="empty-state" id="empty-quick">
+            <div class="empty-icon" aria-hidden="true">✦</div>
+            <div class="empty-title">Search for a word</div>
+            <div class="empty-sub">Type any English word to see synonyms, antonyms, and definitions</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WRITING ASSISTANT MODE -->
+      <div id="writing-mode">
+        <div class="editor-area">
+          <div class="editor-toolbar">
+            <span class="panel-title">Writing Assistant</span>
+            <select class="formality-select" id="formality-select" aria-label="Formality level">
+              <option value="all">All registers</option>
+              <option value="formal">Formal / Business</option>
+              <option value="casual">Casual</option>
+              <option value="academic">Academic</option>
+            </select>
+            <span class="word-count" id="word-count">0 words</span>
+            <button class="btn btn-ghost" onclick="clearEditor()" aria-label="Clear editor">Clear</button>
+          </div>
+          <div
+            class="editable-text"
+            id="editor"
+            contenteditable="true"
+            role="textbox"
+            aria-multiline="true"
+            data-placeholder="Paste or type your text here. Click any word to see synonym suggestions instantly…"
+          ></div>
+          <div class="hint-bar" aria-label="Keyboard hints">
+            <span>Click a word to look up synonyms</span>
+            <span>·</span>
+            <kbd class="kbd">Ctrl+A</kbd> select all
+            <span>·</span>
+            <kbd class="kbd">Tab</kbd> to focus editor
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Nuance notes + Recent lookups -->
+    <div class="right-panel" aria-label="Details and history panel">
+
+      <div class="right-header">
+        <div id="right-panel-title" class="panel-title">Recent Lookups</div>
+      </div>
+
+      <div class="right-scroll" id="right-content" aria-live="polite">
+        <div class="empty-state" id="empty-right">
+          <div class="empty-icon" aria-hidden="true">📖</div>
+          <div class="empty-title">No history yet</div>
+          <div class="empty-sub">Words you look up will appear here</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  'use strict';
+
+  // ──────────────────────────────────────────────
+  // State
+  // ──────────────────────────────────────────────
+  let currentMode = 'quick';
+  let currentPosFilter = 'all';
+  let currentWordData = null;
+  let recentLookups = [];
+  let selectedWritingWord = null;
+  let writingWordNodes = [];
+  let lookupDebounce = null;
+  let isLoading = false;
+
+  const FORMALITY_NOTES = {
+    formal: { label: 'Formal', badge: 'badge-formal', hint: 'Best for business emails and professional writing' },
+    casual: { label: 'Casual', badge: 'badge-casual', hint: 'Natural in conversation and informal messages' },
+    academic: { label: 'Academic', badge: 'badge-formal', hint: 'Appropriate for research and scholarly writing' },
+    neutral: { label: 'Neutral', badge: 'badge-neutral', hint: 'Suitable for general writing contexts' },
+  };
+
+  // POS code → readable label
+  const POS_LABELS = { n: 'noun', v: 'verb', adj: 'adjective', adv: 'adverb', u: 'general' };
+
+  // ──────────────────────────────────────────────
+  // DOM refs
+  // ──────────────────────────────────────────────
+  const wordInput = document.getElementById('word-input');
+  const lookupBtn = document.getElementById('lookup-btn');
+  const quickResults = document.getElementById('quick-results');
+  const emptyQuick = document.getElementById('empty-quick');
+  const rightContent = document.getElementById('right-content');
+  const emptyRight = document.getElementById('empty-right');
+  const rightPanelTitle = document.getElementById('right-panel-title');
+  const editor = document.getElementById('editor');
+  const wordCountEl = document.getElementById('word-count');
+  const formalitySelect = document.getElementById('formality-select');
+  const toast = document.getElementById('toast');
+
+  // ──────────────────────────────────────────────
+  // Mode switching
+  // ──────────────────────────────────────────────
+  function switchMode(mode) {
+    currentMode = mode;
+    const quickEl = document.getElementById('quick-mode');
+    const writingEl = document.getElementById('writing-mode');
+    const btnQuick = document.getElementById('btn-quick');
+    const btnWriting = document.getElementById('btn-writing');
+
+    if (mode === 'quick') {
+      quickEl.classList.remove('hidden');
+      writingEl.classList.remove('active');
+      btnQuick.classList.add('active');
+      btnWriting.classList.remove('active');
+      btnQuick.setAttribute('aria-pressed', 'true');
+      btnWriting.setAttribute('aria-pressed', 'false');
+      showRecentLookups();
+    } else {
+      quickEl.classList.add('hidden');
+      writingEl.classList.add('active');
+      btnQuick.classList.remove('active');
+      btnWriting.classList.add('active');
+      btnQuick.setAttribute('aria-pressed', 'false');
+      btnWriting.setAttribute('aria-pressed', 'true');
+      renderEditor();
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // Word input / lookup
+  // ──────────────────────────────────────────────
+  function clearWordInput() {
+    wordInput.value = '';
+    wordInput.focus();
+    showEmptyQuick();
+  }
+
+  function showEmptyQuick() {
+    quickResults.innerHTML = '';
+    quickResults.appendChild(emptyQuick);
+  }
+
+  function setPosFilter(btn) {
+    document.querySelectorAll('.pos-chip').forEach(c => {
+      c.classList.remove('active');
+      c.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    currentPosFilter = btn.dataset.pos;
+    if (currentWordData) renderWordResults(currentWordData);
+  }
+
+  async function lookupWord() {
+    const word = wordInput.value.trim().toLowerCase();
+    if (!word || isLoading) return;
+
+    isLoading = true;
+    lookupBtn.disabled = true;
+    showLoading();
+
+    try {
+      const [synData, antData, mlData, defData] = await Promise.allSettled([
+        fetchSynonyms(word),
+        fetchAntonyms(word),
+        fetchMeansLike(word),
+        fetchDefinition(word),
+      ]);
+
+      const data = {
+        word,
+        synonyms: synData.status === 'fulfilled' ? synData.value : [],
+        antonyms: antData.status === 'fulfilled' ? antData.value : [],
+        meansLike: mlData.status === 'fulfilled' ? mlData.value : [],
+        definition: defData.status === 'fulfilled' ? defData.value : null,
+      };
+
+      currentWordData = data;
+      renderWordResults(data);
+      addToRecent(data);
+      showNuancePanel(data);
+    } catch (err) {
+      showError(`Could not fetch results: ${err.message}`);
+    } finally {
+      isLoading = false;
+      lookupBtn.disabled = false;
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // API calls
+  // ──────────────────────────────────────────────
+  async function fetchSynonyms(word) {
+    const res = await fetch(`https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=40`);
+    if (!res.ok) throw new Error('Synonym API error');
+    return res.json();
+  }
+
+  async function fetchAntonyms(word) {
+    const res = await fetch(`https://api.datamuse.com/words?rel_ant=${encodeURIComponent(word)}&max=20`);
+    if (!res.ok) throw new Error('Antonym API error');
+    return res.json();
+  }
+
+  async function fetchMeansLike(word) {
+    const res = await fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=20`);
+    if (!res.ok) throw new Error('ML API error');
+    return res.json();
+  }
+
+  async function fetchDefinition(word) {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return Array.isArray(json) ? json[0] : null;
+  }
+
+  // ──────────────────────────────────────────────
+  // Rendering
+  // ──────────────────────────────────────────────
+  function showLoading() {
+    quickResults.innerHTML = `<div class="empty-state"><div class="spinner" aria-label="Loading"></div><div class="loading-pulse" style="color:var(--muted);font-size:0.85rem;margin-top:12px">Fetching results…</div></div>`;
+  }
+
+  function showError(msg) {
+    quickResults.innerHTML = `<div style="padding:20px"><div class="error-msg">${escHtml(msg)}</div></div>`;
+  }
+
+  function renderWordResults(data) {
+    const { word, synonyms, antonyms, meansLike, definition } = data;
+    const filterPos = currentPosFilter;
+
+    function filterByPos(words) {
+      if (filterPos === 'all') return words;
+      return words.filter(w => {
+        const tags = w.tags || [];
+        return tags.some(t => t === filterPos || t.startsWith(filterPos));
+      });
+    }
+
+    const filteredSyns = filterByPos(synonyms);
+    const filteredAnts = filterByPos(antonyms);
+    const filteredMl = filterByPos(meansLike);
+
+    let html = '';
+
+    // Definition card
+    if (definition) {
+      const phonetic = definition.phonetic || (definition.phonetics && definition.phonetics.find(p => p.text)?.text) || '';
+      const meanings = (definition.meanings || []).slice(0, 2);
+      const strength = computeStrength(synonyms, antonyms);
+      html += `<div class="definition-card" role="region" aria-label="Word definition">
+        <div class="def-word">${escHtml(word)}</div>
+        ${phonetic ? `<div class="def-phonetic">${escHtml(phonetic)}</div>` : ''}
+        <div class="def-meanings">
+          ${meanings.map(m => {
+            const def = (m.definitions || [])[0];
+            return def ? `<div><span class="def-pos">${escHtml(m.partOfSpeech || '')}</span><div class="def-text">${escHtml(def.definition || '')}</div></div>` : '';
+          }).join('')}
+        </div>
+        <div class="strength-bar" aria-label="Word strength">
+          <span class="strength-label">Word Strength</span>
+          <div class="strength-track" role="progressbar" aria-valuenow="${strength}" aria-valuemin="0" aria-valuemax="100">
+            <div class="strength-fill" style="width:0%;background:${strengthColor(strength)}" data-target="${strength}"></div>
+          </div>
+          <span class="strength-val" style="color:${strengthColor(strength)}">${strength}%</span>
+        </div>
+      </div>`;
+    }
+
+    // Synonyms
+    if (filteredSyns.length) {
+      html += `<div class="section-label">Synonyms (${filteredSyns.length})</div>`;
+      html += `<div class="words-grid" role="list">`;
+      filteredSyns.forEach(w => {
+        const score = w.score || 0;
+        const scoreNorm = Math.min(100, Math.round((score / 1000000) * 100));
+        const color = scoreNorm > 60 ? 'var(--green)' : scoreNorm > 30 ? 'var(--yellow)' : 'var(--muted)';
+        html += `<button class="word-chip" role="listitem" title="Score: ${score}" onclick="drillDown('${escAttr(w.word)}')" aria-label="Look up synonym ${escAttr(w.word)}">
+          <span class="score-dot" style="background:${color}" aria-hidden="true"></span>${escHtml(w.word)}
+        </button>`;
+      });
+      html += `</div>`;
+    } else if (filterPos !== 'all') {
+      html += `<div class="no-results">No synonyms found for the selected part of speech</div>`;
+    }
+
+    // Antonyms
+    if (filteredAnts.length) {
+      html += `<div class="section-label" style="color:var(--accent2)">Antonyms (${filteredAnts.length})</div>`;
+      html += `<div class="words-grid" role="list">`;
+      filteredAnts.forEach(w => {
+        html += `<button class="word-chip ant" role="listitem" onclick="drillDown('${escAttr(w.word)}')" aria-label="Look up antonym ${escAttr(w.word)}">${escHtml(w.word)}</button>`;
+      });
+      html += `</div>`;
+    }
+
+    // Means-like
+    if (filteredMl.length) {
+      html += `<div class="section-label">Related Meanings (${filteredMl.length})</div>`;
+      html += `<div class="words-grid" role="list">`;
+      filteredMl.slice(0, 15).forEach(w => {
+        html += `<button class="word-chip" role="listitem" onclick="drillDown('${escAttr(w.word)}')" aria-label="Look up related word ${escAttr(w.word)}">${escHtml(w.word)}</button>`;
+      });
+      html += `</div>`;
+    }
+
+    if (!filteredSyns.length && !filteredAnts.length && !filteredMl.length && !definition) {
+      html += `<div class="no-results"><div style="font-size:2rem;margin-bottom:8px">🔍</div>No results found for "<strong>${escHtml(word)}</strong>"</div>`;
+    }
+
+    quickResults.innerHTML = html;
+
+    // Animate strength bar
+    requestAnimationFrame(() => {
+      const fill = quickResults.querySelector('.strength-fill');
+      if (fill) {
+        setTimeout(() => {
+          fill.style.width = `${fill.dataset.target}%`;
+        }, 100);
+      }
+    });
+  }
+
+  function computeStrength(synonyms, antonyms) {
+    const synCount = synonyms.length;
+    const antCount = antonyms.length;
+    // More synonyms = richer word. Score 0–100.
+    const base = Math.min(100, Math.round((synCount / 40) * 70 + (antCount / 20) * 30));
+    return base;
+  }
+
+  function strengthColor(v) {
+    if (v >= 70) return 'var(--green)';
+    if (v >= 40) return 'var(--yellow)';
+    return 'var(--accent2)';
+  }
+
+  // ──────────────────────────────────────────────
+  // Nuance panel (right side)
+  // ──────────────────────────────────────────────
+  function showNuancePanel(data) {
+    rightPanelTitle.textContent = `Nuance Notes — ${data.word}`;
+
+    const formality = formalitySelect.value;
+    const topSyns = (data.synonyms || []).slice(0, 5);
+
+    if (!topSyns.length) {
+      rightContent.innerHTML = `<div class="no-results" style="padding-top:20px">No nuance data available</div>`;
+      showRecentBelow(data);
+      return;
+    }
+
+    let html = '';
+    topSyns.forEach((s, i) => {
+      const fTag = guessFormalityTag(s.word, i);
+      const fInfo = FORMALITY_NOTES[fTag] || FORMALITY_NOTES.neutral;
+      const show = formality === 'all' || formality === fTag || (formality === 'formal' && fTag === 'academic');
+      if (!show) return;
+      html += `<div class="nuance-card" role="article" aria-label="Nuance note for ${escAttr(s.word)}">
+        <div class="nuance-word">${escHtml(s.word)}</div>
+        <div class="nuance-note">
+          <span class="formality-badge ${fInfo.badge}">${fInfo.label}</span>
+          ${fInfo.hint}. Use "<em>${escHtml(s.word)}</em>" as an alternative to "<em>${escHtml(data.word)}</em>" in ${fTag === 'formal' ? 'professional contexts' : fTag === 'casual' ? 'everyday writing' : 'varied contexts'}.
+        </div>
+      </div>`;
+    });
+
+    if (!html) {
+      html = `<div class="no-results" style="padding-top:20px">No synonyms match the selected formality. Try "All registers".</div>`;
+    }
+
+    rightContent.innerHTML = html;
+    showRecentBelow(data);
+  }
+
+  function guessFormalityTag(word, index) {
+    // Heuristic: longer/Latinate words tend to be more formal
+    if (word.length > 9) return index % 2 === 0 ? 'formal' : 'academic';
+    if (word.length < 5) return 'casual';
+    return 'neutral';
+  }
+
+  function showRecentBelow(data) {
+    if (!recentLookups.length) return;
+    const div = document.createElement('div');
+    div.style.marginTop = '24px';
+    div.innerHTML = `<div class="section-label" style="margin-bottom:10px">Recent Lookups</div>`;
+    const list = buildRecentList();
+    div.appendChild(list);
+    rightContent.appendChild(div);
+  }
+
+  function showRecentLookups() {
+    rightPanelTitle.textContent = 'Recent Lookups';
+    if (!recentLookups.length) {
+      rightContent.innerHTML = '';
+      rightContent.appendChild(emptyRight);
+      return;
+    }
+    rightContent.innerHTML = '';
+    rightContent.appendChild(buildRecentList());
+  }
+
+  function buildRecentList() {
+    const wrap = document.createElement('div');
+    wrap.className = 'recent-list';
+    wrap.setAttribute('role', 'list');
+    recentLookups.forEach(item => {
+      const el = document.createElement('button');
+      el.className = 'recent-item';
+      el.setAttribute('role', 'listitem');
+      el.setAttribute('aria-label', `Re-look up ${item.word}`);
+      el.innerHTML = `<span class="recent-word">${escHtml(item.word)}</span>
+        <span class="recent-count">${item.synonyms.length} syn · ${item.antonyms.length} ant</span>`;
+      el.onclick = () => {
+        wordInput.value = item.word;
+        switchMode('quick');
+        currentWordData = item;
+        renderWordResults(item);
+        showNuancePanel(item);
+      };
+      wrap.appendChild(el);
+    });
+    return wrap;
+  }
+
+  function addToRecent(data) {
+    recentLookups = recentLookups.filter(r => r.word !== data.word);
+    recentLookups.unshift(data);
+    if (recentLookups.length > 10) recentLookups = recentLookups.slice(0, 10);
+  }
+
+  // ──────────────────────────────────────────────
+  // Drill-down (click a word chip → look it up)
+  // ──────────────────────────────────────────────
+  function drillDown(word) {
+    wordInput.value = word;
+    lookupWord();
+    showToast(`Looking up "${word}"…`);
+  }
+
+  // ──────────────────────────────────────────────
+  // Writing assistant
+  // ──────────────────────────────────────────────
+  function renderEditor() {
+    // Don't re-render if we have content already parsed
+    updateWordCount();
+    showRecentLookups();
+  }
+
+  function clearEditor() {
+    editor.innerHTML = '';
+    writingWordNodes = [];
+    selectedWritingWord = null;
+    updateWordCount();
+    showRecentLookups();
+  }
+
+  function updateWordCount() {
+    const text = editor.innerText || '';
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    wordCountEl.textContent = `${words.length} word${words.length !== 1 ? 's' : ''}`;
+  }
+
+  function tokenizeEditorText() {
+    const text = editor.innerText || '';
+    if (!text.trim()) return;
+
+    // Split into tokens (words and non-words)
+    const tokens = text.split(/(\s+|[^\w'-]+)/);
+    let html = '';
+    tokens.forEach(token => {
+      if (/^[\w'-]+$/.test(token) && token.length > 1) {
+        html += `<span class="clickable-word" role="button" tabindex="0" aria-label="Click to look up ${escAttr(token)}">${escHtml(token)}</span>`;
+      } else {
+        html += escHtml(token);
+      }
+    });
+
+    editor.innerHTML = html;
+    attachWordClickHandlers();
+  }
+
+  function attachWordClickHandlers() {
+    const words = editor.querySelectorAll('.clickable-word');
+    words.forEach(span => {
+      span.addEventListener('click', onWritingWordClick);
+      span.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onWritingWordClick.call(span, e);
+        }
+      });
+    });
+  }
+
+  async function onWritingWordClick(e) {
+    e.stopPropagation();
+    const span = e.currentTarget || this;
+    const word = span.textContent.trim().toLowerCase().replace(/[^a-z'-]/g, '');
+    if (!word || word.length < 2) return;
+
+    // Highlight selected
+    editor.querySelectorAll('.clickable-word').forEach(s => s.classList.remove('selected'));
+    span.classList.add('selected');
+    selectedWritingWord = span;
+
+    rightPanelTitle.textContent = `Synonyms for "${word}"`;
+    rightContent.innerHTML = `<div class="empty-state"><div class="spinner"></div></div>`;
+
+    const [synData, antData, defData] = await Promise.allSettled([
+      fetchSynonyms(word),
+      fetchAntonyms(word),
+      fetchDefinition(word),
+    ]);
+
+    const synonyms = synData.status === 'fulfilled' ? synData.value : [];
+    const antonyms = antData.status === 'fulfilled' ? antData.value : [];
+    const definition = defData.status === 'fulfilled' ? defData.value : null;
+
+    const data = { word, synonyms, antonyms, meansLike: [], definition };
+    addToRecent(data);
+
+    // Render writing-mode synonym panel
+    const formality = formalitySelect.value;
+
+    let html = '';
+
+    // Definition snippet
+    if (definition) {
+      const meanings = (definition.meanings || []).slice(0, 1);
+      if (meanings.length) {
+        const def = (meanings[0].definitions || [])[0];
+        if (def) {
+          html += `<div class="definition-card" style="margin-bottom:16px">
+            <div class="def-word">${escHtml(word)}</div>
+            <div class="def-text" style="margin-top:6px">${escHtml(def.definition || '')}</div>
+          </div>`;
+        }
+      }
+    }
+
+    if (synonyms.length) {
+      html += `<div class="section-label">Synonyms — click to replace</div>`;
+      synonyms.slice(0, 20).forEach((s, i) => {
+        const fTag = guessFormalityTag(s.word, i);
+        const fInfo = FORMALITY_NOTES[fTag] || FORMALITY_NOTES.neutral;
+        const show = formality === 'all' || formality === fTag || (formality === 'formal' && fTag === 'academic');
+        if (!show) return;
+        html += `<div class="nuance-card">
+          <div class="nuance-word">${escHtml(s.word)}</div>
+          <div class="nuance-note"><span class="formality-badge ${fInfo.badge}">${fInfo.label}</span>${fInfo.hint}</div>
+          <button class="replace-btn" onclick="replaceWord('${escAttr(s.word)}')" aria-label="Replace ${escAttr(word)} with ${escAttr(s.word)}">↩ Replace</button>
+        </div>`;
+      });
+    } else {
+      html += `<div class="no-results">No synonyms found for "<strong>${escHtml(word)}</strong>"</div>`;
+    }
+
+    rightContent.innerHTML = html || `<div class="no-results">No data found</div>`;
+  }
+
+  function replaceWord(replacement) {
+    if (!selectedWritingWord) return;
+    const original = selectedWritingWord.textContent;
+    // Preserve capitalisation
+    let rep = replacement;
+    if (original[0] === original[0].toUpperCase() && original[0] !== original[0].toLowerCase()) {
+      rep = rep[0].toUpperCase() + rep.slice(1);
+    }
+    selectedWritingWord.textContent = rep;
+    selectedWritingWord.classList.remove('selected');
+    selectedWritingWord = null;
+    showToast(`Replaced with "${rep}"`);
+    updateWordCount();
+  }
+
+  // ──────────────────────────────────────────────
+  // Toast
+  // ──────────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // ──────────────────────────────────────────────
+  // Utils
+  // ──────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escAttr(str) {
+    return String(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+  }
+
+  // ──────────────────────────────────────────────
+  // Event listeners
+  // ──────────────────────────────────────────────
+  wordInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') lookupWord();
+  });
+
+  wordInput.addEventListener('input', () => {
+    clearTimeout(lookupDebounce);
+    const val = wordInput.value.trim();
+    if (val.length > 1) {
+      lookupDebounce = setTimeout(() => {
+        if (wordInput.value.trim() === val) lookupWord();
+      }, 800);
+    }
+  });
+
+  // Editor events
+  editor.addEventListener('input', () => {
+    updateWordCount();
+  });
+
+  editor.addEventListener('paste', e => {
+    // Paste as plain text
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+    setTimeout(() => {
+      tokenizeEditorText();
+      updateWordCount();
+    }, 0);
+  });
+
+  // Tokenize on blur (after manual typing)
+  editor.addEventListener('blur', () => {
+    tokenizeEditorText();
+  });
+
+  // Formality change re-renders right panel
+  formalitySelect.addEventListener('change', () => {
+    if (currentWordData && currentMode === 'quick') {
+      showNuancePanel(currentWordData);
+    }
+  });
+
+  // Initial state
+  showRecentLookups();
+</script>
+</body>
+</html>

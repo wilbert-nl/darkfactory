@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScorePost — Sports Score Auto-Poster</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08);
+      --accent: #1db954;
+      --accent2: #ff6b6b;
+      --text: #ffffff;
+      --muted: #9ca3af;
+      --radius: 12px;
+      --font-display: 'Bebas Neue', Impact, sans-serif;
+      --font-body: 'Figtree', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Layout */
+    .app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .header-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    .header-sub { font-size: 12px; color: var(--muted); }
+
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green);
+      background: rgba(67, 217, 173, 0.1);
+      border: 1px solid rgba(67, 217, 173, 0.3);
+      border-radius: 20px;
+      padding: 4px 10px;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* Main content */
+    main {
+      display: grid;
+      grid-template-columns: 340px 1fr 320px;
+      gap: 0;
+      height: calc(100vh - 69px);
+      overflow: hidden;
+    }
+
+    /* Panels */
+    .panel {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel:last-child { border-right: none; }
+
+    .panel-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+
+    /* Match cards */
+    .match-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .match-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--border);
+      transition: background 0.2s;
+    }
+
+    .match-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(168,85,247, 0.15);
+    }
+
+    .match-card:hover::before { background: var(--accent); }
+
+    .match-card.followed { border-color: rgba(168,85,247, 0.5); }
+    .match-card.followed::before { background: var(--accent); }
+
+    .match-card.updated {
+      animation: flash-update 0.6s ease;
+    }
+
+    @keyframes flash-update {
+      0% { background: var(--surface2); }
+      30% { background: rgba(168,85,247, 0.15); }
+      100% { background: var(--surface2); }
+    }
+
+    .match-sport {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sport-tag {
+      background: rgba(168,85,247, 0.15);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+
+    .match-status-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .status-live {
+      background: rgba(67, 217, 173, 0.15);
+      color: var(--green);
+    }
+
+    .status-ft {
+      background: rgba(136, 146, 176, 0.15);
+      color: var(--muted);
+    }
+
+    .status-ht {
+      background: rgba(247, 201, 72, 0.15);
+      color: var(--yellow);
+    }
+
+    .teams {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .team-side {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .team-emoji { font-size: 22px; }
+    .team-name { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; }
+
+    .score-display {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .score-sep { color: var(--border); font-weight: 300; font-size: 20px; }
+
+    .score-num {
+      min-width: 28px;
+      text-align: center;
+      transition: color 0.3s;
+    }
+
+    .score-num.scored {
+      color: var(--green);
+      animation: score-pop 0.5s ease;
+    }
+
+    @keyframes score-pop {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    .match-minute {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .minute-dot {
+      width: 5px; height: 5px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .follow-toggle {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .follow-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    .follow-toggle.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+    /* Config panel */
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+      margin-top: 16px;
+    }
+
+    .section-title:first-child { margin-top: 0; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    input[type="text"]:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(168,85,247, 0.15);
+    }
+
+    textarea { min-height: 80px; line-height: 1.5; }
+
+    .input-group { margin-bottom: 14px; }
+
+    .template-vars {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .var-chip {
+      font-size: 10px;
+      font-weight: 600;
+      background: rgba(168,85,247, 0.1);
+      border: 1px solid rgba(168,85,247, 0.3);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 2px 7px;
+      cursor: pointer;
+      transition: background 0.2s;
+      user-select: none;
+    }
+
+    .var-chip:hover { background: rgba(168,85,247, 0.2); }
+
+    .trigger-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .trigger-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      user-select: none;
+    }
+
+    .trigger-check:hover { border-color: var(--accent); }
+    .trigger-check.checked { border-color: var(--accent); background: rgba(168,85,247, 0.08); }
+
+    .trigger-check input { display: none; }
+
+    .trigger-icon { font-size: 14px; }
+    .trigger-label { font-size: 11px; font-weight: 600; color: var(--text); }
+
+    .custom-checkbox {
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-radius: 3px;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .trigger-check.checked .custom-checkbox {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .custom-checkbox::after {
+      content: '';
+      width: 6px; height: 4px;
+      border-left: 2px solid white;
+      border-bottom: 2px solid white;
+      transform: rotate(-45deg) scaleX(0);
+      transition: transform 0.15s;
+    }
+
+    .trigger-check.checked .custom-checkbox::after { transform: rotate(-45deg) scaleX(1); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover { background: #5a52d5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(168,85,247, 0.3); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-sm { font-size: 11px; padding: 5px 10px; border-radius: 6px; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    /* Preview / Center panel */
+    .center-panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+    .preview-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+      transition: border-color 0.3s;
+    }
+
+    .preview-box.has-post {
+      border-color: rgba(168,85,247, 0.4);
+      box-shadow: 0 0 20px rgba(168,85,247, 0.08);
+    }
+
+    .preview-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .preview-empty .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+
+    .social-mockup {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .social-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .social-avatar {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .social-name { font-size: 13px; font-weight: 700; }
+    .social-handle { font-size: 11px; color: var(--muted); }
+    .social-time { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    .social-text {
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .social-footer {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .social-action {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    .would-post-tag {
+      position: absolute;
+      top: -10px;
+      left: 16px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .trigger-info {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(168,85,247, 0.05);
+      border: 1px solid rgba(168,85,247, 0.15);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+    }
+
+    /* Post history log */
+    .log-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    .log-entry {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      animation: slide-in 0.4s ease;
+    }
+
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .log-entry-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .log-sport-icon { font-size: 14px; }
+
+    .log-match-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .log-time {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .log-trigger {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .log-caption {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .log-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 30px 20px;
+    }
+
+    .log-empty-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+
+    .stat-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* Notification toast */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      max-width: 300px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      animation: toast-in 0.3s ease;
+      pointer-events: auto;
+    }
+
+    .toast.toast-success { border-color: rgba(67, 217, 173, 0.4); }
+    .toast.toast-info { border-color: rgba(168,85,247, 0.4); }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toast-out {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(20px); }
+    }
+
+    .toast-icon { font-size: 16px; flex-shrink: 0; }
+    .toast-body { flex: 1; }
+    .toast-title { font-weight: 700; margin-bottom: 2px; }
+    .toast-msg { font-size: 11px; color: var(--muted); }
+
+    /* Next update timer */
+    .next-update {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .update-bar {
+      flex: 1;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .update-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      transition: width 0.5s linear;
+    }
+
+    /* Venue config */
+    .venue-preview {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .venue-emoji { font-size: 24px; }
+    .venue-name-display { font-size: 13px; font-weight: 700; }
+    .venue-handle-display { font-size: 11px; color: var(--muted); }
+
+    /* Scrollable log */
+    .log-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; grid-template-rows: auto; overflow: auto; height: auto; }
+      .panel { max-height: 500px; }
+    }
+  /* === Media v2 Design System === */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 700px 500px at 70% -10%, rgba(29,185,84,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body > * { position: relative; z-index: 1; }
+
+  h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
+  h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent); }
+  h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+  .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .card, .result, .item, .book, .movie, .album, .article, .show, .post, .score, [class*="card"], [class*="item"], [class*="result"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    transition: transform 0.2s, background 0.2s;
+    animation: mediaFade 0.4s ease both;
+  }
+  .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
+
+  input, select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+  button, .btn, input[type="submit"], input[type="button"] {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 999px;
+    padding: 0.75rem 2rem;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: transform 0.15s, filter 0.15s;
+  }
+  button:hover { transform: scale(1.03); filter: brightness(1.1); }
+  button:active { transform: scale(0.97); }
+
+  .tag, .badge, .genre, .category, .label, .type, .sport, .league {
+    display: inline-block;
+    background: rgba(29,185,84,0.12);
+    border: 1px solid rgba(29,185,84,0.25);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .score, .rating, .stat, .number, .count {
+    font-family: var(--font-mono);
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .live, .trending, .new { color: var(--accent2); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
+  td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+  @keyframes mediaFade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .live::before { content: '● '; animation: livePulse 1.5s ease infinite; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">🏆</div>
+    <div>
+      <div class="header-title">ScorePost</div>
+      <div class="header-sub">Sports Score Auto-Poster for Venues</div>
+    </div>
+    <div class="header-right">
+      <div class="next-update">
+        <span>Next update</span>
+        <div class="update-bar">
+          <div class="update-fill" id="updateBar" style="width:100%"></div>
+        </div>
+        <span id="updateCountdown">10s</span>
+      </div>
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        <span>LIVE</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left: Live Scores -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          📺 Live Matches
+        </div>
+      </div>
+      <div class="panel-body" id="matchesPanel"></div>
+    </div>
+
+    <!-- Center: Preview + Config -->
+    <div class="center-panel panel">
+      <div class="panel-header">
+        <div class="panel-title">✏️ Caption &amp; Preview</div>
+      </div>
+      <div class="panel-body" style="display:flex; flex-direction:column; gap:0;">
+        <!-- Caption Preview -->
+        <div style="margin-bottom:16px;" id="previewArea">
+          <div class="preview-box" id="previewBox">
+            <div class="preview-empty" id="previewEmpty">
+              <div class="empty-icon">📡</div>
+              <div>Follow a team to see your auto-post preview here</div>
+              <div style="margin-top:6px;font-size:11px;color:var(--muted)">Score updates trigger automatic caption generation</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Config -->
+        <div class="section-title">Venue Profile</div>
+        <div class="input-group">
+          <label for="venueName">Venue / Page Name</label>
+          <input type="text" id="venueName" placeholder="e.g. The Corner Sports Bar" value="The Corner Sports Bar" />
+        </div>
+        <div class="input-group">
+          <label for="venueHandle">Social Handle</label>
+          <input type="text" id="venueHandle" placeholder="@yourcornerbar" value="@cornersportsbar" />
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section-title">Caption Template</div>
+        <div class="input-group">
+          <label for="captionTemplate">Post template</label>
+          <textarea id="captionTemplate">⚽ GOAL ALERT! {home_team} {score} {away_team}
+We're watching LIVE at {venue}! 🍺
+Minute {minute} — Come join us! #GameDay #Sports</textarea>
+          <div class="template-vars" id="templateVars"></div>
+        </div>
+
+        <div class="section-title">Auto-Post Triggers</div>
+        <div class="trigger-grid" id="triggerGrid"></div>
+
+        <div class="divider"></div>
+        <button class="btn btn-primary" id="testPostBtn" style="width:100%; margin-top:4px;">
+          🚀 Simulate Manual Post
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: Post History -->
+    <div class="panel log-panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 Post History</div>
+      </div>
+      <div style="padding: 14px 20px 0; flex-shrink:0;">
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Would Post</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statGoals" style="color:var(--green)">0</div>
+            <div class="stat-label">Score Events</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statTeams" style="color:var(--yellow)">0</div>
+            <div class="stat-label">Teams Followed</div>
+          </div>
+        </div>
+      </div>
+      <div class="log-scroll" id="logScroll">
+        <div class="log-empty" id="logEmpty">
+          <div class="log-empty-icon">📜</div>
+          <div>No posts yet</div>
+          <div style="margin-top:4px;font-size:10px;">Follow teams and score events will auto-log here</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // === State ===
+  const state = {
+    followedTeams: new Set(),
+    postLog: [],
+    totalPosts: 0,
+    totalGoals: 0,
+    triggers: {
+      goal: true,
+      halftime: true,
+      fulltime: true,
+      kickoff: false
+    },
+    updateInterval: 10,
+    elapsed: 0
+  };
+
+  // === Match data ===
+  const matches = [
+    {
+      id: 'match1',
+      sport: 'Soccer',
+      sportIcon: '⚽',
+      league: 'Premier League',
+      home: { name: 'Man City', emoji: '🔵', score: 2 },
+      away: { name: 'Arsenal', emoji: '🔴', score: 1 },
+      minute: 67,
+      status: 'LIVE',
+      halfDone: false,
+      scorePrevHome: 2,
+      scorePrevAway: 1
+    },
+    {
+      id: 'match2',
+      sport: 'Soccer',
+      sportIcon: '⚽',
+      league: 'La Liga',
+      home: { name: 'Barcelona', emoji: '🔵🔴', score: 0 },
+      away: { name: 'Real Madrid', emoji: '⚪', score: 0 },
+      minute: 23,
+      status: 'LIVE',
+      halfDone: false,
+      scorePrevHome: 0,
+      scorePrevAway: 0
+    },
+    {
+      id: 'match3',
+      sport: 'Basketball',
+      sportIcon: '🏀',
+      league: 'NBA',
+      home: { name: 'Lakers', emoji: '💜', score: 87 },
+      away: { name: 'Celtics', emoji: '🟢', score: 91 },
+      minute: 'Q3',
+      status: 'LIVE',
+      halfDone: false,
+      scorePrevHome: 87,
+      scorePrevAway: 91
+    },
+    {
+      id: 'match4',
+      sport: 'NFL',
+      sportIcon: '🏈',
+      league: 'NFL',
+      home: { name: 'Chiefs', emoji: '🔴', score: 14 },
+      away: { name: 'Eagles', emoji: '🦅', score: 10 },
+      minute: 'Q2',
+      status: 'LIVE',
+      halfDone: false,
+      scorePrevHome: 14,
+      scorePrevAway: 10
+    }
+  ];
+
+  // === Template variables ===
+  const templateVarDefs = [
+    { key: '{home_team}', desc: 'Home team name' },
+    { key: '{away_team}', desc: 'Away team name' },
+    { key: '{score}', desc: 'Current score' },
+    { key: '{minute}', desc: 'Game minute/period' },
+    { key: '{venue}', desc: 'Your venue name' },
+    { key: '{league}', desc: 'League name' }
+  ];
+
+  // === Trigger definitions ===
+  const triggerDefs = [
+    { key: 'goal', label: 'Goal / Score', icon: '⚡' },
+    { key: 'halftime', label: 'Half Time', icon: '⏸️' },
+    { key: 'fulltime', label: 'Full Time', icon: '🏁' },
+    { key: 'kickoff', label: 'Kick Off', icon: '🎯' }
+  ];
+
+  // === DOM helpers ===
+  function el(id) { return document.getElementById(id); }
+
+  function buildCaption(match, triggerType) {
+    const template = el('captionTemplate').value;
+    const score = `${match.home.score}-${match.away.score}`;
+    const minute = typeof match.minute === 'number' ? `${match.minute}'` : match.minute;
+    const venue = el('venueName').value || 'Our Venue';
+
+    return template
+      .replace(/{home_team}/g, match.home.name)
+      .replace(/{away_team}/g, match.away.name)
+      .replace(/{score}/g, score)
+      .replace(/{minute}/g, minute)
+      .replace(/{venue}/g, venue)
+      .replace(/{league}/g, match.league);
+  }
+
+  // === Render matches ===
+  function renderMatches() {
+    const panel = el('matchesPanel');
+    panel.innerHTML = '';
+
+    matches.forEach(m => {
+      const isFollowed = state.followedTeams.has(m.id);
+      const card = document.createElement('article');
+      card.className = `match-card${isFollowed ? ' followed' : ''}`;
+      card.id = `card-${m.id}`;
+      card.setAttribute('aria-label', `${m.home.name} vs ${m.away.name}`);
+
+      const statusCls = m.status === 'LIVE' ? 'status-live' : m.status === 'FT' ? 'status-ft' : 'status-ht';
+      const minuteDisplay = typeof m.minute === 'number' ? `${m.minute}'` : m.minute;
+      const isLive = m.status === 'LIVE' || m.status === 'HT';
+
+      card.innerHTML = `
+        <button class="follow-toggle${isFollowed ? ' active' : ''}" data-id="${m.id}" aria-pressed="${isFollowed}" title="${isFollowed ? 'Unfollow team' : 'Follow team'}">
+          ${isFollowed ? '★ Following' : '☆ Follow'}
+        </button>
+        <div class="match-sport">
+          <span class="sport-tag">${m.sport}</span>
+          <span style="color:var(--muted)">${m.league}</span>
+          <span class="match-status-badge ${statusCls}">${m.status}</span>
+        </div>
+        <div class="teams">
+          <div class="team-side">
+            <div class="team-emoji">${m.home.emoji}</div>
+            <div class="team-name">${m.home.name}</div>
+          </div>
+          <div class="score-display">
+            <span class="score-num" id="score-h-${m.id}">${m.home.score}</span>
+            <span class="score-sep">—</span>
+            <span class="score-num" id="score-a-${m.id}">${m.away.score}</span>
+          </div>
+          <div class="team-side">
+            <div class="team-emoji">${m.away.emoji}</div>
+            <div class="team-name">${m.away.name}</div>
+          </div>
+        </div>
+        <div class="match-minute">
+          ${isLive && m.status !== 'FT' ? `<div class="minute-dot"></div>` : ''}
+          ${minuteDisplay}
+          ${m.sport === 'Soccer' ? `· ${m.league}` : ''}
+        </div>
+      `;
+
+      panel.appendChild(card);
+    });
+
+    // Attach follow listeners
+    panel.querySelectorAll('.follow-toggle').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        if (state.followedTeams.has(id)) {
+          state.followedTeams.delete(id);
+          showToast('Unfollowed', `Stopped following ${getMatchName(id)}`, 'info');
+        } else {
+          state.followedTeams.add(id);
+          showToast('Following!', `Now tracking ${getMatchName(id)} — auto-posts enabled`, 'success');
+        }
+        updateStats();
+        renderMatches();
+        updatePreview();
+      });
+    });
+  }
+
+  function getMatchName(id) {
+    const m = matches.find(x => x.id === id);
+    return m ? `${m.home.name} vs ${m.away.name}` : id;
+  }
+
+  // === Render template vars ===
+  function renderTemplateVars() {
+    const container = el('templateVars');
+    templateVarDefs.forEach(v => {
+      const chip = document.createElement('button');
+      chip.className = 'var-chip';
+      chip.textContent = v.key;
+      chip.title = v.desc;
+      chip.setAttribute('type', 'button');
+      chip.addEventListener('click', () => {
+        const ta = el('captionTemplate');
+        const pos = ta.selectionStart;
+        const before = ta.value.slice(0, pos);
+        const after = ta.value.slice(pos);
+        ta.value = `${before}${v.key}${after}`;
+        ta.focus();
+        ta.setSelectionRange(pos + v.key.length, pos + v.key.length);
+        updatePreview();
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  // === Render triggers ===
+  function renderTriggers() {
+    const grid = el('triggerGrid');
+    grid.innerHTML = '';
+    triggerDefs.forEach(t => {
+      const label = document.createElement('label');
+      label.className = `trigger-check${state.triggers[t.key] ? ' checked' : ''}`;
+      label.setAttribute('role', 'checkbox');
+      label.setAttribute('aria-checked', String(state.triggers[t.key]));
+      label.tabIndex = 0;
+      label.innerHTML = `
+        <input type="checkbox" ${state.triggers[t.key] ? 'checked' : ''} />
+        <div class="custom-checkbox"></div>
+        <span class="trigger-icon">${t.icon}</span>
+        <span class="trigger-label">${t.label}</span>
+      `;
+
+      const toggle = () => {
+        state.triggers[t.key] = !state.triggers[t.key];
+        label.classList.toggle('checked');
+        label.setAttribute('aria-checked', String(state.triggers[t.key]));
+        updatePreview();
+      };
+
+      label.addEventListener('click', toggle);
+      label.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } });
+      grid.appendChild(label);
+    });
+  }
+
+  // === Preview ===
+  function updatePreview(match, triggerType) {
+    const box = el('previewBox');
+    const empty = el('previewEmpty');
+
+    const followed = matches.filter(m => state.followedTeams.has(m.id));
+    const targetMatch = match || (followed.length > 0 ? followed[0] : null);
+
+    if (!targetMatch) {
+      box.className = 'preview-box';
+      box.innerHTML = `<div class="preview-empty" id="previewEmpty">
+        <div class="empty-icon">📡</div>
+        <div>Follow a team to see your auto-post preview here</div>
+        <div style="margin-top:6px;font-size:11px;color:var(--muted)">Score updates trigger automatic caption generation</div>
+      </div>`;
+      return;
+    }
+
+    const caption = buildCaption(targetMatch, triggerType);
+    const trigger = triggerType || 'goal';
+    const venueName = el('venueName').value || 'Your Venue';
+    const venueHandle = el('venueHandle').value || '@yourpage';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    box.className = 'preview-box has-post';
+    box.innerHTML = `
+      <div class="would-post-tag">Would Post</div>
+      <div class="trigger-info">
+        <span>🔔</span>
+        <span>Triggered by: <strong>${trigger.charAt(0).toUpperCase() + trigger.slice(1)}</strong> — ${targetMatch.home.name} vs ${targetMatch.away.name}</span>
+      </div>
+      <div class="social-mockup">
+        <div class="social-header">
+          <div class="social-avatar">🏆</div>
+          <div>
+            <div class="social-name">${venueName}</div>
+            <div class="social-handle">${venueHandle}</div>
+          </div>
+          <div class="social-time">Just now</div>
+        </div>
+        <div class="social-text">${escapeHtml(caption)}</div>
+        <div class="social-footer">
+          <span class="social-action">👍 Like</span>
+          <span class="social-action">💬 Comment</span>
+          <span class="social-action">🔁 Share</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--accent);font-weight:600;">Facebook · Instagram</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // === Post to log ===
+  function addToLog(match, triggerType, caption) {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    state.postLog.unshift({ match, triggerType, caption, time: timeStr });
+    state.totalPosts++;
+    if (triggerType === 'goal') state.totalGoals++;
+
+    renderLog();
+    updateStats();
+    updatePreview(match, triggerType);
+  }
+
+  function renderLog() {
+    const scroll = el('logScroll');
+    const empty = el('logEmpty');
+
+    if (state.postLog.length === 0) {
+      scroll.innerHTML = `<div class="log-empty" id="logEmpty">
+        <div class="log-empty-icon">📜</div>
+        <div>No posts yet</div>
+        <div style="margin-top:4px;font-size:10px;">Follow teams and score events will auto-log here</div>
+      </div>`;
+      return;
+    }
+
+    scroll.innerHTML = '';
+    state.postLog.slice(0, 20).forEach(entry => {
+      const div = document.createElement('article');
+      div.className = 'log-entry';
+      div.innerHTML = `
+        <div class="log-entry-header">
+          <span class="log-sport-icon">${entry.match.sportIcon}</span>
+          <span class="log-match-name">${entry.match.home.name} vs ${entry.match.away.name}</span>
+          <span class="log-time">${entry.time}</span>
+        </div>
+        <div class="log-trigger">${entry.triggerType}</div>
+        <div class="log-caption">${escapeHtml(entry.caption)}</div>
+      `;
+      scroll.appendChild(div);
+    });
+  }
+
+  function updateStats() {
+    el('statTotal').textContent = state.totalPosts;
+    el('statGoals').textContent = state.totalGoals;
+    el('statTeams').textContent = state.followedTeams.size;
+  }
+
+  // === Toast ===
+  function showToast(title, msg, type) {
+    const container = el('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    const icon = type === 'success' ? '✅' : type === 'info' ? '💡' : '⚠️';
+    toast.innerHTML = `
+      <span class="toast-icon">${icon}</span>
+      <div class="toast-body">
+        <div class="toast-title">${escapeHtml(title)}</div>
+        <div class="toast-msg">${escapeHtml(msg)}</div>
+      </div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.animation = 'toast-out 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  }
+
+  // === Score simulation ===
+  function simulateScoreUpdate() {
+    const followed = matches.filter(m => state.followedTeams.has(m.id) && m.status === 'LIVE');
+
+    matches.forEach(m => {
+      if (m.status !== 'LIVE') return;
+
+      m.scorePrevHome = m.home.score;
+      m.scorePrevAway = m.away.score;
+
+      // Random events
+      const rand = Math.random();
+
+      if (m.sport === 'Soccer') {
+        // advance minute
+        if (typeof m.minute === 'number') m.minute = Math.min(m.minute + 2, 90);
+
+        if (rand < 0.15) {
+          // goal scored
+          if (Math.random() < 0.5) m.home.score++;
+          else m.away.score++;
+        }
+
+        if (m.minute === 45 && !m.halfDone) {
+          m.status = 'HT';
+          m.halfDone = true;
+          if (state.followedTeams.has(m.id) && state.triggers.halftime) {
+            const caption = buildCaption(m, 'halftime');
+            addToLog(m, 'halftime', caption);
+            showToast('Half Time!', `${m.home.name} ${m.home.score}-${m.away.score} ${m.away.name}`, 'info');
+          }
+        } else if (m.minute >= 90) {
+          m.status = 'FT';
+          if (state.followedTeams.has(m.id) && state.triggers.fulltime) {
+            const caption = buildCaption(m, 'fulltime');
+            addToLog(m, 'fulltime', caption);
+            showToast('Full Time!', `Final: ${m.home.name} ${m.home.score}-${m.away.score} ${m.away.name}`, 'success');
+          }
+        }
+      } else if (m.sport === 'Basketball') {
+        if (rand < 0.6) {
+          const pts = [2, 3, 2, 2, 3, 1][Math.floor(Math.random() * 6)];
+          if (Math.random() < 0.5) m.home.score += pts;
+          else m.away.score += pts;
+        }
+      } else if (m.sport === 'NFL') {
+        if (rand < 0.1) {
+          const pts = Math.random() < 0.5 ? 7 : 3;
+          if (Math.random() < 0.5) m.home.score += pts;
+          else m.away.score += pts;
+        }
+      }
+
+      // Check for score change
+      const homeScored = m.home.score > m.scorePrevHome;
+      const awayScored = m.away.score > m.scorePrevAway;
+
+      if ((homeScored || awayScored) && state.followedTeams.has(m.id) && state.triggers.goal) {
+        const caption = buildCaption(m, 'goal');
+        addToLog(m, 'goal', caption);
+
+        const scorer = homeScored ? m.home.name : m.away.name;
+        const sportWord = m.sport === 'Soccer' ? 'GOAL' : m.sport === 'Basketball' ? 'SCORE' : 'TD';
+        showToast(`${sportWord}! 🎉`, `${scorer} scores! ${m.home.name} ${m.home.score}-${m.away.score} ${m.away.name}`, 'success');
+
+        // Flash score
+        const hEl = document.getElementById(`score-h-${m.id}`);
+        const aEl = document.getElementById(`score-a-${m.id}`);
+        if (hEl && homeScored) { hEl.classList.add('scored'); setTimeout(() => hEl.classList.remove('scored'), 600); }
+        if (aEl && awayScored) { aEl.classList.add('scored'); setTimeout(() => aEl.classList.remove('scored'), 600); }
+      }
+    });
+
+    // Re-render match cards
+    renderMatches();
+  }
+
+  // === Countdown timer ===
+  let tickCount = 0;
+  const INTERVAL = state.updateInterval;
+
+  function tick() {
+    tickCount++;
+    const remaining = INTERVAL - (tickCount % INTERVAL);
+    const pct = ((tickCount % INTERVAL) / INTERVAL) * 100;
+
+    el('updateCountdown').textContent = `${remaining}s`;
+    el('updateBar').style.width = `${100 - pct}%`;
+
+    if (tickCount % INTERVAL === 0) {
+      simulateScoreUpdate();
+    }
+  }
+
+  // === Manual post ===
+  el('testPostBtn').addEventListener('click', () => {
+    const followed = matches.filter(m => state.followedTeams.has(m.id));
+    if (followed.length === 0) {
+      showToast('No team followed', 'Please follow at least one team first', 'info');
+      return;
+    }
+    const m = followed[0];
+    const caption = buildCaption(m, 'manual');
+    addToLog(m, 'manual', caption);
+    showToast('Posted!', `Manual post queued for ${m.home.name} vs ${m.away.name}`, 'success');
+  });
+
+  // === Caption template live update ===
+  el('captionTemplate').addEventListener('input', () => updatePreview());
+  el('venueName').addEventListener('input', () => updatePreview());
+  el('venueHandle').addEventListener('input', () => updatePreview());
+
+  // === Kickoff simulation ===
+  function checkKickoff() {
+    matches.forEach(m => {
+      if (state.followedTeams.has(m.id) && state.triggers.kickoff && typeof m.minute === 'number' && m.minute === 0) {
+        const caption = buildCaption(m, 'kickoff');
+        addToLog(m, 'kickoff', caption);
+        showToast(`Kickoff!`, `${m.home.name} vs ${m.away.name} has started!`, 'info');
+      }
+    });
+  }
+
+  // === Init ===
+  function init() {
+    renderMatches();
+    renderTemplateVars();
+    renderTriggers();
+    renderLog();
+    updateStats();
+    updatePreview();
+
+    // Start ticker every second
+    setInterval(tick, 1000);
+  }
+
+  init();
+</script>
+</body>
+</html>

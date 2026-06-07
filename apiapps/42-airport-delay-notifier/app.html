@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RunwayWatch — Airport Delay Notifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── N9 Edge-aligned nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-refresh-status {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+  flex-shrink: 0;
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-section {
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar-section-head {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* Airport search */
+.airport-search-wrap {
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.input-search {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 0.15s ease;
+}
+.input-search:focus { outline: none; border-color: var(--color-accent); }
+.input-search::placeholder { color: var(--color-ink-muted); }
+
+/* Airport directory list */
+.airport-dir {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.airport-dir-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  transition: background 0.1s ease;
+  border-left: 2px solid transparent;
+}
+.airport-dir-item:hover { background: oklch(90% 0.018 95); }
+.airport-dir-item.in-watchlist {
+  color: var(--color-ink-muted);
+  cursor: default;
+}
+.airport-dir-item.in-watchlist:hover { background: transparent; }
+
+.dir-iata {
+  font-weight: 600;
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  color: var(--color-ink);
+  min-width: 34px;
+}
+.dir-city {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dir-add {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.in-watchlist .dir-add {
+  color: var(--color-ink-muted);
+  font-weight: 400;
+}
+
+/* Watched airports */
+.watched-list {
+  flex: 0 0 auto;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.watched-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.watched-item:last-child { border-bottom: none; }
+
+.watched-iata {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  min-width: 36px;
+}
+.watched-city {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.watched-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-green  { background: var(--color-success); }
+.status-amber  { background: var(--color-warn); }
+.status-red    { background: var(--color-danger); }
+.status-grey   { background: var(--color-border); }
+
+.btn-remove-watch {
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: var(--text-lg);
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color 0.12s ease, background 0.12s ease;
+  flex-shrink: 0;
+}
+.btn-remove-watch:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
+
+.watched-empty {
+  padding: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* Auto-refresh controls */
+.refresh-controls {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.refresh-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.toggle-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  flex: 1;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--color-border);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.toggle input:checked + .toggle-track { background: var(--color-accent); }
+.toggle-thumb {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+.toggle input:checked ~ .toggle-thumb { transform: translateX(14px); }
+
+.select-interval {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.select-interval:focus { outline: none; border-color: var(--color-accent); }
+
+/* Severity filter */
+.filter-row {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filter-pill {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.12s ease;
+}
+.filter-pill.active {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-color: var(--color-ink);
+}
+.filter-pill:hover:not(.active) { border-color: var(--color-ink-muted); color: var(--color-ink); }
+
+/* Shipment tracker */
+.shipment-form {
+  padding: 0 var(--space-4) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.input-xs {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  width: 100%;
+  transition: border-color 0.15s ease;
+}
+.input-xs:focus { outline: none; border-color: var(--color-accent); }
+.input-xs::placeholder { color: var(--color-ink-muted); }
+
+.shipment-row { display: flex; gap: var(--space-2); }
+.shipment-row .input-xs { flex: 1; }
+
+.btn-add-shipment {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: transparent;
+  border: 1px dashed var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s ease;
+}
+.btn-add-shipment:hover { background: var(--color-accent-subtle); }
+
+.shipment-list {
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.shipment-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+}
+.shipment-item:last-child { border-bottom: none; }
+.shipment-flight {
+  font-weight: 600;
+  color: var(--color-ink);
+  min-width: 60px;
+}
+.shipment-route {
+  color: var(--color-ink-muted);
+  flex: 1;
+}
+.btn-remove-shipment {
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: var(--text-base);
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.12s ease;
+}
+.btn-remove-shipment:hover { color: var(--color-danger); }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Overview banner */
+.overview-banner {
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--color-paper-2);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.overview-banner.has-delays {
+  background: oklch(93% 0.025 72);
+  border-color: oklch(80% 0.07 72);
+}
+.overview-banner.clear {
+  background: oklch(93% 0.025 155);
+  border-color: oklch(80% 0.06 155);
+}
+
+.overview-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+.overview-text {
+  flex: 1;
+}
+.overview-headline {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+.overview-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+
+/* Quick search */
+.quick-search-wrap {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.input-quick {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  flex: 1;
+  max-width: 280px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: border-color 0.15s ease;
+}
+.input-quick:focus { outline: none; border-color: var(--color-accent); }
+.input-quick::placeholder { text-transform: none; letter-spacing: normal; color: var(--color-ink-muted); }
+
+.btn-check {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.btn-check:hover { opacity: 0.85; }
+.btn-check:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.quick-result {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+/* Section heading */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* Airport status cards grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.airport-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease;
+}
+.airport-card:hover {
+  box-shadow: 0 2px 12px oklch(18% 0.04 155 / 0.08);
+}
+
+.card-head {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.card-name-group {
+  flex: 1;
+  min-width: 0;
+}
+.card-iata {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  font-family: var(--font-display);
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+.card-city {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+.card-fullname {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.badge-none     { background: oklch(93% 0.025 155); color: var(--color-success); }
+.badge-ground-stop { background: oklch(93% 0.05 25); color: var(--color-danger); }
+.badge-ground-delay { background: oklch(93% 0.04 72); color: var(--color-warn); }
+.badge-en-route { background: oklch(93% 0.04 72); color: var(--color-warn); }
+.badge-closure  { background: oklch(93% 0.05 25); color: var(--color-danger); }
+.badge-checking { background: var(--color-paper-2); color: var(--color-ink-muted); }
+.badge-unavail  { background: var(--color-paper-2); color: var(--color-ink-muted); }
+
+.card-body {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.delay-row {
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.delay-label {
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  min-width: 60px;
+  flex-shrink: 0;
+}
+.delay-value { flex: 1; }
+
+.card-foot {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-timestamp {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.btn-refresh-card {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: transparent;
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-3);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.btn-refresh-card:hover { background: var(--color-accent-subtle); }
+.btn-refresh-card:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Empty watched state */
+.watched-empty-main {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-12) var(--space-8);
+  text-align: center;
+}
+.watched-empty-main-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-2);
+}
+.watched-empty-main-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.65;
+}
+
+/* US Map */
+.map-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: oklch(96% 0.006 155);
+}
+
+.map-head {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.map-legend {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.map-svg-wrap {
+  padding: var(--space-4);
+  position: relative;
+}
+
+.map-svg-wrap svg {
+  width: 100%;
+  height: auto;
+}
+
+/* Airport dots on map */
+.map-dot {
+  cursor: pointer;
+  transition: r 0.15s ease;
+}
+.map-dot:hover { r: 7; }
+
+.map-tooltip {
+  position: absolute;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 10;
+}
+.map-tooltip.show { opacity: 1; transform: translateY(0); }
+
+/* Shipment impact panel */
+.impact-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.impact-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.impact-flight {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  min-width: 70px;
+}
+
+.impact-route {
+  flex: 1;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+
+.impact-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.impact-ok     { background: oklch(93% 0.025 155); color: var(--color-success); }
+.impact-risk   { background: oklch(93% 0.04 72);  color: var(--color-warn); }
+.impact-severe { background: oklch(93% 0.05 25);  color: var(--color-danger); }
+
+.impact-empty {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+/* Delay log */
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.log-table th {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+}
+.log-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-ink);
+  vertical-align: middle;
+}
+.log-table tr:last-child td { border-bottom: none; }
+.log-table tbody tr:hover td { background: oklch(96% 0.010 95); }
+
+.log-cleared { color: var(--color-success); font-weight: 600; }
+.log-active  { color: var(--color-warn); font-weight: 600; }
+
+.log-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.log-empty {
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.btn-clear-log {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-3);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.btn-clear-log:hover { color: var(--color-danger); border-color: var(--color-danger); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.warn    { background: var(--color-warn); color: var(--color-ink); }
+.toast.error   { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+
+  .cards-grid { grid-template-columns: 1fr; }
+
+  .nav-refresh-status { display: none; }
+
+  .quick-search-wrap { flex-wrap: wrap; }
+  .input-quick { max-width: 100%; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
+  .airport-card { transition: none; }
+  .toast { transition: opacity 0.1s ease; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 Edge-aligned nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Runway<span>Watch</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Airport Delay Notifier</span>
+  <div class="nav-refresh-status" id="refresh-badge" aria-live="polite">
+    <span class="live-dot" aria-hidden="true"></span>
+    <span id="refresh-label">Auto-refresh off</span>
+  </div>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">&#8592; Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Airport controls">
+
+    <!-- Airport directory -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-head">
+        <span class="sidebar-title">Add Airport</span>
+        <span id="watch-count-badge" style="font-size:var(--text-xs);color:var(--color-ink-muted)">0 / 10</span>
+      </div>
+      <div class="airport-search-wrap">
+        <input
+          type="text"
+          class="input-search"
+          id="airport-search"
+          placeholder="Search by name or IATA…"
+          autocomplete="off"
+          aria-label="Search airports to add"
+        >
+      </div>
+      <div class="airport-dir" id="airport-dir" role="list" aria-label="Airport directory"></div>
+    </div>
+
+    <!-- Watched airports -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-head">
+        <span class="sidebar-title">Watched Airports</span>
+      </div>
+      <div class="watched-list" id="watched-list" role="list" aria-label="Watched airports"></div>
+    </div>
+
+    <!-- Auto-refresh -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-head">
+        <span class="sidebar-title">Auto-Refresh</span>
+      </div>
+      <div class="refresh-controls">
+        <div class="refresh-row">
+          <span class="toggle-label">Enable auto-refresh</span>
+          <label class="toggle" aria-label="Toggle auto-refresh">
+            <input type="checkbox" id="auto-refresh-toggle">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+          <select class="select-interval" id="refresh-interval" aria-label="Refresh interval">
+            <option value="300">5 min</option>
+            <option value="900">15 min</option>
+            <option value="1800">30 min</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Severity filter -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-head">
+        <span class="sidebar-title">Filter by Severity</span>
+      </div>
+      <div class="filter-row" role="group" aria-label="Delay severity filter">
+        <button class="filter-pill active" data-filter="all">All</button>
+        <button class="filter-pill" data-filter="ground-stop">Ground Stop</button>
+        <button class="filter-pill" data-filter="ground-delay">Ground Delay</button>
+        <button class="filter-pill" data-filter="en-route">En Route</button>
+        <button class="filter-pill" data-filter="closure">Closure</button>
+      </div>
+    </div>
+
+    <!-- Shipment tracker -->
+    <div class="sidebar-section" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div class="sidebar-section-head">
+        <span class="sidebar-title">Shipment Tracker</span>
+      </div>
+      <div class="shipment-form">
+        <input type="text" class="input-xs" id="ship-flight" placeholder="Flight # (e.g. AA2341)" maxlength="10" aria-label="Flight number">
+        <div class="shipment-row">
+          <input type="text" class="input-xs" id="ship-origin" placeholder="Origin (IATA)" maxlength="3" style="text-transform:uppercase" aria-label="Origin airport IATA">
+          <input type="text" class="input-xs" id="ship-dest" placeholder="Dest (IATA)" maxlength="3" style="text-transform:uppercase" aria-label="Destination airport IATA">
+        </div>
+        <input type="text" class="input-xs" id="ship-eta" placeholder="Expected arrival (e.g. 14:30)" maxlength="20" aria-label="Expected arrival time">
+        <button class="btn-add-shipment" id="btn-add-shipment">+ Add Shipment</button>
+      </div>
+      <div class="shipment-list" id="shipment-list" role="list" aria-label="Tracked shipments"></div>
+    </div>
+
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Airport status dashboard">
+    <div class="main-scroll">
+
+      <!-- System overview banner -->
+      <div class="overview-banner" id="overview-banner" role="status" aria-live="polite">
+        <span class="overview-icon" id="overview-icon">&#9992;</span>
+        <div class="overview-text">
+          <div class="overview-headline" id="overview-headline">No airports watched yet</div>
+          <div class="overview-sub" id="overview-sub">Add airports from the sidebar to start monitoring delays.</div>
+        </div>
+      </div>
+
+      <!-- Quick IATA search -->
+      <div>
+        <div class="section-head">
+          <span class="section-label">Quick Status Check</span>
+        </div>
+        <div class="quick-search-wrap">
+          <input
+            type="text"
+            class="input-quick"
+            id="quick-iata"
+            placeholder="Enter IATA code (e.g. JFK)"
+            maxlength="3"
+            autocomplete="off"
+            aria-label="Quick airport status check by IATA code"
+          >
+          <button class="btn-check" id="btn-quick-check">Check Status</button>
+          <span class="quick-result" id="quick-result"></span>
+        </div>
+      </div>
+
+      <!-- Airport status cards -->
+      <div>
+        <div class="section-head">
+          <span class="section-label">Watched Airport Status</span>
+          <span id="delay-filter-label" style="font-size:var(--text-xs);color:var(--color-ink-muted)">All delays</span>
+        </div>
+        <div class="cards-grid" id="cards-grid" role="region" aria-label="Airport status cards" aria-live="polite">
+          <div class="watched-empty-main">
+            <div class="watched-empty-main-title">No airports watched</div>
+            <div class="watched-empty-main-sub">Search for airports in the sidebar<br>and click to add them to your watchlist.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- US Map -->
+      <div class="map-wrap">
+        <div class="map-head">
+          <span class="section-label">US Airport Map</span>
+          <div class="map-legend" aria-label="Map legend">
+            <div class="legend-item"><span class="legend-dot" style="background:var(--color-success)"></span> No delays</div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--color-warn)"></span> Delays</div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--color-danger)"></span> Severe</div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--color-border)"></span> Unknown</div>
+          </div>
+        </div>
+        <div class="map-svg-wrap" id="map-wrap">
+          <!-- SVG map built by JS -->
+        </div>
+      </div>
+
+      <!-- Shipment impact panel -->
+      <div>
+        <div class="section-head">
+          <span class="section-label">Shipment Impact</span>
+        </div>
+        <div class="impact-list" id="impact-list" role="region" aria-label="Shipment delay impact" aria-live="polite">
+          <div class="impact-empty">Add shipments in the sidebar to see delay impact.</div>
+        </div>
+      </div>
+
+      <!-- Delay log -->
+      <div>
+        <div class="section-head">
+          <span class="section-label">Historical Delay Log</span>
+          <button class="btn-clear-log" id="btn-clear-log">Clear log</button>
+        </div>
+        <div class="log-wrap">
+          <div class="log-empty" id="log-empty">No delays recorded yet. Delays detected on watched airports will be logged here.</div>
+          <table class="log-table" id="log-table" style="display:none" aria-label="Historical delay log">
+            <thead>
+              <tr>
+                <th>Airport</th>
+                <th>Type</th>
+                <th>Reason</th>
+                <th>Detected</th>
+                <th>Cleared</th>
+              </tr>
+            </thead>
+            <tbody id="log-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+'use strict';
+
+// ── Airport data ──────────────────────────────────────────────────────────────
+const AIRPORTS = [
+  { iata:'JFK', icao:'KJFK', name:'John F. Kennedy Intl',       city:'New York',        lat:40.6413, lon:-73.7781 },
+  { iata:'LAX', icao:'KLAX', name:'Los Angeles Intl',            city:'Los Angeles',     lat:33.9425, lon:-118.4081 },
+  { iata:'ORD', icao:'KORD', name:"O'Hare International",        city:'Chicago',         lat:41.9742, lon:-87.9073 },
+  { iata:'ATL', icao:'KATL', name:'Hartsfield-Jackson Atlanta',  city:'Atlanta',         lat:33.6407, lon:-84.4277 },
+  { iata:'DFW', icao:'KDFW', name:'Dallas/Fort Worth Intl',      city:'Dallas',          lat:32.8998, lon:-97.0403 },
+  { iata:'DEN', icao:'KDEN', name:'Denver International',        city:'Denver',          lat:39.8561, lon:-104.6737 },
+  { iata:'SFO', icao:'KSFO', name:'San Francisco Intl',          city:'San Francisco',   lat:37.6213, lon:-122.3790 },
+  { iata:'SEA', icao:'KSEA', name:'Seattle-Tacoma Intl',         city:'Seattle',         lat:47.4502, lon:-122.3088 },
+  { iata:'LAS', icao:'KLAS', name:'Harry Reid International',    city:'Las Vegas',       lat:36.0840, lon:-115.1537 },
+  { iata:'MCO', icao:'KMCO', name:'Orlando International',       city:'Orlando',         lat:28.4312, lon:-81.3081 },
+  { iata:'MIA', icao:'KMIA', name:'Miami International',         city:'Miami',           lat:25.7959, lon:-80.2870 },
+  { iata:'BOS', icao:'KBOS', name:'Logan International',         city:'Boston',          lat:42.3656, lon:-71.0096 },
+  { iata:'PHX', icao:'KPHX', name:'Phoenix Sky Harbor',          city:'Phoenix',         lat:33.4373, lon:-112.0078 },
+  { iata:'MSP', icao:'KMSP', name:'Minneapolis-St Paul Intl',   city:'Minneapolis',     lat:44.8848, lon:-93.2223 },
+  { iata:'DTW', icao:'KDTW', name:'Detroit Metro Wayne County',  city:'Detroit',         lat:42.2162, lon:-83.3554 },
+  { iata:'CLT', icao:'KCLT', name:'Charlotte Douglas Intl',      city:'Charlotte',       lat:35.2140, lon:-80.9431 },
+  { iata:'EWR', icao:'KEWR', name:'Newark Liberty Intl',         city:'Newark',          lat:40.6925, lon:-74.1687 },
+  { iata:'PHL', icao:'KPHL', name:'Philadelphia Intl',           city:'Philadelphia',    lat:39.8729, lon:-75.2437 },
+  { iata:'LGA', icao:'KLGA', name:'LaGuardia Airport',           city:'New York',        lat:40.7772, lon:-73.8726 },
+  { iata:'IAH', icao:'KIAH', name:'George Bush Intercontinental',city:'Houston',         lat:29.9902, lon:-95.3368 },
+  { iata:'IAD', icao:'KIAD', name:'Dulles International',        city:'Washington DC',   lat:38.9531, lon:-77.4565 },
+  { iata:'BWI', icao:'KBWI', name:'Baltimore/Washington Intl',   city:'Baltimore',       lat:39.1754, lon:-76.6682 },
+  { iata:'MDW', icao:'KMDW', name:'Chicago Midway Intl',         city:'Chicago',         lat:41.7868, lon:-87.7522 },
+  { iata:'PDX', icao:'KPDX', name:'Portland International',      city:'Portland',        lat:45.5898, lon:-122.5951 },
+  { iata:'SLC', icao:'KSLC', name:'Salt Lake City Intl',         city:'Salt Lake City',  lat:40.7884, lon:-111.9778 },
+  { iata:'SAN', icao:'KSAN', name:'San Diego Intl',              city:'San Diego',       lat:32.7336, lon:-117.1897 },
+  { iata:'TPA', icao:'KTPA', name:'Tampa International',         city:'Tampa',           lat:27.9755, lon:-82.5332 },
+  { iata:'HOU', icao:'KHOU', name:'William P. Hobby Airport',    city:'Houston',         lat:29.6454, lon:-95.2789 },
+  { iata:'MSY', icao:'KMSY', name:'Louis Armstrong New Orleans', city:'New Orleans',     lat:29.9934, lon:-90.2580 },
+  { iata:'STL', icao:'KSTL', name:'St Louis Lambert Intl',       city:'St Louis',        lat:38.7487, lon:-90.3700 },
+  { iata:'BNA', icao:'KBNA', name:'Nashville International',     city:'Nashville',       lat:36.1245, lon:-86.6782 },
+  { iata:'RDU', icao:'KRDU', name:'Raleigh-Durham International',city:'Raleigh',         lat:35.8776, lon:-78.7875 },
+  { iata:'AUS', icao:'KAUS', name:'Austin-Bergstrom Intl',       city:'Austin',          lat:30.1975, lon:-97.6664 },
+  { iata:'DAL', icao:'KDAL', name:'Dallas Love Field',           city:'Dallas',          lat:32.8471, lon:-96.8518 },
+  { iata:'OAK', icao:'KOAK', name:'Oakland International',       city:'Oakland',         lat:37.7213, lon:-122.2208 },
+  { iata:'SJC', icao:'KSJC', name:'Norman Y. Mineta San Jose',  city:'San Jose',        lat:37.3626, lon:-121.9290 },
+  { iata:'MEM', icao:'KMEM', name:'Memphis International',       city:'Memphis',         lat:35.0424, lon:-89.9767 },
+  { iata:'CVG', icao:'KCVG', name:'Cincinnati/Northern Kentucky',city:'Cincinnati',      lat:39.0488, lon:-84.6678 },
+  { iata:'CMH', icao:'KCMH', name:'John Glenn Columbus Intl',    city:'Columbus',        lat:39.9980, lon:-82.8919 },
+  { iata:'IND', icao:'KIND', name:'Indianapolis International',  city:'Indianapolis',    lat:39.7173, lon:-86.2944 },
+  { iata:'MKE', icao:'KMKE', name:'General Mitchell International',city:'Milwaukee',     lat:42.9472, lon:-87.8966 },
+  { iata:'JAX', icao:'KJAX', name:'Jacksonville International',  city:'Jacksonville',    lat:30.4941, lon:-81.6879 },
+  { iata:'SMF', icao:'KSMF', name:'Sacramento International',    city:'Sacramento',      lat:38.6954, lon:-121.5908 },
+  { iata:'ABQ', icao:'KABQ', name:'Albuquerque Intl Sunport',    city:'Albuquerque',     lat:35.0402, lon:-106.6090 },
+  { iata:'OGG', icao:'PHOG', name:'Kahului Airport',             city:'Maui',            lat:20.8986, lon:-156.4305 },
+  { iata:'HNL', icao:'PHNL', name:'Daniel K. Inouye Intl',      city:'Honolulu',        lat:21.3245, lon:-157.9251 },
+  { iata:'ANC', icao:'PANC', name:'Ted Stevens Anchorage Intl',  city:'Anchorage',       lat:61.1743, lon:-149.9963 },
+  { iata:'BUF', icao:'KBUF', name:'Buffalo Niagara International',city:'Buffalo',        lat:42.9405, lon:-78.7322 },
+  { iata:'PIT', icao:'KPIT', name:'Pittsburgh International',    city:'Pittsburgh',      lat:40.4915, lon:-80.2329 },
+  { iata:'BDL', icao:'KBDL', name:'Bradley International',       city:'Hartford',        lat:41.9388, lon:-72.6832 },
+];
+
+// ── Storage helpers ───────────────────────────────────────────────────────────
+const ls = {
+  get: (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+// ── App state ─────────────────────────────────────────────────────────────────
+const state = {
+  watchedIatas:   ls.get('rw_watched', []),    // array of IATA strings, ordered
+  statuses:       ls.get('rw_statuses', {}),   // iata -> status object
+  shipments:      ls.get('rw_shipments', []),  // array of shipment objects
+  delayLog:       ls.get('rw_delaylog', []),   // array of log entries
+  searchQuery:    '',
+  severityFilter: 'all',
+  autoRefresh:    false,
+  refreshInterval: 300,
+  refreshTimer:   null,
+  nextRefreshAt:  null,
+};
+
+// Status type constants
+const STATUS_NONE        = 'none';
+const STATUS_GROUND_STOP = 'ground-stop';
+const STATUS_GROUND_DELAY= 'ground-delay';
+const STATUS_EN_ROUTE    = 'en-route';
+const STATUS_CLOSURE     = 'closure';
+const STATUS_CHECKING    = 'checking';
+const STATUS_UNAVAIL     = 'unavail';
+
+// ── FAA API ───────────────────────────────────────────────────────────────────
+async function fetchAirportStatus(airport) {
+  const url = `https://soa.smext.faa.gov/asws/api/airport/status/${airport.icao}`;
+  const res = await fetch(url);
+  if (res.status === 404) return { type: STATUS_UNAVAIL, airport };
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return { type: 'raw', data: await res.json(), airport };
+}
+
+function parseStatus(result) {
+  if (result.type === STATUS_UNAVAIL) {
+    return { status: STATUS_UNAVAIL, reason: 'Status not available via FAA — international airport', duration: null, departure: null, arrival: null };
+  }
+  const d = result.data;
+
+  // No delay
+  if (!d.Status || (!d.GroundDelay?.length && !d.GroundStop?.length && !d.ArriveDepartDelay?.length && !d.Closure?.length)) {
+    return { status: STATUS_NONE, reason: null, duration: null, departure: null, arrival: null };
+  }
+
+  const detail = { status: STATUS_NONE, reason: null, duration: null, departure: null, arrival: null };
+
+  if (d.Closure?.length) {
+    detail.status = STATUS_CLOSURE;
+    detail.reason = d.Closure[0]?.Reason ?? 'Closure';
+  } else if (d.GroundStop?.length) {
+    detail.status = STATUS_GROUND_STOP;
+    const gs = d.GroundStop[0];
+    detail.reason = gs?.Reason ?? 'Ground Stop';
+    detail.duration = gs?.EndTime ?? null;
+  } else if (d.GroundDelay?.length) {
+    detail.status = STATUS_GROUND_DELAY;
+    const gd = d.GroundDelay[0];
+    detail.reason = gd?.Reason ?? 'Ground Delay';
+    detail.duration = gd?.AvgDelay ?? null;
+  } else if (d.ArriveDepartDelay?.length) {
+    detail.status = STATUS_EN_ROUTE;
+    const arr = d.ArriveDepartDelay.find(x => x.Type?.toLowerCase().includes('arr')) ?? null;
+    const dep = d.ArriveDepartDelay.find(x => x.Type?.toLowerCase().includes('dep')) ?? null;
+    detail.arrival = arr ? `Avg ${arr.Avg ?? '?'} — ${arr.Reason ?? ''}` : null;
+    detail.departure = dep ? `Avg ${dep.Avg ?? '?'} — ${dep.Reason ?? ''}` : null;
+    detail.reason = detail.arrival || detail.departure || 'En Route Delay';
+  }
+
+  return detail;
+}
+
+// ── Check a single airport and update state ───────────────────────────────────
+async function checkAirport(iata, silent = false) {
+  const airport = AIRPORTS.find(a => a.iata === iata);
+  if (!airport) return;
+
+  const prev = state.statuses[iata];
+
+  // Mark checking
+  state.statuses[iata] = { ...prev, status: STATUS_CHECKING, lastUpdated: Date.now() };
+  renderCards();
+
+  try {
+    const result = await fetchAirportStatus(airport);
+    const parsed = parseStatus(result);
+    parsed.lastUpdated = Date.now();
+    state.statuses[iata] = parsed;
+
+    // Detect new delay for log
+    if (parsed.status !== STATUS_NONE && parsed.status !== STATUS_CHECKING && parsed.status !== STATUS_UNAVAIL) {
+      const prevStatus = prev?.status;
+      if (prevStatus !== parsed.status) {
+        logDelay(iata, parsed);
+      }
+    }
+    // Clear log entry if resolved
+    if (parsed.status === STATUS_NONE && prev?.status && prev.status !== STATUS_NONE && prev.status !== STATUS_CHECKING && prev.status !== STATUS_UNAVAIL) {
+      clearLogEntry(iata);
+    }
+
+    ls.set('rw_statuses', state.statuses);
+    if (!silent) toast(`${iata} status updated`, 'success');
+  } catch {
+    state.statuses[iata] = { status: STATUS_UNAVAIL, reason: 'Check your connection — FAA API may be unavailable', lastUpdated: Date.now() };
+    if (!silent) toast(`Failed to fetch ${iata} status`, 'error');
+  }
+
+  renderCards();
+  renderOverview();
+  renderWatchedList();
+  renderMap();
+  renderImpact();
+}
+
+async function checkAll(silent = false) {
+  await Promise.all(state.watchedIatas.map(iata => checkAirport(iata, silent)));
+  if (!silent) toast(`All airports refreshed`, 'success');
+}
+
+// ── Delay log ─────────────────────────────────────────────────────────────────
+function logDelay(iata, parsed) {
+  // Don't duplicate active entry
+  const existing = state.delayLog.find(e => e.iata === iata && !e.cleared);
+  if (existing) return;
+
+  state.delayLog.unshift({
+    id: Date.now(),
+    iata,
+    type: parsed.status,
+    reason: parsed.reason ?? '—',
+    detectedAt: new Date().toLocaleString(),
+    cleared: null,
+  });
+  if (state.delayLog.length > 200) state.delayLog.pop();
+  ls.set('rw_delaylog', state.delayLog);
+  renderLog();
+}
+
+function clearLogEntry(iata) {
+  const entry = state.delayLog.find(e => e.iata === iata && !e.cleared);
+  if (entry) {
+    entry.cleared = new Date().toLocaleString();
+    ls.set('rw_delaylog', state.delayLog);
+    renderLog();
+  }
+}
+
+// ── Watchlist management ──────────────────────────────────────────────────────
+function addToWatchlist(iata) {
+  if (state.watchedIatas.includes(iata)) return;
+  if (state.watchedIatas.length >= 10) { toast('Watchlist full (max 10 airports)', 'error'); return; }
+  state.watchedIatas.push(iata);
+  ls.set('rw_watched', state.watchedIatas);
+  renderDir();
+  renderWatchedList();
+  renderCountBadge();
+  checkAirport(iata);
+}
+
+function removeFromWatchlist(iata) {
+  state.watchedIatas = state.watchedIatas.filter(i => i !== iata);
+  ls.set('rw_watched', state.watchedIatas);
+  renderDir();
+  renderWatchedList();
+  renderCountBadge();
+  renderCards();
+  renderOverview();
+  renderMap();
+  renderImpact();
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+
+// Status → badge class + label
+function badgeInfo(status) {
+  switch (status) {
+    case STATUS_NONE:         return { cls: 'badge-none',       label: 'NO DELAYS' };
+    case STATUS_GROUND_STOP:  return { cls: 'badge-ground-stop',label: 'GROUND STOP' };
+    case STATUS_GROUND_DELAY: return { cls: 'badge-ground-delay',label: 'GROUND DELAY' };
+    case STATUS_EN_ROUTE:     return { cls: 'badge-en-route',   label: 'EN ROUTE DELAY' };
+    case STATUS_CLOSURE:      return { cls: 'badge-closure',    label: 'CLOSURE' };
+    case STATUS_CHECKING:     return { cls: 'badge-checking',   label: 'CHECKING…' };
+    default:                  return { cls: 'badge-unavail',    label: 'UNAVAILABLE' };
+  }
+}
+
+function statusDotClass(status) {
+  switch (status) {
+    case STATUS_NONE:         return 'status-green';
+    case STATUS_GROUND_STOP:
+    case STATUS_CLOSURE:      return 'status-red';
+    case STATUS_GROUND_DELAY:
+    case STATUS_EN_ROUTE:     return 'status-amber';
+    case STATUS_CHECKING:     return 'status-grey';
+    default:                  return 'status-grey';
+  }
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Severity filter matches
+function statusMatchesFilter(status) {
+  if (state.severityFilter === 'all') return true;
+  return status === state.severityFilter;
+}
+
+// Airport directory
+function renderDir() {
+  const el = document.getElementById('airport-dir');
+  const q = state.searchQuery.toLowerCase();
+  const filtered = AIRPORTS.filter(a =>
+    a.iata.toLowerCase().includes(q) ||
+    a.name.toLowerCase().includes(q) ||
+    a.city.toLowerCase().includes(q)
+  );
+
+  if (!filtered.length) {
+    el.innerHTML = '<div style="padding:var(--space-3) var(--space-4);font-size:var(--text-xs);color:var(--color-ink-muted)">No airports match.</div>';
+    return;
+  }
+
+  el.innerHTML = filtered.slice(0, 40).map(a => {
+    const watched = state.watchedIatas.includes(a.iata);
+    return `
+      <div class="airport-dir-item ${watched ? 'in-watchlist' : ''}"
+           role="listitem"
+           ${watched ? '' : `data-add="${a.iata}" tabindex="0"`}
+           aria-label="${watched ? 'Already watching' : 'Add'} ${a.iata} — ${a.name}">
+        <span class="dir-iata">${a.iata}</span>
+        <span class="dir-city">${esc(a.city)}</span>
+        <span class="dir-add">${watched ? '✓ Watching' : '+ Add'}</span>
+      </div>`;
+  }).join('');
+}
+
+// Watched sidebar list
+function renderWatchedList() {
+  const el = document.getElementById('watched-list');
+  if (!state.watchedIatas.length) {
+    el.innerHTML = '<div class="watched-empty">No airports watched yet.<br>Search above to add one.</div>';
+    return;
+  }
+  el.innerHTML = state.watchedIatas.map(iata => {
+    const a = AIRPORTS.find(x => x.iata === iata);
+    const s = state.statuses[iata];
+    return `
+      <div class="watched-item" role="listitem">
+        <span class="watched-iata">${iata}</span>
+        <span class="watched-city">${esc(a?.city ?? '—')}</span>
+        <span class="watched-status ${statusDotClass(s?.status)}" title="${s?.status ?? 'unknown'}" aria-hidden="true"></span>
+        <button class="btn-remove-watch" data-remove="${iata}" aria-label="Remove ${iata} from watchlist" title="Remove">&#215;</button>
+      </div>`;
+  }).join('');
+}
+
+function renderCountBadge() {
+  document.getElementById('watch-count-badge').textContent = `${state.watchedIatas.length} / 10`;
+}
+
+// Overview banner
+function renderOverview() {
+  const banner = document.getElementById('overview-banner');
+  const icon   = document.getElementById('overview-icon');
+  const hl     = document.getElementById('overview-headline');
+  const sub    = document.getElementById('overview-sub');
+
+  if (!state.watchedIatas.length) {
+    banner.className = 'overview-banner';
+    icon.textContent = '✈';
+    hl.textContent = 'No airports watched yet';
+    sub.textContent = 'Add airports from the sidebar to start monitoring delays.';
+    return;
+  }
+
+  const total = state.watchedIatas.length;
+  const delayed = state.watchedIatas.filter(iata => {
+    const s = state.statuses[iata]?.status;
+    return s && s !== STATUS_NONE && s !== STATUS_CHECKING && s !== STATUS_UNAVAIL;
+  }).length;
+
+  if (delayed === 0) {
+    banner.className = 'overview-banner clear';
+    icon.textContent = '✔';
+    hl.textContent = `All ${total} watched airport${total > 1 ? 's' : ''} — no delays`;
+    sub.textContent = 'All systems operating normally.';
+  } else {
+    banner.className = 'overview-banner has-delays';
+    icon.textContent = '⚠';
+    hl.textContent = `${delayed} of ${total} watched airport${total > 1 ? 's' : ''} ${delayed > 1 ? 'have' : 'has'} delays`;
+    sub.textContent = 'Check individual cards below for details.';
+  }
+}
+
+// Main airport cards
+function renderCards() {
+  const grid = document.getElementById('cards-grid');
+
+  if (!state.watchedIatas.length) {
+    grid.innerHTML = `
+      <div class="watched-empty-main">
+        <div class="watched-empty-main-title">No airports watched</div>
+        <div class="watched-empty-main-sub">Search for airports in the sidebar<br>and click to add them to your watchlist.</div>
+      </div>`;
+    return;
+  }
+
+  const filtered = state.watchedIatas.filter(iata => {
+    if (state.severityFilter === 'all') return true;
+    const s = state.statuses[iata]?.status;
+    return s === state.severityFilter;
+  });
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="padding:var(--space-8);text-align:center;font-size:var(--text-sm);color:var(--color-ink-muted)">No airports match the current severity filter.</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(iata => {
+    const a = AIRPORTS.find(x => x.iata === iata);
+    const s = state.statuses[iata] ?? { status: STATUS_CHECKING };
+    const { cls, label } = badgeInfo(s.status);
+    const isChecking = s.status === STATUS_CHECKING;
+
+    const delayLines = [];
+    if (s.reason)    delayLines.push(`<div class="delay-row"><span class="delay-label">Reason</span><span class="delay-value">${esc(s.reason)}</span></div>`);
+    if (s.duration)  delayLines.push(`<div class="delay-row"><span class="delay-label">Duration</span><span class="delay-value">${esc(s.duration)}</span></div>`);
+    if (s.departure) delayLines.push(`<div class="delay-row"><span class="delay-label">Departure</span><span class="delay-value">${esc(s.departure)}</span></div>`);
+    if (s.arrival)   delayLines.push(`<div class="delay-row"><span class="delay-label">Arrival</span><span class="delay-value">${esc(s.arrival)}</span></div>`);
+    if (s.status === STATUS_UNAVAIL && !s.reason) delayLines.push(`<div class="delay-row"><span class="delay-label">Note</span><span class="delay-value">Status not available via FAA — check airline directly</span></div>`);
+
+    return `
+      <div class="airport-card" role="article" aria-label="${iata} status card">
+        <div class="card-head">
+          <div class="card-name-group">
+            <div class="card-iata">${iata}</div>
+            <div class="card-city">${esc(a?.city ?? '—')}</div>
+            <div class="card-fullname">${esc(a?.name ?? '—')}</div>
+          </div>
+          <span class="status-badge ${cls}" aria-label="Status: ${label}">${label}</span>
+        </div>
+        <div class="card-body">
+          ${delayLines.length ? delayLines.join('') : `<div style="font-size:var(--text-xs);color:var(--color-ink-muted)">No active delays reported.</div>`}
+        </div>
+        <div class="card-foot">
+          <span class="card-timestamp">Updated ${s.lastUpdated ? fmtTime(s.lastUpdated) : '—'}</span>
+          <button class="btn-refresh-card" data-refresh="${iata}" ${isChecking ? 'disabled' : ''} aria-label="Refresh ${iata} status">
+            ${isChecking ? 'Checking…' : 'Check Now'}
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// US Map (SVG)
+const MAP_W = 960;
+const MAP_H = 520;
+
+// Project lat/lon to rough SVG x/y for continental US and territories
+function project(lat, lon) {
+  // Special cases: Hawaii, Anchorage — we'll place them in inset areas
+  if (lat < 30 && lon < -140) { // Hawaii
+    return { x: 200 + (lon + 160) * 5, y: MAP_H - 60 + (25 - lat) * 4 };
+  }
+  if (lat > 55) { // Alaska
+    return { x: 60 + (lon + 155) * 2, y: MAP_H - 40 + (65 - lat) * 3 };
+  }
+  // Continental US: lon -125 to -65, lat 24 to 50
+  const x = (lon - (-125)) / ((-65) - (-125)) * (MAP_W - 80) + 40;
+  const y = (1 - (lat - 24) / (50 - 24)) * (MAP_H - 80) + 40;
+  return { x, y };
+}
+
+function dotColor(status) {
+  switch (status) {
+    case STATUS_NONE:         return 'var(--color-success)';
+    case STATUS_GROUND_STOP:
+    case STATUS_CLOSURE:      return 'var(--color-danger)';
+    case STATUS_GROUND_DELAY:
+    case STATUS_EN_ROUTE:     return 'var(--color-warn)';
+    default:                  return 'oklch(80% 0.016 95)';
+  }
+}
+
+function renderMap() {
+  const wrap = document.getElementById('map-wrap');
+  // US outline path (simplified)
+  const usPath = `M 60,120 L 80,100 L 130,80 L 180,65 L 240,60 L 300,55 L 370,52 L 440,55 L 510,50 L 580,48 L 640,55 L 700,60 L 760,70 L 810,75 L 850,80 L 880,95 L 900,115 L 910,145 L 900,175 L 885,200 L 870,225 L 855,255 L 840,285 L 830,315 L 820,345 L 810,370 L 790,390 L 765,405 L 740,415 L 710,425 L 680,430 L 645,435 L 610,440 L 580,438 L 545,440 L 510,445 L 480,448 L 450,445 L 420,440 L 390,435 L 355,430 L 320,420 L 285,410 L 255,400 L 225,390 L 200,375 L 180,360 L 165,340 L 155,318 L 145,295 L 130,270 L 115,245 L 100,220 L 85,195 L 72,170 L 62,148 Z`;
+
+  const dots = AIRPORTS.map(a => {
+    const { x, y } = project(a.lat, a.lon);
+    const s = state.statuses[a.iata];
+    const color = dotColor(s?.status);
+    const isWatched = state.watchedIatas.includes(a.iata);
+    return `<circle class="map-dot"
+      cx="${x.toFixed(1)}" cy="${y.toFixed(1)}"
+      r="${isWatched ? 6 : 4}"
+      fill="${color}"
+      stroke="${isWatched ? 'var(--color-ink)' : 'transparent'}"
+      stroke-width="${isWatched ? 1.5 : 0}"
+      opacity="${isWatched ? 1 : 0.65}"
+      data-iata="${a.iata}"
+      aria-label="${a.iata} — ${a.city}"
+    />`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="US airport delay map" style="width:100%;height:auto">
+      <path d="${usPath}" fill="oklch(92% 0.012 155)" stroke="oklch(78% 0.025 155)" stroke-width="1.5" />
+      ${dots}
+    </svg>
+    <div class="map-tooltip" id="map-tooltip"></div>`;
+
+  // Tooltip on hover
+  const svg = wrap.querySelector('svg');
+  const tooltip = wrap.querySelector('#map-tooltip');
+  svg.addEventListener('mouseover', e => {
+    const dot = e.target.closest('circle[data-iata]');
+    if (!dot) return;
+    const iata = dot.dataset.iata;
+    const a = AIRPORTS.find(x => x.iata === iata);
+    const s = state.statuses[iata];
+    const { label } = badgeInfo(s?.status ?? STATUS_UNAVAIL);
+    tooltip.textContent = `${iata} · ${a?.city ?? ''} · ${label}`;
+    const rect = wrap.getBoundingClientRect();
+    const dotRect = dot.getBoundingClientRect();
+    tooltip.style.left = (dotRect.left - rect.left + 8) + 'px';
+    tooltip.style.top  = (dotRect.top  - rect.top  - 28) + 'px';
+    tooltip.classList.add('show');
+  });
+  svg.addEventListener('mouseout', e => {
+    if (!e.target.closest('circle[data-iata]')) tooltip.classList.remove('show');
+  });
+}
+
+// Shipment impact
+function renderImpact() {
+  const el = document.getElementById('impact-list');
+  if (!state.shipments.length) {
+    el.innerHTML = '<div class="impact-empty">Add shipments in the sidebar to see delay impact.</div>';
+    return;
+  }
+
+  el.innerHTML = state.shipments.map(sh => {
+    const originStatus  = state.statuses[sh.origin]?.status;
+    const destStatus    = state.statuses[sh.dest]?.status;
+    const originDelay   = originStatus && originStatus !== STATUS_NONE && originStatus !== STATUS_UNAVAIL;
+    const destDelay     = destStatus   && destStatus   !== STATUS_NONE && destStatus   !== STATUS_UNAVAIL;
+    const severe        = [STATUS_GROUND_STOP, STATUS_CLOSURE].includes(originStatus) || [STATUS_GROUND_STOP, STATUS_CLOSURE].includes(destStatus);
+
+    let impactCls   = 'impact-ok';
+    let impactLabel = 'On Track';
+    let impactDetail = 'No delays at origin or destination.';
+
+    if (severe) {
+      impactCls   = 'impact-severe';
+      impactLabel = 'At Risk';
+      impactDetail = `Severe disruption at ${originDelay && severe ? sh.origin : sh.dest}. Contact carrier immediately.`;
+    } else if (originDelay || destDelay) {
+      impactCls   = 'impact-risk';
+      impactLabel = 'Possible Delay';
+      const affected = [originDelay ? `origin ${sh.origin}` : '', destDelay ? `dest ${sh.dest}` : ''].filter(Boolean).join(' and ');
+      impactDetail = `Delays at ${affected}. Expected arrival ${sh.eta ? sh.eta : 'may be impacted'}.`;
+    } else if (!state.watchedIatas.includes(sh.origin) && !state.watchedIatas.includes(sh.dest)) {
+      impactCls   = 'impact-ok';
+      impactLabel = 'Not Monitored';
+      impactDetail = 'Add origin/destination to watchlist for live delay info.';
+    }
+
+    return `
+      <div class="impact-card" role="listitem">
+        <span class="impact-flight">${esc(sh.flight)}</span>
+        <div class="impact-route">
+          <strong>${esc(sh.origin)} &#8594; ${esc(sh.dest)}</strong><br>
+          ETA: ${esc(sh.eta || '—')}<br>
+          <span style="color:var(--color-ink-muted)">${esc(impactDetail)}</span>
+        </div>
+        <span class="impact-badge ${impactCls}">${esc(impactLabel)}</span>
+      </div>`;
+  }).join('');
+}
+
+// Historical delay log
+function renderLog() {
+  const empty = document.getElementById('log-empty');
+  const table = document.getElementById('log-table');
+  const tbody = document.getElementById('log-body');
+
+  if (!state.delayLog.length) {
+    empty.style.display = '';
+    table.style.display = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  table.style.display = '';
+  tbody.innerHTML = state.delayLog.map(e => {
+    const { label } = badgeInfo(e.type);
+    return `
+      <tr>
+        <td><strong>${esc(e.iata)}</strong></td>
+        <td>${esc(label)}</td>
+        <td style="max-width:240px;white-space:normal">${esc(e.reason)}</td>
+        <td style="white-space:nowrap">${esc(e.detectedAt)}</td>
+        <td style="white-space:nowrap">${e.cleared
+          ? `<span class="log-cleared">${esc(e.cleared)}</span>`
+          : `<span class="log-active">Active</span>`
+        }</td>
+      </tr>`;
+  }).join('');
+}
+
+// Shipment list
+function renderShipments() {
+  const el = document.getElementById('shipment-list');
+  if (!state.shipments.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = state.shipments.map(sh => `
+    <div class="shipment-item" role="listitem">
+      <span class="shipment-flight">${esc(sh.flight)}</span>
+      <span class="shipment-route">${esc(sh.origin)} &#8594; ${esc(sh.dest)}</span>
+      <button class="btn-remove-shipment" data-remove-ship="${sh.id}" aria-label="Remove shipment ${sh.flight}">&#215;</button>
+    </div>`).join('');
+}
+
+// Auto-refresh countdown
+function startAutoRefresh() {
+  stopAutoRefresh();
+  const interval = parseInt(state.refreshInterval) * 1000;
+  state.nextRefreshAt = Date.now() + interval;
+
+  function tick() {
+    if (!state.autoRefresh) return;
+    const remaining = Math.max(0, Math.ceil((state.nextRefreshAt - Date.now()) / 1000));
+    const el = document.getElementById('refresh-label');
+    if (el) el.textContent = `Refresh in ${remaining}s`;
+    if (remaining <= 0) {
+      state.nextRefreshAt = Date.now() + interval;
+      checkAll(true);
+    }
+  }
+
+  state.refreshTimer = setInterval(tick, 1000);
+  tick();
+}
+
+function stopAutoRefresh() {
+  if (state.refreshTimer) { clearInterval(state.refreshTimer); state.refreshTimer = null; }
+  const el = document.getElementById('refresh-label');
+  if (el) el.textContent = 'Auto-refresh off';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+// ── Quick IATA check ──────────────────────────────────────────────────────────
+async function quickCheck() {
+  const input = document.getElementById('quick-iata');
+  const result = document.getElementById('quick-result');
+  const btn = document.getElementById('btn-quick-check');
+  const iata = input.value.trim().toUpperCase().slice(0, 3);
+  if (!iata || iata.length < 2) { toast('Enter a valid IATA code', 'error'); return; }
+
+  // Is it in our list?
+  const known = AIRPORTS.find(a => a.iata === iata);
+  if (!known) {
+    // Build a synthetic airport to try the FAA API with "K" + iata
+    const icao = 'K' + iata;
+    result.textContent = 'Checking…';
+    btn.disabled = true;
+    try {
+      const res = await fetch(`https://soa.smext.faa.gov/asws/api/airport/status/${icao}`);
+      if (res.status === 404) {
+        result.textContent = `${iata}: Status not available via FAA — international airport`;
+      } else if (res.ok) {
+        const data = await res.json();
+        const d = data;
+        if (!d.GroundDelay?.length && !d.GroundStop?.length && !d.ArriveDepartDelay?.length && !d.Closure?.length) {
+          result.textContent = `${iata}: No delays reported`;
+        } else {
+          result.textContent = `${iata}: Delays detected — add to watchlist for details`;
+        }
+      } else {
+        result.textContent = `${iata}: FAA API error (${res.status})`;
+      }
+    } catch {
+      result.textContent = `${iata}: Network error`;
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  result.textContent = 'Checking…';
+  btn.disabled = true;
+  try {
+    const res = await fetchAirportStatus(known);
+    const parsed = parseStatus(res);
+    const { label } = badgeInfo(parsed.status);
+    let txt = `${iata} (${known.city}): ${label}`;
+    if (parsed.reason) txt += ` — ${parsed.reason}`;
+    result.textContent = txt;
+  } catch {
+    result.textContent = `${iata}: Unable to fetch status`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Event wiring ──────────────────────────────────────────────────────────────
+
+// Airport directory: add
+document.getElementById('airport-dir').addEventListener('click', e => {
+  const item = e.target.closest('[data-add]');
+  if (item) addToWatchlist(item.dataset.add);
+});
+document.getElementById('airport-dir').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const item = e.target.closest('[data-add]');
+    if (item) { e.preventDefault(); addToWatchlist(item.dataset.add); }
+  }
+});
+
+// Airport search
+document.getElementById('airport-search').addEventListener('input', e => {
+  state.searchQuery = e.target.value;
+  renderDir();
+});
+
+// Watched list: remove
+document.getElementById('watched-list').addEventListener('click', e => {
+  const btn = e.target.closest('[data-remove]');
+  if (btn) removeFromWatchlist(btn.dataset.remove);
+});
+
+// Cards: refresh individual
+document.getElementById('cards-grid').addEventListener('click', e => {
+  const btn = e.target.closest('[data-refresh]');
+  if (btn) checkAirport(btn.dataset.refresh);
+});
+
+// Severity filter pills
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    state.severityFilter = pill.dataset.filter;
+    document.getElementById('delay-filter-label').textContent =
+      pill.dataset.filter === 'all' ? 'All delays' : pill.textContent + ' only';
+    renderCards();
+  });
+});
+
+// Auto-refresh toggle
+document.getElementById('auto-refresh-toggle').addEventListener('change', e => {
+  state.autoRefresh = e.target.checked;
+  if (state.autoRefresh) {
+    startAutoRefresh();
+  } else {
+    stopAutoRefresh();
+  }
+});
+
+document.getElementById('refresh-interval').addEventListener('change', e => {
+  state.refreshInterval = parseInt(e.target.value);
+  if (state.autoRefresh) startAutoRefresh();
+});
+
+// Quick check
+document.getElementById('btn-quick-check').addEventListener('click', quickCheck);
+document.getElementById('quick-iata').addEventListener('keydown', e => {
+  if (e.key === 'Enter') quickCheck();
+});
+document.getElementById('quick-iata').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase();
+});
+
+// Shipment form
+document.getElementById('btn-add-shipment').addEventListener('click', () => {
+  const flight = document.getElementById('ship-flight').value.trim();
+  const origin = document.getElementById('ship-origin').value.trim().toUpperCase().slice(0,3);
+  const dest   = document.getElementById('ship-dest').value.trim().toUpperCase().slice(0,3);
+  const eta    = document.getElementById('ship-eta').value.trim();
+
+  if (!flight || !origin || !dest) { toast('Enter flight #, origin and destination', 'error'); return; }
+
+  state.shipments.push({ id: Date.now(), flight, origin, dest, eta });
+  ls.set('rw_shipments', state.shipments);
+  document.getElementById('ship-flight').value = '';
+  document.getElementById('ship-origin').value = '';
+  document.getElementById('ship-dest').value   = '';
+  document.getElementById('ship-eta').value    = '';
+  renderShipments();
+  renderImpact();
+  toast(`Shipment ${flight} added`, 'success');
+});
+
+// Remove shipment
+document.getElementById('shipment-list').addEventListener('click', e => {
+  const btn = e.target.closest('[data-remove-ship]');
+  if (btn) {
+    const id = parseInt(btn.dataset.removeShip);
+    state.shipments = state.shipments.filter(s => s.id !== id);
+    ls.set('rw_shipments', state.shipments);
+    renderShipments();
+    renderImpact();
+  }
+});
+
+// Clear delay log
+document.getElementById('btn-clear-log').addEventListener('click', () => {
+  if (!state.delayLog.length) return;
+  if (!confirm('Clear all historical delay log entries?')) return;
+  state.delayLog = [];
+  ls.set('rw_delaylog', []);
+  renderLog();
+  toast('Delay log cleared');
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  renderDir();
+  renderWatchedList();
+  renderCountBadge();
+  renderOverview();
+  renderCards();
+  renderMap();
+  renderImpact();
+  renderShipments();
+  renderLog();
+
+  // Fetch statuses for existing watchlist
+  if (state.watchedIatas.length) {
+    checkAll(true);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

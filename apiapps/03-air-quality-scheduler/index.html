@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Air Quality Scheduler</title>
+  <style>
+    :root {
+      --bg: #02091a;
+      --surface: rgba(255,255,255,0.08);
+      --surface2: rgba(255,255,255,0.13);
+      --border: rgba(255,255,255,0.16);
+      --accent: #38bdf8;
+      --accent2: #fb923c;
+      --text: rgba(255,255,255,0.95);
+      --muted: rgba(255,255,255,0.5);
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    header .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header .tagline {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .search-section {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .search-row input {
+      flex: 1;
+      min-width: 200px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 0.65rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-row input::placeholder {
+      color: var(--muted);
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-outline:hover { background: var(--accent); color: #fff; }
+
+    .btn-sm {
+      padding: 0.4rem 0.9rem;
+      font-size: 0.82rem;
+    }
+
+    .threshold-row {
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .threshold-row label {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .threshold-row input[type="range"] {
+      accent-color: var(--accent);
+      width: 160px;
+    }
+
+    .threshold-val {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.85rem;
+      color: var(--yellow);
+      font-weight: 700;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* AQI forecast */
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.75rem;
+    }
+
+    @media (max-width: 540px) {
+      .forecast-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .day-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.9rem 0.6rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+      position: relative;
+    }
+
+    .day-card:hover { transform: translateY(-2px); }
+    .day-card.selected { border-color: var(--accent); }
+
+    .day-card .day-name {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .day-card .day-date {
+      font-size: 0.8rem;
+      color: var(--text);
+      margin-bottom: 0.7rem;
+    }
+
+    .aqi-badge {
+      display: inline-block;
+      border-radius: 20px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .aqi-good { background: rgba(67,217,173,0.15); color: var(--green); }
+    .aqi-moderate { background: rgba(247,201,72,0.15); color: var(--yellow); }
+    .aqi-unhealthy { background: rgba(251,146,60,0.15); color: var(--accent2); }
+    .aqi-hazardous { background: rgba(180,0,60,0.15); color: #ff3366; }
+
+    .day-card .aqi-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      display: block;
+    }
+
+    .rec-icon {
+      font-size: 1.2rem;
+      margin-bottom: 0.3rem;
+      display: block;
+    }
+
+    /* Events sidebar */
+    .event-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .event-form input, .event-form select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 0.55rem 0.9rem;
+      outline: none;
+    }
+
+    .event-form input:focus, .event-form select:focus {
+      border-color: var(--accent);
+    }
+
+    .event-form input::placeholder { color: var(--muted); }
+
+    .event-list { display: flex; flex-direction: column; gap: 0.65rem; }
+
+    .event-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .event-item .ev-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .event-item .ev-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .event-item .ev-aqi {
+      font-size: 0.78rem;
+    }
+
+    .event-actions {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.3rem;
+    }
+
+    /* Notification panel */
+    .notif-panel {
+      position: fixed;
+      top: 1.2rem;
+      right: 1.2rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      max-width: 320px;
+    }
+
+    .notif {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.8rem 1rem;
+      font-size: 0.84rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease;
+      cursor: pointer;
+    }
+
+    .notif.warn { border-left: 3px solid var(--accent2); }
+    .notif.ok { border-left: 3px solid var(--green); }
+    .notif.info { border-left: 3px solid var(--accent); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .notif-title { font-weight: 700; margin-bottom: 0.25rem; }
+    .notif-body { color: var(--muted); }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .location-pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.82rem;
+      color: var(--text);
+    }
+
+    .current-aqi-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .current-aqi-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+
+    .current-aqi-info { font-size: 0.8rem; color: var(--muted); }
+
+    /* Export */
+    .export-section {
+      margin-top: 1.2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.2rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.77rem;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-good { background: var(--green); }
+    .dot-moderate { background: var(--yellow); }
+    .dot-unhealthy { background: var(--accent2); }
+    .dot-hazardous { background: #ff3366; }
+
+    .placeholder-msg {
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+      padding: 2rem 0;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .alert-warn-row {
+      background: rgba(251,146,60,0.08);
+      border: 1px solid rgba(251,146,60,0.3);
+      border-radius: 8px;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.82rem;
+      color: var(--accent2);
+      margin-top: 0.5rem;
+    }
+
+    .pm-row {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+/* ── Weather design system v2 ── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(180deg, #02091a 0%, #0d1f3c 50%, #153050 100%) fixed;
+  min-height: 100vh;
+  color: rgba(255,255,255,0.9);
+}
+body::before {
+  content: '';
+  position: fixed;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,.12) 0%, transparent 70%);
+  top: -150px; right: -100px;
+  animation: floatOrb 10s ease-in-out infinite;
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251,146,60,.08) 0%, transparent 70%);
+  bottom: 8%; left: -80px;
+  animation: floatOrb 14s ease-in-out infinite reverse;
+  pointer-events: none; z-index: 0;
+}
+/* Glassmorphism cards */
+.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  border-radius: 20px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 8px 32px rgba(0,0,0,0.3);
+}
+h1 {
+  font-weight: 200;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  letter-spacing: -.02em;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 0 30px rgba(56,189,248,.4);
+  -webkit-text-fill-color: rgba(255,255,255,0.95);
+}
+h2, h3 { font-weight: 300; color: rgba(255,255,255,0.85); letter-spacing: -.01em; -webkit-text-fill-color: rgba(255,255,255,0.85); }
+p, label, span, td, th, li { color: rgba(255,255,255,0.8); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
+@keyframes floatOrb { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-22px) scale(1.04);} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+@keyframes glowPulse { 0%,100%{text-shadow:0 0 10px rgba(56,189,248,.4);} 50%{text-shadow:0 0 30px rgba(56,189,248,.9),0 0 60px rgba(56,189,248,.3);} }
+@keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.5);} 50%{box-shadow:0 0 0 8px rgba(251,146,60,0);} }
+.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] { animation: fadeUp .5s ease both; }
+.card:nth-child(2){animation-delay:.08s} .card:nth-child(3){animation-delay:.16s} .card:nth-child(4){animation-delay:.24s}
+[class*="alert"],[class*="warning"] { animation: alertPulse 2s ease-in-out infinite; }
+button,[class*="btn"] {
+  background: rgba(255,255,255,0.1) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.9) !important;
+  transition: all .2s;
+  border-radius: 12px;
+}
+button:hover,[class*="btn"]:hover {
+  background: rgba(56,189,248,0.2) !important;
+  border-color: rgba(56,189,248,0.5) !important;
+  box-shadow: 0 4px 20px rgba(56,189,248,.3);
+  transform: translateY(-1px);
+}
+input, select {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.9) !important;
+}
+input::placeholder { color: rgba(255,255,255,0.4); }
+input:focus, select:focus {
+  border-color: rgba(56,189,248,.6) !important;
+  box-shadow: 0 0 0 3px rgba(56,189,248,.2);
+  outline: none;
+}
+select option { background: #0d1f3c; color: white; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">AirEvent</div>
+    <div class="tagline">Schedule outdoor events on safe-air days</div>
+  </div>
+</header>
+
+<div id="notifPanel" class="notif-panel"></div>
+
+<div class="container">
+
+  <div class="search-section">
+    <div class="search-row">
+      <input id="cityInput" type="text" placeholder="Enter city name (e.g. Amsterdam, New York)" />
+      <a href="app.html" class="btn">Check Air Quality</a>
+    </div>
+    <div class="threshold-row">
+      <label>Alert threshold AQI:</label>
+      <input type="range" id="threshold" min="1" max="300" value="100" oninput="updateThreshold(this.value)" />
+      <span class="threshold-val" id="thresholdVal">100</span>
+      <span style="font-size:0.78rem;color:var(--muted)">Events above this AQI get a warning</span>
+    </div>
+  </div>
+
+  <div id="statusBar" class="status-bar" style="display:none"></div>
+
+  <div class="main-grid">
+    <div>
+      <div class="card">
+        <h2>5-Day Air Quality Forecast</h2>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot dot-good"></div> Good (0-50)</div>
+          <div class="legend-item"><div class="legend-dot dot-moderate"></div> Moderate (51-100)</div>
+          <div class="legend-item"><div class="legend-dot dot-unhealthy"></div> Unhealthy (101-150)</div>
+          <div class="legend-item"><div class="legend-dot dot-hazardous"></div> Hazardous (151+)</div>
+        </div>
+        <div id="forecastContainer">
+          <div class="placeholder-msg">Search for a city above to load the 5-day air quality forecast.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+      <div class="card">
+        <h2>Schedule an Event</h2>
+        <div class="event-form">
+          <input id="evTitle" type="text" placeholder="Event name" />
+          <input id="evDate" type="date" />
+          <input id="evDesc" type="text" placeholder="Notes (optional)" />
+          <a href="app.html" class="btn">Add Event</a>
+        </div>
+        <div id="eventList" class="event-list">
+          <div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:1rem 0;">No events scheduled yet.</div>
+        </div>
+        <div class="export-section">
+          <a href="app.html" class="btn btn-outline btn-sm">Export Schedule (.csv)</a>
+        </div>
+      </div>
+
+      <div class="card" id="alertsCard">
+        <h2>In-App Alerts</h2>
+        <div id="alertList" style="color:var(--muted);font-size:0.83rem;">No alerts. Events with AQI above threshold will appear here.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let forecastData = [];
+  let events = [];
+  let currentLocation = null;
+  let threshold = 100;
+
+  function updateThreshold(val) {
+    threshold = parseInt(val);
+    document.getElementById('thresholdVal').textContent = val;
+    renderEvents();
+    checkAlerts();
+  }
+
+  function aqiClass(aqi) {
+    if (aqi <= 50) return 'aqi-good';
+    if (aqi <= 100) return 'aqi-moderate';
+    if (aqi <= 150) return 'aqi-unhealthy';
+    return 'aqi-hazardous';
+  }
+
+  function aqiLabel(aqi) {
+    if (aqi <= 50) return 'Good';
+    if (aqi <= 100) return 'Moderate';
+    if (aqi <= 150) return 'Unhealthy';
+    if (aqi <= 200) return 'Very Unhealthy';
+    return 'Hazardous';
+  }
+
+  function aqiIcon(aqi) {
+    if (aqi <= 50) return '✅';
+    if (aqi <= 100) return '⚠️';
+    if (aqi <= 150) return '🟠';
+    return '🔴';
+  }
+
+  function dayName(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short' });
+  }
+
+  function dayDate(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  async function fetchLocation() {
+    const city = document.getElementById('cityInput').value.trim();
+    if (!city) { showNotif('Enter a city name', 'Please type a city name first.', 'info'); return; }
+
+    const fc = document.getElementById('forecastContainer');
+    fc.innerHTML = '<div class="placeholder-msg"><span class="spinner"></span> Searching for ' + city + '...</div>';
+
+    try {
+      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+      const geoData = await geoRes.json();
+
+      if (!geoData.results || geoData.results.length === 0) {
+        fc.innerHTML = '<div class="placeholder-msg">City not found. Try a different name.</div>';
+        return;
+      }
+
+      const loc = geoData.results[0];
+      currentLocation = { name: loc.name, country: loc.country_code, lat: loc.latitude, lon: loc.longitude };
+      await fetchAirQuality(loc.latitude, loc.longitude);
+    } catch (e) {
+      fc.innerHTML = '<div class="placeholder-msg">Could not load data. Check your connection.</div>';
+    }
+  }
+
+  async function fetchAirQuality(lat, lon) {
+    const fc = document.getElementById('forecastContainer');
+    fc.innerHTML = '<div class="placeholder-msg"><span class="spinner"></span> Loading air quality data...</div>';
+
+    try {
+      const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=pm10,pm2_5,us_aqi&timezone=auto`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const hours = data.hourly.time;
+      const aqiArr = data.hourly.us_aqi;
+      const pm25Arr = data.hourly.pm2_5;
+      const pm10Arr = data.hourly.pm10;
+
+      // Group by date, pick noon or daily peak
+      const byDate = {};
+      for (let i = 0; i < hours.length; i++) {
+        const dt = hours[i];
+        const dateKey = dt.substring(0, 10);
+        const hour = parseInt(dt.substring(11, 13));
+        if (!byDate[dateKey]) byDate[dateKey] = [];
+        byDate[dateKey].push({ aqi: aqiArr[i], pm25: pm25Arr[i], pm10: pm10Arr[i], hour });
+      }
+
+      const today = new Date();
+      forecastData = [];
+      const sortedDates = Object.keys(byDate).sort();
+
+      // Find next 5 days from today
+      const todayStr = today.toISOString().substring(0, 10);
+      const upcoming = sortedDates.filter(d => d >= todayStr).slice(0, 5);
+
+      for (const dateKey of upcoming) {
+        const entries = byDate[dateKey];
+        const validAqi = entries.filter(e => e.aqi !== null && e.aqi !== undefined);
+        if (validAqi.length === 0) continue;
+        // Use noon or average
+        const noonEntry = entries.find(e => e.hour === 12);
+        const ref = noonEntry || entries[Math.floor(entries.length / 2)];
+        const avgAqi = Math.round(validAqi.reduce((s, e) => s + (e.aqi || 0), 0) / validAqi.length);
+        const peakAqi = Math.max(...validAqi.map(e => e.aqi || 0));
+        const pm25 = ref.pm25 !== null ? ref.pm25.toFixed(1) : 'N/A';
+        const pm10 = ref.pm10 !== null ? ref.pm10.toFixed(1) : 'N/A';
+        forecastData.push({ date: dateKey, aqi: avgAqi, peakAqi, pm25, pm10 });
+      }
+
+      if (forecastData.length === 0) {
+        fc.innerHTML = '<div class="placeholder-msg">No forecast data available for this location.</div>';
+        return;
+      }
+
+      renderForecast();
+      renderStatusBar();
+      renderEvents();
+      checkAlerts();
+    } catch (e) {
+      fc.innerHTML = '<div class="placeholder-msg">Failed to load air quality data.</div>';
+    }
+  }
+
+  function renderForecast() {
+    const fc = document.getElementById('forecastContainer');
+    if (forecastData.length === 0) {
+      fc.innerHTML = '<div class="placeholder-msg">No forecast data available.</div>';
+      return;
+    }
+
+    let html = '<div class="forecast-grid">';
+    for (const day of forecastData) {
+      const cls = aqiClass(day.aqi);
+      const lbl = aqiLabel(day.aqi);
+      const icon = aqiIcon(day.aqi);
+      const warn = day.aqi > threshold ? '<div class="alert-warn-row" style="margin-top:0.5rem;font-size:0.7rem;">Above threshold!</div>' : '';
+      html += `
+        <div class="day-card" onclick="setEventDate('${day.date}')" title="Click to schedule an event on this day">
+          <div class="day-name">${dayName(day.date)}</div>
+          <div class="day-date">${dayDate(day.date)}</div>
+          <span class="rec-icon">${icon}</span>
+          <div class="aqi-badge ${cls}">${day.aqi}</div>
+          <span class="aqi-label">${lbl}</span>
+          <div class="pm-row">
+            <span>PM2.5: ${day.pm25}</span>
+            <span>PM10: ${day.pm10}</span>
+          </div>
+          ${warn}
+        </div>`;
+    }
+    html += '</div>';
+    fc.innerHTML = html;
+  }
+
+  function renderStatusBar() {
+    const bar = document.getElementById('statusBar');
+    bar.style.display = 'flex';
+    if (!currentLocation || forecastData.length === 0) return;
+    const today = forecastData[0];
+    const cls = aqiClass(today.aqi);
+    const lbl = aqiLabel(today.aqi);
+    bar.innerHTML = `
+      <div class="location-pill">📍 ${currentLocation.name}, ${currentLocation.country}</div>
+      <div class="current-aqi-card">
+        <div class="current-aqi-val" style="color:${aqiColorHex(today.aqi)}">${today.aqi}</div>
+        <div>
+          <div class="aqi-badge ${cls}">${lbl}</div>
+          <div class="current-aqi-info">Current AQI (US)</div>
+        </div>
+      </div>`;
+  }
+
+  function aqiColorHex(aqi) {
+    if (aqi <= 50) return '#43d9ad';
+    if (aqi <= 100) return '#f7c948';
+    if (aqi <= 150) return '#ff6584';
+    return '#ff3366';
+  }
+
+  function setEventDate(dateStr) {
+    document.getElementById('evDate').value = dateStr;
+    document.getElementById('evTitle').focus();
+  }
+
+  function addEvent() {
+    const title = document.getElementById('evTitle').value.trim();
+    const date = document.getElementById('evDate').value;
+    const desc = document.getElementById('evDesc').value.trim();
+
+    if (!title) { showNotif('Missing title', 'Please enter an event name.', 'info'); return; }
+    if (!date) { showNotif('Missing date', 'Please pick a date for the event.', 'info'); return; }
+
+    // Find AQI for that date
+    const dayData = forecastData.find(d => d.date === date);
+    const aqi = dayData ? dayData.aqi : null;
+
+    const ev = { id: Date.now(), title, date, desc, aqi };
+    events.push(ev);
+    renderEvents();
+    checkAlerts();
+
+    if (aqi !== null && aqi > threshold) {
+      showNotif(
+        'AQI Alert: ' + title,
+        `${dayDate(date)} has AQI ${aqi} (${aqiLabel(aqi)}) — above your threshold of ${threshold}. Consider rescheduling.`,
+        'warn'
+      );
+    } else if (aqi !== null) {
+      showNotif(title + ' Scheduled', `${dayDate(date)}: AQI ${aqi} — ${aqiLabel(aqi)}. Good to go!`, 'ok');
+    } else {
+      showNotif(title + ' Scheduled', `${dayDate(date)} — no AQI data for this date.`, 'info');
+    }
+
+    document.getElementById('evTitle').value = '';
+    document.getElementById('evDate').value = '';
+    document.getElementById('evDesc').value = '';
+  }
+
+  function removeEvent(id) {
+    events = events.filter(e => e.id !== id);
+    renderEvents();
+    checkAlerts();
+  }
+
+  function renderEvents() {
+    const list = document.getElementById('eventList');
+    if (events.length === 0) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:1rem 0;">No events scheduled yet.</div>';
+      return;
+    }
+
+    const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
+    let html = '';
+    for (const ev of sorted) {
+      const cls = ev.aqi !== null ? aqiClass(ev.aqi) : '';
+      const lbl = ev.aqi !== null ? aqiLabel(ev.aqi) : 'Unknown';
+      const warnFlag = ev.aqi !== null && ev.aqi > threshold;
+      html += `
+        <div class="event-item" style="${warnFlag ? 'border-color:var(--accent2)' : ''}">
+          <div class="ev-title">${escHtml(ev.title)}</div>
+          <div class="ev-meta">${dayDate(ev.date)}, ${dayName(ev.date)}</div>
+          ${ev.desc ? `<div class="ev-meta">${escHtml(ev.desc)}</div>` : ''}
+          ${ev.aqi !== null ? `<div class="ev-aqi"><span class="aqi-badge ${cls}">${ev.aqi}</span> ${lbl}${warnFlag ? ' ⚠️ Above threshold' : ''}</div>` : '<div class="ev-aqi" style="color:var(--muted);font-size:0.78rem;">AQI not available for this date</div>'}
+          <div class="event-actions">
+            <button class="btn btn-outline btn-sm" onclick="removeEvent(${ev.id})">Remove</button>
+          </div>
+        </div>`;
+    }
+    list.innerHTML = html;
+  }
+
+  function checkAlerts() {
+    const alertList = document.getElementById('alertList');
+    const warnings = events.filter(e => e.aqi !== null && e.aqi > threshold);
+    if (warnings.length === 0) {
+      alertList.innerHTML = '<div style="color:var(--muted);font-size:0.83rem;">No alerts. Events with AQI above threshold will appear here.</div>';
+      return;
+    }
+
+    let html = '';
+    for (const ev of warnings) {
+      html += `
+        <div class="alert-warn-row" style="margin-bottom:0.5rem;">
+          <strong>${escHtml(ev.title)}</strong> on ${dayDate(ev.date)}<br>
+          AQI ${ev.aqi} (${aqiLabel(ev.aqi)}) — exceeds threshold of ${threshold}
+        </div>`;
+    }
+    alertList.innerHTML = html;
+  }
+
+  function exportSchedule() {
+    if (events.length === 0) {
+      showNotif('No Events', 'Add events before exporting.', 'info');
+      return;
+    }
+    let csv = 'Event Name,Date,Day,AQI,AQI Category,Notes\n';
+    const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
+    for (const ev of sorted) {
+      const lbl = ev.aqi !== null ? aqiLabel(ev.aqi) : 'Unknown';
+      csv += `"${ev.title}","${ev.date}","${dayName(ev.date)}","${ev.aqi !== null ? ev.aqi : ''}","${lbl}","${ev.desc}"\n`;
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'event-schedule-aqi.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotif('Exported', 'Schedule downloaded as CSV.', 'ok');
+  }
+
+  function showNotif(title, body, type) {
+    const panel = document.getElementById('notifPanel');
+    const el = document.createElement('div');
+    el.className = `notif ${type}`;
+    el.innerHTML = `<div class="notif-title">${escHtml(title)}</div><div class="notif-body">${escHtml(body)}</div>`;
+    el.onclick = () => el.remove();
+    panel.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 6000);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // Allow Enter key to trigger search
+  document.getElementById('cityInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') fetchLocation();
+  });
+
+  // Pre-fill date with tomorrow
+  (function() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('evDate').value = tomorrow.toISOString().substring(0, 10);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beer Pairing Tool — Dark Factory</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400&family=Nunito:wght@400;500;600;700&display=swap');
+    :root {
+  --bg: #0c0800;
+  --surface: #1a1200;
+  --surface2: #251a00;
+  --border: rgba(249,115,22,0.2);
+  --accent: #f97316;
+  --accent2: #84cc16;
+  --text: #fef9ee;
+  --muted: #a16207;
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --radius: 16px;
+}
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--surface) 0%, #1e1540 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .brand h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--text), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand p {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0 2rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: 0.9rem 1.25rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Section headers ── */
+    .section-header {
+      margin-bottom: 1.75rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .section-header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Search bar ── */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0.75rem 1rem 0.75rem 2.75rem;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+    }
+
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* ── Grid ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+    @media (max-width: 900px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 500px) {
+      .grid-4 { grid-template-columns: 1fr; }
+      .container { padding: 1rem; }
+      .tabs { padding: 0 1rem; }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .card.clickable { cursor: pointer; }
+
+    /* ── Beer style card ── */
+    .beer-card .beer-header {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .beer-swatch {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .beer-swatch::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+    }
+
+    .beer-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.15rem;
+    }
+
+    .beer-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.6rem;
+    }
+
+    .tag {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .tag.accent { background: rgba(249, 115, 22, 0.15); border-color: rgba(108, 99, 255, 0.4); color: var(--accent); }
+    .tag.green  { background: rgba(67, 217, 173, 0.12); border-color: rgba(67, 217, 173, 0.35); color: var(--green); }
+    .tag.yellow { background: rgba(247, 201, 72, 0.12); border-color: rgba(247, 201, 72, 0.35); color: var(--yellow); }
+    .tag.red    { background: rgba(132, 204, 22, 0.12); border-color: rgba(132, 204, 22, 0.35); color: var(--accent2); }
+
+    /* ── Match score ── */
+    .match-score {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .score-bar-wrap {
+      flex: 1;
+      background: var(--surface2);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .score-bar {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .score-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--green);
+      min-width: 2.5rem;
+      text-align: right;
+    }
+
+    /* ── Food selector ── */
+    .food-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .food-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0.85rem 0.6rem;
+      cursor: pointer;
+      font-size: 0.82rem;
+      text-align: center;
+      transition: border-color 0.18s, background 0.18s, transform 0.18s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .food-btn .food-icon { font-size: 1.5rem; }
+    .food-btn:hover { border-color: var(--accent); background: var(--surface2); transform: scale(1.03); }
+    .food-btn.selected { border-color: var(--accent); background: rgba(249, 115, 22, 0.12); color: var(--accent); }
+
+    /* ── Pairing result ── */
+    .pairing-result {
+      animation: fadeIn 0.35s ease;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .result-badge {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    /* ── Style guide ── */
+    .srm-chart {
+      display: flex;
+      gap: 2px;
+      margin: 1rem 0;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 36px;
+    }
+
+    .srm-swatch {
+      flex: 1;
+      position: relative;
+      cursor: pointer;
+      transition: flex 0.2s;
+    }
+
+    .srm-swatch:hover { flex: 2; }
+
+    .srm-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.72rem;
+      white-space: nowrap;
+      z-index: 10;
+    }
+
+    .srm-swatch:hover .srm-tooltip { display: block; }
+
+    /* ── Flavor wheel ── */
+    .flavor-wheel-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+
+    /* ── Cellar ── */
+    .cellar-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.6rem 0.85rem;
+      font-size: 0.88rem;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+    }
+
+    .form-group select option { background: var(--surface2); }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent), #5a52e0);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 0.65rem 1.25rem;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn.btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn.btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
+    .btn.btn-sm { padding: 0.4rem 0.85rem; font-size: 0.78rem; }
+
+    /* ── Cellar list ── */
+    .cellar-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      animation: slideIn 0.3s ease;
+      transition: border-color 0.2s;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .cellar-item:hover { border-color: var(--accent); }
+
+    .cellar-swatch {
+      width: 36px;
+      height: 36px;
+      border-radius: 7px;
+      flex-shrink: 0;
+    }
+
+    .cellar-info { flex: 1; min-width: 0; }
+    .cellar-name { font-weight: 600; font-size: 0.92rem; }
+    .cellar-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.1rem; }
+
+    .cellar-actions { display: flex; gap: 0.5rem; }
+
+    /* ── Chip filters ── */
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      padding: 0.3rem 0.85rem;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .chip:hover { border-color: var(--accent); color: var(--text); }
+    .chip.active { background: rgba(249, 115, 22, 0.15); border-color: var(--accent); color: var(--accent); }
+
+    /* ── Toast ── */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--green);
+      border-radius: 10px;
+      padding: 0.7rem 1.1rem;
+      font-size: 0.85rem;
+      max-width: 300px;
+      animation: toastIn 0.3s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+
+    .toast.error { border-left-color: var(--accent2); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(16px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastOut {
+      to { opacity: 0; transform: translateX(16px); }
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+    }
+
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── Stat chips ── */
+    .stat-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .stat-chip .stat-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-chip .stat-lbl { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      max-width: 520px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .modal-header h3 { font-size: 1.1rem; font-weight: 700; }
+
+    .close-btn {
+      background: var(--surface2);
+      border: none;
+      border-radius: 7px;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.35rem 0.55rem;
+      font-size: 1rem;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .close-btn:hover { color: var(--text); background: var(--border); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── Food & Health design system v2 ── */
+body { font-family: 'Nunito', system-ui, sans-serif; }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 20% 85%, rgba(249,115,22,.08) 0%, transparent 60%),
+              radial-gradient(ellipse 40% 40% at 85% 10%, rgba(132,204,22,.06) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+h1, h2, [class*="title"], [class*="name"] {
+  font-family: 'Fraunces', Georgia, serif;
+  letter-spacing: -.02em;
+}
+h1 {
+  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.card,[class*="card"],[class*="recipe"],[class*="result"] {
+  border-radius: 20px !important;
+  box-shadow: 0 4px 24px rgba(249,115,22,.1), 0 1px 4px rgba(0,0,0,.3) !important;
+  border: 1px solid rgba(249,115,22,.15) !important;
+}
+[class*="tag"],[class*="badge"],[class*="pill"],[class*="chip"] {
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  background: rgba(249,115,22,.15);
+  color: var(--accent);
+  border: 1px solid rgba(249,115,22,.25);
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(249,115,22,.3); border-radius: 3px; }
+@keyframes warmFade { from{opacity:0;transform:translateY(14px) scale(.97);} to{opacity:1;transform:translateY(0) scale(1);} }
+@keyframes warmGlow { 0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0);} 50%{box-shadow:0 0 28px 6px rgba(249,115,22,.18);} }
+@keyframes ingredientIn { from{opacity:0;transform:translateX(-8px);} to{opacity:1;transform:translateX(0);} }
+.card,[class*="card"],[class*="result"],[class*="recipe"] { animation: warmFade .45s cubic-bezier(.34,1.56,.64,1) both; }
+.card:nth-child(2){animation-delay:.06s} .card:nth-child(3){animation-delay:.12s} .card:nth-child(4){animation-delay:.18s}
+li,[class*="ingredient"],[class*="step"] { animation: ingredientIn .3s ease both; }
+li:nth-child(2){animation-delay:.04s} li:nth-child(3){animation-delay:.08s} li:nth-child(4){animation-delay:.12s}
+li:nth-child(5){animation-delay:.16s} li:nth-child(6){animation-delay:.20s}
+button[type="submit"],[class*="generate"],[class*="btn-primary"] { animation: warmGlow 2.5s ease-in-out infinite; }
+button,[class*="btn"] { transition: all .2s; border-radius: 12px; }
+button:hover,[class*="btn"]:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(249,115,22,.35);
+}
+input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 3px rgba(249,115,22,.2); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true">🍺</div>
+  <div class="brand">
+    <h1>Beer Pairing Tool</h1>
+    <p>Craft brewery guest experience &amp; tap list manager</p>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="App sections">
+  <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="pairing"  id="tab-pairing">🔀 Food Pairing</button>
+  <button class="tab-btn"        role="tab" aria-selected="false" data-tab="styles"   id="tab-styles">🍻 Style Guide</button>
+  <button class="tab-btn"        role="tab" aria-selected="false" data-tab="taplist"  id="tab-taplist">📋 Tap List</button>
+  <button class="tab-btn"        role="tab" aria-selected="false" data-tab="cellar"   id="tab-cellar">🗄️ My Cellar</button>
+</nav>
+
+<main class="container">
+
+  <!-- ═══ PAIRING TAB ═══ -->
+  <section class="tab-pane active" id="pane-pairing" role="tabpanel" aria-labelledby="tab-pairing">
+    <div class="section-header">
+      <h2>Find Your Perfect Pairing</h2>
+      <p>Select a food to discover matching beer styles, or pick a beer style to explore food recommendations.</p>
+    </div>
+
+    <div class="grid-2" style="gap:2rem; align-items:start;">
+      <div>
+        <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--muted);">I'M EATING…</h3>
+        <div class="food-grid" id="food-grid"></div>
+      </div>
+      <div>
+        <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--muted);">OR I HAVE A BEER STYLE…</h3>
+        <div class="search-wrap" style="margin-bottom:0.75rem;">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="style-search" placeholder="Search beer styles…" aria-label="Search beer styles" />
+        </div>
+        <div id="style-quick-list" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:0.5rem;"></div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div id="pairing-results"></div>
+  </section>
+
+  <!-- ═══ STYLE GUIDE TAB ═══ -->
+  <section class="tab-pane" id="pane-styles" role="tabpanel" aria-labelledby="tab-styles">
+    <div class="section-header">
+      <h2>Beer Style Guide</h2>
+      <p>Explore 40+ beer styles with flavor profiles, ABV ranges, and food affinities.</p>
+    </div>
+
+    <div style="margin-bottom:1.5rem;">
+      <h3 style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;font-weight:600;letter-spacing:0.04em;">BEER COLOR SPECTRUM (SRM)</h3>
+      <div class="srm-chart" id="srm-chart" aria-label="Beer color spectrum chart"></div>
+    </div>
+
+    <div class="flavor-wheel-wrap">
+      <svg id="flavor-wheel" viewBox="0 0 320 320" width="280" height="280" role="img" aria-label="Beer flavor wheel"></svg>
+    </div>
+
+    <div class="chip-row" id="family-chips"></div>
+
+    <div class="search-wrap">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input type="search" id="style-guide-search" placeholder="Search styles…" aria-label="Search beer styles in guide" />
+    </div>
+
+    <div class="grid-3" id="style-guide-grid"></div>
+  </section>
+
+  <!-- ═══ TAP LIST TAB ═══ -->
+  <section class="tab-pane" id="pane-taplist" role="tabpanel" aria-labelledby="tab-taplist">
+    <div class="section-header">
+      <h2>Tap List Manager</h2>
+      <p>Add and manage the beers currently on your taps. Auto-generates food pairing suggestions.</p>
+    </div>
+
+    <div class="cellar-form">
+      <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:1.1rem;">Add Beer to Tap List</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tap-name">Beer Name *</label>
+          <input type="text" id="tap-name" placeholder="e.g. Hazy Horizon IPA" />
+        </div>
+        <div class="form-group">
+          <label for="tap-style">Style *</label>
+          <select id="tap-style"><option value="">Select style…</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tap-abv">ABV (%)</label>
+          <input type="number" id="tap-abv" min="0" max="25" step="0.1" placeholder="e.g. 6.5" />
+        </div>
+        <div class="form-group">
+          <label for="tap-ibu">IBU</label>
+          <input type="number" id="tap-ibu" min="0" max="120" placeholder="e.g. 45" />
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label for="tap-notes">Tasting Notes</label>
+        <textarea id="tap-notes" rows="2" placeholder="Tropical fruit, pine resin, light citrus…"></textarea>
+      </div>
+      <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+        <button class="btn btn-ghost" id="tap-clear-btn" type="button">Clear</button>
+        <button class="btn" id="tap-add-btn" type="button">Add to Tap List</button>
+      </div>
+    </div>
+
+    <div class="stat-row" id="tap-stats"></div>
+
+    <div id="tap-list-output"></div>
+  </section>
+
+  <!-- ═══ CELLAR TAB ═══ -->
+  <section class="tab-pane" id="pane-cellar" role="tabpanel" aria-labelledby="tab-cellar">
+    <div class="section-header">
+      <h2>My Cellar</h2>
+      <p>Track beers you own or want to try. Saved locally in your browser.</p>
+    </div>
+
+    <div class="cellar-form">
+      <h3 style="font-size:0.95rem;font-weight:600;margin-bottom:1.1rem;">Add Beer to Cellar</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cel-name">Beer Name *</label>
+          <input type="text" id="cel-name" placeholder="e.g. Bourbon Barrel Stout" />
+        </div>
+        <div class="form-group">
+          <label for="cel-style">Style *</label>
+          <select id="cel-style"><option value="">Select style…</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cel-brewery">Brewery</label>
+          <input type="text" id="cel-brewery" placeholder="e.g. Founders Brewing" />
+        </div>
+        <div class="form-group">
+          <label for="cel-vintage">Vintage / Year</label>
+          <input type="text" id="cel-vintage" placeholder="e.g. 2024" />
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label for="cel-notes">Personal Notes</label>
+        <textarea id="cel-notes" rows="2" placeholder="Rich chocolate, vanilla, warming…"></textarea>
+      </div>
+      <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+        <button class="btn btn-ghost" id="cel-clear-btn" type="button">Clear</button>
+        <button class="btn" id="cel-add-btn" type="button">Add to Cellar</button>
+      </div>
+    </div>
+
+    <div class="stat-row" id="cel-stats"></div>
+
+    <div id="cel-list-output"></div>
+  </section>
+
+</main>
+
+<!-- Modal for style detail -->
+<div id="style-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   DATA — Beer Styles (42 styles)
+═══════════════════════════════════════════════ */
+const BEER_STYLES = [
+  // ── IPAs
+  { id:'ipa-american',    name:'American IPA',        family:'IPA',    abvMin:5.5, abvMax:7.5,  ibuMin:40, ibuMax:70,  srm:6,  color:'#e8a317', flavors:['Citrus','Pine','Tropical','Bitter','Floral'], desc:'Bold, resinous and assertively bitter with prominent American hop character. Bright citrus and tropical notes dominate.' },
+  { id:'ipa-hazy',        name:'Hazy / New England IPA',family:'IPA',  abvMin:5.5, abvMax:8.5,  ibuMin:35, ibuMax:60,  srm:5,  color:'#f0c040', flavors:['Tropical','Juicy','Stone Fruit','Low Bitter','Soft'], desc:'Opaque, silky-smooth and explosively tropical. Minimal bitterness with pillowy mouthfeel.' },
+  { id:'ipa-double',      name:'Double / Imperial IPA',family:'IPA',   abvMin:7.5, abvMax:10.5, ibuMin:60, ibuMax:100, srm:7,  color:'#d4891a', flavors:['Intense Hops','Citrus','Alcohol Warmth','Pine','Fruity'], desc:'Intensified version of IPA with big malt backbone supporting massive hop character.' },
+  { id:'ipa-session',     name:'Session IPA',          family:'IPA',   abvMin:3.5, abvMax:5.0,  ibuMin:30, ibuMax:50,  srm:4,  color:'#f5d080', flavors:['Light Citrus','Crisp','Refreshing','Mild Bitter','Clean'], desc:'All the hop aroma of a full IPA at sessionable strength. Crisp and easy-drinking.' },
+  { id:'ipa-black',       name:'Black IPA',            family:'IPA',   abvMin:6.0, abvMax:9.0,  ibuMin:50, ibuMax:90,  srm:30, color:'#3b1a08', flavors:['Roast','Pine','Dark Fruit','Bitter','Coffee'], desc:'Dark malts meet aggressive hopping for a unique roasty bitterness with hop complexity.' },
+  { id:'ipa-rye',         name:'Rye IPA',              family:'IPA',   abvMin:5.5, abvMax:8.0,  ibuMin:40, ibuMax:75,  srm:8,  color:'#c27a20', flavors:['Spicy Rye','Citrus','Earthy','Pepper','Dry'], desc:'Rye malt adds a distinctive spicy, earthy dryness to the IPA hop profile.' },
+
+  // ── Stouts & Porters
+  { id:'stout-dry',       name:'Dry Irish Stout',      family:'Stout', abvMin:3.8, abvMax:5.5,  ibuMin:30, ibuMax:45,  srm:40, color:'#120900', flavors:['Coffee','Roast','Dry','Dark','Bitter'], desc:'Roasty and dry with prominent coffee character. Light-bodied despite its dark appearance.' },
+  { id:'stout-sweet',     name:'Milk / Sweet Stout',   family:'Stout', abvMin:4.0, abvMax:6.5,  ibuMin:20, ibuMax:40,  srm:40, color:'#180d05', flavors:['Chocolate','Milk Sugar','Sweet','Cream','Vanilla'], desc:'Unfermentable lactose gives a luscious sweetness with rich chocolate and cream notes.' },
+  { id:'stout-imperial',  name:'Imperial / Russian Stout',family:'Stout',abvMin:8.0,abvMax:14.0,ibuMin:50,ibuMax:90,  srm:40, color:'#0d0600', flavors:['Dark Fruit','Roast','Alcohol Warmth','Chocolate','Complex'], desc:'Massive, complex, and warming. Rich layers of chocolate, dark fruit, and roasted malt.' },
+  { id:'stout-oatmeal',   name:'Oatmeal Stout',        family:'Stout', abvMin:4.5, abvMax:7.0,  ibuMin:25, ibuMax:40,  srm:40, color:'#1a0e06', flavors:['Oatmeal','Smooth','Chocolate','Coffee','Silky'], desc:'Oats create a silky, full body with smooth roastiness and restrained sweetness.' },
+  { id:'porter-american', name:'American Porter',      family:'Porter',abvMin:5.0, abvMax:7.5,  ibuMin:25, ibuMax:50,  srm:30, color:'#2c1208', flavors:['Chocolate','Caramel','Mild Roast','Moderate Bitter','Smooth'], desc:'Roasty and chocolate-forward with a balanced, approachable character.' },
+  { id:'porter-robust',   name:'Robust Porter',        family:'Porter',abvMin:5.0, abvMax:8.0,  ibuMin:25, ibuMax:45,  srm:35, color:'#1e0c06', flavors:['Roast','Coffee','Chocolate','Bold','Dry'], desc:'Full-bodied with assertive roasted character, higher hop bitterness than American Porter.' },
+  { id:'porter-baltic',   name:'Baltic Porter',        family:'Porter',abvMin:6.5, abvMax:9.5,  ibuMin:20, ibuMax:40,  srm:35, color:'#180a05', flavors:['Dark Fruit','Molasses','Rich','Lager-Clean','Smooth'], desc:'Lager-fermented strong porter with smooth, rich character and dark fruit complexity.' },
+
+  // ── Lagers
+  { id:'lager-american',  name:'American Lager',       family:'Lager', abvMin:4.2, abvMax:5.5,  ibuMin:8,  ibuMax:18,  srm:2,  color:'#f0e080', flavors:['Light','Clean','Crisp','Mild Grain','Refreshing'], desc:'Highly attenuated, light and very crisp. The definition of approachable and refreshing.' },
+  { id:'lager-pilsner',   name:'German Pilsner',       family:'Lager', abvMin:4.4, abvMax:5.5,  ibuMin:25, ibuMax:45,  srm:2,  color:'#edd060', flavors:['Herbal Hops','Crisp','Clean','Spicy','Dry'], desc:'Pale golden with a prominent Saaz hop character, dry finish, and high carbonation.' },
+  { id:'lager-czech',     name:'Czech Pilsner',        family:'Lager', abvMin:4.2, abvMax:5.4,  ibuMin:30, ibuMax:45,  srm:3,  color:'#e8c850', flavors:['Spicy Hops','Soft','Malty','Rounded','Bitter'], desc:'Soft water brings a rounded bitterness with rich Bohemian malt sweetness.' },
+  { id:'lager-munich',    name:'Munich Helles',        family:'Lager', abvMin:4.7, abvMax:5.4,  ibuMin:16, ibuMax:22,  srm:3,  color:'#f0d060', flavors:['Malt-Forward','Clean','Subtle','Soft','Balanced'], desc:'Malt-forward pale lager with subtle sweetness and restrained hopping.' },
+  { id:'lager-bock',      name:'Maibock / Helles Bock',family:'Lager',abvMin:6.3, abvMax:7.4,  ibuMin:23, ibuMax:35,  srm:6,  color:'#e89830', flavors:['Rich Malt','Toast','Hop Bite','Strong','Clean'], desc:'Strong, pale bock with toasty malt richness and a clean, hop-balanced finish.' },
+  { id:'lager-doppelbock',name:'Doppelbock',           family:'Lager', abvMin:7.0, abvMax:10.0, ibuMin:16, ibuMax:26,  srm:18, color:'#7a3c10', flavors:['Bread','Dark Fruit','Sweet','Rich','Full-Bodied'], desc:'Intensely malty, rich and complex with warming alcohol and dark fruit notes.' },
+  { id:'lager-rauchbier', name:'Rauchbier',            family:'Lager', abvMin:4.8, abvMax:6.0,  ibuMin:20, ibuMax:30,  srm:12, color:'#8b4020', flavors:['Smoke','Malt','Savory','Bacon','Earthy'], desc:'German smoked malt lager with distinctive, pleasant smokiness and clean malt body.' },
+
+  // ── Wheat
+  { id:'wheat-hefeweizen',name:'Hefeweizen',           family:'Wheat', abvMin:4.9, abvMax:5.6,  ibuMin:8,  ibuMax:15,  srm:4,  color:'#f5d888', flavors:['Banana','Clove','Wheat','Yeasty','Soft'], desc:'Unfiltered German wheat ale with iconic banana and clove esters from Bavarian yeast.' },
+  { id:'wheat-witbier',   name:'Witbier',              family:'Wheat', abvMin:4.5, abvMax:5.5,  ibuMin:8,  ibuMax:20,  srm:3,  color:'#f5e0a0', flavors:['Coriander','Orange Peel','Spicy','Light','Refreshing'], desc:'Belgian spiced wheat beer with orange peel and coriander spicing over a hazy, light body.' },
+  { id:'wheat-american',  name:'American Wheat',       family:'Wheat', abvMin:4.0, abvMax:5.5,  ibuMin:15, ibuMax:30,  srm:4,  color:'#f8d870', flavors:['Clean','Citrus','Light','Approachable','Crisp'], desc:'Lighter take on German wheat with cleaner yeast character and American hop additions.' },
+  { id:'wheat-dunkel',    name:'Dunkelweizen',         family:'Wheat', abvMin:4.8, abvMax:5.6,  ibuMin:10, ibuMax:18,  srm:18, color:'#7a4010', flavors:['Banana','Chocolate','Clove','Dark Malt','Rich'], desc:'Dark wheat with banana/clove esters alongside chocolate and toasted malt character.' },
+
+  // ── Sours & Wild
+  { id:'sour-berliner',   name:'Berliner Weisse',      family:'Sour',  abvMin:2.8, abvMax:3.8,  ibuMin:3,  ibuMax:8,   srm:2,  color:'#f8f0c0', flavors:['Tart','Lactic','Light','Refreshing','Lemony'], desc:'Classic Berlin wheat beer, sharply tart and low in alcohol — often served with syrups.' },
+  { id:'sour-gose',       name:'Gose',                 family:'Sour',  abvMin:4.2, abvMax:4.8,  ibuMin:5,  ibuMax:12,  srm:4,  color:'#e8d090', flavors:['Salty','Tart','Coriander','Wheat','Refreshing'], desc:'Top-fermented sour ale with salt and coriander additions — uniquely savory-tart.' },
+  { id:'sour-gueuze',     name:'Gueuze',               family:'Sour',  abvMin:5.0, abvMax:8.0,  ibuMin:11, ibuMax:23,  srm:6,  color:'#e8c060', flavors:['Funky','Barnyard','Tart','Complex','Dry'], desc:'Blended wild-fermented Belgian lambic with complex barnyard funk and sharp acidity.' },
+  { id:'sour-flanders',   name:'Flanders Red Ale',     family:'Sour',  abvMin:4.6, abvMax:6.5,  ibuMin:10, ibuMax:25,  srm:16, color:'#8b2010', flavors:['Cherry','Vinegar','Oak','Sour','Red Fruit'], desc:'Wood-aged Flemish sour red with cherry, vinegar notes and caramel malt backbone.' },
+  { id:'sour-american',   name:'American Wild Ale',    family:'Sour',  abvMin:5.0, abvMax:10.0, ibuMin:0,  ibuMax:50,  srm:8,  color:'#c08030', flavors:['Varied','Funky','Fruity','Tart','Complex'], desc:'Broad category of American beers utilizing wild yeast and bacteria for unique character.' },
+
+  // ── Belgians
+  { id:'bel-saison',      name:'Saison / Farmhouse',   family:'Belgian',abvMin:5.0,abvMax:8.0,  ibuMin:20, ibuMax:40,  srm:5,  color:'#e8b840', flavors:['Spicy','Fruity','Dry','Peppery','Complex'], desc:'Rustic Belgian ale with fruity yeast esters, peppery spice, and a characteristically dry finish.' },
+  { id:'bel-tripel',      name:'Belgian Tripel',       family:'Belgian',abvMin:7.5,abvMax:9.5,  ibuMin:20, ibuMax:45,  srm:5,  color:'#f0c050', flavors:['Fruity','Spicy','Strong','Effervescent','Complex'], desc:'Strong, pale and effervescent with complex fruity and spicy yeast character.' },
+  { id:'bel-dubbel',      name:'Belgian Dubbel',       family:'Belgian',abvMin:6.0,abvMax:7.6,  ibuMin:15, ibuMax:25,  srm:20, color:'#6a2c10', flavors:['Dark Fruit','Caramel','Mild Roast','Spicy','Rich'], desc:'Dark Belgian ale with rich caramel, dried fruit, and complex yeast-driven spice.' },
+  { id:'bel-quad',        name:'Belgian Quadrupel',    family:'Belgian',abvMin:9.0,abvMax:13.0, ibuMin:20, ibuMax:35,  srm:25, color:'#5a1a08', flavors:['Dark Fruit','Alcohol','Rich','Raisin','Complex'], desc:'The strongest of Belgian ales — immensely rich, warming, and complex with dark fruit.' },
+  { id:'bel-golden',      name:'Belgian Golden Strong',family:'Belgian',abvMin:7.5,abvMax:10.5, ibuMin:22, ibuMax:35,  srm:4,  color:'#f8d840', flavors:['Fruity','Spicy','Deceptive','Strong','Dry'], desc:'Deceptively strong and very pale, with fruity esters masking considerable alcoholic strength.' },
+
+  // ── Amber / Red
+  { id:'amber-american',  name:'American Amber Ale',   family:'Amber', abvMin:4.5, abvMax:6.2,  ibuMin:25, ibuMax:40,  srm:12, color:'#b85020', flavors:['Caramel','Toffee','Moderate Hops','Toast','Balanced'], desc:'Malt-forward with caramel sweetness balanced by moderate American hop character.' },
+  { id:'amber-irish',     name:'Irish Red Ale',        family:'Amber', abvMin:4.0, abvMax:6.0,  ibuMin:18, ibuMax:28,  srm:14, color:'#a03818', flavors:['Caramel','Mild Roast','Toast','Balanced','Soft'], desc:'Malt-driven with toasty caramel sweetness and low hop bitterness for easy drinking.' },
+  { id:'amber-altbier',   name:'Düsseldorf Altbier',   family:'Amber', abvMin:4.3, abvMax:5.5,  ibuMin:25, ibuMax:50,  srm:14, color:'#8b3010', flavors:['Copper','Malt','Hop Bitter','Clean','Nutty'], desc:'Copper-colored German ale with firm bitterness balancing rich, complex malt character.' },
+
+  // ── Brown & Scotch
+  { id:'brown-american',  name:'American Brown Ale',   family:'Brown', abvMin:4.3, abvMax:6.2,  ibuMin:20, ibuMax:40,  srm:20, color:'#5a2010', flavors:['Chocolate','Nutty','Caramel','Moderate Hops','Toast'], desc:'Combines British brown malt character with American hop assertiveness.' },
+  { id:'brown-english',   name:'English Brown Ale',    family:'Brown', abvMin:4.0, abvMax:5.5,  ibuMin:20, ibuMax:30,  srm:22, color:'#4a1808', flavors:['Nutty','Caramel','Biscuit','Mild','Sweet'], desc:'Mellow, nutty, and gently sweet brown ale, very approachable and food-friendly.' },
+  { id:'scotch-wee',      name:'Scotch Ale / Wee Heavy',family:'Scotch',abvMin:6.5,abvMax:10.0, ibuMin:17, ibuMax:35,  srm:22, color:'#5a2010', flavors:['Caramel','Smoky','Rich','Warming','Malt-Driven'], desc:'Richly malty and warming with caramel sweetness and a hint of smokiness.' },
+
+  // ── Specialty
+  { id:'spec-cream',      name:'Cream Ale',            family:'Specialty',abvMin:4.2,abvMax:5.6,ibuMin:8, ibuMax:20,  srm:3,  color:'#f0e090', flavors:['Smooth','Sweet Corn','Mild','Clean','Light'], desc:'American hybrid — smooth, light, and mildly sweet. Pairs ale yeast character with lager clarity.' },
+  { id:'spec-kolsch',     name:'Kölsch',               family:'Specialty',abvMin:4.4,abvMax:5.2,ibuMin:18,ibuMax:30,  srm:4,  color:'#f5e068', flavors:['Delicate','Fruity','Grainy','Light Hop','Clean'], desc:'Delicate Cologne ale fermented and lagered cold for clean, subtle fruity character.' },
+  { id:'spec-barleywine', name:'American Barleywine',  family:'Specialty',abvMin:8.0,abvMax:12.0,ibuMin:50,ibuMax:100,srm:16, color:'#8b3010', flavors:['Caramel','Alcohol','Intense Hops','Warming','Rich'], desc:'Huge malt and hop presence with considerable warmth. A sipping beer with enormous complexity.' },
+];
+
+/* ═══════════════════════════════════════════════
+   DATA — Food → Beer style mappings (60+ foods)
+═══════════════════════════════════════════════ */
+const FOOD_PAIRINGS = [
+  // Meat
+  { food:'Grilled Burger',   icon:'🍔', category:'Meat',    styles:['amber-american','ipa-american','lager-pilsner'],    reason:`The caramel malt in an Amber Ale mirrors the browned, slightly charred beef. An American IPA cuts through fat while adding vibrant citrus contrast. A crisp Pilsner refreshes the palate between bites.` },
+  { food:'BBQ Ribs',         icon:'🍖', category:'Meat',    styles:['stout-oatmeal','amber-american','lager-rauchbier'], reason:`Oatmeal Stout complements smoky, sticky ribs with chocolate depth. Amber Ale echoes the caramel BBQ sauce. Rauchbier intensifies the smoke with its signature beechwood character.` },
+  { food:'Steak',            icon:'🥩', category:'Meat',    styles:['stout-dry','porter-robust','ipa-double'],           reason:`Dry Irish Stout classic beef pairing — roasty bitterness cuts through fat. Robust Porter adds chocolate-coffee depth. Imperial IPA provides bold hop contrast to rich umami.` },
+  { food:'Grilled Chicken',  icon:'🍗', category:'Meat',    styles:['lager-pilsner','wheat-witbier','ipa-session'],      reason:`Pilsner keeps things clean and refreshing. Witbier's orange-coriander complements herbed chicken. Session IPA adds hop brightness without overpowering.` },
+  { food:'Pork Belly',       icon:'🥓', category:'Meat',    styles:['bel-saison','amber-irish','lager-bock'],            reason:`Saison's peppery dryness cuts through fatty pork belly beautifully. Irish Red Ale's caramel sweetness complements the meat. Maibock brings rich malt to match the richness.` },
+  { food:'Duck',             icon:'🦆', category:'Meat',    styles:['bel-dubbel','sour-flanders','porter-baltic'],       reason:`Belgian Dubbel's dark fruit mirrors duck's gamey richness. Flanders Red Ale's cherry-sour acidity cuts through the fat. Baltic Porter's complexity handles duck confit elegantly.` },
+  { food:'Lamb',             icon:'🐑', category:'Meat',    styles:['scotch-wee','bel-saison','ipa-american'],           reason:`Scotch Ale's rich caramel stands up to bold lamb. Saison's peppery spice echoes lamb seasoning. American IPA's herbaceous hops complement rosemary and mint.` },
+
+  // Seafood
+  { food:'Oysters',          icon:'🦪', category:'Seafood', styles:['stout-dry','lager-pilsner','wheat-witbier'],        reason:`Dry Stout and oysters are a legendary Irish pairing — metallic minerals and roast sync perfectly. Pilsner cleanses the palate. Witbier's saline spice echoes the sea.` },
+  { food:'Fish & Chips',     icon:'🐟', category:'Seafood', styles:['lager-pilsner','wheat-hefeweizen','ipa-session'],   reason:`Pilsner cuts through fry grease crisply. Hefeweizen's effervescence lifts heavy batter. Session IPA adds hop brightness to complement malt vinegar.` },
+  { food:'Grilled Salmon',   icon:'🐠', category:'Seafood', styles:['ipa-hazy','bel-saison','lager-czech'],              reason:`Hazy IPA's tropical fruit mirrors salmon's richness without bitterness. Saison's dry finish cleanses. Czech Pilsner's soft malt complements the delicate fish.` },
+  { food:'Shrimp',           icon:'🦐', category:'Seafood', styles:['wheat-witbier','lager-american','ipa-session'],     reason:`Witbier's orange-citrus is a natural match for shrimp seasoning. American Lager is super clean and refreshing. Session IPA adds light hop punch.` },
+  { food:'Lobster',          icon:'🦞', category:'Seafood', styles:['bel-golden','lager-pilsner','wheat-american'],      reason:`Belgian Golden Strong's effervescence and fruit lift buttery lobster. Pilsner keeps things elegant. American Wheat is light and clean.` },
+  { food:'Crab Cakes',       icon:'🦀', category:'Seafood', styles:['spec-kolsch','wheat-witbier','ipa-session'],        reason:`Kölsch is the quintessential crab cake pairing — light, clean, and fruity. Witbier's citrus echoes Old Bay spice. Session IPA adds hop character.` },
+
+  // Pizza & Pasta
+  { food:'Margherita Pizza', icon:'🍕', category:'Pizza',   styles:['lager-pilsner','amber-irish','wheat-hefeweizen'],   reason:`Pilsner's crisp acidity cuts tomato sauce. Irish Red Ale's malt matches mozzarella richness. Hefeweizen's carbonation refreshes between bites.` },
+  { food:'Pepperoni Pizza',  icon:'🍕', category:'Pizza',   styles:['ipa-american','amber-american','lager-pilsner'],    reason:`American IPA cuts through pepperoni grease and spice. Amber Ale echoes caramelized toppings. Pilsner refreshes between slices.` },
+  { food:'Pasta Carbonara',  icon:'🍝', category:'Pasta',   styles:['lager-pilsner','spec-kolsch','wheat-american'],     reason:`Light lagers and Kölsch keep the heavy egg-cream sauce from becoming overwhelming. Clean carbonation refreshes the palate.` },
+  { food:'Pasta Bolognese',  icon:'🍝', category:'Pasta',   styles:['amber-american','ipa-american','amber-altbier'],    reason:`Amber Ale's caramel malt mirrors the meat sauce richness. IPA cuts through the fat. Altbier's firm bitterness works like a Chianti.` },
+
+  // Cheese
+  { food:'Aged Cheddar',     icon:'🧀', category:'Cheese',  styles:['ipa-double','stout-imperial','amber-american'],     reason:`Imperial IPA's big hops cut through sharp cheddar fat and salt. Imperial Stout echoes caramel depth. Amber Ale's maltiness is a classic cheese pairing.` },
+  { food:'Brie / Camembert', icon:'🧀', category:'Cheese',  styles:['bel-tripel','sour-berliner','wheat-witbier'],       reason:`Belgian Tripel's fruity effervescence lifts buttery soft cheese. Berliner Weisse's tartness cuts through creamy texture. Witbier's spice complements the earthiness.` },
+  { food:'Blue Cheese',      icon:'🧀', category:'Cheese',  styles:['stout-imperial','spec-barleywine','bel-quad'],      reason:`Big imperial beers are needed to stand up to pungent blue cheese. Imperial Stout matches intensity. Barleywine's caramel sweetness is a classic contrast. Quadrupel's complexity handles the funk.` },
+  { food:'Goat Cheese',      icon:'🧀', category:'Cheese',  styles:['bel-saison','sour-gose','ipa-session'],             reason:`Saison's peppery funk and tartness are a natural match for tangy goat cheese. Gose's salt and sour echoes the cheese. Session IPA adds hop freshness.` },
+
+  // Vegetarian
+  { food:'Salad',            icon:'🥗', category:'Veggie',  styles:['wheat-hefeweizen','lager-pilsner','sour-berliner'], reason:`Light and refreshing choices to keep the meal crisp. Hefeweizen's fruit complements greens. Berliner Weisse is bracingly tart and light.` },
+  { food:'Veggie Burger',    icon:'🥬', category:'Veggie',  styles:['ipa-american','amber-american','wheat-american'],   reason:`American IPA cuts through bean or grain patty earthiness. Amber Ale adds caramel complement. American Wheat keeps things approachable.` },
+  { food:'Spicy Tacos',      icon:'🌮', category:'Veggie',  styles:['ipa-hazy','sour-gose','lager-american'],            reason:`Hazy IPA's sweetness cools heat and adds tropical contrast. Gose's salt and sour echoes taco flavors. American Lager is the classic spicy food partner.` },
+  { food:'Mushroom Risotto', icon:'🍄', category:'Veggie',  styles:['bel-dubbel','stout-oatmeal','amber-altbier'],       reason:`Dubbel's earthy dark fruit mirrors mushroom depth. Oatmeal Stout's silky body matches the creamy risotto. Altbier's nuttiness complements umami.` },
+  { food:'Roasted Veggies',  icon:'🥕', category:'Veggie',  styles:['amber-american','bel-saison','lager-munich'],       reason:`Amber Ale's caramel echoes roasted caramelized veg. Saison adds herbal complexity. Munich Helles keeps things simple and clean.` },
+  { food:'Hummus & Flatbread',icon:'🫓',category:'Veggie',  styles:['wheat-witbier','lager-pilsner','spec-cream'],       reason:`Witbier's citrus-coriander mirrors hummus spicing. Pilsner is a crisp, clean partner. Cream Ale is light and approachable.` },
+
+  // Dessert
+  { food:'Chocolate Cake',   icon:'🍫', category:'Dessert', styles:['stout-imperial','porter-american','stout-sweet'],   reason:`Imperial Stout and chocolate cake is a classic — roasted cocoa against sweet chocolate. American Porter adds approachable depth. Sweet Stout's lactose sweetness mirrors the cake.` },
+  { food:'Vanilla Ice Cream', icon:'🍦',category:'Dessert', styles:['stout-sweet','porter-american','lager-doppelbock'],  reason:`Sweet / Milk Stout complements vanilla with cream and chocolate. American Porter adds light roast. Doppelbock's rich malt becomes a dessert itself.` },
+  { food:'Cheesecake',       icon:'🍰', category:'Dessert', styles:['stout-sweet','wheat-hefeweizen','bel-tripel'],      reason:`Sweet Stout's creamy sweetness mirrors New York cheesecake. Hefeweizen's banana note complements. Tripel's fruit and sweetness are a natural pairing.` },
+  { food:'Crème Brûlée',     icon:'🍮', category:'Dessert', styles:['bel-tripel','lager-doppelbock','stout-sweet'],      reason:`Tripel's fruity sweetness mirrors the custard richness. Doppelbock's caramel echoes burnt sugar. Sweet Stout is a creamy companion.` },
+  { food:'Fruit Tart',       icon:'🥧', category:'Dessert', styles:['sour-flanders','bel-saison','wheat-witbier'],       reason:`Flanders Red Ale's cherry-fruit acidity mirrors the bright fruit. Saison's dryness cuts through sweetness. Witbier's citrus complements.` },
+  { food:'Nuts & Praline',   icon:'🥜', category:'Dessert', styles:['brown-english','scotch-wee','spec-barleywine'],     reason:`English Brown Ale's nutty caramel is a perfect partner. Scotch Ale mirrors caramelized praline. Barleywine's complexity handles the richness.` },
+
+  // Spicy / Asian
+  { food:'Thai Curry',       icon:'🍛', category:'Spicy',   styles:['ipa-hazy','wheat-hefeweizen','lager-american'],     reason:`Hazy IPA's tropical sweetness cools Thai heat and mirrors coconut notes. Hefeweizen's carbonation refreshes. American Lager is a simple, safe cooling choice.` },
+  { food:'Indian Curry',     icon:'🍲', category:'Spicy',   styles:['ipa-hazy','wheat-witbier','lager-american'],        reason:`Hazy IPA's tropical sweetness complements turmeric and coconut. Witbier's coriander echoes curry spicing. American Lager cools the heat.` },
+  { food:'Sushi',            icon:'🍱', category:'Asian',   styles:['spec-kolsch','wheat-hefeweizen','lager-pilsner'],   reason:`Kölsch's delicate clean fruitiness is a sushi's best friend. Hefeweizen's light body pairs well. Pilsner's crispness mirrors the freshness of fish.` },
+  { food:'Ramen',            icon:'🍜', category:'Asian',   styles:['stout-dry','amber-american','lager-pilsner'],       reason:`Rich tonkotsu broth pairs with Dry Stout's roastiness. Amber Ale's caramel matches soy-based broths. Pilsner cleanses between slurps.` },
+  { food:'Korean BBQ',       icon:'🥢', category:'Asian',   styles:['ipa-american','lager-rauchbier','amber-american'],  reason:`IPA cuts through galbi's fatty richness. Rauchbier's smoke echoes grill char. Amber Ale's malt mirrors the sweet-savory sauce.` },
+
+  // Breakfast
+  { food:'Eggs & Bacon',     icon:'🍳', category:'Brunch',  styles:['stout-dry','amber-irish','spec-cream'],             reason:`Dry Stout and full Irish breakfast is a time-honored classic. Irish Red Ale's malt sweetness mirrors bacon. Cream Ale is a light, approachable brunch beer.` },
+  { food:'Pancakes',         icon:'🥞', category:'Brunch',  styles:['stout-sweet','wheat-hefeweizen','lager-doppelbock'],reason:`Sweet Stout's lactose mirrors maple syrup sweetness. Hefeweizen's banana note is a natural maple pairing. Doppelbock is a celebratory brunch choice.` },
+  { food:'Avocado Toast',    icon:'🥑', category:'Brunch',  styles:['wheat-witbier','ipa-session','spec-kolsch'],        reason:`Witbier's citrus-coriander brightens avocado. Session IPA adds hop freshness. Kölsch's delicate fruitiness is a clean companion.` },
+];
+
+/* ═══════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════ */
+function styleById(id) {
+  return BEER_STYLES.find(s => s.id === id);
+}
+
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast${type === 'error' ? ' error' : ''}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'toastOut 0.3s ease forwards';
+    setTimeout(() => el.remove(), 300);
+  }, 2800);
+}
+
+function closeModal() {
+  document.getElementById('style-modal').style.display = 'none';
+}
+
+function showModal(html) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('style-modal').style.display = 'flex';
+}
+
+/* ═══════════════════════════════════════════════
+   PAIRING TAB
+═══════════════════════════════════════════════ */
+let selectedFood = null;
+let selectedStyleId = null;
+
+function buildFoodGrid() {
+  const grid = document.getElementById('food-grid');
+  const cats = [...new Set(FOOD_PAIRINGS.map(f => f.category))];
+  cats.forEach(cat => {
+    const catDiv = document.createElement('div');
+    catDiv.style.cssText = `grid-column:1/-1; font-size:0.7rem; font-weight:600; color:var(--muted); letter-spacing:0.05em; text-transform:uppercase; margin-top:0.5rem;`;
+    catDiv.textContent = cat;
+    grid.appendChild(catDiv);
+    FOOD_PAIRINGS.filter(f => f.category === cat).forEach(fp => {
+      const btn = document.createElement('button');
+      btn.className = 'food-btn';
+      btn.dataset.food = fp.food;
+      btn.innerHTML = `<span class="food-icon">${fp.icon}</span><span>${fp.food}</span>`;
+      btn.addEventListener('click', () => selectFood(fp));
+      grid.appendChild(btn);
+    });
+  });
+}
+
+function selectFood(fp) {
+  selectedFood = fp;
+  selectedStyleId = null;
+  document.querySelectorAll('.food-btn').forEach(b => b.classList.toggle('selected', b.dataset.food === fp.food));
+  document.querySelectorAll('.style-quick-btn').forEach(b => b.classList.remove('selected'));
+  renderFoodPairing(fp);
+}
+
+function buildStyleQuickList(filter = '') {
+  const list = document.getElementById('style-quick-list');
+  list.innerHTML = '';
+  const styles = BEER_STYLES.filter(s => !filter || s.name.toLowerCase().includes(filter.toLowerCase()) || s.family.toLowerCase().includes(filter.toLowerCase()));
+  if (!styles.length) {
+    list.innerHTML = `<div class="empty-state" style="padding:1.5rem 0"><div class="empty-icon">🔍</div><p>No styles found</p></div>`;
+    return;
+  }
+  styles.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = `style-quick-btn card clickable`;
+    btn.style.cssText = `padding:0.65rem 0.9rem; display:flex; align-items:center; gap:0.75rem; text-align:left; border:none; cursor:pointer; width:100%;`;
+    btn.dataset.styleId = s.id;
+    btn.innerHTML = `
+      <div class="beer-swatch" style="width:28px;height:28px;border-radius:6px;flex-shrink:0;background:${s.color};"></div>
+      <div>
+        <div style="font-size:0.85rem;font-weight:600;">${s.name}</div>
+        <div style="font-size:0.72rem;color:var(--muted);">${s.family} · ${s.abvMin}–${s.abvMax}% ABV</div>
+      </div>
+    `;
+    btn.addEventListener('click', () => selectStyle(s));
+    list.appendChild(btn);
+  });
+}
+
+function selectStyle(s) {
+  selectedStyleId = s.id;
+  selectedFood = null;
+  document.querySelectorAll('.food-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.style-quick-btn').forEach(b => b.classList.toggle('selected', b.dataset.styleId === s.id));
+  renderStylePairing(s);
+}
+
+function renderFoodPairing(fp) {
+  const results = document.getElementById('pairing-results');
+  const topStyles = fp.styles.map(id => styleById(id)).filter(Boolean);
+
+  let html = `
+    <div class="pairing-result">
+      <div class="result-header">
+        <span style="font-size:2rem;">${fp.icon}</span>
+        <div>
+          <h3 style="font-size:1.1rem;font-weight:700;">${fp.food}</h3>
+          <p style="font-size:0.8rem;color:var(--muted);">Top 3 beer style matches</p>
+        </div>
+        <div class="result-badge" style="margin-left:auto;">🍺 Pairing</div>
+      </div>
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.25rem;line-height:1.7;">${fp.reason}</p>
+      <div class="grid-3">
+  `;
+
+  topStyles.forEach((s, i) => {
+    const score = [95, 84, 72][i];
+    html += `
+      <div class="card clickable" onclick="openStyleModal('${s.id}')" role="button" tabindex="0" aria-label="View details for ${s.name}" onkeydown="if(event.key==='Enter'||event.key===' ')openStyleModal('${s.id}')">
+        <div class="beer-header">
+          <div class="beer-swatch" style="background:${s.color};"></div>
+          <div>
+            <div class="beer-name">${s.name}</div>
+            <div class="beer-meta">${s.family} · ${s.abvMin}–${s.abvMax}% ABV · ${s.ibuMin}–${s.ibuMax} IBU</div>
+          </div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.6rem;">${s.desc.substring(0,90)}…</p>
+        <div class="tag-row">${s.flavors.slice(0,3).map(f => `<span class="tag">${f}</span>`).join('')}</div>
+        <div class="match-score">
+          <div class="score-bar-wrap"><div class="score-bar" style="width:${score}%"></div></div>
+          <span class="score-label">${score}%</span>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div></div>`;
+  results.innerHTML = html;
+  results.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function renderStylePairing(s) {
+  const results = document.getElementById('pairing-results');
+  const foods = FOOD_PAIRINGS.filter(fp => fp.styles.includes(s.id));
+
+  let html = `
+    <div class="pairing-result">
+      <div class="result-header">
+        <div class="beer-swatch" style="width:48px;height:48px;border-radius:10px;background:${s.color};flex-shrink:0;"></div>
+        <div>
+          <h3 style="font-size:1.1rem;font-weight:700;">${s.name}</h3>
+          <p style="font-size:0.8rem;color:var(--muted);">${s.family} · ${s.abvMin}–${s.abvMax}% ABV · ${s.ibuMin}–${s.ibuMax} IBU</p>
+        </div>
+        <div class="result-badge" style="margin-left:auto;">🍽️ Foods</div>
+      </div>
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.25rem;line-height:1.7;">${s.desc}</p>
+      <div class="tag-row" style="margin-bottom:1.25rem;">${s.flavors.map(f => `<span class="tag accent">${f}</span>`).join('')}</div>
+  `;
+
+  if (!foods.length) {
+    html += `<div class="empty-state"><div class="empty-icon">🍽️</div><p>No specific food pairings mapped for this style yet.</p></div>`;
+  } else {
+    html += `<h4 style="font-size:0.85rem;color:var(--muted);margin-bottom:0.85rem;font-weight:600;letter-spacing:0.04em;">RECOMMENDED PAIRINGS (${foods.length})</h4><div class="food-grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr));">`;
+    foods.forEach(fp => {
+      html += `
+        <div class="food-btn" style="cursor:default;">
+          <span class="food-icon">${fp.icon}</span>
+          <span>${fp.food}</span>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  results.innerHTML = html;
+  results.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function openStyleModal(id) {
+  const s = styleById(id);
+  if (!s) return;
+  const foods = FOOD_PAIRINGS.filter(fp => fp.styles.includes(id));
+  showModal(`
+    <div class="modal-header">
+      <h3 id="modal-title">${s.name}</h3>
+      <button class="close-btn" onclick="closeModal()" aria-label="Close modal">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+      <div class="beer-swatch" style="width:50px;height:50px;border-radius:10px;background:${s.color};"></div>
+      <div>
+        <div style="font-size:0.85rem;color:var(--muted);">${s.family}</div>
+        <div style="font-size:0.85rem;margin-top:0.15rem;">${s.abvMin}–${s.abvMax}% ABV &nbsp;|&nbsp; ${s.ibuMin}–${s.ibuMax} IBU</div>
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1rem;line-height:1.7;">${s.desc}</p>
+    <div class="tag-row" style="margin-bottom:1rem;">${s.flavors.map(f => `<span class="tag accent">${f}</span>`).join('')}</div>
+    <hr class="divider" />
+    <h4 style="font-size:0.8rem;font-weight:600;color:var(--muted);margin-bottom:0.75rem;">FOOD PAIRINGS (${foods.length})</h4>
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+      ${foods.map(fp => `<span class="tag green">${fp.icon} ${fp.food}</span>`).join('') || '<span style="color:var(--muted);font-size:0.85rem;">No pairings mapped yet</span>'}
+    </div>
+  `);
+}
+
+/* ═══════════════════════════════════════════════
+   STYLE GUIDE TAB
+═══════════════════════════════════════════════ */
+const SRM_COLORS = [
+  {srm:1, color:'#FFE699', label:'1 – Pale Straw'},
+  {srm:2, color:'#FFD878', label:'2 – Straw'},
+  {srm:3, color:'#FFCA5A', label:'3 – Pale Gold'},
+  {srm:4, color:'#FFBF42', label:'4 – Gold'},
+  {srm:5, color:'#FBB123', label:'5 – Deep Gold'},
+  {srm:6, color:'#F8A600', label:'6 – Light Amber'},
+  {srm:7, color:'#F39C00', label:'7 – Amber'},
+  {srm:8, color:'#EA8F00', label:'8 – Medium Amber'},
+  {srm:9, color:'#E58500', label:'9 – Deep Amber'},
+  {srm:10,color:'#DE7C00', label:'10 – Amber-Brown'},
+  {srm:12,color:'#D27200', label:'12 – Brown'},
+  {srm:14,color:'#C65900', label:'14 – Reddish Brown'},
+  {srm:16,color:'#BB4500', label:'16 – Dark Brown'},
+  {srm:18,color:'#B04000', label:'18 – Very Dark Brown'},
+  {srm:20,color:'#943200', label:'20 – Robust Brown'},
+  {srm:24,color:'#832A00', label:'24 – Black-Brown'},
+  {srm:30,color:'#621700', label:'30 – Very Dark'},
+  {srm:40,color:'#13000A', label:'40+ – Black'},
+];
+
+function buildSRMChart() {
+  const chart = document.getElementById('srm-chart');
+  SRM_COLORS.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'srm-swatch';
+    div.style.background = s.color;
+    div.setAttribute('title', s.label);
+    div.innerHTML = `<span class="srm-tooltip">${s.label}</span>`;
+    chart.appendChild(div);
+  });
+}
+
+function buildFlavorWheel() {
+  const svg = document.getElementById('flavor-wheel');
+  const cx = 160, cy = 160, r = 140;
+  const flavors = [
+    { label:'Bitter', color:'#6c63ff', angle:0 },
+    { label:'Sweet', color:'#f7c948', angle:45 },
+    { label:'Sour', color:'#43d9ad', angle:90 },
+    { label:'Roast', color:'#a05020', angle:135 },
+    { label:'Malt', color:'#c87020', angle:180 },
+    { label:'Fruity', color:'#ff6584', angle:225 },
+    { label:'Spicy', color:'#e0a030', angle:270 },
+    { label:'Funky', color:'#7bc67e', angle:315 },
+  ];
+
+  // Draw circle segments
+  let pathEl = '';
+  const n = flavors.length;
+  flavors.forEach((f, i) => {
+    const startAngle = ((i / n) * 2 * Math.PI) - Math.PI / 2;
+    const endAngle = (((i + 1) / n) * 2 * Math.PI) - Math.PI / 2;
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
+    pathEl += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 0,1 ${x2},${y2} Z" fill="${f.color}" opacity="0.75" stroke="#0f1117" stroke-width="2"/>`;
+    const midAngle = startAngle + (endAngle - startAngle) / 2;
+    const lx = cx + (r * 0.65) * Math.cos(midAngle);
+    const ly = cy + (r * 0.65) * Math.sin(midAngle);
+    pathEl += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="#e2e8f0" font-size="11" font-family="system-ui,sans-serif" font-weight="600">${f.label}</text>`;
+  });
+
+  // Center circle
+  pathEl += `<circle cx="${cx}" cy="${cy}" r="40" fill="#1a1d27" stroke="#2e3350" stroke-width="1.5"/>`;
+  pathEl += `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="#8892b0" font-size="10" font-family="system-ui,sans-serif">Flavor</text>`;
+  pathEl += `<text x="${cx}" y="${cy + 13}" text-anchor="middle" dominant-baseline="middle" fill="#8892b0" font-size="10" font-family="system-ui,sans-serif">Wheel</text>`;
+
+  svg.innerHTML = pathEl;
+}
+
+let activeFamily = 'All';
+
+function buildFamilyChips() {
+  const families = ['All', ...new Set(BEER_STYLES.map(s => s.family))];
+  const wrap = document.getElementById('family-chips');
+  wrap.innerHTML = '';
+  families.forEach(fam => {
+    const chip = document.createElement('button');
+    chip.className = `chip${fam === activeFamily ? ' active' : ''}`;
+    chip.textContent = fam;
+    chip.addEventListener('click', () => {
+      activeFamily = fam;
+      buildFamilyChips();
+      renderStyleGuideGrid();
+    });
+    wrap.appendChild(chip);
+  });
+}
+
+function renderStyleGuideGrid(filter = '') {
+  const grid = document.getElementById('style-guide-grid');
+  grid.innerHTML = '';
+  let styles = BEER_STYLES.filter(s => activeFamily === 'All' || s.family === activeFamily);
+  if (filter) styles = styles.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()) || s.family.toLowerCase().includes(filter.toLowerCase()) || s.flavors.some(f => f.toLowerCase().includes(filter.toLowerCase())));
+
+  if (!styles.length) {
+    grid.style.display = 'block';
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>No styles found. Try a different search.</p></div>`;
+    return;
+  }
+  grid.style.display = '';
+
+  styles.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'card clickable';
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `View details for ${s.name}`);
+    card.innerHTML = `
+      <div class="beer-header">
+        <div class="beer-swatch" style="background:${s.color};"></div>
+        <div>
+          <div class="beer-name">${s.name}</div>
+          <div class="beer-meta">${s.family}</div>
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin:0.5rem 0;line-height:1.6;">${s.desc.substring(0,100)}…</p>
+      <div class="beer-meta" style="margin-bottom:0.5rem;">${s.abvMin}–${s.abvMax}% ABV &nbsp;·&nbsp; ${s.ibuMin}–${s.ibuMax} IBU</div>
+      <div class="tag-row">${s.flavors.slice(0,4).map(f => `<span class="tag">${f}</span>`).join('')}</div>
+    `;
+    card.addEventListener('click', () => openStyleModal(s.id));
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openStyleModal(s.id); });
+    grid.appendChild(card);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   TAP LIST TAB
+═══════════════════════════════════════════════ */
+let tapList = [];
+
+function populateStyleSelect(selectId) {
+  const sel = document.getElementById(selectId);
+  const prev = sel.value;
+  sel.innerHTML = `<option value="">Select style…</option>`;
+  BEER_STYLES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.name} (${s.family})`;
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+}
+
+function renderTapStats() {
+  const el = document.getElementById('tap-stats');
+  if (!tapList.length) { el.innerHTML = ''; return; }
+  const families = [...new Set(tapList.map(b => { const s = styleById(b.styleId); return s ? s.family : 'Unknown'; }))];
+  const avgAbv = tapList.filter(b => b.abv).reduce((a,b) => a + b.abv, 0) / tapList.filter(b => b.abv).length;
+  el.innerHTML = `
+    <div class="stat-chip"><div class="stat-val">${tapList.length}</div><div class="stat-lbl">Beers on Tap</div></div>
+    <div class="stat-chip"><div class="stat-val">${families.length}</div><div class="stat-lbl">Style Families</div></div>
+    <div class="stat-chip"><div class="stat-val">${tapList.filter(b=>b.abv).length ? avgAbv.toFixed(1)+'%' : '—'}</div><div class="stat-lbl">Avg ABV</div></div>
+  `;
+}
+
+function renderTapList() {
+  const el = document.getElementById('tap-list-output');
+  renderTapStats();
+  if (!tapList.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🍺</div><p>No beers on tap yet. Add your first beer above!</p></div>`;
+    return;
+  }
+  el.innerHTML = tapList.map((b, i) => {
+    const s = styleById(b.styleId);
+    const foods = s ? FOOD_PAIRINGS.filter(fp => fp.styles.includes(s.id)) : [];
+    return `
+      <div class="cellar-item" id="tap-item-${i}">
+        <div class="cellar-swatch" style="background:${s ? s.color : '#444'};"></div>
+        <div class="cellar-info">
+          <div class="cellar-name">${escHtml(b.name)}</div>
+          <div class="cellar-sub">${s ? s.name : 'Unknown style'}${b.abv ? ` · ${b.abv}% ABV` : ''}${b.ibu ? ` · ${b.ibu} IBU` : ''}</div>
+          ${foods.length ? `<div class="tag-row" style="margin-top:0.4rem;">${foods.slice(0,4).map(fp => `<span class="tag green">${fp.icon} ${fp.food}</span>`).join('')}${foods.length > 4 ? `<span class="tag">+${foods.length - 4} more</span>` : ''}</div>` : ''}
+          ${b.notes ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;font-style:italic;">${escHtml(b.notes)}</div>` : ''}
+        </div>
+        <div class="cellar-actions">
+          <button class="btn btn-ghost btn-sm" onclick="removeTap(${i})" aria-label="Remove ${escHtml(b.name)} from tap list">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function removeTap(i) {
+  const name = tapList[i].name;
+  tapList.splice(i, 1);
+  renderTapList();
+  toast(`Removed "${name}" from tap list`);
+}
+
+document.getElementById('tap-add-btn').addEventListener('click', () => {
+  const name = document.getElementById('tap-name').value.trim();
+  const styleId = document.getElementById('tap-style').value;
+  if (!name) { toast('Please enter a beer name', 'error'); return; }
+  if (!styleId) { toast('Please select a beer style', 'error'); return; }
+  const abv = parseFloat(document.getElementById('tap-abv').value) || null;
+  const ibu = parseInt(document.getElementById('tap-ibu').value) || null;
+  const notes = document.getElementById('tap-notes').value.trim();
+  tapList.push({ name, styleId, abv, ibu, notes });
+  renderTapList();
+  toast(`Added "${name}" to tap list!`);
+  document.getElementById('tap-name').value = '';
+  document.getElementById('tap-style').value = '';
+  document.getElementById('tap-abv').value = '';
+  document.getElementById('tap-ibu').value = '';
+  document.getElementById('tap-notes').value = '';
+});
+
+document.getElementById('tap-clear-btn').addEventListener('click', () => {
+  document.getElementById('tap-name').value = '';
+  document.getElementById('tap-style').value = '';
+  document.getElementById('tap-abv').value = '';
+  document.getElementById('tap-ibu').value = '';
+  document.getElementById('tap-notes').value = '';
+});
+
+/* ═══════════════════════════════════════════════
+   CELLAR TAB
+═══════════════════════════════════════════════ */
+const CELLAR_KEY = 'darkfactory-beer-cellar-v1';
+
+function loadCellar() {
+  try { return JSON.parse(localStorage.getItem(CELLAR_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveCellar(data) {
+  try { localStorage.setItem(CELLAR_KEY, JSON.stringify(data)); } catch {}
+}
+
+let cellar = loadCellar();
+
+function renderCellarStats() {
+  const el = document.getElementById('cel-stats');
+  if (!cellar.length) { el.innerHTML = ''; return; }
+  const families = [...new Set(cellar.map(b => { const s = styleById(b.styleId); return s ? s.family : 'Unknown'; }))];
+  el.innerHTML = `
+    <div class="stat-chip"><div class="stat-val">${cellar.length}</div><div class="stat-lbl">In Cellar</div></div>
+    <div class="stat-chip"><div class="stat-val">${families.length}</div><div class="stat-lbl">Style Families</div></div>
+    <div class="stat-chip"><div class="stat-val">${[...new Set(cellar.map(b => b.brewery).filter(Boolean))].length || '—'}</div><div class="stat-lbl">Breweries</div></div>
+  `;
+}
+
+function renderCellar() {
+  const el = document.getElementById('cel-list-output');
+  renderCellarStats();
+  if (!cellar.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🗄️</div><p>Your cellar is empty. Track the beers you own or want to try!</p></div>`;
+    return;
+  }
+  el.innerHTML = cellar.map((b, i) => {
+    const s = styleById(b.styleId);
+    return `
+      <div class="cellar-item">
+        <div class="cellar-swatch" style="background:${s ? s.color : '#555'};"></div>
+        <div class="cellar-info">
+          <div class="cellar-name">${escHtml(b.name)}</div>
+          <div class="cellar-sub">${s ? s.name : 'Unknown style'}${b.brewery ? ` · ${escHtml(b.brewery)}` : ''}${b.vintage ? ` · ${escHtml(b.vintage)}` : ''}</div>
+          ${b.notes ? `<div style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;font-style:italic;">${escHtml(b.notes)}</div>` : ''}
+        </div>
+        <div class="cellar-actions">
+          <button class="btn btn-ghost btn-sm" onclick="removeCellar(${i})" aria-label="Remove ${escHtml(b.name)} from cellar">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function removeCellar(i) {
+  const name = cellar[i].name;
+  cellar.splice(i, 1);
+  saveCellar(cellar);
+  renderCellar();
+  toast(`Removed "${name}" from cellar`);
+}
+
+document.getElementById('cel-add-btn').addEventListener('click', () => {
+  const name = document.getElementById('cel-name').value.trim();
+  const styleId = document.getElementById('cel-style').value;
+  if (!name) { toast('Please enter a beer name', 'error'); return; }
+  if (!styleId) { toast('Please select a beer style', 'error'); return; }
+  const brewery = document.getElementById('cel-brewery').value.trim();
+  const vintage = document.getElementById('cel-vintage').value.trim();
+  const notes = document.getElementById('cel-notes').value.trim();
+  cellar.push({ name, styleId, brewery, vintage, notes });
+  saveCellar(cellar);
+  renderCellar();
+  toast(`Added "${name}" to your cellar!`);
+  document.getElementById('cel-name').value = '';
+  document.getElementById('cel-style').value = '';
+  document.getElementById('cel-brewery').value = '';
+  document.getElementById('cel-vintage').value = '';
+  document.getElementById('cel-notes').value = '';
+});
+
+document.getElementById('cel-clear-btn').addEventListener('click', () => {
+  document.getElementById('cel-name').value = '';
+  document.getElementById('cel-style').value = '';
+  document.getElementById('cel-brewery').value = '';
+  document.getElementById('cel-vintage').value = '';
+  document.getElementById('cel-notes').value = '';
+});
+
+/* ═══════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════ */
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const active = b.dataset.tab === tabId;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tabId}`));
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  btn.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchTab(btn.dataset.tab); }
+  });
+});
+
+/* ═══════════════════════════════════════════════
+   MODAL keyboard / click outside
+═══════════════════════════════════════════════ */
+document.getElementById('style-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('style-modal')) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+/* ═══════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════ */
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
+(function init() {
+  buildFoodGrid();
+  buildStyleQuickList();
+  buildSRMChart();
+  buildFlavorWheel();
+  buildFamilyChips();
+  renderStyleGuideGrid();
+  populateStyleSelect('tap-style');
+  populateStyleSelect('cel-style');
+  renderTapList();
+  renderCellar();
+
+  // Pairing tab — style search
+  document.getElementById('style-search').addEventListener('input', e => {
+    buildStyleQuickList(e.target.value);
+  });
+
+  // Style guide search
+  document.getElementById('style-guide-search').addEventListener('input', e => {
+    renderStyleGuideGrid(e.target.value);
+  });
+})();
+</script>
+
+</body>
+</html>

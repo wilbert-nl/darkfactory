@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIN Decoder — Vehicle Specification Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --border: rgba(255,255,255,0.08);
+      --accent: #ffffff;
+      --accent2: #3b82f6;
+      --text: #ededed;
+      --muted: #6b7280;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .header-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .header-text p {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .header-badge {
+      margin-left: auto;
+      background: rgba(67, 217, 173, 0.15);
+      border: 1px solid rgba(67, 217, 173, 0.3);
+      color: var(--green);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Layout ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover { border-color: rgba(0,229,255, 0.3); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-header h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .card-icon {
+      font-size: 1rem;
+      width: 28px;
+      height: 28px;
+      background: var(--surface2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── VIN Input Area ── */
+    .vin-input-wrapper {
+      position: relative;
+    }
+
+    .vin-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      font-size: 1.4rem;
+      font-family: 'Courier New', monospace;
+      color: var(--text);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .vin-input::placeholder {
+      color: var(--muted);
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+    }
+
+    .vin-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255, 0.15);
+    }
+
+    .vin-input.valid {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(67, 217, 173, 0.12);
+    }
+
+    .vin-input.invalid {
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 3px rgba(124,58,237, 0.12);
+    }
+
+    .vin-counter {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.78rem;
+      font-family: monospace;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .vin-counter.complete { color: var(--green); }
+    .vin-counter.over { color: var(--accent2); }
+
+    /* ── VIN Visualization ── */
+    .vin-vis {
+      display: flex;
+      gap: 2px;
+      flex-wrap: nowrap;
+      margin-top: 0.75rem;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .vin-seg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .vin-seg-label {
+      font-size: 0.55rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .vin-chars {
+      display: flex;
+      gap: 2px;
+    }
+
+    .vin-char {
+      width: 28px;
+      height: 34px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--muted);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .vin-char.filled { color: var(--text); }
+    .vin-char.wmi { border-color: rgba(0,229,255, 0.5); background: rgba(0,229,255, 0.08); }
+    .vin-char.wmi.filled { color: var(--accent); }
+    .vin-char.vds { border-color: rgba(247, 201, 72, 0.5); background: rgba(247, 201, 72, 0.08); }
+    .vin-char.vds.filled { color: var(--yellow); }
+    .vin-char.vis { border-color: rgba(67, 217, 173, 0.5); background: rgba(67, 217, 173, 0.08); }
+    .vin-char.vis.filled { color: var(--green); }
+
+    .vin-seg-bar {
+      height: 3px;
+      border-radius: 2px;
+      width: 100%;
+      margin-top: 2px;
+    }
+
+    .vin-seg-bar.wmi { background: var(--accent); }
+    .vin-seg-bar.vds { background: var(--yellow); }
+    .vin-seg-bar.vis { background: var(--green); }
+
+    /* ── VIN Legend ── */
+    .vin-legend {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.wmi { background: var(--accent); }
+    .legend-dot.vds { background: var(--yellow); }
+    .legend-dot.vis { background: var(--green); }
+
+    /* ── Validation Message ── */
+    .validation-msg {
+      margin-top: 0.6rem;
+      font-size: 0.78rem;
+      min-height: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+
+    .validation-msg.valid { color: var(--green); }
+    .validation-msg.invalid { color: var(--accent2); }
+    .validation-msg.neutral { color: var(--muted); }
+
+    /* ── Action Buttons ── */
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 1.25rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.4rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn:focus-visible { box-shadow: 0 0 0 3px rgba(0,229,255, 0.4); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #8b83ff);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0,229,255, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { background: var(--border); border-color: var(--accent); color: var(--accent); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+    }
+
+    .btn-ghost:hover { color: var(--accent2); border-color: var(--accent2); }
+
+    /* ── Loading Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── Result Panel ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-panel {
+      animation: fadeUp 0.3s ease forwards;
+    }
+
+    /* ── Spec Grid ── */
+    .spec-hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 700px) { .spec-hero { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 450px) { .spec-hero { grid-template-columns: 1fr; } }
+
+    .hero-stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .hero-stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.2;
+    }
+
+    .hero-stat-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 0.3rem;
+    }
+
+    .spec-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .spec-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.875rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .spec-key {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+
+    .spec-val {
+      font-size: 0.875rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ── Recalls ── */
+    .recall-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .recall-badge.none {
+      background: rgba(67, 217, 173, 0.12);
+      border: 1px solid rgba(67, 217, 173, 0.3);
+      color: var(--green);
+    }
+
+    .recall-badge.has-recalls {
+      background: rgba(124,58,237, 0.12);
+      border: 1px solid rgba(124,58,237, 0.3);
+      color: var(--accent2);
+    }
+
+    .recall-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent2);
+      border-radius: 8px;
+      padding: 0.875rem 1rem;
+      margin-top: 0.6rem;
+    }
+
+    .recall-item h4 {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--accent2);
+      margin-bottom: 0.25rem;
+    }
+
+    .recall-item p {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── Section Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      flex: 1;
+      min-width: 80px;
+      padding: 0.5rem 0.75rem;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      outline: none;
+    }
+
+    .tab:hover { color: var(--text); }
+    .tab:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+
+    .tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeUp 0.2s ease forwards; }
+
+    /* ── History Table ── */
+    .history-list { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .history-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .history-item:hover { border-color: var(--accent); background: rgba(0,229,255, 0.05); }
+    .history-item:focus-visible { outline: 2px solid var(--accent); }
+
+    .history-vin {
+      font-family: monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    .history-desc {
+      font-size: 0.78rem;
+      color: var(--muted);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-date {
+      font-size: 0.7rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .history-del {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.15rem 0.3rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      transition: color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .history-del:hover { color: var(--accent2); }
+
+    /* ── Batch Decoder ── */
+    .batch-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.875rem 1rem;
+      font-size: 0.85rem;
+      font-family: 'Courier New', monospace;
+      color: var(--text);
+      outline: none;
+      resize: vertical;
+      min-height: 100px;
+      transition: border-color 0.2s;
+    }
+
+    .batch-input:focus { border-color: var(--accent); }
+    .batch-input::placeholder { color: var(--muted); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    .batch-results {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .batch-row {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.82rem;
+    }
+
+    .batch-row .bvin { font-family: monospace; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+    .batch-row .bdesc { color: var(--text); flex: 1; }
+    .batch-row .bstatus { flex-shrink: 0; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+
+    .pill.ok { background: rgba(67,217,173,0.15); color: var(--green); }
+    .pill.err { background: rgba(124,58,237,0.15); color: var(--accent2); }
+    .pill.loading { background: rgba(0,229,255,0.15); color: var(--accent); }
+
+    /* ── Error/Empty States ── */
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--muted);
+    }
+
+    .empty-state .es-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .empty-state h3 { font-size: 1rem; margin-bottom: 0.25rem; color: var(--text); }
+    .empty-state p { font-size: 0.82rem; }
+
+    .error-box {
+      background: rgba(124,58,237, 0.08);
+      border: 1px solid rgba(124,58,237, 0.3);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      font-size: 0.85rem;
+      color: var(--accent2);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+
+    /* ── Print Styles ── */
+    @media print {
+      body { background: #fff; color: #111; }
+      header, .input-section, .history-section, .batch-section, .actions, .tabs, #printBtn { display: none !important; }
+      .card { border: 1px solid #ddd; page-break-inside: avoid; }
+      .spec-item { background: #f9f9f9; }
+      .hero-stat-value { color: #6c63ff; }
+    }
+
+    /* ── VIN Position Tooltip ── */
+    .vin-pos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .vin-pos-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+
+    .vin-pos-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      font-family: monospace;
+    }
+
+    .vin-pos-num.wmi { background: rgba(0,229,255,0.2); color: var(--accent); }
+    .vin-pos-num.vds { background: rgba(247,201,72,0.2); color: var(--yellow); }
+    .vin-pos-num.vis { background: rgba(67,217,173,0.2); color: var(--green); }
+
+    .vin-pos-info { flex: 1; min-width: 0; }
+    .vin-pos-name { font-size: 0.72rem; font-weight: 600; color: var(--text); }
+    .vin-pos-desc { font-size: 0.65rem; color: var(--muted); margin-top: 0.1rem; }
+    .vin-pos-char { font-family: monospace; font-size: 0.85rem; font-weight: 700; color: var(--accent); }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--border); margin: 1rem 0; }
+
+    /* ── Toast ── */
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(40px); }
+    }
+
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.65rem 1rem;
+      font-size: 0.8rem;
+      color: var(--text);
+      max-width: 280px;
+      animation: toastIn 0.25s ease forwards;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .toast.removing { animation: toastOut 0.2s ease forwards; }
+
+/* === Dev Tools v2 Design System === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.6;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+
+.container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.card, .result, .item, .output, .barcode-result, .vin-result, .isbn-result, .rhyme, .synonym,
+[class*="card"], [class*="result"], [class*="item"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  animation: toolsFade 0.25s ease both;
+}
+
+.code, .value, pre, code, .mono, .barcode, .isbn, .vin, .word {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  color: var(--text);
+  word-break: break-all;
+}
+
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.65rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.3);
+}
+
+button, .btn, input[type="submit"], input[type="button"] {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.5rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+button:hover { opacity: 0.9; }
+button:active { transform: scale(0.97); }
+
+.tag, .badge, .status, .label, .part-of-speech, .section-header {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+}
+
+.valid, .found, .success { color: var(--green); }
+.invalid, .not-found, .error { color: var(--red); }
+.warning { color: var(--yellow); }
+
+/* Word list / rhyme list */
+.word-list, .rhyme-list, .synonym-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+}
+.word-list li, .rhyme-list li, .synonym-list li {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.word-list li:hover, .rhyme-list li:hover, .synonym-list li:hover { border-color: rgba(255,255,255,0.3); }
+
+table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-weight: 600; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+@keyframes toolsFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-icon" aria-hidden="true">🚗</div>
+  <div class="header-text">
+    <h1>VIN Decoder</h1>
+    <p>Complete vehicle specification reports powered by NHTSA</p>
+  </div>
+  <span class="header-badge" aria-label="Free to use">FREE · NO KEY</span>
+</header>
+
+<main>
+
+  <!-- Input Section -->
+  <section class="card input-section" aria-label="VIN Input">
+    <div class="card-header">
+      <span class="card-icon" aria-hidden="true">🔍</span>
+      <h2>Decode a VIN</h2>
+    </div>
+
+    <div class="vin-input-wrapper">
+      <label for="vinInput" class="sr-only">Enter 17-character Vehicle Identification Number</label>
+      <input
+        type="text"
+        id="vinInput"
+        class="vin-input"
+        placeholder="Enter 17-character VIN…"
+        maxlength="17"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        aria-describedby="vinValidation"
+      />
+      <span class="vin-counter" id="vinCounter" aria-live="polite">0/17</span>
+    </div>
+
+    <!-- VIN Visualization -->
+    <div class="vin-vis" id="vinVis" aria-label="VIN character breakdown">
+      <!-- WMI: 1–3 -->
+      <div class="vin-seg">
+        <div class="vin-chars" id="wmiChars"></div>
+        <div class="vin-seg-bar wmi"></div>
+        <span class="vin-seg-label">WMI</span>
+      </div>
+      <!-- VDS: 4–9 -->
+      <div class="vin-seg">
+        <div class="vin-chars" id="vdsChars"></div>
+        <div class="vin-seg-bar vds"></div>
+        <span class="vin-seg-label">VDS</span>
+      </div>
+      <!-- VIS: 10–17 -->
+      <div class="vin-seg">
+        <div class="vin-chars" id="visChars"></div>
+        <div class="vin-seg-bar vis"></div>
+        <span class="vin-seg-label">VIS</span>
+      </div>
+    </div>
+
+    <div class="vin-legend">
+      <div class="legend-item"><span class="legend-dot wmi"></span> WMI — World Manufacturer Identifier (1–3)</div>
+      <div class="legend-item"><span class="legend-dot vds"></span> VDS — Vehicle Descriptor Section (4–9)</div>
+      <div class="legend-item"><span class="legend-dot vis"></span> VIS — Vehicle Identifier Section (10–17)</div>
+    </div>
+
+    <div id="vinValidation" class="validation-msg neutral" role="status" aria-live="polite">
+      Enter a VIN to begin — 17 alphanumeric characters (no I, O, or Q)
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="decodeBtn" disabled aria-label="Decode VIN">
+        <span id="btnLabel">Decode VIN</span>
+      </button>
+      <button class="btn btn-secondary" id="clearBtn" aria-label="Clear input">✕ Clear</button>
+      <button class="btn btn-secondary" id="printBtn" aria-label="Print vehicle report" style="display:none">🖨 Print Report</button>
+    </div>
+  </section>
+
+  <!-- Result Section -->
+  <section class="card result-panel" id="resultSection" aria-label="Decode results" style="display:none">
+    <div class="card-header">
+      <span class="card-icon" aria-hidden="true">📋</span>
+      <h2 id="resultTitle">Vehicle Report</h2>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true" aria-controls="tabSpecs" id="tabBtnSpecs">Specs</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabRecalls" id="tabBtnRecalls">Recalls</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPositions" id="tabBtnPositions">VIN Breakdown</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabRaw" id="tabBtnRaw">Raw Data</button>
+    </div>
+
+    <div id="tabSpecs" class="tab-panel active" role="tabpanel" aria-labelledby="tabBtnSpecs">
+      <div class="spec-hero" id="specHero"></div>
+      <div class="spec-grid" id="specGrid"></div>
+    </div>
+
+    <div id="tabRecalls" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnRecalls">
+      <div id="recallContent"></div>
+    </div>
+
+    <div id="tabPositions" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnPositions">
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;">Each character in a VIN encodes specific vehicle information per the ISO 3779 standard.</p>
+      <div class="vin-pos-grid" id="posGrid"></div>
+    </div>
+
+    <div id="tabRaw" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnRaw">
+      <pre id="rawData" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:0.72rem;overflow:auto;max-height:400px;color:var(--muted);line-height:1.5;"></pre>
+    </div>
+  </section>
+
+  <!-- Two-column lower section -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;" id="lowerGrid">
+
+    <!-- History -->
+    <section class="card history-section" aria-label="VIN lookup history">
+      <div class="card-header">
+        <span class="card-icon" aria-hidden="true">🕐</span>
+        <h2>Lookup History</h2>
+        <button class="btn btn-ghost" id="clearHistoryBtn" style="margin-left:auto;font-size:0.72rem;padding:0.25rem 0.5rem;" aria-label="Clear all history">Clear all</button>
+      </div>
+      <div id="historyList">
+        <div class="empty-state">
+          <div class="es-icon" aria-hidden="true">📂</div>
+          <h3>No lookups yet</h3>
+          <p>Your decoded VINs will appear here</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Batch Decoder -->
+    <section class="card batch-section" aria-label="Batch VIN decoder">
+      <div class="card-header">
+        <span class="card-icon" aria-hidden="true">⚡</span>
+        <h2>Batch Decoder</h2>
+      </div>
+      <label for="batchInput" style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:0.5rem;">Paste multiple VINs — one per line (max 10)</label>
+      <textarea
+        id="batchInput"
+        class="batch-input"
+        placeholder="1HGBH41JXMN109186&#10;2T1BURHE0JC062816&#10;3VWSE69M25M509738"
+        aria-label="Batch VIN input, one VIN per line"
+      ></textarea>
+      <div class="actions" style="margin-top:0.75rem;">
+        <button class="btn btn-primary" id="batchDecodeBtn" aria-label="Decode all VINs">⚡ Decode All</button>
+      </div>
+      <div class="batch-results" id="batchResults"></div>
+    </section>
+
+  </div>
+
+</main>
+
+<div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<style>
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  @media (max-width: 700px) {
+    #lowerGrid { grid-template-columns: 1fr !important; }
+  }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const NHTSA_DECODE = vin => `https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/${vin}?format=json`;
+  const NHTSA_RECALLS = (make, model, year) =>
+    `https://api.nhtsa.gov/recalls/recallsByVehicle?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${encodeURIComponent(year)}`;
+  const HISTORY_KEY = 'vin-decoder-history';
+  const MAX_HISTORY = 20;
+  const VALID_CHARS = /^[A-HJ-NPR-Z0-9]+$/i;
+  const ILLEGAL = /[IOQ]/i;
+
+  // VIN position metadata
+  const VIN_POSITIONS = [
+    { pos: 1, name: 'Country', desc: 'Country of manufacture', seg: 'wmi' },
+    { pos: 2, name: 'Manufacturer', desc: 'Vehicle manufacturer', seg: 'wmi' },
+    { pos: 3, name: 'Vehicle Type', desc: 'Division/vehicle type', seg: 'wmi' },
+    { pos: 4, name: 'Brand/Line', desc: 'Car line, series, or brand', seg: 'vds' },
+    { pos: 5, name: 'Body Style', desc: 'Body style (2-door, 4-door, SUV…)', seg: 'vds' },
+    { pos: 6, name: 'Restraints', desc: 'Restraint system type', seg: 'vds' },
+    { pos: 7, name: 'Model', desc: 'Model and/or engine code', seg: 'vds' },
+    { pos: 8, name: 'Engine', desc: 'Engine type/displacement', seg: 'vds' },
+    { pos: 9, name: 'Check Digit', desc: 'Validity check digit (0–9 or X)', seg: 'vds' },
+    { pos: 10, name: 'Model Year', desc: 'Model year code', seg: 'vis' },
+    { pos: 11, name: 'Plant', desc: 'Assembly plant', seg: 'vis' },
+    { pos: 12, name: 'Seq 1', desc: 'Sequential production number', seg: 'vis' },
+    { pos: 13, name: 'Seq 2', desc: 'Sequential production number', seg: 'vis' },
+    { pos: 14, name: 'Seq 3', desc: 'Sequential production number', seg: 'vis' },
+    { pos: 15, name: 'Seq 4', desc: 'Sequential production number', seg: 'vis' },
+    { pos: 16, name: 'Seq 5', desc: 'Sequential production number', seg: 'vis' },
+    { pos: 17, name: 'Seq 6', desc: 'Sequential production number', seg: 'vis' },
+  ];
+
+  const CHECK_VALUES = {
+    A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,
+    J:1,K:2,L:3,M:4,N:5,P:7,R:9,
+    S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9,
+  };
+  const WEIGHTS = [8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  const vinInput      = document.getElementById('vinInput');
+  const vinCounter    = document.getElementById('vinCounter');
+  const vinValidation = document.getElementById('vinValidation');
+  const decodeBtn     = document.getElementById('decodeBtn');
+  const clearBtn      = document.getElementById('clearBtn');
+  const printBtn      = document.getElementById('printBtn');
+  const resultSection = document.getElementById('resultSection');
+  const resultTitle   = document.getElementById('resultTitle');
+  const specHero      = document.getElementById('specHero');
+  const specGrid      = document.getElementById('specGrid');
+  const recallContent = document.getElementById('recallContent');
+  const posGrid       = document.getElementById('posGrid');
+  const rawData       = document.getElementById('rawData');
+  const historyList   = document.getElementById('historyList');
+  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+  const batchInput    = document.getElementById('batchInput');
+  const batchDecodeBtn = document.getElementById('batchDecodeBtn');
+  const batchResults  = document.getElementById('batchResults');
+
+  // ── VIN Visualization Init ─────────────────────────────────────────────────
+  const wmiChars = document.getElementById('wmiChars');
+  const vdsChars = document.getElementById('vdsChars');
+  const visChars = document.getElementById('visChars');
+
+  function buildCharCells() {
+    for (let i = 1; i <= 17; i++) {
+      const cell = document.createElement('span');
+      cell.className = `vin-char ${i <= 3 ? 'wmi' : i <= 9 ? 'vds' : 'vis'}`;
+      cell.id = `vc${i}`;
+      cell.textContent = '·';
+      cell.setAttribute('aria-label', `Position ${i}`);
+      if (i <= 3) wmiChars.appendChild(cell);
+      else if (i <= 9) vdsChars.appendChild(cell);
+      else visChars.appendChild(cell);
+    }
+  }
+  buildCharCells();
+
+  function updateVinVis(vin) {
+    for (let i = 1; i <= 17; i++) {
+      const cell = document.getElementById(`vc${i}`);
+      const ch = vin[i - 1];
+      if (ch) {
+        cell.textContent = ch;
+        cell.classList.add('filled');
+      } else {
+        cell.textContent = '·';
+        cell.classList.remove('filled');
+      }
+    }
+  }
+
+  // ── VIN Validation ────────────────────────────────────────────────────────
+  function calcCheckDigit(vin) {
+    if (vin.length !== 17) return null;
+    const upper = vin.toUpperCase();
+    let sum = 0;
+    for (let i = 0; i < 17; i++) {
+      const ch = upper[i];
+      const val = /[0-9]/.test(ch) ? parseInt(ch, 10) : (CHECK_VALUES[ch] ?? 0);
+      sum += val * WEIGHTS[i];
+    }
+    const rem = sum % 11;
+    return rem === 10 ? 'X' : String(rem);
+  }
+
+  function validateVin(vin) {
+    const v = vin.toUpperCase();
+    if (v.length === 0) return { valid: false, msg: 'Enter a VIN to begin — 17 alphanumeric characters (no I, O, or Q)', level: 'neutral' };
+    if (v.length < 17) return { valid: false, msg: `Need ${17 - v.length} more character${17 - v.length > 1 ? 's' : ''}`, level: 'neutral' };
+    if (v.length > 17) return { valid: false, msg: 'VIN must be exactly 17 characters', level: 'invalid' };
+    if (ILLEGAL.test(v)) return { valid: false, msg: 'VIN cannot contain I, O, or Q', level: 'invalid' };
+    if (!VALID_CHARS.test(v)) return { valid: false, msg: 'VIN contains invalid characters', level: 'invalid' };
+    const expected = calcCheckDigit(v);
+    const actual = v[8];
+    if (expected && actual !== expected) {
+      return { valid: true, msg: `Check digit mismatch (pos 9): expected ${expected}, got ${actual} — may still be valid`, level: 'neutral' };
+    }
+    return { valid: true, msg: '✓ Valid VIN — check digit verified', level: 'valid' };
+  }
+
+  function onVinInput() {
+    const raw = vinInput.value.replace(/[^A-HJ-NPR-Z0-9]/gi, '').toUpperCase().slice(0, 17);
+    if (raw !== vinInput.value) {
+      const sel = vinInput.selectionStart;
+      vinInput.value = raw;
+      vinInput.setSelectionRange(sel, sel);
+    }
+
+    const len = raw.length;
+    vinCounter.textContent = `${len}/17`;
+    vinCounter.className = `vin-counter${len === 17 ? ' complete' : ''}`;
+
+    updateVinVis(raw);
+
+    const result = validateVin(raw);
+    vinValidation.textContent = result.msg;
+    vinValidation.className = `validation-msg ${result.level}`;
+
+    vinInput.className = `vin-input ${len === 17 ? (result.level === 'invalid' ? 'invalid' : 'valid') : len > 0 ? '' : ''}`;
+    decodeBtn.disabled = !result.valid;
+  }
+
+  vinInput.addEventListener('input', onVinInput);
+
+  vinInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !decodeBtn.disabled) decodeBtn.click();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    vinInput.value = '';
+    onVinInput();
+    resultSection.style.display = 'none';
+    printBtn.style.display = 'none';
+    vinInput.focus();
+  });
+
+  printBtn.addEventListener('click', () => window.print());
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  const tabButtons = document.querySelectorAll('[role="tab"]');
+  const tabPanels  = document.querySelectorAll('[role="tabpanel"]');
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+      tabPanels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      document.getElementById(btn.getAttribute('aria-controls')).classList.add('active');
+    });
+
+    btn.addEventListener('keydown', e => {
+      const tabs = [...tabButtons];
+      const idx = tabs.indexOf(btn);
+      if (e.key === 'ArrowRight') { e.preventDefault(); tabs[(idx + 1) % tabs.length].click(); tabs[(idx + 1) % tabs.length].focus(); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); tabs[(idx - 1 + tabs.length) % tabs.length].click(); tabs[(idx - 1 + tabs.length) % tabs.length].focus(); }
+    });
+  });
+
+  // ── NHTSA Decode ──────────────────────────────────────────────────────────
+  let lastDecodeData = null;
+
+  decodeBtn.addEventListener('click', async () => {
+    const vin = vinInput.value.toUpperCase();
+    await decodeVin(vin);
+  });
+
+  async function decodeVin(vin) {
+    setDecoding(true);
+    resultSection.style.display = 'none';
+
+    try {
+      const res = await fetch(NHTSA_DECODE(vin));
+      if (!res.ok) throw new Error(`NHTSA API error: ${res.status}`);
+      const json = await res.json();
+      const data = json.Results && json.Results[0];
+      if (!data) throw new Error('No results returned from NHTSA');
+
+      lastDecodeData = data;
+      renderResult(vin, data);
+      saveHistory(vin, data);
+      renderHistory();
+      printBtn.style.display = 'inline-flex';
+      showToast(`Decoded ${vin.slice(0,5)}… successfully`);
+    } catch (err) {
+      renderError(err.message);
+    } finally {
+      setDecoding(false);
+    }
+  }
+
+  function setDecoding(on) {
+    if (on) {
+      document.getElementById('btnLabel').innerHTML = `<span class="spinner"></span> Decoding…`;
+      decodeBtn.disabled = true;
+    } else {
+      document.getElementById('btnLabel').textContent = 'Decode VIN';
+      const res = validateVin(vinInput.value);
+      decodeBtn.disabled = !res.valid;
+    }
+  }
+
+  function renderResult(vin, d) {
+    const year  = d.ModelYear  || '—';
+    const make  = d.Make       || '—';
+    const model = d.Model      || '—';
+    const trim  = d.Trim       || d.Series || '—';
+
+    resultTitle.textContent = `${year} ${make} ${model}`;
+    resultSection.style.display = 'block';
+
+    // Switch to first tab
+    tabButtons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+    tabPanels.forEach(p => p.classList.remove('active'));
+    tabButtons[0].classList.add('active');
+    tabButtons[0].setAttribute('aria-selected', 'true');
+    tabPanels[0].classList.add('active');
+
+    // Hero stats
+    specHero.innerHTML = [
+      { label: 'Year',  value: year },
+      { label: 'Make',  value: make },
+      { label: 'Model', value: model },
+    ].map(h => `
+      <div class="hero-stat">
+        <div class="hero-stat-value">${esc(h.value)}</div>
+        <div class="hero-stat-label">${esc(h.label)}</div>
+      </div>
+    `).join('');
+
+    // Spec fields
+    const fields = [
+      ['Trim / Series', trim],
+      ['Body Style',    d.BodyClass || '—'],
+      ['Drive Type',    d.DriveType || '—'],
+      ['Engine',        formatEngine(d)],
+      ['Fuel Type',     d.FuelTypePrimary || '—'],
+      ['Displacement',  d.DisplacementL ? `${parseFloat(d.DisplacementL).toFixed(1)}L` : '—'],
+      ['Cylinders',     d.EngineCylinders || '—'],
+      ['Horsepower',    d.EngineHP ? `${d.EngineHP} hp` : '—'],
+      ['Transmission',  d.TransmissionStyle || '—'],
+      ['GVWR',          d.GVWR || '—'],
+      ['Doors',         d.Doors || '—'],
+      ['Seats',         d.SeatBeltsAll || '—'],
+      ['Manufacturer',  d.Manufacturer || '—'],
+      ['Plant City',    d.PlantCity ? `${d.PlantCity}, ${d.PlantState || d.PlantCountry || ''}`.trim().replace(/,$/, '') : '—'],
+      ['Plant Country', d.PlantCountry || '—'],
+      ['VIN',           vin],
+      ['Error Code',    (d.ErrorCode === '0' || d.ErrorCode === '') ? 'None' : (d.ErrorCode || '—')],
+    ];
+
+    specGrid.innerHTML = fields
+      .filter(([, v]) => v && v !== '—' && v !== '' && v !== 'null')
+      .map(([k, v]) => `<div class="spec-item"><span class="spec-key">${esc(k)}</span><span class="spec-val">${esc(v)}</span></div>`)
+      .join('');
+
+    // Position breakdown
+    const vinUpper = vin.toUpperCase();
+    posGrid.innerHTML = VIN_POSITIONS.map(p => `
+      <div class="vin-pos-item">
+        <div class="vin-pos-num ${p.seg}">${p.pos}</div>
+        <div class="vin-pos-info">
+          <div class="vin-pos-name">${esc(p.name)}</div>
+          <div class="vin-pos-desc">${esc(p.desc)}</div>
+        </div>
+        <div class="vin-pos-char">${esc(vinUpper[p.pos - 1] || '·')}</div>
+      </div>
+    `).join('');
+
+    // Raw
+    rawData.textContent = JSON.stringify(lastDecodeData, null, 2);
+
+    // Recalls
+    fetchRecalls(make, model, year);
+
+    resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function formatEngine(d) {
+    const parts = [];
+    if (d.DisplacementL) parts.push(`${parseFloat(d.DisplacementL).toFixed(1)}L`);
+    if (d.EngineCylinders) parts.push(`V${d.EngineCylinders}`);
+    if (d.FuelTypePrimary) parts.push(d.FuelTypePrimary);
+    return parts.join(' ') || '—';
+  }
+
+  function renderError(msg) {
+    resultSection.style.display = 'block';
+    tabPanels.forEach(p => p.classList.remove('active'));
+    tabPanels[0].classList.add('active');
+    tabButtons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+    tabButtons[0].classList.add('active'); tabButtons[0].setAttribute('aria-selected', 'true');
+    specHero.innerHTML = '';
+    specGrid.innerHTML = `<div class="error-box" role="alert"><span>⚠</span><span>${esc(msg)}</span></div>`;
+  }
+
+  // ── Recalls ───────────────────────────────────────────────────────────────
+  async function fetchRecalls(make, model, year) {
+    if (!make || make === '—' || !model || model === '—' || !year || year === '—') {
+      recallContent.innerHTML = `<p style="color:var(--muted);font-size:0.82rem;">Cannot fetch recalls — make/model/year unavailable.</p>`;
+      return;
+    }
+
+    recallContent.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;display:flex;align-items:center;gap:0.5rem;"><span class="spinner" style="border-color:rgba(136,146,176,0.3);border-top-color:var(--muted);"></span> Fetching recall data…</div>`;
+
+    try {
+      const res = await fetch(NHTSA_RECALLS(make, model, year));
+      if (!res.ok) throw new Error(`${res.status}`);
+      const json = await res.json();
+      const results = json.results || [];
+
+      if (results.length === 0) {
+        recallContent.innerHTML = `
+          <div class="recall-badge none" role="status">✓ No open recalls found for ${esc(year)} ${esc(make)} ${esc(model)}</div>`;
+        return;
+      }
+
+      const badge = `<div class="recall-badge has-recalls" role="status" style="margin-bottom:0.75rem;">⚠ ${results.length} recall${results.length > 1 ? 's' : ''} found</div>`;
+      const items = results.slice(0, 10).map(r => `
+        <div class="recall-item">
+          <h4>${esc(r.Component || 'Component Unknown')}</h4>
+          <p>${esc(r.Summary || r.Consequence || 'No summary available')}</p>
+          ${r.RemedyDescription ? `<p style="margin-top:0.35rem;color:var(--text);font-size:0.75rem;"><strong>Remedy:</strong> ${esc(r.RemedyDescription)}</p>` : ''}
+        </div>
+      `).join('');
+
+      recallContent.innerHTML = badge + items;
+    } catch (err) {
+      recallContent.innerHTML = `<p style="color:var(--muted);font-size:0.82rem;">Could not load recall data: ${esc(err.message)}</p>`;
+    }
+  }
+
+  // ── History ───────────────────────────────────────────────────────────────
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function saveHistory(vin, d) {
+    const hist = loadHistory().filter(h => h.vin !== vin);
+    hist.unshift({
+      vin,
+      desc: `${d.ModelYear || ''} ${d.Make || ''} ${d.Model || ''}`.trim() || vin,
+      date: new Date().toLocaleDateString(),
+    });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(0, MAX_HISTORY)));
+  }
+
+  function renderHistory() {
+    const hist = loadHistory();
+    if (hist.length === 0) {
+      historyList.innerHTML = `<div class="empty-state"><div class="es-icon" aria-hidden="true">📂</div><h3>No lookups yet</h3><p>Your decoded VINs will appear here</p></div>`;
+      return;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'history-list';
+
+    hist.forEach(h => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.tabIndex = 0;
+      item.setAttribute('role', 'button');
+      item.setAttribute('aria-label', `Load ${h.vin} — ${h.desc}`);
+      item.innerHTML = `
+        <span class="history-vin">${esc(h.vin)}</span>
+        <span class="history-desc">${esc(h.desc)}</span>
+        <span class="history-date">${esc(h.date)}</span>
+        <button class="history-del" aria-label="Remove ${h.vin} from history" title="Remove">✕</button>
+      `;
+
+      item.addEventListener('click', e => {
+        if (e.target.classList.contains('history-del')) {
+          e.stopPropagation();
+          const updated = loadHistory().filter(x => x.vin !== h.vin);
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+          renderHistory();
+          showToast(`Removed ${h.vin}`);
+          return;
+        }
+        vinInput.value = h.vin;
+        onVinInput();
+        decodeVin(h.vin);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      item.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+      });
+
+      container.appendChild(item);
+    });
+
+    historyList.innerHTML = '';
+    historyList.appendChild(container);
+  }
+
+  clearHistoryBtn.addEventListener('click', () => {
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+    showToast('History cleared');
+  });
+
+  // ── Batch Decoder ─────────────────────────────────────────────────────────
+  batchDecodeBtn.addEventListener('click', async () => {
+    const lines = batchInput.value
+      .split('\n')
+      .map(l => l.trim().toUpperCase())
+      .filter(l => l.length > 0)
+      .slice(0, 10);
+
+    if (lines.length === 0) {
+      showToast('Enter at least one VIN');
+      return;
+    }
+
+    batchResults.innerHTML = '';
+
+    const rows = lines.map(vin => {
+      const row = document.createElement('div');
+      row.className = 'batch-row';
+      const valid = validateVin(vin);
+      row.innerHTML = `
+        <span class="bvin">${esc(vin.slice(0, 17).padEnd(17, '·'))}</span>
+        <span class="bdesc">${valid.valid ? 'Fetching…' : esc(valid.msg)}</span>
+        <span class="bstatus"><span class="pill ${valid.valid ? 'loading' : 'err'}">${valid.valid ? '…' : 'Invalid'}</span></span>
+      `;
+      batchResults.appendChild(row);
+      return { vin, row, valid: valid.valid };
+    });
+
+    for (const { vin, row, valid } of rows) {
+      if (!valid) continue;
+      try {
+        const res = await fetch(NHTSA_DECODE(vin));
+        const json = await res.json();
+        const d = json.Results && json.Results[0];
+        const desc = d ? `${d.ModelYear || ''} ${d.Make || ''} ${d.Model || ''}`.trim() : 'Unknown';
+        row.querySelector('.bdesc').textContent = desc || vin;
+        row.querySelector('.bstatus').innerHTML = `<span class="pill ok">OK</span>`;
+        saveHistory(vin, d || {});
+      } catch (e) {
+        row.querySelector('.bdesc').textContent = `Error: ${e.message}`;
+        row.querySelector('.bstatus').innerHTML = `<span class="pill err">Error</span>`;
+      }
+    }
+
+    renderHistory();
+  });
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  function showToast(msg) {
+    const container = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('removing');
+      el.addEventListener('animationend', () => el.remove());
+    }, 2800);
+  }
+
+  // ── Utilities ─────────────────────────────────────────────────────────────
+  function esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  renderHistory();
+  vinInput.focus();
+
+})();
+</script>
+</body>
+</html>

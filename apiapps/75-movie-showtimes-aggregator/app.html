@@ -1,0 +1,2635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineDesk — Cinema Schedule Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── N9 Edge-aligned nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-cinema-name {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-head {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Sidebar sections ── */
+.sidebar-section {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sidebar-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.field-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.input-sm {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-sm:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.input-sm::placeholder { color: var(--color-ink-muted); }
+.input-sm[type="number"] { font-variant-numeric: tabular-nums; }
+select.input-sm { cursor: pointer; }
+
+/* Form grid */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+/* ── Movie search / autocomplete ── */
+.search-wrap {
+  position: relative;
+}
+
+.input-search {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.input-search::placeholder { color: var(--color-ink-muted); }
+
+.search-loading {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+
+.autocomplete-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  z-index: 300;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px oklch(18% 0.04 155 / 0.16);
+  overflow: hidden;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.autocomplete-dropdown.open { display: block; }
+
+.ac-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s ease;
+}
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover, .ac-item:focus { background: var(--color-accent-subtle); outline: none; }
+
+.ac-thumb {
+  width: 28px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.ac-item-info { flex: 1; min-width: 0; }
+.ac-item-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-item-meta { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.ac-message {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  text-align: center;
+}
+
+/* Selected movie preview strip */
+.movie-preview-strip {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-md);
+}
+.movie-preview-strip.visible { display: flex; }
+
+.preview-thumb {
+  width: 28px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.preview-info { flex: 1; min-width: 0; }
+.preview-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.preview-meta { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.btn-clear {
+  background: none;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: var(--text-lg);
+  line-height: 1;
+  padding: 0 var(--space-1);
+  transition: color 0.12s ease;
+  flex-shrink: 0;
+}
+.btn-clear:hover { color: var(--color-danger); }
+
+/* ── Showtime builder ── */
+.showtime-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.showtime-slot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  animation: row-in 0.18s ease;
+}
+
+.showtime-slot-row .input-sm { flex: 1; min-width: 0; }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.btn-add-slot {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: transparent;
+  border: 1px dashed var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.12s ease, border-style 0.12s ease;
+}
+.btn-add-slot:hover { background: var(--color-accent-subtle); border-style: solid; }
+
+.btn-remove-slot {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-lg);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.btn-remove-slot:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
+
+/* ── Sidebar quick-filters ── */
+.filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pill {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 20px;
+  border: 1px solid var(--color-border);
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.pill:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+.pill.active { background: var(--color-accent); color: var(--color-paper); border-color: var(--color-accent); }
+
+/* ── OMDB key ── */
+.omdb-key-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.input-key {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  transition: border-color 0.15s ease;
+}
+.input-key:focus { outline: none; border-color: var(--color-accent); }
+.input-key::placeholder { color: var(--color-ink-muted); }
+
+/* ── Buttons ── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  width: 100%;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28); }
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
+
+.btn-sm-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.btn-sm-outline:hover {
+  border-color: var(--color-accent-line);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.btn-key-save {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+.btn-key-save:hover { opacity: 0.85; }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* ── Tab bar ── */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-6);
+  flex-shrink: 0;
+  background: var(--color-paper);
+}
+
+.tab-btn {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--color-ink); }
+.tab-btn.active { color: var(--color-accent); border-bottom-color: var(--color-accent); font-weight: 600; }
+
+.tab-spacer { flex: 1; }
+
+.listing-btn {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+}
+.listing-btn:hover { background: var(--color-accent-subtle); border-color: var(--color-accent-line); color: var(--color-accent); }
+
+/* ── Tab panels ── */
+.tab-panel {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+}
+.tab-panel.active { display: flex; flex-direction: column; }
+
+/* ── Today's Schedule ── */
+.schedule-wrap {
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.schedule-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.schedule-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.schedule-date {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.screen-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.screen-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-2);
+}
+
+.showings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Showing card ── */
+.showing-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: background 0.12s ease, border-color 0.12s ease;
+  cursor: pointer;
+}
+.showing-card:hover { background: oklch(90% 0.018 95); border-color: var(--color-accent-line); }
+
+.showing-poster {
+  width: 40px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.showing-time {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 56px;
+}
+
+.showing-info { flex: 1; min-width: 0; }
+
+.showing-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.showing-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.showing-meta-item {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+
+.badge-2d { color: var(--color-ink-muted); border-color: var(--color-border); background: var(--color-paper); }
+.badge-3d { color: oklch(52% 0.14 220); border-color: oklch(80% 0.08 220); background: oklch(96% 0.025 220); }
+.badge-imax { color: oklch(52% 0.18 30); border-color: oklch(80% 0.10 30); background: oklch(96% 0.025 30); }
+
+.badge-now {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--color-accent);
+  color: var(--color-paper);
+  flex-shrink: 0;
+}
+
+.now-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-paper);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.genre-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  text-align: center;
+  gap: var(--space-4);
+  flex: 1;
+}
+
+.empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.empty-sub {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  max-width: 320px;
+  line-height: 1.65;
+}
+
+/* ── Weekly grid ── */
+.weekly-wrap {
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.weekly-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.weekly-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.weekly-range {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.weekly-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.day-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.day-head {
+  text-align: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+}
+
+.day-name {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.day-num {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.day-col.today .day-head {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-line);
+}
+
+.day-col.today .day-name,
+.day-col.today .day-num { color: var(--color-accent); }
+
+.weekly-card {
+  padding: var(--space-2);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+  min-width: 0;
+}
+.weekly-card:hover { background: oklch(90% 0.018 95); border-color: var(--color-accent-line); }
+
+.weekly-card-time {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.weekly-card-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+  line-height: 1.3;
+}
+
+.weekly-card-screen {
+  font-size: 9px;
+  color: var(--color-ink-muted);
+  margin-top: 1px;
+}
+
+/* ── Movie Database ── */
+.db-wrap {
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.db-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.db-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.movie-db-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+.movie-db-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  background: var(--color-paper-2);
+}
+.movie-db-card:hover {
+  border-color: var(--color-accent-line);
+  box-shadow: 0 4px 16px oklch(18% 0.04 155 / 0.10);
+  transform: translateY(-2px);
+}
+
+.db-poster {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  background: var(--color-border);
+  display: block;
+}
+
+.db-poster-placeholder {
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: var(--color-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-3xl);
+  color: var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.db-card-body {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.db-card-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.db-card-year {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.db-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.rt-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.rt-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+}
+
+.rt-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  padding: 3px var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.12s ease;
+}
+.rt-input:focus { outline: none; border-color: var(--color-accent); }
+.rt-input::placeholder { color: var(--color-ink-muted); }
+
+/* ── Movie Detail Panel ── */
+.detail-panel {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-paper);
+  flex-direction: column;
+}
+.detail-panel.open { display: flex; }
+
+/* ── DB layout with detail split ── */
+.db-split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.db-list-side {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.detail-side {
+  width: 320px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-paper);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.detail-side.hidden { display: none; }
+
+.detail-head {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-movie-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+
+.detail-body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.detail-poster {
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin: 0 auto;
+  display: block;
+  background: var(--color-border);
+}
+
+.detail-poster-placeholder {
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 2/3;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-3xl);
+  margin: 0 auto;
+  color: var(--color-border);
+}
+
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.detail-meta-item { display: flex; flex-direction: column; gap: 2px; }
+
+.detail-meta-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.detail-meta-value {
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.detail-overview {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.65;
+}
+
+.detail-showtimes-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detail-showing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+
+.detail-showing-time { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+.detail-showing-screen { color: var(--color-ink-muted); }
+.detail-showing-date { color: var(--color-ink-muted); }
+
+/* ── Listing Generator ── */
+.listing-gen-wrap {
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.listing-gen-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.listing-gen-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.listing-preview {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-paper-2);
+}
+
+.listing-preview-head {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.listing-preview-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.listing-preview-body {
+  padding: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  min-height: 200px;
+  font-family: 'Courier New', monospace;
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.listing-gen-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.btn-generate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-generate:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28); }
+
+.btn-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.btn-copy:hover { background: var(--color-paper-2); border-color: var(--color-accent-line); color: var(--color-accent); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent-line); }
+
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 60vh;
+  }
+
+  .main { overflow: visible; }
+
+  .tab-panel.active { display: flex; overflow: visible; }
+
+  .schedule-wrap, .weekly-wrap, .db-wrap, .listing-gen-wrap {
+    padding: var(--space-4);
+  }
+
+  .weekly-grid {
+    grid-template-columns: repeat(7, minmax(80px, 1fr));
+    overflow-x: auto;
+  }
+
+  .movie-db-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+
+  .db-split { flex-direction: column; }
+  .detail-side { width: 100%; border-left: none; border-top: 1px solid var(--color-border); }
+
+  .nav-cinema-name { display: none; }
+
+  .listing-gen-actions { flex-direction: column; }
+
+  .form-row { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .showtime-slot-row, .movie-db-card, .showing-card, .btn-primary, .btn-generate { animation: none; transition: none; }
+  .toast { transition: opacity 0.15s ease; transform: translateY(0); }
+  .now-dot { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Cine<span>Desk</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Cinema Schedule Manager</span>
+  <span class="nav-cinema-name" id="nav-cinema-name" aria-live="polite"></span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Cinema setup and schedule tools">
+    <div class="sidebar-head">
+      <span class="sidebar-title">Schedule Tools</span>
+    </div>
+
+    <div class="sidebar-scroll">
+
+      <!-- Cinema Setup -->
+      <div class="sidebar-section" id="section-cinema">
+        <div class="sidebar-section-head">
+          <span class="section-label">Cinema Setup</span>
+          <button class="btn-sm-outline" id="btn-save-cinema">Save</button>
+        </div>
+        <div>
+          <label class="field-label" for="cinema-name">Cinema name</label>
+          <input type="text" class="input-sm" id="cinema-name" placeholder="Grand Regal Cinema" maxlength="80">
+        </div>
+        <div>
+          <label class="field-label" for="cinema-address">Address</label>
+          <input type="text" class="input-sm" id="cinema-address" placeholder="123 Main St" maxlength="120">
+        </div>
+        <div class="form-row">
+          <div>
+            <label class="field-label" for="cinema-screens">Screens (1–10)</label>
+            <input type="number" class="input-sm" id="cinema-screens" min="1" max="10" value="3">
+          </div>
+          <div>
+            <label class="field-label" for="cinema-phone">Phone</label>
+            <input type="text" class="input-sm" id="cinema-phone" placeholder="+1 555 000">
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Movie to Schedule -->
+      <div class="sidebar-section" id="section-add-movie">
+        <div class="sidebar-section-head">
+          <span class="section-label">Add Movie</span>
+        </div>
+
+        <!-- Movie search -->
+        <div>
+          <label class="field-label" for="movie-search">Title search</label>
+          <div class="search-wrap">
+            <input type="text" class="input-search" id="movie-search"
+              placeholder="Search iTunes…" autocomplete="off"
+              aria-autocomplete="list" aria-controls="ac-dropdown">
+            <span class="search-loading" id="search-loading" aria-live="polite"></span>
+            <div class="autocomplete-dropdown" id="ac-dropdown" role="listbox" aria-label="Movie suggestions"></div>
+          </div>
+        </div>
+
+        <!-- Selected movie preview -->
+        <div class="movie-preview-strip" id="movie-preview" aria-live="polite">
+          <img class="preview-thumb" id="preview-thumb" src="" alt="">
+          <div class="preview-info">
+            <div class="preview-title" id="preview-title"></div>
+            <div class="preview-meta" id="preview-meta"></div>
+          </div>
+          <button class="btn-clear" id="btn-clear-movie" aria-label="Clear selected movie">×</button>
+        </div>
+
+        <!-- Override fields -->
+        <div class="form-row">
+          <div>
+            <label class="field-label" for="movie-year">Year</label>
+            <input type="text" class="input-sm" id="movie-year" placeholder="2024" maxlength="4">
+          </div>
+          <div>
+            <label class="field-label" for="movie-runtime">Runtime (min)</label>
+            <input type="number" class="input-sm" id="movie-runtime" min="1" max="300" placeholder="120">
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label class="field-label" for="movie-genre">Genre</label>
+            <input type="text" class="input-sm" id="movie-genre" placeholder="Drama" maxlength="40">
+          </div>
+          <div>
+            <label class="field-label" for="movie-rating">Age rating</label>
+            <input type="text" class="input-sm" id="movie-rating" placeholder="PG-13" maxlength="10">
+          </div>
+        </div>
+        <div>
+          <label class="field-label" for="movie-format">Format</label>
+          <select class="input-sm" id="movie-format">
+            <option value="2D">2D</option>
+            <option value="3D">3D</option>
+            <option value="IMAX">IMAX</option>
+          </select>
+        </div>
+
+        <!-- Screen assignment -->
+        <div>
+          <label class="field-label" for="movie-screen">Screen</label>
+          <select class="input-sm" id="movie-screen" aria-label="Assign to screen">
+            <option value="1">Screen 1</option>
+          </select>
+        </div>
+
+        <!-- Date range -->
+        <div class="form-row">
+          <div>
+            <label class="field-label" for="date-from">From date</label>
+            <input type="date" class="input-sm" id="date-from">
+          </div>
+          <div>
+            <label class="field-label" for="date-to">To date</label>
+            <input type="date" class="input-sm" id="date-to">
+          </div>
+        </div>
+
+        <!-- Showtime builder -->
+        <div>
+          <label class="field-label">Showtimes</label>
+          <div class="showtime-slots-list" id="showtime-slots"></div>
+          <button class="btn-add-slot" id="btn-add-slot">+ Add time slot</button>
+        </div>
+
+        <!-- Pricing -->
+        <div>
+          <label class="field-label">Ticket prices</label>
+          <div class="form-row">
+            <div>
+              <label class="field-label" for="price-standard">Standard</label>
+              <input type="number" class="input-sm" id="price-standard" min="0" step="0.50" placeholder="12.00">
+            </div>
+            <div>
+              <label class="field-label" for="price-senior">Senior</label>
+              <input type="number" class="input-sm" id="price-senior" min="0" step="0.50" placeholder="9.00">
+            </div>
+          </div>
+          <div class="form-row" style="margin-top:var(--space-2)">
+            <div>
+              <label class="field-label" for="price-child">Child</label>
+              <input type="number" class="input-sm" id="price-child" min="0" step="0.50" placeholder="7.00">
+            </div>
+            <div>
+              <label class="field-label" for="price-student">Student</label>
+              <input type="number" class="input-sm" id="price-student" min="0" step="0.50" placeholder="9.50">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btn-add-to-schedule">Add to Schedule</button>
+      </div>
+
+      <!-- Quick filters -->
+      <div class="sidebar-section" id="section-filters">
+        <div class="sidebar-section-head">
+          <span class="section-label">Filters</span>
+        </div>
+        <div>
+          <label class="field-label">Jump to</label>
+          <div class="filter-pills">
+            <button class="pill active" data-filter="all">All</button>
+            <button class="pill" data-filter="this-week">This week</button>
+            <button class="pill" data-filter="today">Today</button>
+          </div>
+        </div>
+        <div>
+          <label class="field-label" for="genre-filter">Genre</label>
+          <select class="input-sm" id="genre-filter">
+            <option value="">All genres</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- OMDB key (optional) -->
+      <div class="sidebar-section" id="section-omdb">
+        <div class="sidebar-section-head">
+          <span class="section-label">OMDB (optional)</span>
+        </div>
+        <p style="font-size:var(--text-xs);color:var(--color-ink-muted);line-height:1.5">
+          Add an <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noopener" style="color:var(--color-accent);text-decoration:underline;text-underline-offset:2px">OMDB API key</a> to enrich movies with ratings and additional metadata.
+        </p>
+        <div class="omdb-key-row">
+          <input type="password" class="input-key" id="omdb-key" placeholder="Your OMDB key…" autocomplete="off" aria-label="OMDB API key">
+          <button class="btn-key-save" id="btn-save-omdb-key">Save</button>
+        </div>
+        <span id="omdb-status" style="font-size:var(--text-xs);color:var(--color-success);display:none">Key saved</span>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ── Main panel ── -->
+  <main class="main" aria-label="Cinema schedule views">
+
+    <!-- Tab bar -->
+    <div class="tab-bar" role="tablist" aria-label="Schedule views">
+      <button class="tab-btn active" id="tab-today" role="tab" aria-selected="true" aria-controls="panel-today">Today</button>
+      <button class="tab-btn" id="tab-weekly" role="tab" aria-selected="false" aria-controls="panel-weekly">Weekly</button>
+      <button class="tab-btn" id="tab-db" role="tab" aria-selected="false" aria-controls="panel-db">Movie Database</button>
+      <button class="tab-btn" id="tab-listing" role="tab" aria-selected="false" aria-controls="panel-listing">Public Listing</button>
+      <div class="tab-spacer"></div>
+    </div>
+
+    <!-- ── Today's Schedule ── -->
+    <div class="tab-panel active" id="panel-today" role="tabpanel" aria-labelledby="tab-today">
+      <div class="schedule-wrap" id="today-content">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- ── Weekly Schedule ── -->
+    <div class="tab-panel" id="panel-weekly" role="tabpanel" aria-labelledby="tab-weekly">
+      <div class="weekly-wrap">
+        <div class="weekly-header">
+          <span class="weekly-title">This Week</span>
+          <span class="weekly-range" id="weekly-range"></span>
+        </div>
+        <div class="weekly-grid" id="weekly-grid" aria-label="Weekly schedule grid">
+          <!-- populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Movie Database ── -->
+    <div class="tab-panel" id="panel-db" role="tabpanel" aria-labelledby="tab-db">
+      <div class="db-split">
+        <div class="db-list-side">
+          <div class="db-header">
+            <span class="db-title">Movie Database</span>
+            <span id="db-count" style="font-size:var(--text-sm);color:var(--color-ink-muted)"></span>
+          </div>
+          <div class="movie-db-grid" id="movie-db-grid">
+            <!-- populated by JS -->
+          </div>
+          <div class="empty-state" id="db-empty" style="display:none">
+            <p class="empty-title">No movies yet</p>
+            <p class="empty-sub">Add movies to your schedule using the sidebar and they'll appear here.</p>
+          </div>
+        </div>
+        <div class="detail-side hidden" id="detail-side" aria-label="Movie detail">
+          <div class="detail-head">
+            <span class="detail-movie-title" id="detail-title"></span>
+            <button class="btn-clear" id="btn-close-detail" aria-label="Close detail">×</button>
+          </div>
+          <div class="detail-body" id="detail-body">
+            <!-- populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Public Listing Generator ── -->
+    <div class="tab-panel" id="panel-listing" role="tabpanel" aria-labelledby="tab-listing">
+      <div class="listing-gen-wrap">
+        <div class="listing-gen-header">
+          <span class="listing-gen-title">Public Listing Generator</span>
+        </div>
+        <p style="font-size:var(--text-sm);color:var(--color-ink-muted);line-height:1.65">
+          Generate a standalone HTML page with this week's showtimes — ready to embed on your cinema's website.
+        </p>
+        <div class="listing-gen-actions">
+          <button class="btn-generate" id="btn-generate-listing">Generate Listing Page</button>
+          <button class="btn-copy" id="btn-copy-listing">Copy HTML</button>
+        </div>
+        <div class="listing-preview">
+          <div class="listing-preview-head">
+            <span class="listing-preview-label">Preview</span>
+            <span style="font-size:var(--text-xs);color:var(--color-ink-muted)">This week's showtimes</span>
+          </div>
+          <div class="listing-preview-body" id="listing-preview-body">
+            Click "Generate Listing Page" to preview the HTML output.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+'use strict';
+
+// ── Utilities ──────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+function fmtDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((d - today) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff === -1) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function fmtFullDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function getWeekDays() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  // Start on Sunday
+  const sun = new Date(today);
+  sun.setDate(today.getDate() - today.getDay());
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(sun);
+    d.setDate(sun.getDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+function isNowShowing(showing) {
+  const now = new Date();
+  const [h, m] = showing.time.split(':').map(Number);
+  const start = new Date(showing.date + 'T00:00:00');
+  start.setHours(h, m, 0, 0);
+  const end = new Date(start.getTime() + (showing.movie.runtime || 120) * 60000);
+  return now >= start && now <= end;
+}
+
+// ── Storage ────────────────────────────────────────────────────
+const db = {
+  cinema: {
+    get: () => { try { return JSON.parse(localStorage.getItem('cinedesk_cinema') || 'null'); } catch { return null; } },
+    save: (v) => localStorage.setItem('cinedesk_cinema', JSON.stringify(v)),
+  },
+  schedule: {
+    get: () => { try { return JSON.parse(localStorage.getItem('cinedesk_schedule') || '[]'); } catch { return []; } },
+    save: (v) => localStorage.setItem('cinedesk_schedule', JSON.stringify(v)),
+  },
+  omdbKey: {
+    get: () => localStorage.getItem('cinedesk_omdb_key') || '',
+    save: (k) => localStorage.setItem('cinedesk_omdb_key', k),
+  },
+  rtRatings: {
+    get: () => { try { return JSON.parse(localStorage.getItem('cinedesk_rt') || '{}'); } catch { return {}; } },
+    save: (v) => localStorage.setItem('cinedesk_rt', JSON.stringify(v)),
+  },
+};
+
+// ── App state ──────────────────────────────────────────────────
+let state = {
+  cinema: db.cinema.get() || { name: '', address: '', screens: 3, phone: '' },
+  schedule: db.schedule.get(), // array of movie entries
+  rtRatings: db.rtRatings.get(),
+  selectedMovie: null,     // iTunes result currently staged
+  showtimeSlots: [],       // [{time, format}] pending before submit
+  activeFilter: 'all',
+  genreFilter: '',
+  activeTab: 'today',
+  detailMovie: null,
+  searchTimer: null,
+  generatedHtml: '',
+};
+
+// ── Showtime slots ─────────────────────────────────────────────
+function addSlot() {
+  state.showtimeSlots.push({ id: uid(), time: '19:00' });
+  renderSlots();
+}
+
+function removeSlot(id) {
+  state.showtimeSlots = state.showtimeSlots.filter(s => s.id !== id);
+  renderSlots();
+}
+
+function renderSlots() {
+  const container = document.getElementById('showtime-slots');
+  container.innerHTML = '';
+  state.showtimeSlots.forEach(slot => {
+    const row = document.createElement('div');
+    row.className = 'showtime-slot-row';
+    row.innerHTML = `
+      <input type="time" class="input-sm" value="${esc(slot.time)}" aria-label="Show time" data-slot-id="${slot.id}">
+      <button class="btn-remove-slot" aria-label="Remove slot" data-slot-id="${slot.id}" title="Remove">×</button>
+    `;
+    row.querySelector('input').addEventListener('input', (e) => {
+      const s = state.showtimeSlots.find(s => s.id === slot.id);
+      if (s) s.time = e.target.value;
+    });
+    row.querySelector('button').addEventListener('click', () => removeSlot(slot.id));
+    container.appendChild(row);
+  });
+}
+
+// ── Cinema setup ───────────────────────────────────────────────
+function loadCinemaForm() {
+  document.getElementById('cinema-name').value = state.cinema.name;
+  document.getElementById('cinema-address').value = state.cinema.address;
+  document.getElementById('cinema-screens').value = state.cinema.screens;
+  document.getElementById('cinema-phone').value = state.cinema.phone;
+  updateNavCinema();
+  updateScreenSelect();
+}
+
+function saveCinema() {
+  state.cinema.name = document.getElementById('cinema-name').value.trim();
+  state.cinema.address = document.getElementById('cinema-address').value.trim();
+  state.cinema.screens = parseInt(document.getElementById('cinema-screens').value) || 3;
+  state.cinema.phone = document.getElementById('cinema-phone').value.trim();
+  db.cinema.save(state.cinema);
+  updateNavCinema();
+  updateScreenSelect();
+  toast('Cinema settings saved', 'success');
+}
+
+function updateNavCinema() {
+  const el = document.getElementById('nav-cinema-name');
+  el.textContent = state.cinema.name || '';
+}
+
+function updateScreenSelect() {
+  const sel = document.getElementById('movie-screen');
+  const n = Math.min(10, Math.max(1, state.cinema.screens || 3));
+  sel.innerHTML = '';
+  for (let i = 1; i <= n; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `Screen ${i}`;
+    sel.appendChild(opt);
+  }
+}
+
+// ── iTunes Search ──────────────────────────────────────────────
+async function searchItunes(query) {
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=movie&entity=movie&limit=10`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('iTunes search failed');
+  const data = await res.json();
+  return data.results || [];
+}
+
+async function handleSearchInput(e) {
+  const q = e.target.value.trim();
+  const dropdown = document.getElementById('ac-dropdown');
+  const loadingEl = document.getElementById('search-loading');
+
+  if (!q) { dropdown.classList.remove('open'); loadingEl.textContent = ''; return; }
+
+  clearTimeout(state.searchTimer);
+  state.searchTimer = setTimeout(async () => {
+    loadingEl.textContent = '…';
+    dropdown.innerHTML = '<div class="ac-message">Searching…</div>';
+    dropdown.classList.add('open');
+
+    try {
+      const results = await searchItunes(q);
+      loadingEl.textContent = '';
+
+      if (!results.length) {
+        dropdown.innerHTML = '<div class="ac-message">No results found.</div>';
+        return;
+      }
+
+      dropdown.innerHTML = '';
+      results.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'ac-item';
+        item.setAttribute('role', 'option');
+        item.setAttribute('tabindex', '0');
+
+        const artworkUrl = r.artworkUrl100 ? r.artworkUrl100.replace('100x100', '300x300') : '';
+        const year = r.releaseDate ? r.releaseDate.slice(0, 4) : '';
+        const genre = (r.primaryGenreName || '');
+
+        item.innerHTML = `
+          ${artworkUrl
+            ? `<img class="ac-thumb" src="${esc(artworkUrl)}" alt="${esc(r.trackName)} poster" loading="lazy">`
+            : `<div class="ac-thumb" style="display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--color-ink-muted)">🎬</div>`}
+          <div class="ac-item-info">
+            <div class="ac-item-title">${esc(r.trackName || r.collectionName)}</div>
+            <div class="ac-item-meta">${esc(year)}${genre ? ' · ' + esc(genre) : ''}</div>
+          </div>
+        `;
+
+        item.addEventListener('click', () => selectMovie(r));
+        item.addEventListener('keydown', (e) => { if (e.key === 'Enter') selectMovie(r); });
+        dropdown.appendChild(item);
+      });
+
+    } catch {
+      loadingEl.textContent = '';
+      dropdown.innerHTML = '<div class="ac-message">Search failed. Check your connection.</div>';
+    }
+  }, 350);
+}
+
+function selectMovie(itunesResult) {
+  const artworkUrl = itunesResult.artworkUrl100
+    ? itunesResult.artworkUrl100.replace('100x100', '300x300')
+    : '';
+  const year = itunesResult.releaseDate ? itunesResult.releaseDate.slice(0, 4) : '';
+  const genre = itunesResult.primaryGenreName || '';
+  const runtime = itunesResult.trackTimeMillis ? Math.round(itunesResult.trackTimeMillis / 60000) : null;
+  const contentRating = itunesResult.contentAdvisoryRating || '';
+
+  state.selectedMovie = {
+    itunesId: itunesResult.trackId,
+    title: itunesResult.trackName || itunesResult.collectionName || '',
+    artwork: artworkUrl,
+    year,
+    genre,
+    runtime,
+    contentRating,
+    description: itunesResult.longDescription || itunesResult.shortDescription || '',
+    itunesPrice: itunesResult.trackPrice || null,
+    raw: itunesResult,
+  };
+
+  // Auto-fill override fields
+  document.getElementById('movie-year').value = year;
+  document.getElementById('movie-runtime').value = runtime || '';
+  document.getElementById('movie-genre').value = genre;
+  document.getElementById('movie-rating').value = contentRating;
+
+  // Show preview strip
+  const strip = document.getElementById('movie-preview');
+  strip.classList.add('visible');
+
+  const thumb = document.getElementById('preview-thumb');
+  if (artworkUrl) { thumb.src = artworkUrl; thumb.alt = state.selectedMovie.title; thumb.style.display = ''; }
+  else { thumb.style.display = 'none'; }
+
+  document.getElementById('preview-title').textContent = state.selectedMovie.title;
+  document.getElementById('preview-meta').textContent = [year, genre, runtime ? `${runtime} min` : ''].filter(Boolean).join(' · ');
+
+  // Close dropdown
+  document.getElementById('ac-dropdown').classList.remove('open');
+  document.getElementById('movie-search').value = '';
+  document.getElementById('search-loading').textContent = '';
+
+  // Auto-add a default slot if none exist
+  if (!state.showtimeSlots.length) addSlot();
+
+  // Enrich with OMDB if key exists
+  const omdbKey = db.omdbKey.get();
+  if (omdbKey && state.selectedMovie.title) {
+    enrichWithOmdb(state.selectedMovie.title, omdbKey);
+  }
+}
+
+async function enrichWithOmdb(title, apiKey) {
+  try {
+    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.Response === 'False') return;
+
+    // Update runtime if we didn't have it
+    if (data.Runtime && !document.getElementById('movie-runtime').value) {
+      const rt = parseInt(data.Runtime);
+      if (!isNaN(rt)) {
+        document.getElementById('movie-runtime').value = rt;
+        if (state.selectedMovie) state.selectedMovie.runtime = rt;
+      }
+    }
+
+    if (data.Rated && !document.getElementById('movie-rating').value) {
+      document.getElementById('movie-rating').value = data.Rated;
+      if (state.selectedMovie) state.selectedMovie.contentRating = data.Rated;
+    }
+
+    // Store OMDB data on selectedMovie for later
+    if (state.selectedMovie) {
+      state.selectedMovie.omdb = data;
+      // Update preview meta
+      document.getElementById('preview-meta').textContent = [
+        document.getElementById('movie-year').value,
+        document.getElementById('movie-genre').value,
+        document.getElementById('movie-runtime').value ? `${document.getElementById('movie-runtime').value} min` : ''
+      ].filter(Boolean).join(' · ');
+    }
+  } catch { /* silent */ }
+}
+
+function clearSelectedMovie() {
+  state.selectedMovie = null;
+  document.getElementById('movie-preview').classList.remove('visible');
+  document.getElementById('movie-year').value = '';
+  document.getElementById('movie-runtime').value = '';
+  document.getElementById('movie-genre').value = '';
+  document.getElementById('movie-rating').value = '';
+  document.getElementById('movie-format').value = '2D';
+}
+
+// ── Add to schedule ────────────────────────────────────────────
+function addToSchedule() {
+  const title = state.selectedMovie
+    ? state.selectedMovie.title
+    : document.getElementById('movie-year').value; // fallback: maybe user typed manually
+
+  if (!state.selectedMovie && !document.getElementById('movie-genre').value) {
+    // No movie selected and no data
+    toast('Search and select a movie first', 'error');
+    return;
+  }
+
+  const finalTitle = state.selectedMovie ? state.selectedMovie.title : '(Untitled)';
+  const year = document.getElementById('movie-year').value;
+  const runtime = parseInt(document.getElementById('movie-runtime').value) || null;
+  const genre = document.getElementById('movie-genre').value;
+  const rating = document.getElementById('movie-rating').value;
+  const format = document.getElementById('movie-format').value;
+  const screenNum = document.getElementById('movie-screen').value;
+  const dateFrom = document.getElementById('date-from').value;
+  const dateTo = document.getElementById('date-to').value;
+  const prices = {
+    standard: parseFloat(document.getElementById('price-standard').value) || null,
+    senior:   parseFloat(document.getElementById('price-senior').value) || null,
+    child:    parseFloat(document.getElementById('price-child').value) || null,
+    student:  parseFloat(document.getElementById('price-student').value) || null,
+  };
+
+  if (!state.showtimeSlots.length) {
+    toast('Add at least one showtime slot', 'error');
+    return;
+  }
+
+  if (!dateFrom || !dateTo) {
+    toast('Set a date range (From / To)', 'error');
+    return;
+  }
+
+  if (dateTo < dateFrom) {
+    toast('"To" date must be on or after "From" date', 'error');
+    return;
+  }
+
+  // Expand date range into individual showings
+  const showings = [];
+  let cursor = new Date(dateFrom + 'T00:00:00');
+  const endDate = new Date(dateTo + 'T00:00:00');
+  while (cursor <= endDate) {
+    const dateStr = cursor.toISOString().slice(0, 10);
+    state.showtimeSlots.forEach(slot => {
+      showings.push({ date: dateStr, time: slot.time });
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  // Check if movie already exists in schedule (merge)
+  const existingIdx = state.schedule.findIndex(m =>
+    m.itunesId && state.selectedMovie && m.itunesId === state.selectedMovie.itunesId
+  );
+
+  if (existingIdx >= 0) {
+    // Merge: add new showings, avoiding exact duplicates
+    const existingKeys = new Set(state.schedule[existingIdx].showings.map(s => `${s.date}|${s.time}|${screenNum}`));
+    showings.forEach(s => {
+      const key = `${s.date}|${s.time}|${screenNum}`;
+      if (!existingKeys.has(key)) {
+        state.schedule[existingIdx].showings.push({ ...s, screen: Number(screenNum) });
+        existingKeys.add(key);
+      }
+    });
+    toast(`Showtimes merged for "${finalTitle}"`, 'success');
+  } else {
+    const entry = {
+      id: uid(),
+      itunesId: state.selectedMovie?.itunesId || null,
+      title: finalTitle,
+      artwork: state.selectedMovie?.artwork || '',
+      year,
+      runtime,
+      genre,
+      contentRating: rating,
+      format,
+      description: state.selectedMovie?.description || '',
+      omdb: state.selectedMovie?.omdb || null,
+      prices,
+      showings: showings.map(s => ({ ...s, screen: Number(screenNum) })),
+      addedAt: Date.now(),
+    };
+    state.schedule.unshift(entry);
+    toast(`"${finalTitle}" added to schedule`, 'success');
+  }
+
+  db.schedule.save(state.schedule);
+
+  // Reset form
+  clearSelectedMovie();
+  state.showtimeSlots = [];
+  renderSlots();
+  document.getElementById('date-from').value = '';
+  document.getElementById('date-to').value = '';
+
+  // Refresh views
+  renderTodaySchedule();
+  renderWeeklyGrid();
+  renderMovieDatabase();
+  updateGenreFilter();
+}
+
+// ── Today's Schedule ───────────────────────────────────────────
+function getTodayShowings() {
+  const today = todayStr();
+  const genreF = state.genreFilter;
+  const rows = [];
+
+  state.schedule.forEach(movie => {
+    if (genreF && movie.genre !== genreF) return;
+    (movie.showings || []).forEach(s => {
+      if (s.date !== today) return;
+      rows.push({ movie, showing: s });
+    });
+  });
+
+  rows.sort((a, b) => a.showing.time.localeCompare(b.showing.time));
+  return rows;
+}
+
+function renderTodaySchedule() {
+  const container = document.getElementById('today-content');
+  const rows = getTodayShowings();
+
+  const header = `
+    <div class="schedule-header">
+      <span class="schedule-title">Today's Schedule</span>
+      <span class="schedule-date">${fmtFullDate(todayStr())}</span>
+    </div>
+  `;
+
+  if (!rows.length) {
+    container.innerHTML = header + `
+      <div class="empty-state" style="flex:unset;padding:var(--space-12) var(--space-8)">
+        <p class="empty-title">No showings today</p>
+        <p class="empty-sub">Add movies to the schedule using the sidebar. Movies with today's date will appear here.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Group by screen
+  const byScreen = {};
+  rows.forEach(({ movie, showing }) => {
+    const scr = showing.screen || 1;
+    if (!byScreen[scr]) byScreen[scr] = [];
+    byScreen[scr].push({ movie, showing });
+  });
+
+  let html = header;
+
+  Object.keys(byScreen).sort((a, b) => Number(a) - Number(b)).forEach(scr => {
+    html += `<div class="screen-group"><div class="screen-label" aria-label="Screen ${scr}">Screen ${scr}</div><div class="showings-list" role="list">`;
+
+    byScreen[scr].forEach(({ movie, showing }) => {
+      const isNow = isNowShowing({ ...showing, movie });
+      const nowBadge = isNow
+        ? `<span class="badge-now" aria-label="Now showing"><span class="now-dot" aria-hidden="true"></span>Now</span>`
+        : '';
+      const fmtBadge = `<span class="badge badge-${movie.format?.toLowerCase() || '2d'}">${esc(movie.format || '2D')}</span>`;
+      const genreTag = movie.genre ? `<span class="genre-tag">${esc(movie.genre)}</span>` : '';
+      const runtime = movie.runtime ? `<span class="showing-meta-item">${movie.runtime} min</span>` : '';
+      const contentRating = movie.contentRating ? `<span class="showing-meta-item">${esc(movie.contentRating)}</span>` : '';
+
+      html += `
+        <div class="showing-card" role="listitem" tabindex="0"
+          aria-label="${esc(movie.title)} at ${esc(showing.time)}"
+          onclick="openDetailFromShowing(${JSON.stringify(movie.id).replace(/"/g,'&quot;')})">
+          ${movie.artwork
+            ? `<img class="showing-poster" src="${esc(movie.artwork)}" alt="${esc(movie.title)} poster" loading="lazy">`
+            : `<div class="showing-poster" style="display:flex;align-items:center;justify-content:center;font-size:1.25rem">🎬</div>`}
+          <span class="showing-time">${esc(showing.time)}</span>
+          <div class="showing-info">
+            <div class="showing-title">${esc(movie.title)}</div>
+            <div class="showing-meta">
+              ${fmtBadge}
+              ${genreTag}
+              ${runtime}
+              ${contentRating}
+            </div>
+          </div>
+          ${nowBadge}
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// ── Weekly Grid ────────────────────────────────────────────────
+function renderWeeklyGrid() {
+  const gridEl = document.getElementById('weekly-grid');
+  const rangeEl = document.getElementById('weekly-range');
+  const days = getWeekDays();
+  const genreF = state.genreFilter;
+
+  rangeEl.textContent = `${fmtDate(days[0])} – ${fmtDate(days[6])}`;
+
+  // Build a map: date -> [showings]
+  const byDay = {};
+  days.forEach(d => { byDay[d] = []; });
+
+  state.schedule.forEach(movie => {
+    if (genreF && movie.genre !== genreF) return;
+    (movie.showings || []).forEach(s => {
+      if (byDay[s.date] !== undefined) {
+        byDay[s.date].push({ movie, showing: s });
+      }
+    });
+  });
+
+  days.forEach(d => {
+    byDay[d].sort((a, b) => a.showing.time.localeCompare(b.showing.time));
+  });
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const today = todayStr();
+
+  gridEl.innerHTML = '';
+  days.forEach((day, i) => {
+    const isToday = day === today;
+    const dayDate = new Date(day + 'T00:00:00');
+    const col = document.createElement('div');
+    col.className = 'day-col' + (isToday ? ' today' : '');
+    col.setAttribute('aria-label', `${dayNames[i]} ${dayDate.getDate()}`);
+
+    let html = `
+      <div class="day-head">
+        <div class="day-name">${dayNames[i]}</div>
+        <div class="day-num">${dayDate.getDate()}</div>
+      </div>
+    `;
+
+    if (!byDay[day].length) {
+      html += `<div style="font-size:9px;color:var(--color-ink-muted);text-align:center;padding:var(--space-2);">—</div>`;
+    } else {
+      byDay[day].forEach(({ movie, showing }) => {
+        html += `
+          <div class="weekly-card" tabindex="0" role="button"
+            aria-label="${esc(movie.title)} at ${esc(showing.time)}"
+            onclick="openDetailFromShowing(${JSON.stringify(movie.id).replace(/"/g,'&quot;')})">
+            <div class="weekly-card-time">${esc(showing.time)}</div>
+            <div class="weekly-card-title">${esc(movie.title)}</div>
+            <div class="weekly-card-screen">Scr ${showing.screen || 1}</div>
+          </div>
+        `;
+      });
+    }
+
+    col.innerHTML = html;
+    gridEl.appendChild(col);
+  });
+}
+
+// ── Movie Database ─────────────────────────────────────────────
+function renderMovieDatabase() {
+  const grid = document.getElementById('movie-db-grid');
+  const empty = document.getElementById('db-empty');
+  const countEl = document.getElementById('db-count');
+
+  const movies = state.schedule;
+  countEl.textContent = `${movies.length} film${movies.length !== 1 ? 's' : ''}`;
+
+  if (!movies.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+
+  empty.style.display = 'none';
+  grid.innerHTML = '';
+  const rtRatings = state.rtRatings;
+
+  movies.forEach(movie => {
+    const card = document.createElement('div');
+    card.className = 'movie-db-card';
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `${movie.title} — click for details`);
+
+    const rt = rtRatings[movie.id] || '';
+
+    card.innerHTML = `
+      ${movie.artwork
+        ? `<img class="db-poster" src="${esc(movie.artwork)}" alt="${esc(movie.title)} poster" loading="lazy">`
+        : `<div class="db-poster-placeholder">🎬</div>`}
+      <div class="db-card-body">
+        <div class="db-card-title">${esc(movie.title)}</div>
+        <div class="db-card-year">${esc(movie.year || '')}</div>
+        <div class="db-card-tags">
+          ${movie.genre ? `<span class="genre-tag">${esc(movie.genre)}</span>` : ''}
+          ${movie.contentRating ? `<span class="badge badge-2d" style="font-size:9px">${esc(movie.contentRating)}</span>` : ''}
+        </div>
+        <div class="rt-row">
+          <span class="rt-label">RT%</span>
+          <input type="number" class="rt-input" min="0" max="100" placeholder="—"
+            value="${esc(rt)}"
+            aria-label="Rotten Tomatoes rating for ${esc(movie.title)}"
+            data-movie-id="${esc(movie.id)}"
+            onclick="event.stopPropagation()">
+        </div>
+      </div>
+    `;
+
+    // RT rating save
+    const rtInput = card.querySelector('.rt-input');
+    rtInput.addEventListener('change', (e) => {
+      e.stopPropagation();
+      const val = e.target.value;
+      state.rtRatings[movie.id] = val;
+      db.rtRatings.save(state.rtRatings);
+    });
+
+    card.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      openMovieDetail(movie.id);
+    });
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMovieDetail(movie.id); }
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function openDetailFromShowing(movieId) {
+  // Switch to DB tab and open detail
+  switchTab('db');
+  openMovieDetail(movieId);
+}
+
+function openMovieDetail(movieId) {
+  const movie = state.schedule.find(m => m.id === movieId);
+  if (!movie) return;
+
+  state.detailMovie = movie;
+
+  const side = document.getElementById('detail-side');
+  const titleEl = document.getElementById('detail-title');
+  const bodyEl = document.getElementById('detail-body');
+
+  side.classList.remove('hidden');
+  titleEl.textContent = movie.title;
+
+  // Collect all showings for this movie
+  const showings = (movie.showings || []).sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.time.localeCompare(b.time);
+  });
+
+  const rt = state.rtRatings[movie.id] ? `${state.rtRatings[movie.id]}%` : '—';
+  const omdb = movie.omdb;
+  const omdbRating = omdb ? (omdb.imdbRating !== 'N/A' ? `IMDb ${omdb.imdbRating}` : '') : '';
+  const director = omdb?.Director && omdb.Director !== 'N/A' ? omdb.Director : '';
+  const actors = omdb?.Actors && omdb.Actors !== 'N/A' ? omdb.Actors : '';
+
+  bodyEl.innerHTML = `
+    ${movie.artwork
+      ? `<img class="detail-poster" src="${esc(movie.artwork)}" alt="${esc(movie.title)} poster">`
+      : `<div class="detail-poster-placeholder">🎬</div>`}
+
+    <div class="detail-meta-grid">
+      <div class="detail-meta-item">
+        <span class="detail-meta-label">Year</span>
+        <span class="detail-meta-value">${esc(movie.year || '—')}</span>
+      </div>
+      <div class="detail-meta-item">
+        <span class="detail-meta-label">Runtime</span>
+        <span class="detail-meta-value">${movie.runtime ? movie.runtime + ' min' : '—'}</span>
+      </div>
+      <div class="detail-meta-item">
+        <span class="detail-meta-label">Genre</span>
+        <span class="detail-meta-value">${esc(movie.genre || '—')}</span>
+      </div>
+      <div class="detail-meta-item">
+        <span class="detail-meta-label">Rating</span>
+        <span class="detail-meta-value">${esc(movie.contentRating || '—')}</span>
+      </div>
+      <div class="detail-meta-item">
+        <span class="detail-meta-label">Format</span>
+        <span class="detail-meta-value">${esc(movie.format || '2D')}</span>
+      </div>
+      <div class="detail-meta-item">
+        <span class="detail-meta-label">RT Score</span>
+        <span class="detail-meta-value">${esc(rt)}</span>
+      </div>
+      ${omdbRating ? `<div class="detail-meta-item" style="grid-column:1/-1"><span class="detail-meta-label">IMDb</span><span class="detail-meta-value">${esc(omdbRating)}</span></div>` : ''}
+      ${director ? `<div class="detail-meta-item" style="grid-column:1/-1"><span class="detail-meta-label">Director</span><span class="detail-meta-value">${esc(director)}</span></div>` : ''}
+    </div>
+
+    ${actors ? `<p style="font-size:var(--text-xs);color:var(--color-ink-muted);line-height:1.5"><strong style="color:var(--color-ink)">Cast:</strong> ${esc(actors)}</p>` : ''}
+
+    ${movie.description ? `<p class="detail-overview">${esc(movie.description)}</p>` : ''}
+
+    <div>
+      <div class="section-label" style="margin-bottom:var(--space-3)">All Scheduled Showings</div>
+      ${showings.length
+        ? `<div class="detail-showtimes-list">
+            ${showings.map(s => `
+              <div class="detail-showing-row">
+                <span class="detail-showing-time">${esc(s.time)}</span>
+                <span class="detail-showing-screen">Scr ${s.screen || 1}</span>
+                <span class="detail-showing-date">${esc(fmtDate(s.date))}</span>
+              </div>
+            `).join('')}
+           </div>`
+        : `<p style="font-size:var(--text-sm);color:var(--color-ink-muted)">No showings scheduled.</p>`}
+    </div>
+
+    ${movie.prices && Object.values(movie.prices).some(Boolean) ? `
+      <div>
+        <div class="section-label" style="margin-bottom:var(--space-3)">Ticket Prices</div>
+        <div class="detail-meta-grid">
+          ${movie.prices.standard != null ? `<div class="detail-meta-item"><span class="detail-meta-label">Standard</span><span class="detail-meta-value">$${movie.prices.standard.toFixed(2)}</span></div>` : ''}
+          ${movie.prices.senior != null ? `<div class="detail-meta-item"><span class="detail-meta-label">Senior</span><span class="detail-meta-value">$${movie.prices.senior.toFixed(2)}</span></div>` : ''}
+          ${movie.prices.child != null ? `<div class="detail-meta-item"><span class="detail-meta-label">Child</span><span class="detail-meta-value">$${movie.prices.child.toFixed(2)}</span></div>` : ''}
+          ${movie.prices.student != null ? `<div class="detail-meta-item"><span class="detail-meta-label">Student</span><span class="detail-meta-value">$${movie.prices.student.toFixed(2)}</span></div>` : ''}
+        </div>
+      </div>
+    ` : ''}
+
+    <button class="btn-primary" style="background:var(--color-danger);box-shadow:none"
+      onclick="removeMovieFromSchedule(${JSON.stringify(movie.id).replace(/"/g,'&quot;')})">
+      Remove from Schedule
+    </button>
+  `;
+}
+
+function removeMovieFromSchedule(movieId) {
+  if (!confirm('Remove this movie and all its showtimes? This cannot be undone.')) return;
+  state.schedule = state.schedule.filter(m => m.id !== movieId);
+  db.schedule.save(state.schedule);
+  state.detailMovie = null;
+  document.getElementById('detail-side').classList.add('hidden');
+  renderMovieDatabase();
+  renderTodaySchedule();
+  renderWeeklyGrid();
+  updateGenreFilter();
+  toast('Movie removed from schedule');
+}
+
+// ── Genre filter ───────────────────────────────────────────────
+function updateGenreFilter() {
+  const sel = document.getElementById('genre-filter');
+  const current = sel.value;
+  const genres = [...new Set(state.schedule.map(m => m.genre).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All genres</option>';
+  genres.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g;
+    opt.textContent = g;
+    if (g === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const isActive = b.id === `tab-${name}`;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${name}`);
+  });
+  state.activeTab = name;
+
+  if (name === 'weekly') renderWeeklyGrid();
+  if (name === 'db') renderMovieDatabase();
+  if (name === 'listing') prefillListingPreview();
+}
+
+// ── Listing Generator ──────────────────────────────────────────
+function generateListingHtml() {
+  const cinema = state.cinema;
+  const week = getWeekDays();
+  const cinemaName = cinema.name || 'Our Cinema';
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  // Build schedule data for the week
+  const weekData = week.map((date, i) => {
+    const d = new Date(date + 'T00:00:00');
+    const showings = [];
+    state.schedule.forEach(movie => {
+      (movie.showings || []).forEach(s => {
+        if (s.date === date) showings.push({ ...s, movie });
+      });
+    });
+    showings.sort((a, b) => a.time.localeCompare(b.time));
+    return { date, dayName: dayNames[i], dayNum: d.getDate(), showings };
+  });
+
+  const today = todayStr();
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${cinemaName} — This Week's Showtimes</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: #fafaf8;
+    color: #1a1a1a;
+    line-height: 1.55;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+  .cinema-header {
+    text-align: center;
+    padding: 2rem 0 1.5rem;
+    border-bottom: 2px solid #1a1a1a;
+    margin-bottom: 2rem;
+  }
+  .cinema-name { font-size: 2rem; font-weight: bold; letter-spacing: -0.02em; }
+  .cinema-sub { font-size: 0.875rem; color: #666; margin-top: 0.375rem; }
+  .week-heading {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .day-block { margin-bottom: 2rem; }
+  .day-title {
+    font-size: 1.125rem;
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.375rem;
+    margin-bottom: 0.75rem;
+  }
+  .day-title.today { color: #2d6a4f; border-bottom-color: #2d6a4f; }
+  .showing-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  .showing-row:last-child { border-bottom: none; }
+  .showing-time {
+    font-size: 1rem;
+    font-weight: bold;
+    min-width: 52px;
+    font-variant-numeric: tabular-nums;
+    color: #2d6a4f;
+  }
+  .showing-details { flex: 1; }
+  .showing-title { font-size: 0.9375rem; font-weight: 600; }
+  .showing-meta { font-size: 0.8125rem; color: #666; margin-top: 0.125rem; }
+  .showing-screen { font-size: 0.8125rem; color: #999; }
+  .no-showings { font-size: 0.875rem; color: #999; font-style: italic; padding: 0.375rem 0; }
+  .footer {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: #999;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #ddd;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="cinema-header">
+    <div class="cinema-name">${cinemaName}</div>
+    <div class="cinema-sub">${cinema.address ? cinema.address + (cinema.phone ? ' &nbsp;·&nbsp; ' + cinema.phone : '') : cinema.phone || ''}</div>
+  </div>
+  <div class="week-heading">This Week's Showtimes</div>
+${weekData.map(day => `  <div class="day-block">
+    <div class="day-title${day.date === today ? ' today' : ''}">${day.dayName}, ${new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</div>
+    ${day.showings.length
+      ? day.showings.map(s => `    <div class="showing-row">
+      <div class="showing-time">${s.time}</div>
+      <div class="showing-details">
+        <div class="showing-title">${s.movie.title}</div>
+        <div class="showing-meta">${[s.movie.genre, s.movie.runtime ? s.movie.runtime + ' min' : '', s.movie.contentRating, s.movie.format].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div class="showing-screen">Scr ${s.screen || 1}</div>
+    </div>`).join('\n')
+      : '    <div class="no-showings">No showings scheduled</div>'}
+  </div>`).join('\n')}
+  <div class="footer">
+    Generated by CineDesk &nbsp;·&nbsp; ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+  </div>
+</div>
+</body>
+</html>`;
+
+  return html;
+}
+
+function prefillListingPreview() {
+  if (!state.generatedHtml) return;
+  document.getElementById('listing-preview-body').textContent = state.generatedHtml;
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+// ── Filter pills ───────────────────────────────────────────────
+function setFilter(filterValue) {
+  state.activeFilter = filterValue;
+  document.querySelectorAll('.pill[data-filter]').forEach(p => {
+    p.classList.toggle('active', p.dataset.filter === filterValue);
+  });
+
+  if (filterValue === 'today') {
+    switchTab('today');
+  } else if (filterValue === 'this-week') {
+    switchTab('weekly');
+  } else {
+    // 'all' — stay on current tab, just re-render
+    renderTodaySchedule();
+    renderWeeklyGrid();
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────
+function init() {
+  // Load cinema
+  loadCinemaForm();
+
+  // Load OMDB key
+  const omdbKey = db.omdbKey.get();
+  if (omdbKey) {
+    document.getElementById('omdb-key').value = omdbKey;
+    document.getElementById('omdb-status').style.display = '';
+  }
+
+  // Default dates: today to +7
+  const from = todayStr();
+  const to = new Date(); to.setDate(to.getDate() + 7);
+  document.getElementById('date-from').value = from;
+  document.getElementById('date-to').value = to.toISOString().slice(0, 10);
+
+  // Initial render
+  updateGenreFilter();
+  renderTodaySchedule();
+
+  // Tab buttons
+  ['today', 'weekly', 'db', 'listing'].forEach(t => {
+    document.getElementById(`tab-${t}`).addEventListener('click', () => switchTab(t));
+  });
+
+  // Sidebar save cinema
+  document.getElementById('btn-save-cinema').addEventListener('click', saveCinema);
+  ['cinema-name', 'cinema-screens'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      updateNavCinema();
+      if (id === 'cinema-screens') updateScreenSelect();
+    });
+  });
+
+  // Movie search
+  document.getElementById('movie-search').addEventListener('input', handleSearchInput);
+  document.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('.search-wrap')) {
+      document.getElementById('ac-dropdown').classList.remove('open');
+    }
+  }, { passive: true });
+
+  // Clear selected movie
+  document.getElementById('btn-clear-movie').addEventListener('click', clearSelectedMovie);
+
+  // Add slot
+  document.getElementById('btn-add-slot').addEventListener('click', addSlot);
+
+  // Add to schedule
+  document.getElementById('btn-add-to-schedule').addEventListener('click', addToSchedule);
+
+  // Filter pills
+  document.querySelectorAll('.pill[data-filter]').forEach(p => {
+    p.addEventListener('click', () => setFilter(p.dataset.filter));
+  });
+
+  // Genre filter
+  document.getElementById('genre-filter').addEventListener('change', (e) => {
+    state.genreFilter = e.target.value;
+    renderTodaySchedule();
+    renderWeeklyGrid();
+  });
+
+  // OMDB key
+  document.getElementById('btn-save-omdb-key').addEventListener('click', () => {
+    const key = document.getElementById('omdb-key').value.trim();
+    db.omdbKey.save(key);
+    const statusEl = document.getElementById('omdb-status');
+    statusEl.style.display = key ? '' : 'none';
+    if (key) toast('OMDB key saved', 'success');
+  });
+  document.getElementById('omdb-key').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-save-omdb-key').click();
+  });
+
+  // Close detail
+  document.getElementById('btn-close-detail').addEventListener('click', () => {
+    document.getElementById('detail-side').classList.add('hidden');
+    state.detailMovie = null;
+  });
+
+  // Listing generator
+  document.getElementById('btn-generate-listing').addEventListener('click', () => {
+    state.generatedHtml = generateListingHtml();
+    document.getElementById('listing-preview-body').textContent = state.generatedHtml;
+    toast('Listing page generated', 'success');
+  });
+
+  document.getElementById('btn-copy-listing').addEventListener('click', async () => {
+    if (!state.generatedHtml) {
+      toast('Generate the listing first', 'error');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(state.generatedHtml);
+      toast('Copied to clipboard', 'success');
+    } catch {
+      toast('Copy failed — select and copy the text manually', 'error');
+    }
+  });
+
+  // Auto-add first slot on load if empty
+  if (!state.showtimeSlots.length) addSlot();
+}
+
+init();
+</script>
+</body>
+</html>

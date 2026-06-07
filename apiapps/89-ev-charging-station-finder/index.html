@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EV Fleet Charging Finder</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --bg: #070c1a;
+      --surface: #0d1526;
+      --surface2: #141f36;
+      --border: rgba(245,158,11,0.2);
+      --accent: #f59e0b;
+      --accent2: #3b82f6;
+      --text: #e8eaf6;
+      --muted: #6b7da8;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f97316;
+      --radius: 8px;
+      --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    header h1 small {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.4px;
+    }
+
+    nav {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    nav button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: var(--radius);
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    nav button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    nav button:hover:not(.active) {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Shared components ── */
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 18px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    button:hover { opacity: 0.88; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-success { background: var(--green); color: #0f1117; }
+    .btn-danger  { background: var(--accent2); color: #fff; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    input, select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 9px 13px;
+      font-size: 0.88rem;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus { border-color: var(--accent); }
+
+    input::placeholder { color: var(--muted); }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .card + .card { margin-top: 14px; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .tag-ccs    { background: rgba(74,222,128,0.25); color: var(--accent); }
+    .tag-chademo { background: rgba(247,201,72,0.25); color: var(--yellow); }
+    .tag-type2  { background: rgba(67,217,173,0.25); color: var(--green); }
+    .tag-tesla  { background: rgba(56,189,248,0.25); color: var(--accent2); }
+    .tag-other  { background: rgba(136,146,176,0.2); color: var(--muted); }
+    .tag-fast   { background: rgba(67,217,173,0.2); color: var(--green); }
+    .tag-slow   { background: rgba(136,146,176,0.15); color: var(--muted); }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+    .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-yellow { background: var(--yellow); }
+    .dot-red { background: var(--accent2); }
+    .dot-grey { background: var(--muted); }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      z-index: 9999;
+      animation: slideIn 0.25s ease;
+      max-width: 320px;
+    }
+    .toast.error { border-left-color: var(--accent2); }
+    .toast.success { border-left-color: var(--green); }
+
+    @keyframes slideIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Finder / Map View ── */
+    .finder-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .finder-layout { grid-template-columns: 1fr; }
+    }
+
+    .finder-sidebar h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .filter-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .filter-bar h3 {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .check-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+      color: var(--muted);
+    }
+
+    .check-pill input { display: none; }
+
+    .check-pill:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(74,222,128,0.18);
+      color: var(--text);
+    }
+
+    .check-pill:hover { border-color: var(--accent); color: var(--text); }
+
+    .station-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 560px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .station-list::-webkit-scrollbar { width: 4px; }
+    .station-list::-webkit-scrollbar-track { background: transparent; }
+    .station-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .station-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+
+    .station-card:hover { border-color: var(--accent); transform: translateX(2px); }
+    .station-card.selected { border-color: var(--accent); background: rgba(74,222,128,0.08); }
+
+    .station-card .sc-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .station-card .sc-addr {
+      font-size: 0.77rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sc-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.75rem;
+    }
+
+    .sc-dist {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    /* ── SVG Map ── */
+    .map-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .map-svg-wrap {
+      width: 100%;
+      height: 480px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #mapSvg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-legend {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(15,17,23,0.88);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 0.75rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 5px;
+    }
+
+    .legend-item:last-child { margin-bottom: 0; }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+
+    .station-detail-panel {
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      padding: 16px;
+    }
+
+    .station-detail-panel h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .detail-item {
+      font-size: 0.8rem;
+    }
+
+    .detail-item .di-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+    }
+
+    /* ── Fleet View ── */
+    .fleet-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .fleet-layout { grid-template-columns: 1fr; }
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .section-header h2 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .vehicle-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: border-color 0.15s;
+    }
+
+    .vehicle-card + .vehicle-card { margin-top: 10px; }
+    .vehicle-card:hover { border-color: var(--border); }
+
+    .vehicle-icon {
+      width: 42px;
+      height: 42px;
+      background: var(--surface2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .vehicle-info { flex: 1; min-width: 0; }
+
+    .vehicle-info .v-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .vehicle-info .v-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .vehicle-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .vehicle-actions button {
+      padding: 5px 10px;
+      font-size: 0.75rem;
+    }
+
+    /* Add vehicle form */
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .add-form h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    /* ── Route Planner ── */
+    .route-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .route-layout { grid-template-columns: 1fr; }
+    }
+
+    .route-sidebar h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .route-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    .route-result {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .route-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .route-header h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .stop-timeline {
+      padding: 20px;
+    }
+
+    .stop-item {
+      display: flex;
+      gap: 16px;
+      padding-bottom: 20px;
+      position: relative;
+    }
+
+    .stop-item:last-child { padding-bottom: 0; }
+
+    .stop-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .stop-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .stop-circle.start { background: var(--green); color: #0f1117; }
+    .stop-circle.end   { background: var(--accent2); color: #fff; }
+    .stop-circle.charge { background: var(--accent); color: #fff; }
+
+    .stop-connector {
+      width: 2px;
+      flex: 1;
+      background: var(--border);
+      margin: 4px 0;
+      min-height: 30px;
+    }
+
+    .stop-body { flex: 1; }
+
+    .stop-body .sb-title {
+      font-weight: 700;
+      font-size: 0.88rem;
+      margin-bottom: 3px;
+    }
+
+    .stop-body .sb-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stop-body .sb-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .maps-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 4px 10px;
+      border: 1px solid rgba(74,222,128,0.4);
+      border-radius: 20px;
+      transition: all 0.15s;
+    }
+
+    .maps-btn:hover { background: rgba(74,222,128,0.15); }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state .es-icon {
+      font-size: 3rem;
+      margin-bottom: 14px;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-card .sv {
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--accent);
+    }
+
+    .stat-card .sl {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .progress-bar-wrap {
+      background: var(--surface2);
+      border-radius: 20px;
+      height: 6px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 20px;
+      background: var(--accent);
+      transition: width 0.5s ease;
+    }
+
+    select option { background: var(--surface2); }
+
+    .range-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type=range] {
+      flex: 1;
+      padding: 0;
+      height: 4px;
+      accent-color: var(--accent);
+      background: var(--surface2);
+    }
+
+    .range-val {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent);
+      width: 50px;
+      text-align: right;
+    }
+
+    .connector-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    /* === Travel v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 800px 500px at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 400px 300px at 90% 90%, rgba(245,158,11,0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.02em; }
+    h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+    h2 { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .flight, .route, .delay, .alert, .station, .transit, .park, .trail, .ev-station, .transport,
+    [class*="card"], [class*="item"], [class*="flight"], [class*="route"], [class*="result"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      animation: boardSlide 0.35s cubic-bezier(0.4,0,0.2,1) both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { background: var(--surface2); }
+
+    .time, .code, .flight-number, .gate, .terminal, .delay-time, .duration, .distance,
+    .iss-time, .coords, .lat, .lon, .pass-time, .co2, .emission, .minutes, .seconds,
+    .countdown, .stat, .number, .metric, pre, code, .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    .big-time, .big-number, .countdown, .pass-time {
+      font-family: var(--font-mono);
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0.65rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.7rem 1.75rem;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.88rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .status, .label, .type, .mode, .line, .provider {
+      display: inline-block;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--font-mono);
+    }
+
+    .on-time, .normal, .open, .available, .active, .lower { color: var(--green); }
+    .delayed, .late, .closed, .disrupted, .higher { color: var(--red); }
+    .caution, .minor-delay, .check { color: var(--orange); }
+
+    .status-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
+    .status-fill { height: 100%; background: var(--accent2); border-radius: 2px; transition: width 0.6s ease; }
+
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(245,158,11,0.06); font-variant-numeric: tabular-nums; }
+    tr:hover td { background: var(--surface2); }
+
+    @keyframes boardSlide {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes alertBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .delayed, .alert-active, .disrupted { animation: alertBlink 1.8s ease infinite; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon" aria-hidden="true">⚡</div>
+    <h1>EV Fleet Charging Finder
+      <small>Fleet-grade charging station intelligence</small>
+    </h1>
+  </div>
+  <nav role="navigation" aria-label="App sections">
+    <button class="active" data-view="finder" onclick="switchView('finder')">🗺 Finder</button>
+    <button data-view="fleet" onclick="switchView('fleet')">🚐 Fleet</button>
+    <button data-view="route" onclick="switchView('route')">📍 Route Planner</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ══════════════════ FINDER VIEW ══════════════════ -->
+  <div id="view-finder" class="view active" role="tabpanel" aria-label="Station Finder">
+    <div style="margin-bottom:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <button class="btn-primary" onclick="locateMe()" id="locateBtn">📡 Use My Location</button>
+      <div style="display:flex; gap:8px; flex:1; min-width:220px;">
+        <input type="text" id="searchInput" placeholder="Search city or address…" style="flex:1;" onkeydown="if(event.key==='Enter')searchLocation()" aria-label="Search location" />
+        <button class="btn-outline" onclick="searchLocation()">Search</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <h3>Filters</h3>
+      <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;">
+        <div style="flex:1; min-width:160px;">
+          <label>Connector Type</label>
+          <div class="checkbox-group" id="connectorFilters">
+            <label class="check-pill"><input type="checkbox" value="CCS" checked onchange="applyFilters()"> CCS</label>
+            <label class="check-pill"><input type="checkbox" value="CHAdeMO" checked onchange="applyFilters()"> CHAdeMO</label>
+            <label class="check-pill"><input type="checkbox" value="Type2" checked onchange="applyFilters()"> Type 2</label>
+            <label class="check-pill"><input type="checkbox" value="Tesla" checked onchange="applyFilters()"> Tesla</label>
+          </div>
+        </div>
+        <div style="min-width:160px;">
+          <label>Min Power (kW): <span id="minKwVal">0</span> kW</label>
+          <div class="range-input-wrap" style="margin-top:6px;">
+            <input type="range" id="minKw" min="0" max="350" step="10" value="0"
+              oninput="document.getElementById('minKwVal').textContent=this.value; applyFilters()"
+              aria-label="Minimum power in kilowatts" />
+          </div>
+        </div>
+        <div style="min-width:140px;">
+          <label>Network</label>
+          <select id="networkFilter" onchange="applyFilters()" aria-label="Filter by network">
+            <option value="">All Networks</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="finder-layout">
+      <div class="finder-sidebar">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+          <span style="font-size:0.82rem; color:var(--muted);" id="stationCount">No stations loaded</span>
+          <button class="btn-outline" style="font-size:0.75rem; padding:5px 10px;" onclick="refreshStations()">↻ Refresh</button>
+        </div>
+        <div class="station-list" id="stationList" role="list" aria-label="Charging stations">
+          <div class="empty-state">
+            <div class="es-icon">📡</div>
+            <p>Click "Use My Location" or search for a city to find nearby charging stations.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-panel">
+        <div class="map-svg-wrap">
+          <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Charging station map">
+            <defs>
+              <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#1a1d27"/>
+                <stop offset="100%" stop-color="#0f1117"/>
+              </radialGradient>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#bgGrad)"/>
+            <text x="50%" y="46%" text-anchor="middle" fill="#2e3350" font-size="14" font-family="sans-serif">
+              Load stations to see the map
+            </text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#2e3350" font-size="12" font-family="sans-serif">
+              ⚡ EV Fleet Charging Finder
+            </text>
+          </svg>
+        </div>
+        <div class="map-legend" aria-label="Map legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green);"></div><span>Available</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--yellow);"></div><span>Unknown</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent2);"></div><span>Unavailable</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent); box-shadow:0 0 6px var(--accent);"></div><span>Selected</span></div>
+        </div>
+        <div class="station-detail-panel" id="stationDetail" style="display:none;">
+          <!-- filled dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ FLEET VIEW ══════════════════ -->
+  <div id="view-fleet" class="view" role="tabpanel" aria-label="Fleet Registry">
+    <div class="stats-row" id="fleetStats"></div>
+    <div class="fleet-layout">
+      <div>
+        <div class="section-header">
+          <h2>Fleet Registry</h2>
+          <button class="btn-primary" onclick="showAddVehicle()">+ Add Vehicle</button>
+        </div>
+        <div id="vehicleList" role="list" aria-label="Fleet vehicles"></div>
+      </div>
+      <div>
+        <div class="add-form" id="addVehicleForm" style="display:none;">
+          <h3>Register Vehicle</h3>
+          <div class="field">
+            <label for="vName">Vehicle Name / ID</label>
+            <input type="text" id="vName" placeholder="e.g. Van #12 or Tesla Model 3" />
+          </div>
+          <div class="field">
+            <label for="vConnector">Connector Type</label>
+            <select id="vConnector">
+              <option value="CCS">CCS (DC Fast)</option>
+              <option value="Type2">Type 2 (AC)</option>
+              <option value="CHAdeMO">CHAdeMO</option>
+              <option value="Tesla">Tesla</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="vRange">Range (km)</label>
+            <input type="number" id="vRange" placeholder="e.g. 350" min="50" max="800" />
+          </div>
+          <div class="field">
+            <label for="vDriver">Assigned Driver</label>
+            <input type="text" id="vDriver" placeholder="Driver name (optional)" />
+          </div>
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <button class="btn-primary" onclick="addVehicle()" style="flex:1;">Save Vehicle</button>
+            <button class="btn-outline" onclick="hideAddVehicle()">Cancel</button>
+          </div>
+        </div>
+
+        <div class="add-form" style="margin-top:14px;">
+          <h3 style="margin-bottom:12px;">Connector Distribution</h3>
+          <div id="connectorChart"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ ROUTE PLANNER VIEW ══════════════════ -->
+  <div id="view-route" class="view" role="tabpanel" aria-label="Route Planner">
+    <div class="route-layout">
+      <div class="route-sidebar">
+        <h2>Plan a Route</h2>
+        <div class="route-form">
+          <div class="field">
+            <label for="routeVehicle">Select Vehicle</label>
+            <select id="routeVehicle" aria-label="Select vehicle for route">
+              <option value="">-- Choose a vehicle --</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="routeStart">Start Location</label>
+            <input type="text" id="routeStart" placeholder="e.g. Amsterdam" aria-label="Start location" />
+          </div>
+          <div class="field">
+            <label for="routeEnd">Destination</label>
+            <input type="text" id="routeEnd" placeholder="e.g. Berlin" aria-label="Destination" />
+          </div>
+          <div class="field">
+            <label for="routeMinKw">Min Charger Power (kW)</label>
+            <select id="routeMinKw" aria-label="Minimum charger power">
+              <option value="0">Any speed</option>
+              <option value="22">22 kW+</option>
+              <option value="50">50 kW+ (Fast)</option>
+              <option value="100">100 kW+ (Rapid)</option>
+              <option value="150">150 kW+ (Ultra)</option>
+            </select>
+          </div>
+          <button class="btn-primary" onclick="planRoute()" style="width:100%;" id="planRouteBtn">
+            ⚡ Plan Route
+          </button>
+        </div>
+
+        <div class="add-form" id="savedRoutesBox">
+          <h3 style="margin-bottom:10px; font-size:0.85rem;">Recent Routes</h3>
+          <div id="savedRoutesList" style="font-size:0.82rem; color:var(--muted);">No saved routes yet.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="route-result" id="routeResult">
+          <div class="empty-state">
+            <div class="es-icon">🗺</div>
+            <p>Select a vehicle, enter start and destination, then click <strong>Plan Route</strong>.<br><br>The planner will auto-insert charging stops based on vehicle range and available charging stations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+'use strict';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const state = {
+  stations: [],
+  filtered: [],
+  selected: null,
+  userLat: null,
+  userLon: null,
+  fleet: [],
+  savedRoutes: []
+};
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info', duration = 3500) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+function setLoading(id, msg = 'Loading…') {
+  document.getElementById(id).innerHTML = `
+    <div class="loading-row">
+      <div class="spinner"></div>
+      <span>${msg}</span>
+    </div>`;
+}
+
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`view-${name}`).classList.add('active');
+  document.querySelector(`nav button[data-view="${name}"]`).classList.add('active');
+
+  if (name === 'fleet') renderFleet();
+  if (name === 'route') populateRouteVehicles();
+}
+
+function connectorTag(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('ccs') || n.includes('combo')) return 'ccs';
+  if (n.includes('chademo')) return 'chademo';
+  if (n.includes('type 2') || n.includes('mennekes') || n.includes('iec 62196')) return 'type2';
+  if (n.includes('tesla')) return 'tesla';
+  return 'other';
+}
+
+function connectorLabel(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('ccs') || n.includes('combo')) return 'CCS';
+  if (n.includes('chademo')) return 'CHAdeMO';
+  if (n.includes('type 2') || n.includes('mennekes') || n.includes('iec 62196')) return 'Type 2';
+  if (n.includes('tesla')) return 'Tesla';
+  return name || 'Unknown';
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Persistence ───────────────────────────────────────────────────────────────
+function saveFleet() {
+  try { localStorage.setItem('evfleet_fleet', JSON.stringify(state.fleet)); } catch(e) {}
+}
+
+function loadFleet() {
+  try {
+    const d = localStorage.getItem('evfleet_fleet');
+    if (d) state.fleet = JSON.parse(d);
+  } catch(e) { state.fleet = []; }
+}
+
+function saveRoutes() {
+  try { localStorage.setItem('evfleet_routes', JSON.stringify(state.savedRoutes)); } catch(e) {}
+}
+
+function loadRoutes() {
+  try {
+    const d = localStorage.getItem('evfleet_routes');
+    if (d) state.savedRoutes = JSON.parse(d);
+  } catch(e) { state.savedRoutes = []; }
+}
+
+// ── Geocoding (Nominatim) ─────────────────────────────────────────────────────
+async function geocode(query) {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'EVFleetFinder/1.0' } });
+  if (!res.ok) throw new Error(`Geocoding failed: ${res.status}`);
+  const data = await res.json();
+  if (!data.length) throw new Error(`Location not found: "${query}"`);
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name };
+}
+
+// ── OpenChargeMap ─────────────────────────────────────────────────────────────
+async function fetchOCMStations(lat, lon, distance = 15) {
+  const base = `https://api.openchargemap.io/v3/poi/?output=json&compact=true&verbose=false`;
+  const params = `&latitude=${lat}&longitude=${lon}&distance=${distance}&distanceunit=km&maxresults=30&key=`;
+  const res = await fetch(base + params);
+  if (!res.ok) throw new Error(`OCM API error: ${res.status}`);
+  return res.json();
+}
+
+// ── Overpass fallback ─────────────────────────────────────────────────────────
+async function fetchOverpassStations(lat, lon, radiusKm = 15) {
+  const r = radiusKm * 1000;
+  const query = `[out:json][timeout:20];node["amenity"="charging_station"](around:${r},${lat},${lon});out;`;
+  const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error(`Overpass error: ${res.status}`);
+  const data = await res.json();
+  return (data.elements || []).map(el => ({
+    _source: 'osm',
+    ID: el.id,
+    AddressInfo: {
+      Title: el.tags.name || el.tags['operator'] || 'Charging Station',
+      AddressLine1: el.tags['addr:street'] ? `${el.tags['addr:street']} ${el.tags['addr:housenumber'] || ''}`.trim() : '',
+      Town: el.tags['addr:city'] || '',
+      Latitude: el.lat,
+      Longitude: el.lon
+    },
+    Connections: buildOSMConnections(el.tags),
+    OperatorInfo: { Title: el.tags.operator || 'Unknown Operator' },
+    StatusType: { IsOperational: true },
+    UsageCost: el.tags.fee === 'yes' ? 'Paid' : (el.tags.fee === 'no' ? 'Free' : 'Unknown')
+  }));
+}
+
+function buildOSMConnections(tags) {
+  const conns = [];
+  const sockets = tags.socket || '';
+  const addConn = (name, power) => conns.push({
+    ConnectionType: { Title: name },
+    PowerKW: power,
+    Quantity: 1
+  });
+  if (sockets.includes('type2') || tags['socket:type2']) addConn('Type 2 (Mennekes)', parseInt(tags['socket:type2:output'] || '22'));
+  if (sockets.includes('ccs') || tags['socket:type2_combo']) addConn('CCS/SAE J1772 Combo', parseInt(tags['socket:type2_combo:output'] || '50'));
+  if (sockets.includes('chademo') || tags['socket:chademo']) addConn('CHAdeMO', parseInt(tags['socket:chademo:output'] || '50'));
+  if (!conns.length) addConn('Unknown', null);
+  return conns;
+}
+
+// ── Load stations ─────────────────────────────────────────────────────────────
+async function loadStations(lat, lon) {
+  state.userLat = lat;
+  state.userLon = lon;
+  setLoading('stationList', 'Fetching nearby stations…');
+  document.getElementById('stationCount').textContent = 'Loading…';
+
+  let stations = [];
+  try {
+    stations = await fetchOCMStations(lat, lon);
+    if (!stations.length) throw new Error('No results from OCM');
+  } catch (err) {
+    toast(`OCM API unavailable, trying OpenStreetMap fallback…`, 'info');
+    try {
+      stations = await fetchOverpassStations(lat, lon);
+    } catch (err2) {
+      document.getElementById('stationList').innerHTML =
+        `<div class="empty-state"><div class="es-icon">⚠️</div><p>Could not load stations. Check your connection and try again.<br><small>${err2.message}</small></p></div>`;
+      document.getElementById('stationCount').textContent = 'Error loading';
+      toast('Failed to load charging stations', 'error');
+      return;
+    }
+  }
+
+  // Enrich with distance
+  stations.forEach(s => {
+    const ai = s.AddressInfo || {};
+    s._dist = haversine(lat, lon, ai.Latitude || 0, ai.Longitude || 0);
+  });
+
+  stations.sort((a, b) => a._dist - b._dist);
+  state.stations = stations;
+
+  // Populate network filter
+  const networks = [...new Set(stations.map(s => (s.OperatorInfo || {}).Title).filter(Boolean))].sort();
+  const nf = document.getElementById('networkFilter');
+  const existing = nf.value;
+  nf.innerHTML = '<option value="">All Networks</option>';
+  networks.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = n;
+    nf.appendChild(opt);
+  });
+  nf.value = existing;
+
+  applyFilters();
+  toast(`Found ${stations.length} charging stations nearby`, 'success');
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const minKw = parseInt(document.getElementById('minKw').value) || 0;
+  const network = document.getElementById('networkFilter').value;
+  const connTypes = [...document.querySelectorAll('#connectorFilters input:checked')].map(i => i.value);
+
+  state.filtered = state.stations.filter(s => {
+    const conns = s.Connections || [];
+    const hasConn = conns.some(c => {
+      const label = connectorLabel((c.ConnectionType || {}).Title || '');
+      return connTypes.some(ct => label.toLowerCase().includes(ct.toLowerCase()));
+    });
+    if (!hasConn) return false;
+
+    if (minKw > 0) {
+      const hasKw = conns.some(c => (c.PowerKW || 0) >= minKw);
+      if (!hasKw) return false;
+    }
+
+    if (network) {
+      const op = ((s.OperatorInfo || {}).Title || '');
+      if (op !== network) return false;
+    }
+
+    return true;
+  });
+
+  document.getElementById('stationCount').textContent =
+    `${state.filtered.length} station${state.filtered.length !== 1 ? 's' : ''} found`;
+  renderStationList();
+  renderMap();
+}
+
+// ── Station List ──────────────────────────────────────────────────────────────
+function renderStationList() {
+  const list = document.getElementById('stationList');
+  if (!state.filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="es-icon">🔌</div><p>No stations match current filters. Try adjusting connector type or minimum power.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = state.filtered.map((s, i) => {
+    const ai = s.AddressInfo || {};
+    const conns = s.Connections || [];
+    const op = (s.OperatorInfo || {}).Title || 'Unknown';
+    const isOp = (s.StatusType || {}).IsOperational;
+    const dotClass = isOp === true ? 'dot-green' : (isOp === false ? 'dot-red' : 'dot-yellow');
+    const statusLabel = isOp === true ? 'Available' : (isOp === false ? 'Unavailable' : 'Unknown');
+    const maxKw = Math.max(...conns.map(c => c.PowerKW || 0).filter(k => k > 0), 0);
+    const distKm = s._dist ? s._dist.toFixed(1) : '?';
+
+    const connTags = [...new Set(conns.map(c => connectorLabel((c.ConnectionType || {}).Title || '')))].slice(0, 3).map(lbl => {
+      const key = connectorTag(lbl.toLowerCase());
+      return `<span class="tag tag-${key}">${lbl}</span>`;
+    }).join('');
+
+    return `<div class="station-card${state.selected === i ? ' selected' : ''}"
+              role="listitem"
+              tabindex="0"
+              onclick="selectStation(${i})"
+              onkeydown="if(event.key==='Enter'||event.key===' ')selectStation(${i})"
+              aria-label="${ai.Title || 'Station'}, ${distKm} km away">
+      <div class="sc-name" title="${ai.Title || 'Charging Station'}">${ai.Title || 'Charging Station'}</div>
+      <div class="sc-addr">${[ai.AddressLine1, ai.Town].filter(Boolean).join(', ') || 'Address unavailable'}</div>
+      <div class="sc-meta">
+        <span class="status-dot ${dotClass}" aria-hidden="true"></span>
+        <span style="font-size:0.75rem;">${statusLabel}</span>
+        ${maxKw ? `<span class="tag ${maxKw >= 50 ? 'tag-fast' : 'tag-slow'}">${maxKw} kW</span>` : ''}
+        ${connTags}
+        <span class="sc-dist">${distKm} km</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Select Station ────────────────────────────────────────────────────────────
+function selectStation(idx) {
+  state.selected = idx;
+  renderStationList();
+  renderMap();
+
+  const s = state.filtered[idx];
+  const ai = s.AddressInfo || {};
+  const conns = s.Connections || [];
+  const op = (s.OperatorInfo || {}).Title || 'Unknown';
+  const isOp = (s.StatusType || {}).IsOperational;
+  const statusLabel = isOp === true ? 'Operational' : (isOp === false ? 'Unavailable' : 'Status Unknown');
+  const statusColor = isOp === true ? 'var(--green)' : (isOp === false ? 'var(--accent2)' : 'var(--yellow)');
+  const cost = s.UsageCost || 'Unknown';
+
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${ai.Latitude},${ai.Longitude}`;
+
+  const connRows = conns.map(c => {
+    const lbl = connectorLabel((c.ConnectionType || {}).Title || 'Unknown');
+    const key = connectorTag(lbl.toLowerCase());
+    const kw = c.PowerKW ? `${c.PowerKW} kW` : 'kW unknown';
+    const qty = c.Quantity || 1;
+    return `<span class="tag tag-${key}">${lbl} · ${kw} × ${qty}</span>`;
+  }).join('');
+
+  const detail = document.getElementById('stationDetail');
+  detail.style.display = 'block';
+  detail.innerHTML = `
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div>
+        <h3>${ai.Title || 'Charging Station'}</h3>
+        <div style="font-size:0.8rem; color:var(--muted); margin-top:3px;">
+          ${[ai.AddressLine1, ai.Town, ai.Country ? (ai.Country.Title || '') : ''].filter(Boolean).join(', ')}
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span style="font-size:0.78rem; color:${statusColor}; font-weight:700;">● ${statusLabel}</span>
+        <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="maps-btn" aria-label="Open in Google Maps">🗺 Maps</a>
+      </div>
+    </div>
+    <div class="connector-badges" style="margin-top:10px;">${connRows}</div>
+    <div class="detail-grid" style="margin-top:10px;">
+      <div class="detail-item"><div class="di-label">Operator</div>${op}</div>
+      <div class="detail-item"><div class="di-label">Usage Cost</div>${cost}</div>
+      <div class="detail-item"><div class="di-label">Distance</div>${s._dist ? s._dist.toFixed(2) + ' km' : 'N/A'}</div>
+      <div class="detail-item"><div class="di-label">Connectors</div>${conns.length}</div>
+    </div>`;
+}
+
+// ── SVG Map ───────────────────────────────────────────────────────────────────
+function renderMap() {
+  const svg = document.getElementById('mapSvg');
+  const W = svg.clientWidth || 600;
+  const H = svg.clientHeight || 480;
+
+  if (!state.filtered.length || !state.userLat) {
+    svg.innerHTML = `
+      <defs><radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#1a1d27"/><stop offset="100%" stop-color="#0f1117"/>
+      </radialGradient></defs>
+      <rect width="100%" height="100%" fill="url(#bgGrad)"/>
+      <text x="50%" y="46%" text-anchor="middle" fill="#2e3350" font-size="14" font-family="sans-serif">Load stations to see the map</text>
+      <text x="50%" y="55%" text-anchor="middle" fill="#2e3350" font-size="12" font-family="sans-serif">⚡ EV Fleet Charging Finder</text>`;
+    return;
+  }
+
+  // Build bounding box
+  const lats = state.filtered.map(s => (s.AddressInfo || {}).Latitude).filter(Boolean);
+  const lons = state.filtered.map(s => (s.AddressInfo || {}).Longitude).filter(Boolean);
+  lats.push(state.userLat);
+  lons.push(state.userLon);
+
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  const pad = 0.1;
+  const latRange = (maxLat - minLat) + pad * 2 || pad * 2;
+  const lonRange = (maxLon - minLon) + pad * 2 || pad * 2;
+
+  const toX = lon => ((lon - minLon + pad) / lonRange) * (W - 40) + 20;
+  const toY = lat => (1 - (lat - minLat + pad) / latRange) * (H - 40) + 20;
+
+  // Grid lines
+  const gridLines = [];
+  for (let i = 0; i <= 4; i++) {
+    const y = 20 + (i / 4) * (H - 40);
+    gridLines.push(`<line x1="20" y1="${y}" x2="${W - 20}" y2="${y}" stroke="#2e3350" stroke-width="0.5" opacity="0.5"/>`);
+    const x = 20 + (i / 4) * (W - 40);
+    gridLines.push(`<line x1="${x}" y1="20" x2="${x}" y2="${H - 20}" stroke="#2e3350" stroke-width="0.5" opacity="0.5"/>`);
+  }
+
+  // Station dots
+  const dots = state.filtered.map((s, i) => {
+    const ai = s.AddressInfo || {};
+    const lat = ai.Latitude, lon = ai.Longitude;
+    if (!lat || !lon) return '';
+    const x = toX(lon);
+    const y = toY(lat);
+    const isOp = (s.StatusType || {}).IsOperational;
+    const color = i === state.selected ? '#6c63ff' :
+                  (isOp === true ? '#43d9ad' : (isOp === false ? '#ff6584' : '#f7c948'));
+    const r = i === state.selected ? 8 : 6;
+    const name = (ai.Title || 'Station').replace(/"/g, '&quot;');
+    return `<g role="button" aria-label="${name}" style="cursor:pointer" onclick="selectStation(${i})">
+      ${i === state.selected ? `<circle cx="${x}" cy="${y}" r="14" fill="${color}" opacity="0.2"/>` : ''}
+      <circle cx="${x}" cy="${y}" r="${r}" fill="${color}" stroke="${i === state.selected ? '#fff' : 'rgba(0,0,0,0.3)'}" stroke-width="${i === state.selected ? 2 : 1}"/>
+      <title>${name}</title>
+    </g>`;
+  }).join('');
+
+  // User location
+  const ux = toX(state.userLon);
+  const uy = toY(state.userLat);
+  const userDot = `
+    <circle cx="${ux}" cy="${uy}" r="14" fill="#6c63ff" opacity="0.15">
+      <animate attributeName="r" values="10;16;10" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.15;0.05;0.15" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="${ux}" cy="${uy}" r="7" fill="#6c63ff" stroke="#fff" stroke-width="2"/>
+    <text x="${ux}" y="${uy + 4}" text-anchor="middle" fill="#fff" font-size="8" font-family="sans-serif" font-weight="bold">U</text>`;
+
+  svg.innerHTML = `
+    <defs>
+      <radialGradient id="bgGrad2" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#1a1d27"/><stop offset="100%" stop-color="#0f1117"/>
+      </radialGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#bgGrad2)"/>
+    ${gridLines.join('')}
+    ${dots}
+    ${userDot}`;
+}
+
+// ── Geolocation ───────────────────────────────────────────────────────────────
+function locateMe() {
+  const btn = document.getElementById('locateBtn');
+  if (!navigator.geolocation) {
+    toast('Geolocation not supported by your browser', 'error');
+    return;
+  }
+  btn.textContent = '📡 Locating…';
+  btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      btn.textContent = '📡 Use My Location';
+      btn.disabled = false;
+      toast('Location acquired!', 'success');
+      loadStations(pos.coords.latitude, pos.coords.longitude);
+    },
+    err => {
+      btn.textContent = '📡 Use My Location';
+      btn.disabled = false;
+      const msg = err.code === 1 ? 'Location access denied. Search for a city instead.' :
+                  err.code === 2 ? 'Location unavailable.' : 'Location request timed out.';
+      toast(msg, 'error');
+    },
+    { timeout: 10000, maximumAge: 60000 }
+  );
+}
+
+function searchLocation() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) { toast('Enter a city or address to search', 'info'); return; }
+  setLoading('stationList', `Searching "${q}"…`);
+  geocode(q)
+    .then(({ lat, lon, name }) => {
+      toast(`Found: ${name.split(',').slice(0, 2).join(',')}`, 'success');
+      loadStations(lat, lon);
+    })
+    .catch(err => {
+      document.getElementById('stationList').innerHTML =
+        `<div class="empty-state"><div class="es-icon">🔍</div><p>${err.message}</p></div>`;
+      toast(err.message, 'error');
+    });
+}
+
+function refreshStations() {
+  if (state.userLat && state.userLon) {
+    loadStations(state.userLat, state.userLon);
+  } else {
+    toast('No location set. Use My Location or search first.', 'info');
+  }
+}
+
+// ── Fleet Registry ────────────────────────────────────────────────────────────
+function renderFleet() {
+  renderFleetStats();
+  renderVehicleList();
+  renderConnectorChart();
+}
+
+function renderFleetStats() {
+  const fleet = state.fleet;
+  const connCounts = {};
+  fleet.forEach(v => { connCounts[v.connector] = (connCounts[v.connector] || 0) + 1; });
+  const topConn = Object.entries(connCounts).sort((a, b) => b[1] - a[1])[0];
+
+  document.getElementById('fleetStats').innerHTML = `
+    <div class="stat-card">
+      <div class="sv">${fleet.length}</div>
+      <div class="sl">Total Vehicles</div>
+    </div>
+    <div class="stat-card">
+      <div class="sv" style="color:var(--green)">${Math.round(fleet.reduce((s, v) => s + (v.range || 0), 0) / (fleet.length || 1))}</div>
+      <div class="sl">Avg Range (km)</div>
+    </div>
+    <div class="stat-card">
+      <div class="sv" style="color:var(--accent)">${Object.keys(connCounts).length || 0}</div>
+      <div class="sl">Connector Types</div>
+    </div>
+    <div class="stat-card">
+      <div class="sv" style="color:var(--yellow)">${topConn ? topConn[0] : '—'}</div>
+      <div class="sl">Most Common</div>
+    </div>`;
+}
+
+function renderVehicleList() {
+  const el = document.getElementById('vehicleList');
+  if (!state.fleet.length) {
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">🚐</div><p>No vehicles registered yet. Add your first EV to start planning routes.</p></div>`;
+    return;
+  }
+  const icons = { CCS: '⚡', Type2: '🔌', CHAdeMO: '🔋', Tesla: '🚀' };
+  el.innerHTML = state.fleet.map((v, i) => `
+    <div class="vehicle-card" role="listitem">
+      <div class="vehicle-icon" aria-hidden="true">${icons[v.connector] || '🚗'}</div>
+      <div class="vehicle-info">
+        <div class="v-name">${v.name}</div>
+        <div class="v-meta">
+          <span class="tag tag-${connectorTag(v.connector)}" style="margin-right:6px;">${v.connector}</span>
+          Range: ${v.range} km
+          ${v.driver ? ` · Driver: ${v.driver}` : ''}
+        </div>
+      </div>
+      <div class="vehicle-actions">
+        <button class="btn-outline" onclick="removeVehicle(${i})" aria-label="Remove ${v.name}">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderConnectorChart() {
+  const el = document.getElementById('connectorChart');
+  if (!state.fleet.length) {
+    el.innerHTML = `<p style="font-size:0.82rem; color:var(--muted);">Add vehicles to see distribution.</p>`;
+    return;
+  }
+  const counts = {};
+  const colors = { CCS: '#6c63ff', CHAdeMO: '#f7c948', Type2: '#43d9ad', Tesla: '#ff6584', Other: '#8892b0' };
+  state.fleet.forEach(v => { counts[v.connector] = (counts[v.connector] || 0) + 1; });
+  const total = state.fleet.length;
+  el.innerHTML = Object.entries(counts).map(([conn, cnt]) => `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:5px;">
+        <span class="tag tag-${connectorTag(conn)}">${conn}</span>
+        <span style="color:var(--muted);">${cnt} vehicle${cnt > 1 ? 's' : ''} (${Math.round(cnt/total*100)}%)</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" style="width:${(cnt/total)*100}%; background:${colors[conn] || '#8892b0'};"></div>
+      </div>
+    </div>`).join('');
+}
+
+function showAddVehicle() {
+  document.getElementById('addVehicleForm').style.display = 'block';
+  document.getElementById('vName').focus();
+}
+
+function hideAddVehicle() {
+  document.getElementById('addVehicleForm').style.display = 'none';
+  ['vName', 'vRange', 'vDriver'].forEach(id => document.getElementById(id).value = '');
+}
+
+function addVehicle() {
+  const name = document.getElementById('vName').value.trim();
+  const connector = document.getElementById('vConnector').value;
+  const range = parseInt(document.getElementById('vRange').value);
+  const driver = document.getElementById('vDriver').value.trim();
+
+  if (!name) { toast('Vehicle name is required', 'error'); return; }
+  if (!range || range < 50) { toast('Enter a valid range (50+ km)', 'error'); return; }
+
+  state.fleet.push({ name, connector, range, driver, id: Date.now() });
+  saveFleet();
+  hideAddVehicle();
+  renderFleet();
+  toast(`${name} added to fleet!`, 'success');
+}
+
+function removeVehicle(i) {
+  const v = state.fleet[i];
+  state.fleet.splice(i, 1);
+  saveFleet();
+  renderFleet();
+  toast(`${v.name} removed from fleet`, 'info');
+}
+
+// ── Route Planner ─────────────────────────────────────────────────────────────
+function populateRouteVehicles() {
+  const sel = document.getElementById('routeVehicle');
+  sel.innerHTML = '<option value="">-- Choose a vehicle --</option>';
+  state.fleet.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `${v.name} · ${v.connector} · ${v.range} km range`;
+    sel.appendChild(opt);
+  });
+  renderSavedRoutes();
+}
+
+function renderSavedRoutes() {
+  const el = document.getElementById('savedRoutesList');
+  if (!state.savedRoutes.length) {
+    el.innerHTML = `<span style="color:var(--muted);">No saved routes yet.</span>`;
+    return;
+  }
+  el.innerHTML = state.savedRoutes.slice(-5).reverse().map((r, i) => `
+    <div style="display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border);">
+      <span style="font-size:0.88rem;">📍</span>
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:600; font-size:0.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${r.from} → ${r.to}</div>
+        <div style="color:var(--muted); font-size:0.75rem;">${r.vehicle} · ${r.stops} stops · ${r.dist} km</div>
+      </div>
+    </div>`).join('');
+}
+
+async function planRoute() {
+  const vIdx = document.getElementById('routeVehicle').value;
+  const startQ = document.getElementById('routeStart').value.trim();
+  const endQ = document.getElementById('routeEnd').value.trim();
+  const minKw = parseInt(document.getElementById('routeMinKw').value) || 0;
+
+  if (vIdx === '') { toast('Select a vehicle first', 'error'); return; }
+  if (!startQ) { toast('Enter a start location', 'error'); return; }
+  if (!endQ) { toast('Enter a destination', 'error'); return; }
+
+  const vehicle = state.fleet[parseInt(vIdx)];
+  if (!vehicle) { toast('Vehicle not found', 'error'); return; }
+
+  const btn = document.getElementById('planRouteBtn');
+  btn.textContent = '⏳ Planning…';
+  btn.disabled = true;
+
+  const result = document.getElementById('routeResult');
+  result.innerHTML = `<div class="loading-row"><div class="spinner"></div><span>Geocoding locations…</span></div>`;
+
+  try {
+    const [startGeo, endGeo] = await Promise.all([geocode(startQ), geocode(endQ)]);
+    result.innerHTML = `<div class="loading-row"><div class="spinner"></div><span>Finding charging stations along route…</span></div>`;
+
+    const totalDist = haversine(startGeo.lat, startGeo.lon, endGeo.lat, endGeo.lon);
+    const numLegs = Math.max(1, Math.ceil(totalDist / (vehicle.range * 0.8)));
+    const chargingStops = [];
+
+    if (numLegs > 1) {
+      for (let i = 1; i < numLegs; i++) {
+        const t = i / numLegs;
+        const midLat = startGeo.lat + (endGeo.lat - startGeo.lat) * t;
+        const midLon = startGeo.lon + (endGeo.lon - startGeo.lon) * t;
+
+        let stations = [];
+        try {
+          stations = await fetchOCMStations(midLat, midLon, 20);
+        } catch {
+          try {
+            stations = await fetchOverpassStations(midLat, midLon, 20);
+          } catch { stations = []; }
+        }
+
+        // Filter by vehicle connector + minKw
+        const compatible = stations.filter(s => {
+          const conns = s.Connections || [];
+          return conns.some(c => {
+            const lbl = connectorLabel((c.ConnectionType || {}).Title || '');
+            const kw = c.PowerKW || 0;
+            const connMatch = lbl.toLowerCase().includes(vehicle.connector.toLowerCase()) ||
+              (vehicle.connector === 'Type2' && lbl.toLowerCase().includes('type 2')) ||
+              (vehicle.connector === 'CCS' && (lbl.toLowerCase().includes('ccs') || lbl.toLowerCase().includes('combo')));
+            return connMatch && kw >= minKw;
+          });
+        });
+
+        if (compatible.length) {
+          compatible.sort((a, b) => {
+            const maxKwA = Math.max(...(a.Connections || []).map(c => c.PowerKW || 0));
+            const maxKwB = Math.max(...(b.Connections || []).map(c => c.PowerKW || 0));
+            return maxKwB - maxKwA;
+          });
+          const best = compatible[0];
+          const ai = best.AddressInfo || {};
+          const conns = best.Connections || [];
+          const maxKw = Math.max(...conns.map(c => c.PowerKW || 0).filter(k => k > 0), 0);
+          const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${ai.Latitude},${ai.Longitude}`;
+          chargingStops.push({
+            name: ai.Title || 'Charging Stop',
+            addr: [ai.AddressLine1, ai.Town].filter(Boolean).join(', ') || 'Address unavailable',
+            maxKw,
+            connector: vehicle.connector,
+            mapsUrl,
+            legDist: Math.round(totalDist / numLegs)
+          });
+        } else {
+          chargingStops.push({
+            name: `Charging Stop ${i}`,
+            addr: `Near waypoint ${i} (no compatible stations found)`,
+            maxKw: 0,
+            connector: vehicle.connector,
+            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${midLat},${midLon}`,
+            legDist: Math.round(totalDist / numLegs),
+            warning: true
+          });
+        }
+      }
+    }
+
+    const startMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(startQ)}`;
+    const endMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endQ)}`;
+
+    const savedRoute = {
+      from: startQ, to: endQ,
+      vehicle: vehicle.name,
+      stops: chargingStops.length,
+      dist: Math.round(totalDist)
+    };
+    state.savedRoutes.push(savedRoute);
+    saveRoutes();
+    renderSavedRoutes();
+
+    const allStops = [
+      { type: 'start', name: startQ, addr: startGeo.name.split(',').slice(0,2).join(','), mapsUrl: startMapsUrl },
+      ...chargingStops.map(s => ({ type: 'charge', ...s })),
+      { type: 'end', name: endQ, addr: endGeo.name.split(',').slice(0,2).join(','), mapsUrl: endMapsUrl }
+    ];
+
+    const stopItems = allStops.map((stop, idx) => {
+      const isLast = idx === allStops.length - 1;
+      const circleClass = stop.type === 'start' ? 'start' : stop.type === 'end' ? 'end' : 'charge';
+      const circleContent = stop.type === 'start' ? 'A' : stop.type === 'end' ? 'B' : `⚡`;
+
+      let tags = '';
+      if (stop.type === 'charge') {
+        tags = `
+          <div class="sb-tags">
+            <span class="tag tag-${connectorTag(stop.connector)}">${stop.connector}</span>
+            ${stop.maxKw ? `<span class="tag ${stop.maxKw >= 50 ? 'tag-fast' : 'tag-slow'}">${stop.maxKw} kW</span>` : ''}
+            ${stop.legDist ? `<span class="tag tag-other">~${stop.legDist} km leg</span>` : ''}
+            ${stop.warning ? `<span class="tag" style="background:rgba(247,201,72,0.2);color:var(--yellow);">⚠️ No exact match</span>` : ''}
+          </div>`;
+      } else {
+        tags = `<div class="sb-tags"><span class="tag tag-other">${stop.type === 'start' ? 'Departure' : 'Destination'}</span></div>`;
+      }
+
+      return `<div class="stop-item">
+        <div class="stop-line">
+          <div class="stop-circle ${circleClass}" aria-label="${stop.type}">${circleContent}</div>
+          ${!isLast ? '<div class="stop-connector"></div>' : ''}
+        </div>
+        <div class="stop-body">
+          <div class="sb-title">${stop.name}</div>
+          <div class="sb-sub">${stop.addr}</div>
+          ${tags}
+          <div style="margin-top:6px;">
+            <a href="${stop.mapsUrl}" target="_blank" rel="noopener noreferrer" class="maps-btn" aria-label="Open ${stop.name} in Google Maps">🗺 Open in Maps</a>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    result.innerHTML = `
+      <div class="route-header">
+        <span style="font-size:1.3rem;" aria-hidden="true">⚡</span>
+        <div>
+          <h3>${startQ} → ${endQ}</h3>
+          <div style="font-size:0.78rem; color:var(--muted);">${vehicle.name} · ${vehicle.connector} · ~${Math.round(totalDist)} km · ${chargingStops.length} charging stop${chargingStops.length !== 1 ? 's' : ''}</div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <a href="https://www.google.com/maps/dir/${encodeURIComponent(startQ)}/${encodeURIComponent(endQ)}" target="_blank" rel="noopener noreferrer" class="maps-btn" aria-label="Open full route in Google Maps">🗺 Full Route</a>
+        </div>
+      </div>
+      <div class="stop-timeline">${stopItems}</div>`;
+
+    toast(`Route planned: ${chargingStops.length} charging stop${chargingStops.length !== 1 ? 's' : ''} for ${Math.round(totalDist)} km`, 'success');
+  } catch (err) {
+    result.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${err.message}</p></div>`;
+    toast(err.message, 'error');
+  } finally {
+    btn.textContent = '⚡ Plan Route';
+    btn.disabled = false;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  loadFleet();
+  loadRoutes();
+
+  // Seed demo fleet if empty
+  if (!state.fleet.length) {
+    state.fleet = [
+      { id: 1, name: 'Van #01 – Renault Kangoo', connector: 'Type2', range: 270, driver: 'Jan de Vries' },
+      { id: 2, name: 'Van #02 – VW ID. Buzz',   connector: 'CCS',   range: 420, driver: 'Sofía Martín' },
+      { id: 3, name: 'Car #03 – Tesla Model 3',  connector: 'Tesla', range: 550, driver: 'Liam Nguyen' },
+    ];
+    saveFleet();
+  }
+
+  // Window resize: redraw map
+  window.addEventListener('resize', () => {
+    if (state.userLat) renderMap();
+  });
+}
+
+init();
+</script>
+</body>
+</html>

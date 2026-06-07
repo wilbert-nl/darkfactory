@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carbon Intensity Monitor — Dark Factory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c10;
+      --surface: #0e1318;
+      --surface2: #141a21;
+      --border: rgba(255,255,255,0.08);
+      --accent: #00d4aa;
+      --accent2: #f59e0b;
+      --text: #e6edf3;
+      --muted: #6b7280;
+      --green: #26a69a;
+      --yellow: #f59e0b;
+      --radius: 6px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(0,212,170,0.4);
+    }
+
+    header h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+    header .subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(67,217,173,0.12);
+      border: 1px solid rgba(67,217,173,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green);
+    }
+
+    .live-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    .last-updated {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ── Layout ── */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 340px 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover { border-color: var(--accent); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .card-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* ── Gauge ── */
+    .gauge-card {
+      text-align: center;
+    }
+
+    .gauge-wrap {
+      position: relative;
+      width: 200px;
+      height: 110px;
+      margin: 0 auto 16px;
+    }
+
+    .gauge-svg {
+      width: 200px;
+      height: 110px;
+      overflow: visible;
+    }
+
+    .gauge-track {
+      fill: none;
+      stroke: var(--surface2);
+      stroke-width: 18;
+      stroke-linecap: round;
+    }
+
+    .gauge-fill {
+      fill: none;
+      stroke-width: 18;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1), stroke 0.6s;
+    }
+
+    .gauge-value {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+      transition: color 0.6s;
+    }
+
+    .gauge-unit {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .intensity-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-top: 10px;
+      transition: background 0.6s, color 0.6s;
+    }
+
+    .intensity-index {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* ── Intensity colours ── */
+    .color-very-low  { color: #43d9ad; }
+    .color-low       { color: #43d9ad; }
+    .color-moderate  { color: #f7c948; }
+    .color-high      { color: #ff6584; }
+    .color-very-high { color: #ff3860; }
+
+    .bg-very-low  { background: rgba(67,217,173,0.15); color: #43d9ad; }
+    .bg-low       { background: rgba(67,217,173,0.15); color: #43d9ad; }
+    .bg-moderate  { background: rgba(247,201,72,0.15); color: #f7c948; }
+    .bg-high      { background: rgba(245,158,11,0.15); color: #ff6584; }
+    .bg-very-high { background: rgba(255,56,96,0.15); color: #ff3860; }
+
+    .stroke-very-low  { stroke: #43d9ad; }
+    .stroke-low       { stroke: #43d9ad; }
+    .stroke-moderate  { stroke: #f7c948; }
+    .stroke-high      { stroke: #ff6584; }
+    .stroke-very-high { stroke: #ff3860; }
+
+    /* ── Generation Mix ── */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .donut-svg {
+      width: 140px;
+      height: 140px;
+      flex-shrink: 0;
+    }
+
+    .donut-legend {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      cursor: default;
+      border-radius: 6px;
+      padding: 3px 5px;
+      transition: background 0.15s;
+    }
+
+    .legend-item:hover { background: var(--surface2); }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .legend-name { color: var(--text); flex: 1; }
+    .legend-pct  { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ── Forecast ── */
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: repeat(24, 1fr);
+      gap: 3px;
+      margin-top: 12px;
+    }
+
+    .forecast-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .forecast-bar-bg {
+      width: 100%;
+      height: 64px;
+      background: var(--surface2);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .forecast-bar-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      border-radius: 4px;
+      transition: height 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .forecast-bar-wrap.best .forecast-bar-bg {
+      box-shadow: 0 0 0 1px var(--green);
+    }
+
+    .forecast-hour {
+      font-size: 9px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .forecast-tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 11px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .forecast-bar-wrap:hover .forecast-tooltip { opacity: 1; }
+
+    .forecast-best-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--green);
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    /* ── Best Windows ── */
+    .window-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .window-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s, transform 0.15s;
+      cursor: default;
+    }
+
+    .window-item:hover {
+      border-color: var(--green);
+      transform: translateX(2px);
+    }
+
+    .window-rank {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .rank-1 { background: rgba(67,217,173,0.2); color: var(--green); }
+    .rank-2 { background: rgba(0,212,170,0.2); color: var(--accent); }
+    .rank-3 { background: rgba(247,201,72,0.2); color: var(--yellow); }
+
+    .window-time {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .window-val {
+      font-size: 13px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .window-bar {
+      width: 60px;
+      height: 4px;
+      background: var(--surface);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .window-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--green);
+    }
+
+    /* ── Country Table ── */
+    .country-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 160px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--font);
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: var(--accent); }
+
+    .sort-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      font-family: var(--font);
+    }
+
+    .sort-btn:hover, .sort-btn.active {
+      border-color: var(--accent);
+      background: rgba(0,212,170,0.1);
+      color: var(--accent);
+    }
+
+    .country-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .country-table th {
+      text-align: left;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .country-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(46,51,80,0.5);
+      vertical-align: middle;
+    }
+
+    .country-table tr:hover td { background: var(--surface2); }
+    .country-table tr:last-child td { border-bottom: none; }
+
+    .country-bar-cell {
+      width: 100px;
+    }
+
+    .country-bar-bg {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .country-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s;
+    }
+
+    .flag { font-size: 18px; }
+
+    /* ── Tips ── */
+    .tips-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .tip-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface2);
+      border-radius: 10px;
+      border-left: 3px solid transparent;
+      transition: border-color 0.2s;
+    }
+
+    .tip-item:hover { border-left-color: var(--accent); }
+
+    .tip-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .tip-body {}
+    .tip-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+    .tip-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* ── Skeleton / loading ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Error / notice ── */
+    .notice {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .notice-warn {
+      background: rgba(247,201,72,0.1);
+      border: 1px solid rgba(247,201,72,0.25);
+      color: var(--yellow);
+    }
+
+    .notice-err {
+      background: rgba(255,101,132,0.1);
+      border: 1px solid rgba(255,101,132,0.25);
+      color: var(--accent2);
+    }
+
+    /* ── Tabs (forecast / table) ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 18px;
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      font-family: var(--font);
+    }
+
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Refresh btn ── */
+    .refresh-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 14px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.2s, color 0.2s;
+      font-family: var(--font);
+    }
+
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* ── Full-width card ── */
+    .full-row { grid-column: 1 / -1; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .top-row { grid-template-columns: 1fr 1fr; }
+      .gauge-card { grid-column: 1 / -1; }
+      .bottom-row { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .top-row { grid-template-columns: 1fr; }
+      main { padding: 16px; }
+      header { padding: 14px 16px; }
+      .forecast-grid { grid-template-columns: repeat(12, 1fr); }
+    }
+
+    /* ── Country table overflow ── */
+    .table-wrap {
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    /* ── Threshold slider ── */
+    .threshold-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .threshold-label {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    input[type=range] {
+      flex: 1;
+      min-width: 100px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .threshold-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Finance design system v2 ── */
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(0,212,170,.065) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,.9) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    h1, h2 {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    [class*="price"],[class*="value"],[class*="amount"],[class*="rate"],
+    [class*="stat"],[class*="metric"],[class*="kpi"],td,code,.number {
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+      font-variant-numeric: tabular-nums slashed-zero;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+    .card,[class*="card"],[class*="metric-card"],[class*="stat-card"] {
+      border-left: 3px solid var(--accent) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    table { border-collapse: collapse; width: 100%; }
+    thead th {
+      font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: right; white-space: nowrap; position: sticky; top: 0; background: var(--bg);
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background 120ms; }
+    tbody tr:hover { background: rgba(255,255,255,.04); }
+    td { padding: 6px 12px; text-align: right; vertical-align: middle; white-space: nowrap; font-size: 13px; }
+    td:first-child { text-align: left; color: var(--text); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.5);} 50%{box-shadow:0 0 0 6px rgba(0,212,170,0);} }
+    .card,[class*="card"],[class*="result"],[class*="item"] { animation: slideUp .35s ease both; }
+    .card:nth-child(2),[class*="item"]:nth-child(2){animation-delay:.05s}
+    .card:nth-child(3),[class*="item"]:nth-child(3){animation-delay:.1s}
+    .card:nth-child(4){animation-delay:.15s}
+    tbody tr { animation: slideUp .2s ease both; }
+    tbody tr:nth-child(2){animation-delay:.03s} tbody tr:nth-child(3){animation-delay:.06s}
+    tbody tr:nth-child(4){animation-delay:.09s}
+    button,[class*="btn"] { transition: all .15s; }
+    button:hover,[class*="btn"]:hover {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0,212,170,.15) !important;
+    }
+    input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 2px rgba(0,212,170,.2); }
+    [class*="live"],[class*="dot"],[class*="indicator"] { animation: livePulse 2s ease-in-out infinite; }
+    [class*="positive"],[class*="gain"],[class*="up"] { color:var(--green)!important; }
+    [class*="negative"],[class*="loss"],[class*="down"] { color:#ef5350!important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true">⚡</div>
+  <div>
+    <h1>Carbon Intensity Monitor</h1>
+    <div class="subtitle">Real-time UK grid data + global country comparison</div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge" role="status" aria-live="polite">
+      <div class="live-dot"></div>
+      LIVE UK
+    </div>
+    <span class="last-updated" id="lastUpdated">Fetching…</span>
+    <button class="refresh-btn" id="refreshBtn" aria-label="Refresh data">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- TOP ROW -->
+  <section class="top-row" aria-label="Overview">
+
+    <!-- Gauge -->
+    <div class="card gauge-card" aria-label="Current UK carbon intensity">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(108,99,255,0.15)">📊</div>
+        <div>
+          <div class="card-title">UK Live Intensity</div>
+          <div class="card-sub">National Grid carbon gCO₂eq/kWh</div>
+        </div>
+      </div>
+
+      <div class="gauge-wrap" role="img" aria-label="Carbon intensity gauge">
+        <svg class="gauge-svg" viewBox="0 0 200 110" aria-hidden="true">
+          <!-- semicircle track: radius 80, centre 100,105 -->
+          <path class="gauge-track" d="M 20 105 A 80 80 0 0 1 180 105" />
+          <path class="gauge-fill" id="gaugeFill"
+            d="M 20 105 A 80 80 0 0 1 180 105"
+            stroke-dasharray="251.2"
+            stroke-dashoffset="251.2" />
+        </svg>
+        <div class="gauge-value" id="gaugeValue" style="color:var(--muted)">
+          <span id="gaugeNum">—</span>
+          <span class="gauge-unit">g</span>
+        </div>
+      </div>
+
+      <div id="intensityLabel" class="intensity-label" style="background:var(--surface2);color:var(--muted)">
+        Loading…
+      </div>
+      <div class="intensity-index" id="intensityIndex"></div>
+
+      <div style="margin-top:18px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+        <span>0</span>
+        <span>Very Low</span>
+        <span>Low</span>
+        <span>Mod</span>
+        <span>High</span>
+        <span>Very High</span>
+      </div>
+    </div>
+
+    <!-- Generation Mix -->
+    <div class="card" aria-label="UK generation mix">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(67,217,173,0.15)">🌱</div>
+        <div>
+          <div class="card-title">Generation Mix</div>
+          <div class="card-sub">UK grid sources right now</div>
+        </div>
+      </div>
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 140 140" aria-hidden="true" id="donutSvg">
+          <circle cx="70" cy="70" r="50" fill="none" stroke="var(--surface2)" stroke-width="22"/>
+          <!-- segments rendered by JS -->
+          <text x="70" y="68" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Inter,sans-serif">Loading</text>
+          <text x="70" y="82" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Inter,sans-serif">mix…</text>
+        </svg>
+        <div class="donut-legend" id="donutLegend">
+          <div class="skeleton" style="height:14px;margin-bottom:6px;"></div>
+          <div class="skeleton" style="height:14px;margin-bottom:6px;"></div>
+          <div class="skeleton" style="height:14px;margin-bottom:6px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="card" aria-label="Usage tips">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(247,201,72,0.15)">💡</div>
+        <div>
+          <div class="card-title">Green Compute Tips</div>
+          <div class="card-sub">Reduce your carbon footprint</div>
+        </div>
+      </div>
+      <div class="tips-list" id="tipsList">
+        <!-- filled by JS based on intensity -->
+      </div>
+    </div>
+  </section>
+
+  <!-- BOTTOM ROW -->
+  <section class="bottom-row" aria-label="Forecast and comparison">
+
+    <!-- Forecast + Best Windows combined card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(108,99,255,0.15)">🕐</div>
+        <div>
+          <div class="card-title">Today's Forecast</div>
+          <div class="card-sub">Best windows to run batch jobs</div>
+        </div>
+      </div>
+
+      <div class="threshold-row">
+        <span class="threshold-label">Threshold:</span>
+        <input type="range" id="thresholdSlider" min="50" max="350" value="150" step="10" aria-label="Carbon intensity threshold in gCO2/kWh" />
+        <span class="threshold-val"><span id="thresholdVal">150</span> g</span>
+      </div>
+
+      <div class="forecast-grid" id="forecastGrid" role="list" aria-label="Hourly forecast bars">
+        <!-- 24 bars rendered by JS -->
+      </div>
+
+      <div class="forecast-best-label" id="bestWindowLabel" aria-live="polite">
+        ⏳ Loading forecast…
+      </div>
+
+      <div style="margin-top:20px">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;">Top 3 Clean Windows</div>
+        <div class="window-list" id="windowList"></div>
+      </div>
+    </div>
+
+    <!-- Country Comparison -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(255,101,132,0.15)">🌍</div>
+        <div>
+          <div class="card-title">Global Comparison</div>
+          <div class="card-sub">Avg carbon intensity by country (gCO₂eq/kWh)</div>
+        </div>
+      </div>
+
+      <div class="country-controls">
+        <input
+          type="search"
+          class="search-input"
+          id="countrySearch"
+          placeholder="Search country…"
+          aria-label="Search countries"
+        />
+        <button class="sort-btn active" id="sortAsc" aria-pressed="true">↑ Low first</button>
+        <button class="sort-btn" id="sortDesc" aria-pressed="false">↓ High first</button>
+      </div>
+
+      <div class="table-wrap" role="region" aria-label="Country carbon intensity table">
+        <table class="country-table" aria-label="Carbon intensity by country">
+          <thead>
+            <tr>
+              <th scope="col">Country</th>
+              <th scope="col">g CO₂/kWh</th>
+              <th scope="col" class="country-bar-cell">Relative</th>
+              <th scope="col">Level</th>
+            </tr>
+          </thead>
+          <tbody id="countryTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Country data (static, ~40 countries, gCO2eq/kWh avg) ──
+  const COUNTRIES = [
+    { name: 'Paraguay',      flag: '🇵🇾', intensity: 25  },
+    { name: 'Iceland',       flag: '🇮🇸', intensity: 28  },
+    { name: 'Norway',        flag: '🇳🇴', intensity: 29  },
+    { name: 'Albania',       flag: '🇦🇱', intensity: 35  },
+    { name: 'New Zealand',   flag: '🇳🇿', intensity: 120 },
+    { name: 'Switzerland',   flag: '🇨🇭', intensity: 45  },
+    { name: 'Sweden',        flag: '🇸🇪', intensity: 54  },
+    { name: 'France',        flag: '🇫🇷', intensity: 58  },
+    { name: 'Canada',        flag: '🇨🇦', intensity: 140 },
+    { name: 'Finland',       flag: '🇫🇮', intensity: 132 },
+    { name: 'Austria',       flag: '🇦🇹', intensity: 150 },
+    { name: 'Denmark',       flag: '🇩🇰', intensity: 155 },
+    { name: 'Portugal',      flag: '🇵🇹', intensity: 160 },
+    { name: 'Latvia',        flag: '🇱🇻', intensity: 165 },
+    { name: 'Spain',         flag: '🇪🇸', intensity: 175 },
+    { name: 'Lithuania',     flag: '🇱🇹', intensity: 180 },
+    { name: 'United Kingdom',flag: '🇬🇧', intensity: 185 },
+    { name: 'Belgium',       flag: '🇧🇪', intensity: 190 },
+    { name: 'Netherlands',   flag: '🇳🇱', intensity: 280 },
+    { name: 'Germany',       flag: '🇩🇪', intensity: 311 },
+    { name: 'Italy',         flag: '🇮🇹', intensity: 233 },
+    { name: 'Ireland',       flag: '🇮🇪', intensity: 330 },
+    { name: 'United States', flag: '🇺🇸', intensity: 388 },
+    { name: 'Japan',         flag: '🇯🇵', intensity: 474 },
+    { name: 'South Korea',   flag: '🇰🇷', intensity: 500 },
+    { name: 'China',         flag: '🇨🇳', intensity: 555 },
+    { name: 'Turkey',        flag: '🇹🇷', intensity: 438 },
+    { name: 'India',         flag: '🇮🇳', intensity: 632 },
+    { name: 'Mexico',        flag: '🇲🇽', intensity: 350 },
+    { name: 'Brazil',        flag: '🇧🇷', intensity: 103 },
+    { name: 'Argentina',     flag: '🇦🇷', intensity: 280 },
+    { name: 'Colombia',      flag: '🇨🇴', intensity: 176 },
+    { name: 'Chile',         flag: '🇨🇱', intensity: 268 },
+    { name: 'Egypt',         flag: '🇪🇬', intensity: 480 },
+    { name: 'South Africa',  flag: '🇿🇦', intensity: 825 },
+    { name: 'Nigeria',       flag: '🇳🇬', intensity: 430 },
+    { name: 'Saudi Arabia',  flag: '🇸🇦', intensity: 620 },
+    { name: 'Iran',          flag: '🇮🇷', intensity: 560 },
+    { name: 'UAE',           flag: '🇦🇪', intensity: 540 },
+    { name: 'Pakistan',      flag: '🇵🇰', intensity: 390 },
+    { name: 'Bangladesh',    flag: '🇧🇩', intensity: 510 },
+    { name: 'Indonesia',     flag: '🇮🇩', intensity: 700 },
+    { name: 'Vietnam',       flag: '🇻🇳', intensity: 480 },
+    { name: 'Thailand',      flag: '🇹🇭', intensity: 500 },
+    { name: 'Poland',        flag: '🇵🇱', intensity: 699 },
+    { name: 'Czech Republic',flag: '🇨🇿', intensity: 440 },
+    { name: 'Romania',       flag: '🇷🇴', intensity: 280 },
+    { name: 'Ukraine',       flag: '🇺🇦', intensity: 220 },
+    { name: 'Russia',        flag: '🇷🇺', intensity: 380 },
+    { name: 'Australia',     flag: '🇦🇺', intensity: 560 },
+  ];
+
+  const MAX_INTENSITY = 900;
+  const GAUGE_CIRCUMFERENCE = 251.2; // semicircle π*80
+
+  // ── State ──
+  let forecastData = [];
+  let threshold = 150;
+  let sortAscending = true;
+  let countryQuery = '';
+
+  // ── Helpers ──
+  function intensityClass(val) {
+    if (val <= 100) return 'very-low';
+    if (val <= 199) return 'low';
+    if (val <= 300) return 'moderate';
+    if (val <= 450) return 'high';
+    return 'very-high';
+  }
+
+  function intensityLabel(val) {
+    if (val <= 100) return 'Very Low';
+    if (val <= 199) return 'Low';
+    if (val <= 300) return 'Moderate';
+    if (val <= 450) return 'High';
+    return 'Very High';
+  }
+
+  function intensityColor(cls) {
+    const map = {
+      'very-low': '#43d9ad',
+      'low': '#43d9ad',
+      'moderate': '#f7c948',
+      'high': '#ff6584',
+      'very-high': '#ff3860',
+    };
+    return map[cls] || '#8892b0';
+  }
+
+  function clamp(val, min, max) {
+    return Math.min(Math.max(val, min), max);
+  }
+
+  function formatTime(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatHour(isoString) {
+    const d = new Date(isoString);
+    return d.getHours().toString().padStart(2, '0');
+  }
+
+  // ── Generation source colours ──
+  const GEN_COLORS = {
+    gas:        '#f7c948',
+    coal:       '#8892b0',
+    nuclear:    '#6c63ff',
+    wind:       '#43d9ad',
+    solar:      '#ff9f43',
+    hydro:      '#54a0ff',
+    imports:    '#ff6584',
+    biomass:    '#5f27cd',
+    other:      '#576574',
+    gas_cc:     '#f7c948',
+    oil:        '#ee5a24',
+    geothermal: '#1dd1a1',
+  };
+
+  const GEN_LABELS = {
+    gas:     'Gas',
+    coal:    'Coal',
+    nuclear: 'Nuclear',
+    wind:    'Wind',
+    solar:   'Solar',
+    hydro:   'Hydro',
+    imports: 'Imports',
+    biomass: 'Biomass',
+    other:   'Other',
+    oil:     'Oil',
+    geothermal: 'Geothermal',
+  };
+
+  // ── DOM refs ──
+  const gaugeNum       = document.getElementById('gaugeNum');
+  const gaugeValue     = document.getElementById('gaugeValue');
+  const gaugeFill      = document.getElementById('gaugeFill');
+  const intensLbl      = document.getElementById('intensityLabel');
+  const intensIdx      = document.getElementById('intensityIndex');
+  const lastUpdated    = document.getElementById('lastUpdated');
+  const refreshBtn     = document.getElementById('refreshBtn');
+  const refreshIcon    = document.getElementById('refreshIcon');
+  const donutSvg       = document.getElementById('donutSvg');
+  const donutLegend    = document.getElementById('donutLegend');
+  const forecastGrid   = document.getElementById('forecastGrid');
+  const bestWindowLbl  = document.getElementById('bestWindowLabel');
+  const windowList     = document.getElementById('windowList');
+  const tipsList       = document.getElementById('tipsList');
+  const countryBody    = document.getElementById('countryTableBody');
+  const countrySearch  = document.getElementById('countrySearch');
+  const sortAscBtn     = document.getElementById('sortAsc');
+  const sortDescBtn    = document.getElementById('sortDesc');
+  const thresholdSlider = document.getElementById('thresholdSlider');
+  const thresholdVal   = document.getElementById('thresholdVal');
+
+  // ── Gauge render ──
+  function renderGauge(val, index) {
+    const cls   = intensityClass(val);
+    const color = intensityColor(cls);
+    const pct   = clamp(val / 500, 0, 1); // cap at 500 for gauge fill
+    const offset = GAUGE_CIRCUMFERENCE * (1 - pct);
+
+    gaugeNum.textContent = val;
+    gaugeValue.style.color = color;
+    gaugeFill.style.strokeDashoffset = offset;
+    gaugeFill.setAttribute('class', `gauge-fill stroke-${cls}`);
+
+    intensLbl.textContent = intensityLabel(val);
+    intensLbl.className = `intensity-label bg-${cls}`;
+
+    if (index) {
+      intensIdx.textContent = `Index: ${index}`;
+    }
+  }
+
+  // ── Tips render ──
+  function renderTips(val) {
+    const cls = intensityClass(val);
+    const allTips = {
+      'very-low': [
+        { icon: '🚀', title: 'Perfect time to run batch jobs', desc: 'Grid is at its greenest. Schedule heavy compute, ML training, and data pipeline runs now.' },
+        { icon: '🔋', title: 'Charge electric vehicles', desc: 'Charging EVs right now produces minimal carbon — ideal if you can schedule charging.' },
+        { icon: '📦', title: 'Run backup and sync operations', desc: 'Trigger cloud backups, database snapshots, and large file syncs for best carbon efficiency.' },
+        { icon: '🌬️', title: 'High renewable output', desc: 'Wind and solar are likely driving intensity down. Share this moment with your sustainability report.' },
+      ],
+      low: [
+        { icon: '✅', title: 'Good window for intensive tasks', desc: 'Carbon intensity is low — a great time to run non-urgent workloads and avoid peak hours.' },
+        { icon: '🔌', title: 'Schedule discretionary loads', desc: 'Dishwashers, washing machines, and EV chargers will use relatively clean energy now.' },
+        { icon: '📊', title: 'Batch reporting is efficient', desc: 'Generate large reports and analytics jobs while the grid is green.' },
+      ],
+      moderate: [
+        { icon: '⚖️', title: 'Mix of renewables and fossil fuels', desc: 'Consider deferring non-urgent heavy workloads by a few hours if a greener window follows.' },
+        { icon: '📉', title: 'Reduce idle server load', desc: 'Turn off unused compute instances and scale down non-critical services to lower consumption.' },
+        { icon: '🕐', title: 'Check the forecast', desc: 'A lower-intensity window may be coming — use the 24h forecast to plan your next batch job.' },
+      ],
+      high: [
+        { icon: '⚠️', title: 'Grid is relatively dirty right now', desc: 'Avoid scheduling new heavy jobs. Defer batch workloads to a cleaner window.' },
+        { icon: '🛑', title: 'Pause non-critical processes', desc: 'Now is a good time to pause discretionary compute like analytics pipelines and data exports.' },
+        { icon: '💡', title: 'Reduce lighting and idle load', desc: 'Switch off unused monitors and equipment — every watt saved matters during peak dirty hours.' },
+        { icon: '📧', title: 'Notify your team', desc: 'Alert engineers to hold off on deployments or heavy CI runs until intensity drops.' },
+      ],
+      'very-high': [
+        { icon: '🔴', title: 'Highest carbon period — act now', desc: 'Grid carbon intensity is very high. Immediately defer all non-essential workloads.' },
+        { icon: '🛑', title: 'Suspend batch processing', desc: 'Stop or pause all background jobs, ML training, and data ingestion until intensity falls.' },
+        { icon: '📴', title: 'Reduce server footprint', desc: 'Scale down to minimum required capacity. Shut down staging environments and dev clusters.' },
+        { icon: '🌐', title: 'Shift load to greener regions', desc: 'If multi-region, route compute to data centers in countries with lower current intensity.' },
+      ],
+    };
+
+    const tips = allTips[cls] || allTips.moderate;
+    tipsList.innerHTML = tips.map(t => `
+      <div class="tip-item">
+        <div class="tip-icon" aria-hidden="true">${t.icon}</div>
+        <div class="tip-body">
+          <div class="tip-title">${t.title}</div>
+          <div class="tip-desc">${t.desc}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Donut chart ──
+  function renderDonut(genData) {
+    // Filter and sort by percentage
+    const items = genData
+      .filter(g => g.perc > 0.5)
+      .sort((a, b) => b.perc - a.perc);
+
+    const total = items.reduce((s, g) => s + g.perc, 0);
+    const cx = 70, cy = 70, r = 50;
+    const circumference = 2 * Math.PI * r;
+
+    let currentAngle = -Math.PI / 2; // start top
+    const segments = [];
+
+    items.forEach(g => {
+      const fraction = g.perc / total;
+      const angle = fraction * 2 * Math.PI;
+      const large = angle > Math.PI ? 1 : 0;
+      const x1 = cx + r * Math.cos(currentAngle);
+      const y1 = cy + r * Math.sin(currentAngle);
+      const x2 = cx + r * Math.cos(currentAngle + angle);
+      const y2 = cy + r * Math.sin(currentAngle + angle);
+      const color = GEN_COLORS[g.fuel] || GEN_COLORS.other;
+      segments.push({ x1, y1, x2, y2, large, color, g, fraction, endAngle: currentAngle + angle });
+      currentAngle += angle;
+    });
+
+    // Build SVG paths (stroke-based segments)
+    let svgContent = `<circle cx="70" cy="70" r="50" fill="none" stroke="var(--surface2)" stroke-width="22"/>`;
+
+    // Use stroke-dasharray technique on separate paths
+    items.forEach((g, i) => {
+      const seg = segments[i];
+      const pct = seg.fraction * circumference;
+      const color = GEN_COLORS[g.fuel] || GEN_COLORS.other;
+      const priorPct = segments.slice(0, i).reduce((s, x) => s + x.fraction * circumference, 0);
+      svgContent += `
+        <circle cx="70" cy="70" r="50" fill="none"
+          stroke="${color}"
+          stroke-width="22"
+          stroke-dasharray="${pct} ${circumference}"
+          stroke-dashoffset="${-priorPct + circumference * 0.25}"
+          transform="rotate(-90 70 70)"
+          style="transform-origin:70px 70px;transition:stroke-dasharray 0.8s">
+          <title>${GEN_LABELS[g.fuel] || g.fuel}: ${g.perc.toFixed(1)}%</title>
+        </circle>`;
+    });
+
+    // Centre text
+    const topFuel = items[0];
+    if (topFuel) {
+      svgContent += `
+        <text x="70" y="66" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700" font-family="Inter,sans-serif">
+          ${topFuel.perc.toFixed(0)}%
+        </text>
+        <text x="70" y="80" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="Inter,sans-serif">
+          ${GEN_LABELS[topFuel.fuel] || topFuel.fuel}
+        </text>`;
+    }
+
+    donutSvg.innerHTML = svgContent;
+
+    // Legend
+    donutLegend.innerHTML = items.slice(0, 7).map(g => {
+      const color = GEN_COLORS[g.fuel] || GEN_COLORS.other;
+      return `
+        <div class="legend-item">
+          <div class="legend-dot" style="background:${color}"></div>
+          <span class="legend-name">${GEN_LABELS[g.fuel] || g.fuel}</span>
+          <span class="legend-pct">${g.perc.toFixed(1)}%</span>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Forecast bars ──
+  function renderForecast(data) {
+    forecastData = data;
+    const vals = data.map(d => d.intensity.forecast);
+    const minVal = Math.min(...vals);
+    const maxVal = Math.max(...vals);
+
+    // Find hours below threshold
+    const belowThreshold = data.filter(d => d.intensity.forecast <= threshold);
+    const bestHours = data
+      .slice()
+      .sort((a, b) => a.intensity.forecast - b.intensity.forecast)
+      .slice(0, 3);
+
+    const bestSet = new Set(bestHours.map(d => d.from));
+
+    forecastGrid.innerHTML = data.map(d => {
+      const val = d.intensity.forecast;
+      const cls = intensityClass(val);
+      const color = intensityColor(cls);
+      const heightPct = clamp((val - 0) / (maxVal - 0), 0.05, 1) * 100;
+      const hour = formatHour(d.from);
+      const isBest = bestSet.has(d.from);
+      const isBelow = val <= threshold;
+
+      return `
+        <div class="forecast-bar-wrap${isBest ? ' best' : ''}" role="listitem"
+             aria-label="${hour}:00 — ${val} gCO2/kWh — ${intensityLabel(val)}">
+          <div class="forecast-bar-bg">
+            <div class="forecast-bar-fill" style="height:${heightPct}%;background:${color};opacity:${isBelow ? '1' : '0.5'}"></div>
+            <div class="forecast-tooltip">
+              <strong>${hour}:00</strong> — ${val} g<br>
+              <span style="color:${color}">${intensityLabel(val)}</span>
+            </div>
+          </div>
+          <div class="forecast-hour">${hour}</div>
+        </div>`;
+    }).join('');
+
+    // Best window label
+    if (belowThreshold.length > 0) {
+      const startHr = formatHour(belowThreshold[0].from);
+      bestWindowLbl.innerHTML = `✅ <strong>${belowThreshold.length} hours</strong> below ${threshold}g threshold today — starting at <strong>${startHr}:00</strong>`;
+      bestWindowLbl.style.color = 'var(--green)';
+    } else {
+      bestWindowLbl.innerHTML = `⚡ No hours below ${threshold}g today — try raising the threshold`;
+      bestWindowLbl.style.color = 'var(--yellow)';
+    }
+
+    // Top windows
+    renderBestWindows(bestHours, maxVal);
+  }
+
+  function renderBestWindows(bestHours, maxVal) {
+    const ranks = ['rank-1', 'rank-2', 'rank-3'];
+    windowList.innerHTML = bestHours.map((d, i) => {
+      const val = d.intensity.forecast;
+      const cls = intensityClass(val);
+      const color = intensityColor(cls);
+      const barW = clamp(100 - (val / maxVal) * 100, 10, 100);
+      const hour = formatHour(d.from);
+      return `
+        <div class="window-item">
+          <div class="window-rank ${ranks[i]}">${i + 1}</div>
+          <div class="window-time">${hour}:00 – ${(parseInt(hour) + 1).toString().padStart(2,'0')}:00</div>
+          <div class="window-val" style="color:${color}">${val}<span style="font-size:10px;color:var(--muted)"> g</span></div>
+          <div class="window-bar">
+            <div class="window-bar-fill" style="width:${barW}%;background:${color}"></div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Country table ──
+  function renderCountryTable() {
+    const query = countryQuery.toLowerCase();
+    let data = COUNTRIES.filter(c => c.name.toLowerCase().includes(query));
+    data = data.slice().sort((a, b) => sortAscending ? a.intensity - b.intensity : b.intensity - a.intensity);
+    const maxI = Math.max(...data.map(c => c.intensity));
+
+    countryBody.innerHTML = data.map(c => {
+      const cls = intensityClass(c.intensity);
+      const color = intensityColor(cls);
+      const barW = clamp((c.intensity / maxI) * 100, 2, 100);
+      return `
+        <tr>
+          <td>
+            <span class="flag" aria-hidden="true">${c.flag}</span>
+            <span style="margin-left:8px">${c.name}</span>
+          </td>
+          <td style="font-variant-numeric:tabular-nums;font-weight:700;color:${color}">${c.intensity}</td>
+          <td class="country-bar-cell">
+            <div class="country-bar-bg">
+              <div class="country-bar-fill" style="width:${barW}%;background:${color}"></div>
+            </div>
+          </td>
+          <td style="color:${color};font-size:12px;font-weight:600">${intensityLabel(c.intensity)}</td>
+        </tr>`;
+    }).join('');
+
+    if (!data.length) {
+      countryBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No countries match your search</td></tr>`;
+    }
+  }
+
+  // ── Fetch UK live intensity ──
+  async function fetchIntensity() {
+    const res = await fetch('https://api.carbonintensity.org.uk/intensity');
+    if (!res.ok) throw new Error(`Intensity API ${res.status}`);
+    const json = await res.json();
+    return json.data[0];
+  }
+
+  // ── Fetch generation mix ──
+  async function fetchGeneration() {
+    const res = await fetch('https://api.carbonintensity.org.uk/generation');
+    if (!res.ok) throw new Error(`Generation API ${res.status}`);
+    const json = await res.json();
+    return json.data.generationmix;
+  }
+
+  // ── Fetch today forecast ──
+  async function fetchForecast() {
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await fetch(`https://api.carbonintensity.org.uk/intensity/date/${today}`);
+    if (!res.ok) throw new Error(`Forecast API ${res.status}`);
+    const json = await res.json();
+    return json.data;
+  }
+
+  // ── Show notice ──
+  function showNotice(container, type, msg) {
+    container.innerHTML = `<div class="notice notice-${type}" role="alert">⚠️ ${msg}</div>`;
+  }
+
+  // ── Main load ──
+  async function loadAll() {
+    refreshBtn.disabled = true;
+    refreshIcon.className = 'spin';
+    lastUpdated.textContent = 'Updating…';
+
+    // Intensity
+    try {
+      const d = await fetchIntensity();
+      const val = d.intensity.actual ?? d.intensity.forecast;
+      renderGauge(val, d.intensity.index);
+      renderTips(val);
+    } catch (e) {
+      intensLbl.textContent = 'API unavailable';
+      intensLbl.className = 'intensity-label notice-err';
+      gaugeNum.textContent = '?';
+      showNotice(tipsList, 'err', `Could not load UK intensity: ${e.message}`);
+    }
+
+    // Generation mix
+    try {
+      const gen = await fetchGeneration();
+      renderDonut(gen);
+    } catch (e) {
+      donutLegend.innerHTML = `<div class="notice notice-warn">Generation data unavailable</div>`;
+    }
+
+    // Forecast
+    try {
+      const fc = await fetchForecast();
+      if (fc && fc.length) {
+        renderForecast(fc);
+      } else {
+        bestWindowLbl.textContent = 'No forecast data available for today.';
+      }
+    } catch (e) {
+      bestWindowLbl.innerHTML = `<span style="color:var(--accent2)">Forecast unavailable: ${e.message}</span>`;
+    }
+
+    lastUpdated.textContent = `Updated ${new Date().toLocaleTimeString('en-GB')}`;
+    refreshBtn.disabled = false;
+    refreshIcon.className = '';
+  }
+
+  // ── Events ──
+  refreshBtn.addEventListener('click', loadAll);
+
+  thresholdSlider.addEventListener('input', () => {
+    threshold = parseInt(thresholdSlider.value);
+    thresholdVal.textContent = threshold;
+    if (forecastData.length) renderForecast(forecastData);
+  });
+
+  countrySearch.addEventListener('input', () => {
+    countryQuery = countrySearch.value;
+    renderCountryTable();
+  });
+
+  sortAscBtn.addEventListener('click', () => {
+    sortAscending = true;
+    sortAscBtn.classList.add('active');
+    sortAscBtn.setAttribute('aria-pressed', 'true');
+    sortDescBtn.classList.remove('active');
+    sortDescBtn.setAttribute('aria-pressed', 'false');
+    renderCountryTable();
+  });
+
+  sortDescBtn.addEventListener('click', () => {
+    sortAscending = false;
+    sortDescBtn.classList.add('active');
+    sortDescBtn.setAttribute('aria-pressed', 'true');
+    sortAscBtn.classList.remove('active');
+    sortAscBtn.setAttribute('aria-pressed', 'false');
+    renderCountryTable();
+  });
+
+  // ── Init ──
+  renderCountryTable();
+  loadAll();
+
+  // Auto-refresh every 5 minutes
+  setInterval(loadAll, 5 * 60 * 1000);
+
+})();
+</script>
+</body>
+</html>

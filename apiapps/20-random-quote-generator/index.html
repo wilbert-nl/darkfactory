@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Random Quote Generator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08);
+      --accent: #1db954;
+      --accent2: #ff6b6b;
+      --text: #ffffff;
+      --muted: #9ca3af;
+      --radius: 12px;
+      --font-display: 'Bebas Neue', Impact, sans-serif;
+      --font-body: 'Figtree', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --font: var(--font-body);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .header-text h1 { font-size: 18px; font-weight: 700; }
+    .header-text p  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 0;
+      padding: 0 32px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 14px 20px;
+      border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-count {
+      background: var(--surface2);
+      border-radius: 20px;
+      font-size: 11px;
+      padding: 1px 7px;
+      color: var(--muted);
+    }
+    .tab-btn.active .tab-count {
+      background: rgba(168,85,247,.2);
+      color: var(--accent);
+    }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      padding: 32px;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── Tab panels ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+      align-items: center;
+    }
+    .filter-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      font-weight: 600;
+    }
+    .tag-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .2s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--text); }
+    .chip.active {
+      background: rgba(168,85,247,.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Quote card ── */
+    .quote-card-wrap {
+      position: relative;
+      margin-bottom: 24px;
+    }
+    .quote-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 44px 48px;
+      position: relative;
+      overflow: hidden;
+      transition: opacity .4s, transform .4s;
+    }
+    .quote-card.fade-out { opacity: 0; transform: translateY(-8px); }
+    .quote-card.fade-in  { animation: fadeIn .4s ease forwards; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .quote-card::before {
+      content: '\201C';
+      position: absolute;
+      top: -10px; left: 32px;
+      font-size: 120px;
+      color: var(--accent);
+      opacity: .12;
+      font-family: Georgia, serif;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .quote-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(168,85,247,.15);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 20px;
+    }
+
+    .quote-text {
+      font-size: clamp(18px, 2.5vw, 24px);
+      line-height: 1.65;
+      font-style: italic;
+      color: var(--text);
+      margin-bottom: 24px;
+    }
+
+    .quote-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .author-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .author-name {
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .author-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .quote-actions {
+      position: absolute;
+      top: 16px; right: 16px;
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .quote-card:hover .quote-actions { opacity: 1; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      border: none;
+      font-family: var(--font);
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #7b73ff; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(168,85,247,.4); }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+    }
+    .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+    .btn-icon {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all .2s;
+    }
+    .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-icon.fav-active { color: var(--accent2); border-color: var(--accent2); background: rgba(244,63,94,.1); }
+
+    /* ── Action row below card ── */
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .card-actions .spacer { flex: 1; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      transition: transform .3s ease;
+      z-index: 1000;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { border-color: var(--green); }
+    #toast.error   { border-color: var(--accent2); }
+
+    /* ── Favourites panel ── */
+    .favs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .fav-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      position: relative;
+      transition: border-color .2s;
+    }
+    .fav-card:hover { border-color: var(--accent); }
+    .fav-card .fav-tag {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 10px;
+    }
+    .fav-card .fav-text {
+      font-size: 15px;
+      font-style: italic;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    .fav-card .fav-author {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .fav-card .fav-remove {
+      position: absolute;
+      top: 12px; right: 12px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color .2s, background .2s;
+    }
+    .fav-card .fav-remove:hover { color: var(--accent2); background: rgba(244,63,94,.1); }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 32px;
+      color: var(--muted);
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
+    .empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+    .empty-state p  { font-size: 14px; }
+
+    /* ── Canvas modal ── */
+    #canvas-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #canvas-modal.open { display: flex; }
+    .canvas-modal-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      max-width: 600px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .canvas-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .canvas-modal-header h3 { font-size: 16px; font-weight: 700; }
+    #quote-canvas {
+      border-radius: 8px;
+      width: 100%;
+      display: block;
+    }
+    .canvas-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── Stats strip ── */
+    .stats-strip {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat-value { font-size: 24px; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+    /* ── Search ── */
+    .search-wrap {
+      position: relative;
+      margin-left: auto;
+    }
+    .search-wrap input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px 8px 36px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      width: 200px;
+      transition: border-color .2s, width .3s;
+      font-family: var(--font);
+    }
+    .search-wrap input:focus { border-color: var(--accent); width: 260px; }
+    .search-icon {
+      position: absolute;
+      left: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    /* ── Pulse animation for new quote ── */
+    @keyframes pulseGlow {
+      0%   { box-shadow: 0 0 0 0 rgba(168,85,247,.4); }
+      70%  { box-shadow: 0 0 0 12px rgba(168,85,247,0); }
+      100% { box-shadow: 0 0 0 0 rgba(168,85,247,0); }
+    }
+    .quote-card.pulse { animation: fadeIn .4s ease forwards, pulseGlow .8s ease .2s; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      main { padding: 20px 16px; }
+      .quote-card { padding: 32px 24px; }
+      .tabs { padding: 0 16px; }
+      header { padding: 16px; }
+      .favs-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Focus visible */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* === Media v2 Design System === */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 700px 500px at 70% -10%, rgba(29,185,84,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body > * { position: relative; z-index: 1; }
+
+  h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
+  h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent); }
+  h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+  .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .card, .result, .item, .book, .movie, .album, .article, .show, .post, .score, [class*="card"], [class*="item"], [class*="result"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    transition: transform 0.2s, background 0.2s;
+    animation: mediaFade 0.4s ease both;
+  }
+  .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
+
+  input, select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+  button, .btn, input[type="submit"], input[type="button"] {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 999px;
+    padding: 0.75rem 2rem;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: transform 0.15s, filter 0.15s;
+  }
+  button:hover { transform: scale(1.03); filter: brightness(1.1); }
+  button:active { transform: scale(0.97); }
+
+  .tag, .badge, .genre, .category, .label, .type, .sport, .league {
+    display: inline-block;
+    background: rgba(29,185,84,0.12);
+    border: 1px solid rgba(29,185,84,0.25);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .score, .rating, .stat, .number, .count {
+    font-family: var(--font-mono);
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .live, .trending, .new { color: var(--accent2); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
+  td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+  @keyframes mediaFade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .live::before { content: '● '; animation: livePulse 1.5s ease infinite; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo" aria-hidden="true">💬</div>
+  <div class="header-text">
+    <h1>Quote Generator</h1>
+    <p>Daily inspiration for coaches, creators &amp; brands</p>
+  </div>
+  <div class="header-actions">
+    <div class="spinner" id="global-spinner" aria-label="Loading" role="status"></div>
+  </div>
+</header>
+
+<!-- ── Tabs ── -->
+<nav class="tabs" role="tablist" aria-label="Main navigation">
+  <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="panel-explore" id="tab-explore"   data-tab="explore">
+    ✨ Explore <span class="tab-count" id="explore-count">—</span>
+  </button>
+  <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="panel-favourites" id="tab-favourites" data-tab="favourites">
+    ♥ Favourites <span class="tab-count" id="fav-count">0</span>
+  </button>
+</nav>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- Explore panel -->
+  <section id="panel-explore" class="panel active" role="tabpanel" aria-labelledby="tab-explore">
+
+    <!-- Filter bar -->
+    <div class="filter-bar" role="group" aria-label="Filter by category">
+      <span class="filter-label">Category:</span>
+      <div class="tag-chips" id="tag-chips">
+        <button class="chip active" data-tag="all">All</button>
+        <button class="chip" data-tag="motivation">Motivation</button>
+        <button class="chip" data-tag="leadership">Leadership</button>
+        <button class="chip" data-tag="resilience">Resilience</button>
+        <button class="chip" data-tag="wisdom">Wisdom</button>
+        <button class="chip" data-tag="success">Success</button>
+        <button class="chip" data-tag="creativity">Creativity</button>
+        <button class="chip" data-tag="mindset">Mindset</button>
+      </div>
+    </div>
+
+    <!-- Quote card -->
+    <div class="quote-card-wrap">
+      <article class="quote-card pulse" id="quote-card" aria-live="polite" aria-atomic="true">
+        <div class="quote-actions">
+          <button class="btn-icon" id="fav-btn" aria-label="Add to favourites" title="Favourite">♥</button>
+          <button class="btn-icon" id="copy-btn" aria-label="Copy quote" title="Copy">📋</button>
+          <button class="btn-icon" id="image-btn" aria-label="Generate image" title="Create image">🖼</button>
+        </div>
+        <div class="quote-tag" id="quote-tag">✨ Motivation</div>
+        <p class="quote-text" id="quote-text">Loading a great quote for you…</p>
+        <div class="quote-author">
+          <div class="author-avatar" id="author-avatar" aria-hidden="true">?</div>
+          <div>
+            <div class="author-name" id="author-name">—</div>
+            <div class="author-sub" id="author-sub">Loading…</div>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Card actions -->
+    <div class="card-actions">
+      <button class="btn btn-primary" id="new-quote-btn">
+        🔀 New Quote
+      </button>
+      <button class="btn btn-secondary" id="share-btn">
+        ↗ Share
+      </button>
+      <div class="spacer"></div>
+      <span style="font-size:13px; color:var(--muted);" id="source-label"></span>
+    </div>
+
+  </section>
+
+  <!-- Favourites panel -->
+  <section id="panel-favourites" class="panel" role="tabpanel" aria-labelledby="tab-favourites" hidden>
+
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+      <h2 style="font-size:18px; font-weight:700;">Saved Quotes</h2>
+      <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input type="search" id="fav-search" placeholder="Search favourites…" aria-label="Search favourites" />
+      </div>
+      <button class="btn btn-secondary" id="clear-favs-btn" style="margin-left:auto;">🗑 Clear All</button>
+    </div>
+
+    <div class="favs-grid" id="favs-grid"></div>
+
+    <div class="empty-state" id="favs-empty" hidden>
+      <div class="empty-icon">🌟</div>
+      <h3>No favourites yet</h3>
+      <p>Hit ♥ on any quote to save it here.</p>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ── Canvas modal ── -->
+<div id="canvas-modal" role="dialog" aria-modal="true" aria-labelledby="canvas-title">
+  <div class="canvas-modal-inner">
+    <div class="canvas-modal-header">
+      <h3 id="canvas-title">🖼 Quote Image</h3>
+      <button class="btn-ghost" id="canvas-close" aria-label="Close">✕</button>
+    </div>
+    <canvas id="quote-canvas" width="560" height="280"></canvas>
+    <div class="canvas-actions">
+      <button class="btn btn-secondary" id="canvas-close2">Cancel</button>
+      <button class="btn btn-primary" id="canvas-download">⬇ Download PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  'use strict';
+
+  /* ─────────────────────────────────────────────
+     Curated fallback quote library (50+ quotes)
+  ───────────────────────────────────────────── */
+  const FALLBACK_QUOTES = [
+    { text: `The only way to do great work is to love what you do.`, author: `Steve Jobs`, tag: `motivation` },
+    { text: `In the middle of every difficulty lies opportunity.`, author: `Albert Einstein`, tag: `resilience` },
+    { text: `It does not matter how slowly you go as long as you do not stop.`, author: `Confucius`, tag: `motivation` },
+    { text: `The future belongs to those who believe in the beauty of their dreams.`, author: `Eleanor Roosevelt`, tag: `mindset` },
+    { text: `Success is not final, failure is not fatal: it is the courage to continue that counts.`, author: `Winston Churchill`, tag: `resilience` },
+    { text: `Innovation distinguishes between a leader and a follower.`, author: `Steve Jobs`, tag: `leadership` },
+    { text: `The best way to predict the future is to create it.`, author: `Peter Drucker`, tag: `leadership` },
+    { text: `Creativity is intelligence having fun.`, author: `Albert Einstein`, tag: `creativity` },
+    { text: `The only limit to our realization of tomorrow is our doubts of today.`, author: `Franklin D. Roosevelt`, tag: `mindset` },
+    { text: `Great things never come from comfort zones.`, author: `Neil Strauss`, tag: `motivation` },
+    { text: `Leadership is not about being in charge. It is about taking care of those in your charge.`, author: `Simon Sinek`, tag: `leadership` },
+    { text: `The secret of getting ahead is getting started.`, author: `Mark Twain`, tag: `success` },
+    { text: `Believe you can and you are halfway there.`, author: `Theodore Roosevelt`, tag: `mindset` },
+    { text: `Knowing yourself is the beginning of all wisdom.`, author: `Aristotle`, tag: `wisdom` },
+    { text: `The wise man does not lay up his own treasures; the more he gives to others, the more he has.`, author: `Lao Tzu`, tag: `wisdom` },
+    { text: `You miss 100% of the shots you do not take.`, author: `Wayne Gretzky`, tag: `success` },
+    { text: `Whether you think you can, or you think you cannot, you are right.`, author: `Henry Ford`, tag: `mindset` },
+    { text: `Do what you can, with what you have, where you are.`, author: `Theodore Roosevelt`, tag: `resilience` },
+    { text: `Life is what happens when you are busy making other plans.`, author: `John Lennon`, tag: `wisdom` },
+    { text: `The greatest glory in living lies not in never falling, but in rising every time we fall.`, author: `Nelson Mandela`, tag: `resilience` },
+    { text: `Creativity takes courage.`, author: `Henri Matisse`, tag: `creativity` },
+    { text: `You cannot build a reputation on what you are going to do.`, author: `Henry Ford`, tag: `success` },
+    { text: `The measure of intelligence is the ability to change.`, author: `Albert Einstein`, tag: `wisdom` },
+    { text: `It always seems impossible until it is done.`, author: `Nelson Mandela`, tag: `motivation` },
+    { text: `Imagination is more important than knowledge.`, author: `Albert Einstein`, tag: `creativity` },
+    { text: `The best leaders are those most interested in surrounding themselves with assistants and associates smarter than they are.`, author: `John C. Maxwell`, tag: `leadership` },
+    { text: `Tough times never last, but tough people do.`, author: `Robert H. Schuller`, tag: `resilience` },
+    { text: `Your time is limited, so do not waste it living someone else's life.`, author: `Steve Jobs`, tag: `motivation` },
+    { text: `An investment in knowledge pays the best interest.`, author: `Benjamin Franklin`, tag: `wisdom` },
+    { text: `Strive not to be a success, but rather to be of value.`, author: `Albert Einstein`, tag: `success` },
+    { text: `The only person you are destined to become is the person you decide to be.`, author: `Ralph Waldo Emerson`, tag: `mindset` },
+    { text: `You have brains in your head. You have feet in your shoes. You can steer yourself any direction you choose.`, author: `Dr. Seuss`, tag: `motivation` },
+    { text: `A leader is one who knows the way, goes the way, and shows the way.`, author: `John C. Maxwell`, tag: `leadership` },
+    { text: `Change is the end result of all true learning.`, author: `Leo Buscaglia`, tag: `mindset` },
+    { text: `Creativity is seeing what others see and thinking what no one else has ever thought.`, author: `Albert Einstein`, tag: `creativity` },
+    { text: `Hardships often prepare ordinary people for an extraordinary destiny.`, author: `C.S. Lewis`, tag: `resilience` },
+    { text: `Success usually comes to those who are too busy looking for it.`, author: `Henry David Thoreau`, tag: `success` },
+    { text: `Do not go where the path may lead, go instead where there is no path and leave a trail.`, author: `Ralph Waldo Emerson`, tag: `motivation` },
+    { text: `The secret of success is to do the common thing uncommonly well.`, author: `John D. Rockefeller`, tag: `success` },
+    { text: `Start where you are. Use what you have. Do what you can.`, author: `Arthur Ashe`, tag: `resilience` },
+    { text: `The man who has confidence in himself gains the confidence of others.`, author: `Hasidic Proverb`, tag: `leadership` },
+    { text: `Not all those who wander are lost.`, author: `J.R.R. Tolkien`, tag: `wisdom` },
+    { text: `Two roads diverged in a wood, and I took the one less traveled by.`, author: `Robert Frost`, tag: `wisdom` },
+    { text: `We know what we are, but know not what we may be.`, author: `William Shakespeare`, tag: `mindset` },
+    { text: `The only way to make sense out of change is to plunge into it, move with it, and join the dance.`, author: `Alan Watts`, tag: `mindset` },
+    { text: `To live is the rarest thing in the world. Most people exist, that is all.`, author: `Oscar Wilde`, tag: `wisdom` },
+    { text: `The most courageous act is still to think for yourself. Aloud.`, author: `Coco Chanel`, tag: `resilience` },
+    { text: `You cannot cross the sea merely by standing and staring at the water.`, author: `Rabindranath Tagore`, tag: `motivation` },
+    { text: `There is no substitute for hard work.`, author: `Thomas Edison`, tag: `success` },
+    { text: `Genius is one percent inspiration and ninety-nine percent perspiration.`, author: `Thomas Edison`, tag: `success` },
+    { text: `Every artist was first an amateur.`, author: `Ralph Waldo Emerson`, tag: `creativity` },
+    { text: `Logic will get you from A to B. Imagination will take you everywhere.`, author: `Albert Einstein`, tag: `creativity` },
+    { text: `What lies behind us and what lies before us are tiny matters compared to what lies within us.`, author: `Ralph Waldo Emerson`, tag: `mindset` },
+    { text: `The only true wisdom is in knowing you know nothing.`, author: `Socrates`, tag: `wisdom` },
+    { text: `Life is not measured by the number of breaths we take, but by the moments that take our breath away.`, author: `Maya Angelou`, tag: `wisdom` },
+  ];
+
+  /* ─────────────────────────────────────────────
+     State
+  ───────────────────────────────────────────── */
+  let currentQuote  = null;
+  let activeTag     = `all`;
+  let favourites    = JSON.parse(localStorage.getItem(`qg-favs`) || `[]`);
+  let favSearchTerm = ``;
+
+  /* ─────────────────────────────────────────────
+     DOM refs
+  ───────────────────────────────────────────── */
+  const quoteCard    = document.getElementById(`quote-card`);
+  const quoteText    = document.getElementById(`quote-text`);
+  const quoteBadge   = document.getElementById(`quote-tag`);
+  const authorAvatar = document.getElementById(`author-avatar`);
+  const authorName   = document.getElementById(`author-name`);
+  const authorSub    = document.getElementById(`author-sub`);
+  const favBtn       = document.getElementById(`fav-btn`);
+  const copyBtn      = document.getElementById(`copy-btn`);
+  const imageBtn     = document.getElementById(`image-btn`);
+  const newQuoteBtn  = document.getElementById(`new-quote-btn`);
+  const shareBtn     = document.getElementById(`share-btn`);
+  const sourceLabel  = document.getElementById(`source-label`);
+  const spinner      = document.getElementById(`global-spinner`);
+  const favsGrid     = document.getElementById(`favs-grid`);
+  const favsEmpty    = document.getElementById(`favs-empty`);
+  const favSearch    = document.getElementById(`fav-search`);
+  const favCount     = document.getElementById(`fav-count`);
+  const exploreCount = document.getElementById(`explore-count`);
+  const toast        = document.getElementById(`toast`);
+  const canvasModal  = document.getElementById(`canvas-modal`);
+  const qCanvas      = document.getElementById(`quote-canvas`);
+
+  /* ─────────────────────────────────────────────
+     Toast
+  ───────────────────────────────────────────── */
+  let toastTimer = null;
+  function showToast(msg, type = `success`) {
+    toast.textContent = ``;
+    const icon = document.createElement(`span`);
+    icon.textContent = type === `success` ? `✅` : `⚠️`;
+    icon.setAttribute(`aria-hidden`, `true`);
+    toast.appendChild(icon);
+    toast.appendChild(document.createTextNode(` ${msg}`));
+    toast.className = `show ${type}`;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.className = ``; }, 2800);
+  }
+
+  /* ─────────────────────────────────────────────
+     Fetch quote
+  ───────────────────────────────────────────── */
+  async function fetchRandomQuote() {
+    try {
+      const res = await Promise.race([
+        fetch(`https://dummyjson.com/quotes/random`),
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`timeout`)), 5000))
+      ]);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return {
+        text:   data.quote,
+        author: data.author,
+        tag:    `motivation`,
+        source: `API`
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function pickFallback(tag) {
+    const pool = tag === `all`
+      ? FALLBACK_QUOTES
+      : FALLBACK_QUOTES.filter(q => q.tag === tag);
+    if (!pool.length) return FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
+    let q;
+    do { q = pool[Math.floor(Math.random() * pool.length)]; }
+    while (pool.length > 1 && currentQuote && q.text === currentQuote.text);
+    return { ...q, source: `local` };
+  }
+
+  async function loadQuote(animated = true) {
+    if (animated) {
+      quoteCard.classList.add(`fade-out`);
+      await new Promise(r => setTimeout(r, 300));
+    }
+    spinner.classList.add(`active`);
+    newQuoteBtn.disabled = true;
+
+    let quote = null;
+    if (activeTag === `all`) {
+      quote = await fetchRandomQuote();
+    }
+    if (!quote) {
+      quote = pickFallback(activeTag);
+    } else {
+      // Assign a tag that fits the active filter (API quotes are tag-agnostic)
+      quote.tag = activeTag === `all`
+        ? (FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)].tag)
+        : activeTag;
+    }
+
+    currentQuote = quote;
+    renderQuote(quote);
+
+    spinner.classList.remove(`active`);
+    newQuoteBtn.disabled = false;
+
+    if (animated) {
+      quoteCard.classList.remove(`fade-out`);
+      quoteCard.classList.remove(`pulse`);
+      void quoteCard.offsetWidth;
+      quoteCard.classList.add(`pulse`);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     Render
+  ───────────────────────────────────────────── */
+  const TAG_ICONS = {
+    motivation: `✨`, leadership: `🦁`, resilience: `💪`,
+    wisdom: `🦉`, success: `🏆`, creativity: `🎨`, mindset: `🧠`
+  };
+  const TAG_LABELS = {
+    motivation: `Motivation`, leadership: `Leadership`, resilience: `Resilience`,
+    wisdom: `Wisdom`, success: `Success`, creativity: `Creativity`, mindset: `Mindset`
+  };
+
+  function getInitials(name) {
+    return name.split(` `).map(w => w[0]).slice(0, 2).join(``).toUpperCase();
+  }
+
+  function renderQuote(q) {
+    const icon  = TAG_ICONS[q.tag]  || `✨`;
+    const label = TAG_LABELS[q.tag] || q.tag;
+    quoteBadge.textContent   = `${icon} ${label}`;
+    quoteText.textContent    = `“${q.text}”`;
+    authorName.textContent   = q.author;
+    authorSub.textContent    = `Quoted wisdom`;
+    authorAvatar.textContent = getInitials(q.author);
+    sourceLabel.textContent  = q.source === `API` ? `via DummyJSON API` : ``;
+    updateFavBtn();
+    updateExploreCount();
+  }
+
+  function updateFavBtn() {
+    if (!currentQuote) return;
+    const isFav = favourites.some(f => f.text === currentQuote.text);
+    favBtn.classList.toggle(`fav-active`, isFav);
+    favBtn.setAttribute(`aria-label`, isFav ? `Remove from favourites` : `Add to favourites`);
+    favBtn.title = isFav ? `Remove from favourites` : `Add to favourites`;
+  }
+
+  function updateExploreCount() {
+    exploreCount.textContent = activeTag === `all`
+      ? FALLBACK_QUOTES.length + `+`
+      : FALLBACK_QUOTES.filter(q => q.tag === activeTag).length;
+  }
+
+  /* ─────────────────────────────────────────────
+     Favourites
+  ───────────────────────────────────────────── */
+  function saveFavourites() {
+    localStorage.setItem(`qg-favs`, JSON.stringify(favourites));
+    favCount.textContent = favourites.length;
+  }
+
+  function toggleFavourite() {
+    if (!currentQuote) return;
+    const idx = favourites.findIndex(f => f.text === currentQuote.text);
+    if (idx === -1) {
+      favourites.unshift({ ...currentQuote });
+      showToast(`Saved to favourites!`);
+    } else {
+      favourites.splice(idx, 1);
+      showToast(`Removed from favourites`, `error`);
+    }
+    saveFavourites();
+    updateFavBtn();
+    renderFavourites();
+  }
+
+  function renderFavourites() {
+    const term = favSearchTerm.toLowerCase();
+    const list = term
+      ? favourites.filter(f =>
+          f.text.toLowerCase().includes(term) ||
+          f.author.toLowerCase().includes(term) ||
+          (f.tag || ``).includes(term)
+        )
+      : favourites;
+
+    favsGrid.innerHTML = ``;
+    if (!list.length) {
+      favsEmpty.hidden = false;
+      favsEmpty.querySelector(`h3`).textContent = term ? `No matches found` : `No favourites yet`;
+      favsEmpty.querySelector(`p`).textContent  = term ? `Try a different search term.` : `Hit ♥ on any quote to save it here.`;
+      return;
+    }
+    favsEmpty.hidden = true;
+
+    list.forEach((q, i) => {
+      const icon  = TAG_ICONS[q.tag]  || `✨`;
+      const label = TAG_LABELS[q.tag] || (q.tag || ``);
+      const card  = document.createElement(`article`);
+      card.className = `fav-card`;
+      card.innerHTML = `
+        <div class="fav-tag">${icon} ${label}</div>
+        <p class="fav-text">“${q.text}”</p>
+        <div class="fav-author">— ${q.author}</div>
+        <button class="fav-remove" aria-label="Remove ${q.author} quote from favourites" data-idx="${i}">×</button>
+      `;
+      favsGrid.appendChild(card);
+    });
+  }
+
+  /* ─────────────────────────────────────────────
+     Copy to clipboard
+  ───────────────────────────────────────────── */
+  async function copyQuote() {
+    if (!currentQuote) return;
+    const text = `“${currentQuote.text}” — ${currentQuote.author}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`Copied to clipboard!`);
+    } catch (_) {
+      // Fallback
+      const ta = document.createElement(`textarea`);
+      ta.value = text;
+      ta.style.position = `fixed`;
+      ta.style.opacity  = `0`;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand(`copy`);
+      document.body.removeChild(ta);
+      showToast(`Copied to clipboard!`);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     Web Share
+  ───────────────────────────────────────────── */
+  async function shareQuote() {
+    if (!currentQuote) return;
+    const text = `“${currentQuote.text}” — ${currentQuote.author}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Quote of the day`, text });
+        showToast(`Shared successfully!`);
+      } catch (e) {
+        if (e.name !== `AbortError`) showToast(`Share failed`, `error`);
+      }
+    } else {
+      // Fallback: copy
+      await copyQuote();
+      showToast(`Link copied — share it anywhere!`);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     Canvas image generator
+  ───────────────────────────────────────────── */
+  function generateImage() {
+    if (!currentQuote) return;
+
+    const W = 560, H = 280;
+    qCanvas.width  = W;
+    qCanvas.height = H;
+    const ctx = qCanvas.getContext(`2d`);
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, `#1a1d27`);
+    grad.addColorStop(1, `#22263a`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Accent top bar
+    const bar = ctx.createLinearGradient(0, 0, W, 0);
+    bar.addColorStop(0, `#6c63ff`);
+    bar.addColorStop(1, `#ff6584`);
+    ctx.fillStyle = bar;
+    ctx.fillRect(0, 0, W, 4);
+
+    // Big decorative quote mark
+    ctx.font = `bold 100px Georgia, serif`;
+    ctx.fillStyle = `rgba(168,85,247,0.12)`;
+    ctx.fillText(`“`, 24, 90);
+
+    // Quote text — wrap it
+    const maxW   = W - 80;
+    const words  = currentQuote.text.split(` `);
+    const lines  = [];
+    let line     = ``;
+    ctx.font     = `italic 18px Inter, system-ui, sans-serif`;
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxW) { lines.push(line); line = word; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+
+    const lineH   = 28;
+    const totalH  = lines.length * lineH;
+    let startY    = (H - totalH - 40) / 2 + 20;
+    if (startY < 40) startY = 40;
+
+    ctx.fillStyle = `#e2e8f0`;
+    ctx.font      = `italic 18px Inter, system-ui, sans-serif`;
+    ctx.textAlign = `center`;
+    lines.forEach((l, i) => {
+      ctx.fillText(`“${i === 0 ? `` : ``}${l}${i === lines.length - 1 ? `”` : ``}`, W / 2, startY + i * lineH);
+    });
+
+    // Fix: add open/close quotes correctly
+    if (lines.length > 0) {
+      ctx.clearRect(40, startY - lineH, W - 80, totalH + lineH);
+      ctx.fillStyle = `#e2e8f0`;
+      lines.forEach((l, i) => {
+        const prefix = i === 0 ? `“` : ``;
+        const suffix = i === lines.length - 1 ? `”` : ``;
+        ctx.fillText(`${prefix}${l}${suffix}`, W / 2, startY + i * lineH);
+      });
+    }
+
+    // Author
+    ctx.font      = `600 15px Inter, system-ui, sans-serif`;
+    ctx.fillStyle = `#8892b0`;
+    ctx.fillText(`— ${currentQuote.author}`, W / 2, startY + totalH + 20);
+
+    // Tag badge bottom-right
+    const tag   = (TAG_LABELS[currentQuote.tag] || currentQuote.tag || ``).toUpperCase();
+    const icon  = TAG_ICONS[currentQuote.tag]   || `✨`;
+    ctx.font    = `600 11px Inter, system-ui, sans-serif`;
+    ctx.textAlign = `right`;
+    ctx.fillStyle = `rgba(168,85,247,0.7)`;
+    ctx.fillText(`${icon} ${tag}`, W - 24, H - 16);
+
+    // Watermark
+    ctx.font      = `400 11px Inter, system-ui, sans-serif`;
+    ctx.textAlign = `left`;
+    ctx.fillStyle = `rgba(136,146,176,0.5)`;
+    ctx.fillText(`Quote Generator`, 24, H - 16);
+
+    canvasModal.classList.add(`open`);
+    canvasModal.querySelector(`canvas`).focus();
+  }
+
+  function closeCanvasModal() {
+    canvasModal.classList.remove(`open`);
+    imageBtn.focus();
+  }
+
+  /* ─────────────────────────────────────────────
+     Tab switching
+  ───────────────────────────────────────────── */
+  document.querySelectorAll(`.tab-btn`).forEach(btn => {
+    btn.addEventListener(`click`, () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll(`.tab-btn`).forEach(b => {
+        b.classList.remove(`active`);
+        b.setAttribute(`aria-selected`, `false`);
+      });
+      document.querySelectorAll(`.panel`).forEach(p => {
+        p.classList.remove(`active`);
+        p.hidden = true;
+      });
+      btn.classList.add(`active`);
+      btn.setAttribute(`aria-selected`, `true`);
+      const panel = document.getElementById(`panel-${tab}`);
+      panel.classList.add(`active`);
+      panel.hidden = false;
+      if (tab === `favourites`) renderFavourites();
+    });
+  });
+
+  /* ─────────────────────────────────────────────
+     Tag chip filtering
+  ───────────────────────────────────────────── */
+  document.getElementById(`tag-chips`).addEventListener(`click`, async (e) => {
+    const chip = e.target.closest(`.chip`);
+    if (!chip) return;
+    document.querySelectorAll(`.chip`).forEach(c => c.classList.remove(`active`));
+    chip.classList.add(`active`);
+    activeTag = chip.dataset.tag;
+    await loadQuote();
+  });
+
+  /* ─────────────────────────────────────────────
+     Button listeners
+  ───────────────────────────────────────────── */
+  newQuoteBtn.addEventListener(`click`, () => loadQuote());
+  favBtn.addEventListener(`click`,      toggleFavourite);
+  copyBtn.addEventListener(`click`,     copyQuote);
+  imageBtn.addEventListener(`click`,    generateImage);
+  shareBtn.addEventListener(`click`,    shareQuote);
+
+  document.getElementById(`canvas-close`).addEventListener(`click`,  closeCanvasModal);
+  document.getElementById(`canvas-close2`).addEventListener(`click`, closeCanvasModal);
+
+  document.getElementById(`canvas-download`).addEventListener(`click`, () => {
+    const link    = document.createElement(`a`);
+    link.download = `quote-${Date.now()}.png`;
+    link.href     = qCanvas.toDataURL(`image/png`);
+    link.click();
+    showToast(`Image downloaded!`);
+  });
+
+  canvasModal.addEventListener(`click`, (e) => {
+    if (e.target === canvasModal) closeCanvasModal();
+  });
+
+  // Escape key closes modal
+  document.addEventListener(`keydown`, (e) => {
+    if (e.key === `Escape` && canvasModal.classList.contains(`open`)) closeCanvasModal();
+  });
+
+  // Favourites: remove button
+  favsGrid.addEventListener(`click`, (e) => {
+    const btn = e.target.closest(`.fav-remove`);
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx, 10);
+    const term = favSearchTerm.toLowerCase();
+    const visibleList = term
+      ? favourites.filter(f =>
+          f.text.toLowerCase().includes(term) ||
+          f.author.toLowerCase().includes(term) ||
+          (f.tag || ``).includes(term)
+        )
+      : favourites;
+    const q = visibleList[idx];
+    const globalIdx = favourites.findIndex(f => f.text === q.text);
+    if (globalIdx !== -1) favourites.splice(globalIdx, 1);
+    saveFavourites();
+    renderFavourites();
+    updateFavBtn();
+    showToast(`Removed from favourites`, `error`);
+  });
+
+  // Clear all favourites
+  document.getElementById(`clear-favs-btn`).addEventListener(`click`, () => {
+    if (!favourites.length) return;
+    if (confirm(`Clear all ${favourites.length} favourite${favourites.length === 1 ? `` : `s`}?`)) {
+      favourites = [];
+      saveFavourites();
+      renderFavourites();
+      updateFavBtn();
+      showToast(`All favourites cleared`);
+    }
+  });
+
+  // Favourite search
+  favSearch.addEventListener(`input`, () => {
+    favSearchTerm = favSearch.value;
+    renderFavourites();
+  });
+
+  // Keyboard: Enter/Space on chips
+  document.getElementById(`tag-chips`).addEventListener(`keydown`, (e) => {
+    if (e.key === `Enter` || e.key === ` `) {
+      e.preventDefault();
+      e.target.click();
+    }
+  });
+
+  /* ─────────────────────────────────────────────
+     Init
+  ───────────────────────────────────────────── */
+  favCount.textContent = favourites.length;
+  updateExploreCount();
+  // Initialize panel visibility
+  document.getElementById(`panel-favourites`).hidden = true;
+  loadQuote(false);
+</script>
+</body>
+</html>

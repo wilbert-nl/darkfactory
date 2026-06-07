@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VAT Rate Compliance Monitor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    :root {
+      --bg: #080c10;
+      --surface: #0e1318;
+      --surface2: #141a21;
+      --border: rgba(255,255,255,0.08);
+      --accent: #00d4aa;
+      --accent2: #f59e0b;
+      --text: #e6edf3;
+      --muted: #6b7280;
+      --green: #26a69a;
+      --yellow: #f59e0b;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .logo-text p {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #7c74ff; }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover { background: var(--surface2); border-color: var(--accent); }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    .btn-green { background: var(--green); color: #0f1117; }
+    .btn-green:hover { opacity: 0.85; }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-card .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .stat-accent { color: var(--accent); }
+    .stat-green { color: var(--green); }
+    .stat-yellow { color: var(--yellow); }
+    .stat-red { color: var(--accent2); }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+      width: fit-content;
+    }
+
+    .tab {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      background: transparent;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      padding: 9px 12px 9px 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select { padding-left: 12px; }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    .filter-select {
+      padding: 9px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      min-width: 140px;
+    }
+
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--surface2);
+    }
+
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    th:hover { color: var(--text); }
+
+    th .sort-icon { margin-left: 4px; opacity: 0.4; }
+    th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+
+    td {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:hover td { background: var(--surface2); }
+
+    .rate-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 52px;
+    }
+
+    .rate-standard { background: rgba(0,212,170, 0.15); color: var(--accent); }
+    .rate-reduced { background: rgba(67, 217, 173, 0.15); color: var(--green); }
+    .rate-super { background: rgba(247, 201, 72, 0.15); color: var(--yellow); }
+    .rate-zero { background: rgba(136, 146, 176, 0.15); color: var(--muted); }
+    .rate-na { background: transparent; color: var(--muted); }
+
+    .country-flag {
+      font-size: 18px;
+      margin-right: 8px;
+    }
+
+    .country-cell {
+      display: flex;
+      align-items: center;
+    }
+
+    .update-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+    }
+
+    .badge-recent { background: rgba(67, 217, 173, 0.15); color: var(--green); }
+    .badge-old { background: rgba(136, 146, 176, 0.1); color: var(--muted); }
+    .badge-changed { background: rgba(245,158,11, 0.15); color: var(--accent2); }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+
+    .pag-info { font-size: 12px; color: var(--muted); }
+
+    .pag-btns { display: flex; gap: 6px; }
+
+    .pag-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .pag-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .pag-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .pag-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Alert Panel */
+    .alert-panel {
+      position: fixed;
+      top: 70px;
+      right: 24px;
+      width: 340px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      z-index: 200;
+      display: none;
+    }
+
+    .alert-panel.open { display: block; }
+
+    .alert-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .alert-header h3 { font-size: 14px; font-weight: 600; }
+
+    .alert-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px;
+    }
+
+    .alert-close:hover { color: var(--text); }
+
+    .alert-list {
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .alert-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      border-left: 3px solid var(--accent2);
+      background: var(--surface2);
+    }
+
+    .alert-item .alert-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+    .alert-item .alert-desc { font-size: 12px; color: var(--muted); }
+    .alert-item .alert-time { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    .notif-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent2);
+      border-radius: 50%;
+      display: inline-block;
+      margin-left: 4px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* History Panel */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .history-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .history-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .history-card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+    }
+
+    .diff-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .diff-label { color: var(--muted); width: 90px; font-size: 12px; }
+
+    .diff-old {
+      background: rgba(245,158,11, 0.15);
+      color: var(--accent2);
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .diff-new {
+      background: rgba(67, 217, 173, 0.15);
+      color: var(--green);
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .diff-arrow { color: var(--muted); }
+
+    /* Calendar */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .calendar-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .calendar-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .calendar-card-date {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .calendar-card-country {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .upcoming-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .tag-upcoming { background: rgba(247, 201, 72, 0.15); color: var(--yellow); }
+    .tag-confirmed { background: rgba(67, 217, 173, 0.15); color: var(--green); }
+
+    /* Export */
+    .export-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .export-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .export-section p { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+
+    .export-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+
+    .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+
+    .tooltip {
+      position: relative;
+    }
+
+    .tooltip:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 300;
+      pointer-events: none;
+    }
+
+    .detail-row {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .no-results {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .changed-marker {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--accent2);
+      border-radius: 50%;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(0,212,170, 0.15);
+      color: var(--accent);
+    }
+
+    @media (max-width: 700px) {
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+      .header-actions .btn-outline { display: none; }
+      main { padding: 16px; }
+      .alert-panel { right: 8px; width: calc(100vw - 16px); }
+    }
+
+    /* Finance design system v2 */
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(0,212,170,.065) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,.9) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    h1, h2 {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    [class*="price"],[class*="value"],[class*="amount"],[class*="rate"],
+    [class*="stat"],[class*="metric"],[class*="kpi"],td,code,.number {
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+      font-variant-numeric: tabular-nums slashed-zero;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+    .card,[class*="card"],[class*="metric-card"],[class*="stat-card"] {
+      border-left: 3px solid var(--accent) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    table { border-collapse: collapse; width: 100%; }
+    thead th {
+      font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: right; white-space: nowrap; position: sticky; top: 0; background: var(--bg);
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background 120ms; }
+    tbody tr:hover { background: rgba(255,255,255,.04); }
+    td { padding: 6px 12px; text-align: right; vertical-align: middle; white-space: nowrap; font-size: 13px; }
+    td:first-child { text-align: left; color: var(--text); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.5);} 50%{box-shadow:0 0 0 6px rgba(0,212,170,0);} }
+    @keyframes flashGreen { 0%,100%{background:transparent;} 25%{background:rgba(38,166,154,.2);} }
+    @keyframes flashRed { 0%,100%{background:transparent;} 25%{background:rgba(239,83,80,.2);} }
+    .card,[class*="card"],[class*="result"],[class*="item"] { animation: slideUp .35s ease both; }
+    .card:nth-child(2),[class*="item"]:nth-child(2){animation-delay:.05s}
+    .card:nth-child(3),[class*="item"]:nth-child(3){animation-delay:.1s}
+    .card:nth-child(4){animation-delay:.15s}
+    .card:nth-child(5){animation-delay:.2s}
+    tbody tr { animation: slideUp .2s ease both; }
+    tbody tr:nth-child(2){animation-delay:.03s} tbody tr:nth-child(3){animation-delay:.06s}
+    tbody tr:nth-child(4){animation-delay:.09s} tbody tr:nth-child(5){animation-delay:.12s}
+    button,[class*="btn"] { transition: all .15s; }
+    button:hover,[class*="btn"]:hover {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0,212,170,.15) !important;
+    }
+    input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 2px rgba(0,212,170,.2); }
+    [class*="live"],[class*="dot"],[class*="indicator"] { animation: livePulse 2s ease-in-out infinite; }
+    [class*="positive"],[class*="gain"],[class*="profit"],[class*="up"] { color:var(--green)!important; }
+    [class*="negative"],[class*="loss"],[class*="down"] { color:#ef5350!important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">&#9670;</div>
+    <div class="logo-text">
+      <h1>VAT Rate Monitor</h1>
+      <p>EU Compliance Dashboard &mdash; 2024 Data</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline btn-sm" id="btnAlerts">
+      Alerts <span class="notif-dot" id="notifDot"></span>
+    </button>
+    <button class="btn btn-primary btn-sm" id="btnExportCSV">Export CSV</button>
+  </div>
+</header>
+
+<!-- Alert Panel -->
+<div class="alert-panel" id="alertPanel">
+  <div class="alert-header">
+    <h3>Rate Change Alerts</h3>
+    <button class="alert-close" id="closeAlerts">&times;</button>
+  </div>
+  <div class="alert-list" id="alertList"></div>
+</div>
+
+<main>
+  <!-- Summary Stats -->
+  <div class="summary-grid" id="summaryGrid">
+    <div class="stat-card">
+      <div class="stat-label">Countries Tracked</div>
+      <div class="stat-value stat-accent" id="statCountries">27</div>
+      <div class="stat-sub">EU Member States</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Rate Entries</div>
+      <div class="stat-value stat-green" id="statEntries">0</div>
+      <div class="stat-sub">Standard + reduced rates</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Recent Changes</div>
+      <div class="stat-value stat-red" id="statChanges">0</div>
+      <div class="stat-sub">In last 12 months</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Standard Rate</div>
+      <div class="stat-value stat-yellow" id="statAvg">0%</div>
+      <div class="stat-sub">EU-27 average</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="history">Change History</button>
+    <button class="tab" data-tab="calendar">Rate Calendar</button>
+    <button class="tab" data-tab="export">Export</button>
+  </div>
+
+  <!-- Dashboard Panel -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="filters">
+      <div class="search-wrap">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="searchInput" placeholder="Search country..." />
+      </div>
+      <select class="filter-select" id="categoryFilter">
+        <option value="">All Rate Types</option>
+        <option value="standard">Standard Rate</option>
+        <option value="reduced">Reduced Rate(s)</option>
+        <option value="super">Super-Reduced Rate</option>
+        <option value="zero">Zero Rate</option>
+      </select>
+      <select class="filter-select" id="sortField">
+        <option value="country">Sort: Country A-Z</option>
+        <option value="standard_desc">Sort: Highest Standard</option>
+        <option value="standard_asc">Sort: Lowest Standard</option>
+        <option value="updated">Sort: Recently Updated</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Country</th>
+            <th>Standard</th>
+            <th>Reduced</th>
+            <th>Super-Reduced</th>
+            <th>Zero Rate</th>
+            <th>Last Updated</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="vatTableBody"></tbody>
+      </table>
+      <div id="noResults" class="no-results" style="display:none">No countries match your filters.</div>
+      <div class="pagination" id="paginationBar">
+        <div class="pag-info" id="pagInfo"></div>
+        <div class="pag-btns" id="pagBtns"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Panel -->
+  <div class="panel" id="panel-history">
+    <div class="section-title">Rate Change History <span class="tag">2022 - 2024</span></div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- Calendar Panel -->
+  <div class="panel" id="panel-calendar">
+    <div class="section-title">Rate Validity Calendar <span class="tag">Upcoming &amp; Confirmed Changes</span></div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <!-- Export Panel -->
+  <div class="panel" id="panel-export">
+    <div class="export-section">
+      <h3>Export VAT Rate Table</h3>
+      <p>Download the current EU VAT rate dataset in your preferred format for use in invoicing tools, ERP systems, or spreadsheets.</p>
+      <div class="export-btns">
+        <button class="btn btn-primary" id="dlCSV">Download CSV</button>
+        <button class="btn btn-outline" id="dlJSON">Download JSON</button>
+        <button class="btn btn-outline" id="dlTSV">Download TSV</button>
+      </div>
+    </div>
+    <div class="export-section">
+      <h3>Preview (first 5 rows)</h3>
+      <p>Standard CSV format compatible with Excel, Google Sheets, and most invoicing tools.</p>
+      <pre id="csvPreview" style="background:var(--surface2);padding:14px;border-radius:8px;overflow:auto;font-size:12px;color:var(--green);border:1px solid var(--border);"></pre>
+    </div>
+  </div>
+</main>
+
+<script>
+// ============================================================
+// EU VAT RATE DATABASE - Official 2024 Rates
+// Sources: European Commission VAT rates database
+// ============================================================
+const VAT_DATA = [
+  {
+    country: "Austria",
+    code: "AT",
+    flag: "&#127462;&#127481;",
+    standard: 20,
+    reduced: [10, 13],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2023-01-01",
+    notes: "10% reduced for food, books, medicines, accommodation. 13% for cultural events, plants, wine.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Belgium",
+    code: "BE",
+    flag: "&#127463;&#127466;",
+    standard: 21,
+    reduced: [6, 12],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2024-01-01",
+    notes: "6% for essential goods, food, books. 12% for certain social housing. Zero rate on intra-EU supplies.",
+    recentChange: true,
+    history: [
+      { date: "2024-01-01", type: "reduced", old: "6", next: "6", note: "Rate maintained, scope extended to demolition and reconstruction." }
+    ]
+  },
+  {
+    country: "Bulgaria",
+    code: "BG",
+    flag: "&#127463;&#127468;",
+    standard: 20,
+    reduced: [9],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2023-07-01",
+    notes: "9% for hotels, books, medicines, baby food. Extended through 2024.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Croatia",
+    code: "HR",
+    flag: "&#127469;&#127479;",
+    standard: 25,
+    reduced: [5, 13],
+    superReduced: null,
+    zero: false,
+    lastUpdated: "2023-01-01",
+    notes: "5% for basic foodstuffs, books, medicines. 13% for accommodation, food services.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Cyprus",
+    code: "CY",
+    flag: "&#127464;&#127486;",
+    standard: 19,
+    reduced: [5, 9],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2022-07-01",
+    notes: "5% for basic goods and medical equipment. 9% for restaurants and hotel accommodation.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Czech Republic",
+    code: "CZ",
+    flag: "&#127464;&#127487;",
+    standard: 21,
+    reduced: [12],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2024-01-01",
+    notes: "Rate reform: previously had 10% and 15% reduced rates, consolidated to single 12% from Jan 2024.",
+    recentChange: true,
+    history: [
+      { date: "2024-01-01", type: "reduced", old: "10 / 15", next: "12", note: "Consolidation of two reduced rates into a single 12% rate." }
+    ]
+  },
+  {
+    country: "Denmark",
+    code: "DK",
+    flag: "&#127465;&#127472;",
+    standard: 25,
+    reduced: [],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "1992-01-01",
+    notes: "Denmark applies no reduced VAT rates. Zero rate on newspapers, domestic passenger transport.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Estonia",
+    code: "EE",
+    flag: "&#127466;&#127466;",
+    standard: 22,
+    reduced: [9, 13],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2024-01-01",
+    notes: "Standard rate increased from 20% to 22% on 1 January 2024. 9% for books, medicines, accommodation.",
+    recentChange: true,
+    history: [
+      { date: "2024-01-01", type: "standard", old: "20", next: "22", note: "Rate increase to fund public services. One of highest recent increases in EU." }
+    ]
+  },
+  {
+    country: "Finland",
+    code: "FI",
+    flag: "&#127467;&#127470;",
+    standard: 25.5,
+    reduced: [10, 14],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2024-09-01",
+    notes: "Standard rate increased from 24% to 25.5% on 1 Sep 2024. 10% for books, medicines, transport. 14% for food.",
+    recentChange: true,
+    history: [
+      { date: "2024-09-01", type: "standard", old: "24", next: "25.5", note: "Rate increase as part of austerity measures." }
+    ]
+  },
+  {
+    country: "France",
+    code: "FR",
+    flag: "&#127467;&#127479;",
+    standard: 20,
+    reduced: [5.5, 10],
+    superReduced: 2.1,
+    zero: true,
+    lastUpdated: "2014-01-01",
+    notes: "2.1% super-reduced for medicines reimbursed by social security, press. 5.5% for food, books, energy. 10% for restaurants.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Germany",
+    code: "DE",
+    flag: "&#127465;&#127466;",
+    standard: 19,
+    reduced: [7],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2021-01-01",
+    notes: "7% for food, books, newspapers, cultural services, public transport. Standard reverted to 19% from Jan 2021.",
+    recentChange: false,
+    history: [
+      { date: "2021-01-01", type: "standard", old: "16", next: "19", note: "Reverted to 19% after temporary Covid reduction to 16% (Jul-Dec 2020)." }
+    ]
+  },
+  {
+    country: "Greece",
+    code: "GR",
+    flag: "&#127468;&#127479;",
+    standard: 24,
+    reduced: [6, 13],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2016-06-01",
+    notes: "6% for books, medicines, theatre tickets. 13% for food, energy, hotels. Some island reductions apply.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Hungary",
+    code: "HU",
+    flag: "&#127469;&#127482;",
+    standard: 27,
+    reduced: [5, 18],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2012-01-01",
+    notes: "Highest standard VAT rate in the EU. 5% for medicines, books, commercial accommodation. 18% for food.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Ireland",
+    code: "IE",
+    flag: "&#127470;&#127466;",
+    standard: 23,
+    reduced: [9, 13.5],
+    superReduced: 4.8,
+    zero: true,
+    lastUpdated: "2023-03-01",
+    notes: "4.8% for live horses and greyhounds. 9% for tourism, hospitality (restored from 13.5%). 13.5% for construction, fuel.",
+    recentChange: true,
+    history: [
+      { date: "2023-03-01", type: "reduced", old: "9", next: "13.5", note: "Tourism/hospitality rate reverted from 9% to 13.5% after Covid relief ended." }
+    ]
+  },
+  {
+    country: "Italy",
+    code: "IT",
+    flag: "&#127470;&#127481;",
+    standard: 22,
+    reduced: [5, 10],
+    superReduced: 4,
+    zero: true,
+    lastUpdated: "2013-10-01",
+    notes: "4% super-reduced for basic food, books, medicines, social housing. 5% for food in certain schemes. 10% for tourism, restaurants.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Latvia",
+    code: "LV",
+    flag: "&#127473;&#127483;",
+    standard: 21,
+    reduced: [5, 12],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2018-01-01",
+    notes: "5% for fresh fruit, vegetables, medicines. 12% for medical devices, firewood, natural gas.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Lithuania",
+    code: "LT",
+    flag: "&#127473;&#127481;",
+    standard: 21,
+    reduced: [5, 9],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2021-01-01",
+    notes: "5% for books, medicines, food for infants. 9% for heating, accommodation, passenger transport.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Luxembourg",
+    code: "LU",
+    flag: "&#127473;&#127482;",
+    standard: 17,
+    reduced: [8, 14],
+    superReduced: 3,
+    zero: true,
+    lastUpdated: "2024-01-01",
+    notes: "Restored standard rate to 17% on 1 Jan 2024 after temporary reduction to 16% in 2023. Lowest standard rate in EU.",
+    recentChange: true,
+    history: [
+      { date: "2024-01-01", type: "standard", old: "16", next: "17", note: "Rate restored after 2023 cost-of-living relief measure expired." }
+    ]
+  },
+  {
+    country: "Malta",
+    code: "MT",
+    flag: "&#127474;&#127481;",
+    standard: 18,
+    reduced: [5, 7],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2011-01-01",
+    notes: "5% for food and medicines. 7% for sporting events, sports facilities, arts and culture.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Netherlands",
+    code: "NL",
+    flag: "&#127475;&#127473;",
+    standard: 21,
+    reduced: [9],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2019-01-01",
+    notes: "9% for food, medicines, books, sport services. Proposal to abolish reduced rate on sport by 2026.",
+    recentChange: false,
+    history: [
+      { date: "2019-01-01", type: "reduced", old: "6", next: "9", note: "Reduced rate increased from 6% to 9% in 2019 reform." }
+    ]
+  },
+  {
+    country: "Poland",
+    code: "PL",
+    flag: "&#127477;&#127473;",
+    standard: 23,
+    reduced: [5, 8],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2024-04-01",
+    notes: "5% for basic food, books, children clothing. 8% for medicines, construction. Zero rate on food reinstated Apr 2024.",
+    recentChange: true,
+    history: [
+      { date: "2024-04-01", type: "zero", old: "5", next: "0", note: "Zero VAT on basic foods maintained through 2024 anti-inflation measure." }
+    ]
+  },
+  {
+    country: "Portugal",
+    code: "PT",
+    flag: "&#127477;&#127481;",
+    standard: 23,
+    reduced: [6, 13],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2023-01-01",
+    notes: "6% for food essentials, books, medicines, utilities. 13% for processed food, wine, oil. Azores and Madeira apply lower rates.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Romania",
+    code: "RO",
+    flag: "&#127479;&#127476;",
+    standard: 19,
+    reduced: [5, 9],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2024-01-01",
+    notes: "5% for books, home buyers (first home under 120,000 EUR). 9% for food, medicines, accommodation.",
+    recentChange: true,
+    history: [
+      { date: "2024-01-01", type: "reduced", old: "5 / 9", next: "5 / 9", note: "Scope adjustment: 5% restricted for home purchase qualifying threshold." }
+    ]
+  },
+  {
+    country: "Slovakia",
+    code: "SK",
+    flag: "&#127480;&#127472;",
+    standard: 20,
+    reduced: [10],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2024-01-01",
+    notes: "Rate increased from 20% to 23% planned for 2025. 10% for food, medicines, books, accommodation.",
+    recentChange: true,
+    history: [
+      { date: "2024-10-01", type: "standard", old: "20", next: "23", note: "Rate increase approved; takes effect October 2024 as part of fiscal consolidation." }
+    ]
+  },
+  {
+    country: "Slovenia",
+    code: "SI",
+    flag: "&#127480;&#127470;",
+    standard: 22,
+    reduced: [5, 9.5],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2020-01-01",
+    notes: "5% for books, medicines, baby food. 9.5% for food, accommodation, transport, cultural services.",
+    recentChange: false,
+    history: []
+  },
+  {
+    country: "Spain",
+    code: "ES",
+    flag: "&#127466;&#127480;",
+    standard: 21,
+    reduced: [10],
+    superReduced: 4,
+    zero: true,
+    lastUpdated: "2023-07-01",
+    notes: "4% super-reduced for essential foods, medicines, books. Reduced from 10% to 0% for basic food Jul 2022, 5% from Jan 2023.",
+    recentChange: true,
+    history: [
+      { date: "2023-07-01", type: "reduced", old: "0 / 5", next: "5 / 10", note: "Partial return to standard reduced rates on basic foods; anti-inflation measures extended." }
+    ]
+  },
+  {
+    country: "Sweden",
+    code: "SE",
+    flag: "&#127480;&#127466;",
+    standard: 25,
+    reduced: [6, 12],
+    superReduced: null,
+    zero: true,
+    lastUpdated: "2024-01-01",
+    notes: "6% for books, newspapers, passenger transport. 12% for food, restaurants, accommodation. Reduced from 12% to 6% for repairs.",
+    recentChange: true,
+    history: [
+      { date: "2024-01-01", type: "reduced", old: "12", next: "6", note: "Repair services rate reduced from 12% to 6% to promote circular economy." }
+    ]
+  }
+];
+
+// Change History (detailed)
+const CHANGE_HISTORY = [
+  {
+    country: "Estonia",
+    flag: "&#127466;&#127466;",
+    date: "2024-01-01",
+    category: "Standard Rate",
+    oldRate: "20%",
+    newRate: "22%",
+    reason: "Fiscal consolidation to fund public services and defense expenditure.",
+    source: "Estonian Tax and Customs Board"
+  },
+  {
+    country: "Finland",
+    flag: "&#127467;&#127470;",
+    date: "2024-09-01",
+    category: "Standard Rate",
+    oldRate: "24%",
+    newRate: "25.5%",
+    reason: "Austerity package approved by Finnish Parliament in 2024 budget.",
+    source: "Finnish Tax Administration"
+  },
+  {
+    country: "Czech Republic",
+    flag: "&#127464;&#127487;",
+    date: "2024-01-01",
+    category: "Reduced Rate",
+    oldRate: "10% / 15%",
+    newRate: "12%",
+    reason: "Tax simplification reform consolidating two rates into one.",
+    source: "Czech Financial Administration"
+  },
+  {
+    country: "Luxembourg",
+    flag: "&#127473;&#127482;",
+    date: "2024-01-01",
+    category: "Standard Rate",
+    oldRate: "16%",
+    newRate: "17%",
+    reason: "Temporary 2023 reduction (cost-of-living relief) expired. Rate restored.",
+    source: "Luxembourg Tax Authority (AED)"
+  },
+  {
+    country: "Slovakia",
+    flag: "&#127480;&#127472;",
+    date: "2024-10-01",
+    category: "Standard Rate",
+    oldRate: "20%",
+    newRate: "23%",
+    reason: "Fiscal consolidation measures enacted to address budget deficit.",
+    source: "Slovak Financial Directorate"
+  },
+  {
+    country: "Poland",
+    flag: "&#127477;&#127473;",
+    date: "2024-04-01",
+    category: "Zero Rate Extension",
+    oldRate: "5%",
+    newRate: "0%",
+    reason: "Anti-inflation measure on basic foods extended; helps lower-income households.",
+    source: "Polish Ministry of Finance"
+  },
+  {
+    country: "Sweden",
+    flag: "&#127480;&#127466;",
+    date: "2024-01-01",
+    category: "Reduced Rate",
+    oldRate: "12%",
+    newRate: "6%",
+    reason: "Circular economy initiative to encourage repair over disposal of goods.",
+    source: "Swedish Tax Agency (Skatteverket)"
+  },
+  {
+    country: "Ireland",
+    flag: "&#127470;&#127466;",
+    date: "2023-03-01",
+    category: "Reduced Rate",
+    oldRate: "9%",
+    newRate: "13.5%",
+    reason: "Hospitality rate relief (Covid-19 support) ended. Rate reverted to pre-pandemic level.",
+    source: "Irish Revenue Commissioners"
+  },
+  {
+    country: "Germany",
+    flag: "&#127465;&#127466;",
+    date: "2021-01-01",
+    category: "Standard Rate",
+    oldRate: "16%",
+    newRate: "19%",
+    reason: "Temporary Covid-19 stimulus reduction (Jul-Dec 2020) ended; rate restored.",
+    source: "German Federal Ministry of Finance"
+  }
+];
+
+// Upcoming/Scheduled Changes
+const UPCOMING_CHANGES = [
+  {
+    country: "Netherlands",
+    flag: "&#127475;&#127473;",
+    changeDate: "2026-01-01",
+    description: "Proposal to remove 9% reduced rate on sport facilities and sporting events.",
+    category: "Reduced Rate",
+    status: "Proposed",
+    impact: "Sporting services would move to 21% standard rate."
+  },
+  {
+    country: "Slovakia",
+    flag: "&#127480;&#127472;",
+    changeDate: "2025-01-01",
+    description: "Further rate adjustments under fiscal reform package under review.",
+    category: "Standard Rate",
+    status: "Confirmed",
+    impact: "Additional scope changes expected alongside rate change."
+  },
+  {
+    country: "Belgium",
+    flag: "&#127463;&#127466;",
+    changeDate: "2025-07-01",
+    description: "Extended 6% reduced rate on demolition and reconstruction in all urban areas.",
+    category: "Reduced Rate",
+    status: "Confirmed",
+    impact: "Construction sector benefits from lower rate in urban renewal zones."
+  },
+  {
+    country: "Romania",
+    flag: "&#127479;&#127476;",
+    changeDate: "2025-01-01",
+    description: "New restrictions on 5% rate for residential property purchases.",
+    category: "Super-Reduced Rate",
+    status: "Confirmed",
+    impact: "Property threshold tightened; fewer buyers qualify for 5% rate."
+  },
+  {
+    country: "France",
+    flag: "&#127467;&#127479;",
+    changeDate: "2025-01-01",
+    description: "Possible increase in standard rate discussed in budget talks.",
+    category: "Standard Rate",
+    status: "Proposed",
+    impact: "Would be first French VAT rate change since 2014 if enacted."
+  }
+];
+
+// ============================================================
+// APP STATE
+// ============================================================
+let currentPage = 1;
+const PER_PAGE = 10;
+let filteredData = [...VAT_DATA];
+let sortMode = "country";
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+function formatRate(val) {
+  if (val === null || val === undefined) return '<span class="rate-badge rate-na">—</span>';
+  if (val === 0) return '<span class="rate-badge rate-zero">0%</span>';
+  return `<span class="rate-badge rate-standard">${val}%</span>`;
+}
+
+function formatReducedRates(arr) {
+  if (!arr || arr.length === 0) return '<span class="rate-badge rate-na">—</span>';
+  return arr.map(r => `<span class="rate-badge rate-reduced">${r}%</span>`).join(" ");
+}
+
+function formatSuperReduced(val) {
+  if (val === null || val === undefined) return '<span class="rate-badge rate-na">—</span>';
+  return `<span class="rate-badge rate-super">${val}%</span>`;
+}
+
+function formatZero(hasZero) {
+  if (!hasZero) return '<span class="rate-badge rate-na">No</span>';
+  return '<span class="rate-badge rate-zero">Yes</span>';
+}
+
+function formatDate(str) {
+  if (!str) return "—";
+  const d = new Date(str);
+  return d.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function isRecent(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - 1);
+  return d >= cutoff;
+}
+
+// ============================================================
+// RENDER DASHBOARD TABLE
+// ============================================================
+function applySort(data) {
+  const copy = [...data];
+  if (sortMode === "country") {
+    copy.sort((a, b) => a.country.localeCompare(b.country));
+  } else if (sortMode === "standard_desc") {
+    copy.sort((a, b) => b.standard - a.standard);
+  } else if (sortMode === "standard_asc") {
+    copy.sort((a, b) => a.standard - b.standard);
+  } else if (sortMode === "updated") {
+    copy.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
+  }
+  return copy;
+}
+
+function renderTable() {
+  const search = document.getElementById("searchInput").value.toLowerCase().trim();
+  const cat = document.getElementById("categoryFilter").value;
+
+  filteredData = VAT_DATA.filter(row => {
+    const matchSearch = !search || row.country.toLowerCase().includes(search) || row.code.toLowerCase().includes(search);
+    let matchCat = true;
+    if (cat === "standard") matchCat = row.standard > 0;
+    if (cat === "reduced") matchCat = row.reduced && row.reduced.length > 0;
+    if (cat === "super") matchCat = row.superReduced !== null && row.superReduced !== undefined;
+    if (cat === "zero") matchCat = row.zero === true;
+    return matchSearch && matchCat;
+  });
+
+  filteredData = applySort(filteredData);
+
+  const tbody = document.getElementById("vatTableBody");
+  const noResults = document.getElementById("noResults");
+  const total = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  if (currentPage > totalPages) currentPage = 1;
+
+  if (total === 0) {
+    tbody.innerHTML = "";
+    noResults.style.display = "block";
+    document.getElementById("pagInfo").textContent = "";
+    document.getElementById("pagBtns").innerHTML = "";
+    return;
+  }
+  noResults.style.display = "none";
+
+  const start = (currentPage - 1) * PER_PAGE;
+  const pageData = filteredData.slice(start, start + PER_PAGE);
+
+  tbody.innerHTML = pageData.map(row => {
+    const updated = isRecent(row.lastUpdated)
+      ? `<span class="update-badge badge-recent">&#128337; ${formatDate(row.lastUpdated)}</span>`
+      : `<span class="update-badge badge-old">${formatDate(row.lastUpdated)}</span>`;
+    const changed = row.recentChange ? `<span class="changed-marker" title="Recent change"></span>` : "";
+
+    return `<tr>
+      <td>
+        <div class="country-cell">
+          <span class="country-flag">${row.flag}</span>
+          <div>
+            <strong>${row.country}</strong>${changed}
+            <div class="detail-row">${row.code}</div>
+          </div>
+        </div>
+      </td>
+      <td>${formatRate(row.standard)}</td>
+      <td>${formatReducedRates(row.reduced)}</td>
+      <td>${formatSuperReduced(row.superReduced)}</td>
+      <td>${formatZero(row.zero)}</td>
+      <td>${updated}</td>
+      <td style="max-width:220px;font-size:12px;color:var(--muted)">${row.notes}</td>
+    </tr>`;
+  }).join("");
+
+  // Pagination
+  document.getElementById("pagInfo").textContent = `Showing ${start + 1}-${Math.min(start + PER_PAGE, total)} of ${total} countries`;
+  const btnsEl = document.getElementById("pagBtns");
+  let btnsHTML = `<button class="pag-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? "disabled" : ""}>&lsaquo;</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    btnsHTML += `<button class="pag-btn ${i === currentPage ? "active" : ""}" onclick="goPage(${i})">${i}</button>`;
+  }
+  btnsHTML += `<button class="pag-btn" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? "disabled" : ""}>&rsaquo;</button>`;
+  btnsEl.innerHTML = btnsHTML;
+}
+
+function goPage(n) {
+  const total = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  if (n < 1 || n > totalPages) return;
+  currentPage = n;
+  renderTable();
+}
+
+// ============================================================
+// RENDER HISTORY
+// ============================================================
+function renderHistory() {
+  const el = document.getElementById("historyList");
+  el.innerHTML = CHANGE_HISTORY.map(h => `
+    <div class="history-card">
+      <div class="history-card-header">
+        <div class="history-card-title">
+          <span style="font-size:22px">${h.flag}</span>
+          <div>
+            <div>${h.country}</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:400">${h.category}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:600;color:var(--yellow)">${formatDate(h.date)}</div>
+          <div style="font-size:11px;color:var(--muted)">Effective date</div>
+        </div>
+      </div>
+      <div class="diff-row">
+        <span class="diff-label">Rate change</span>
+        <span class="diff-old">${h.oldRate}</span>
+        <span class="diff-arrow">&#8594;</span>
+        <span class="diff-new">${h.newRate}</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px">${h.reason}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">Source: ${h.source}</div>
+    </div>
+  `).join("");
+}
+
+// ============================================================
+// RENDER CALENDAR
+// ============================================================
+function renderCalendar() {
+  const el = document.getElementById("calendarGrid");
+  el.innerHTML = UPCOMING_CHANGES.map(c => {
+    const tagClass = c.status === "Confirmed" ? "tag-confirmed" : "tag-upcoming";
+    const tagLabel = c.status === "Confirmed" ? "Confirmed" : "Proposed";
+    return `
+    <div class="calendar-card">
+      <div class="calendar-card-header">
+        <div>
+          <div class="calendar-card-date">${formatDate(c.changeDate)}</div>
+          <div class="calendar-card-country">${c.flag} ${c.country}</div>
+        </div>
+        <span class="upcoming-tag ${tagClass}">${tagLabel}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">${c.category}</div>
+      <div style="font-size:13px;margin-bottom:8px">${c.description}</div>
+      <div style="font-size:12px;color:var(--muted);padding:8px;background:var(--surface2);border-radius:6px">
+        <strong>Impact:</strong> ${c.impact}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ============================================================
+// EXPORT FUNCTIONS
+// ============================================================
+function buildCSVData() {
+  const headers = ["Country", "Code", "Standard Rate (%)", "Reduced Rates (%)", "Super-Reduced Rate (%)", "Zero Rate", "Last Updated", "Notes"];
+  const rows = VAT_DATA.map(r => [
+    r.country,
+    r.code,
+    r.standard,
+    r.reduced.length > 0 ? r.reduced.join(" / ") : "",
+    r.superReduced !== null && r.superReduced !== undefined ? r.superReduced : "",
+    r.zero ? "Yes" : "No",
+    r.lastUpdated,
+    `"${r.notes.replace(/"/g, "''")}"`
+  ]);
+  return [headers, ...rows].map(row => row.join(",")).join("\n");
+}
+
+function buildTSVData() {
+  const headers = ["Country", "Code", "Standard Rate (%)", "Reduced Rates (%)", "Super-Reduced Rate (%)", "Zero Rate", "Last Updated", "Notes"];
+  const rows = VAT_DATA.map(r => [
+    r.country,
+    r.code,
+    r.standard,
+    r.reduced.length > 0 ? r.reduced.join(" / ") : "",
+    r.superReduced !== null && r.superReduced !== undefined ? r.superReduced : "",
+    r.zero ? "Yes" : "No",
+    r.lastUpdated,
+    r.notes
+  ]);
+  return [headers, ...rows].map(row => row.join("\t")).join("\n");
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function renderExportPreview() {
+  const csv = buildCSVData();
+  const lines = csv.split("\n").slice(0, 6).join("\n");
+  document.getElementById("csvPreview").textContent = lines + "\n...";
+}
+
+// ============================================================
+// ALERTS
+// ============================================================
+function renderAlerts() {
+  const recentChanges = CHANGE_HISTORY.filter(h => {
+    const d = new Date(h.date);
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    return d >= cutoff;
+  });
+
+  const el = document.getElementById("alertList");
+  if (recentChanges.length === 0) {
+    el.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted)">No recent alerts</div>`;
+    return;
+  }
+
+  el.innerHTML = recentChanges.map(h => `
+    <div class="alert-item">
+      <div class="alert-title">${h.flag} ${h.country} — ${h.category}</div>
+      <div class="alert-desc">${h.oldRate} &rarr; ${h.newRate}: ${h.reason}</div>
+      <div class="alert-time">${formatDate(h.date)}</div>
+    </div>
+  `).join("");
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function computeStats() {
+  const total = VAT_DATA.length;
+  const entryCount = VAT_DATA.reduce((sum, r) => {
+    let c = 1; // standard
+    c += r.reduced.length;
+    if (r.superReduced !== null && r.superReduced !== undefined) c++;
+    if (r.zero) c++;
+    return sum + c;
+  }, 0);
+  const changed = VAT_DATA.filter(r => r.recentChange).length;
+  const avgStandard = (VAT_DATA.reduce((s, r) => s + r.standard, 0) / total).toFixed(1);
+
+  document.getElementById("statCountries").textContent = total;
+  document.getElementById("statEntries").textContent = entryCount;
+  document.getElementById("statChanges").textContent = changed;
+  document.getElementById("statAvg").textContent = avgStandard + "%";
+}
+
+// ============================================================
+// INIT & EVENT LISTENERS
+// ============================================================
+document.addEventListener("DOMContentLoaded", function() {
+  computeStats();
+  renderTable();
+  renderHistory();
+  renderCalendar();
+  renderAlerts();
+  renderExportPreview();
+
+  // Tab switching
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      const panelId = "panel-" + btn.dataset.tab;
+      document.getElementById(panelId).classList.add("active");
+    });
+  });
+
+  // Filters
+  document.getElementById("searchInput").addEventListener("input", function() {
+    currentPage = 1;
+    renderTable();
+  });
+
+  document.getElementById("categoryFilter").addEventListener("change", function() {
+    currentPage = 1;
+    renderTable();
+  });
+
+  document.getElementById("sortField").addEventListener("change", function() {
+    sortMode = this.value;
+    currentPage = 1;
+    renderTable();
+  });
+
+  // Alerts
+  document.getElementById("btnAlerts").addEventListener("click", function() {
+    document.getElementById("alertPanel").classList.toggle("open");
+  });
+
+  document.getElementById("closeAlerts").addEventListener("click", function() {
+    document.getElementById("alertPanel").classList.remove("open");
+  });
+
+  // Export
+  document.getElementById("btnExportCSV").addEventListener("click", function() {
+    downloadFile(buildCSVData(), "eu-vat-rates-2024.csv", "text/csv");
+  });
+
+  document.getElementById("dlCSV").addEventListener("click", function() {
+    downloadFile(buildCSVData(), "eu-vat-rates-2024.csv", "text/csv");
+  });
+
+  document.getElementById("dlJSON").addEventListener("click", function() {
+    downloadFile(JSON.stringify(VAT_DATA, null, 2), "eu-vat-rates-2024.json", "application/json");
+  });
+
+  document.getElementById("dlTSV").addEventListener("click", function() {
+    downloadFile(buildTSVData(), "eu-vat-rates-2024.tsv", "text/tab-separated-values");
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,2098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CineList — Movie Showtimes Aggregator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08);
+      --accent: #00c030;
+      --accent2: #e8a020;
+      --text: #ffffff;
+      --muted: #9ca3af;
+      --radius: 12px;
+      --font-display: 'Bebas Neue', Impact, sans-serif;
+      --font-body: 'Figtree', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Animations ── */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    .fade-in { animation: fadeIn 0.4s ease both; }
+
+    /* ── Layout ── */
+    .app-header {
+      background: linear-gradient(135deg, var(--surface) 0%, #1e2035 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      gap: 1rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .logo span { color: var(--accent); }
+
+    nav { display: flex; gap: 0.25rem; }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: 0.5rem 0.875rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .nav-btn:hover { background: var(--surface2); color: var(--text); }
+    .nav-btn.active { background: var(--accent); color: #fff; }
+
+    .watchlist-badge {
+      background: var(--accent2);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(168,85,247, 0.15);
+      border: 1px solid rgba(168,85,247, 0.3);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      margin-bottom: 1rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.75rem, 4vw, 2.75rem);
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--text) 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ── Filter Bar ── */
+    .filter-bar {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      align-items: center;
+    }
+
+    .filter-bar label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .filter-select, .filter-input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 0.875rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .filter-select:focus, .filter-input:focus { border-color: var(--accent); }
+
+    .filter-input {
+      flex: 1;
+      min-width: 180px;
+      max-width: 300px;
+    }
+
+    .filter-input::placeholder { color: var(--muted); }
+
+    /* ── Movie Grid ── */
+    .movie-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .movie-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      position: relative;
+      animation: fadeIn 0.4s ease both;
+    }
+
+    .movie-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+      border-color: var(--accent);
+    }
+
+    .movie-card:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .movie-poster {
+      width: 100%;
+      aspect-ratio: 2/3;
+      object-fit: cover;
+      display: block;
+      background: var(--surface2);
+    }
+
+    .poster-placeholder {
+      width: 100%;
+      aspect-ratio: 2/3;
+      background: linear-gradient(135deg, var(--surface2), var(--border));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: var(--muted);
+    }
+
+    .movie-card-body {
+      padding: 1rem;
+    }
+
+    .movie-card-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.375rem;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .movie-card-meta {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+
+    .rating-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--yellow);
+    }
+
+    .genre-tag {
+      background: rgba(168,85,247, 0.15);
+      color: var(--accent);
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .showtime-chips {
+      display: flex;
+      gap: 0.375rem;
+      flex-wrap: wrap;
+      margin-top: 0.625rem;
+    }
+
+    .showtime-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--green);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .watchlist-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: rgba(15, 17, 23, 0.8);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      backdrop-filter: blur(4px);
+    }
+
+    .watchlist-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    .watchlist-btn.saved { color: var(--accent2); border-color: var(--accent2); }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .empty-state h3 { color: var(--text); margin-bottom: 0.5rem; font-size: 1.125rem; }
+    .empty-state p { font-size: 0.875rem; }
+
+    /* ── Modal / Detail ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 680px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.95);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.open .modal { transform: scale(1); }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      gap: 1rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.25rem;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .modal-close:hover { background: var(--surface2); color: var(--text); }
+
+    .modal-body {
+      display: flex;
+      gap: 1.5rem;
+      padding: 1.5rem;
+    }
+
+    .modal-poster {
+      width: 150px;
+      min-width: 150px;
+      border-radius: 8px;
+      overflow: hidden;
+      align-self: flex-start;
+    }
+
+    .modal-poster img {
+      width: 100%;
+      display: block;
+    }
+
+    .modal-poster-placeholder {
+      width: 100%;
+      aspect-ratio: 2/3;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+    }
+
+    .modal-info { flex: 1; }
+
+    .modal-title {
+      font-size: 1.375rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+
+    .modal-tagline {
+      color: var(--muted);
+      font-style: italic;
+      margin-bottom: 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .modal-meta-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .meta-item strong { color: var(--text); }
+
+    .modal-overview {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+
+    .modal-showtimes { margin-bottom: 1rem; }
+
+    .modal-showtimes h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-showtime-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .modal-showtime-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .modal-showtime-item .time { color: var(--green); font-weight: 700; font-family: monospace; }
+    .modal-showtime-item .screen { color: var(--muted); font-size: 0.7rem; margin-top: 0.1rem; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #5a52d5; transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-danger {
+      background: rgba(244,63,94, 0.15);
+      color: var(--accent2);
+      border: 1px solid rgba(244,63,94, 0.3);
+    }
+
+    .btn-danger:hover { background: rgba(244,63,94, 0.25); }
+
+    .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.8rem; }
+
+    /* ── Admin View ── */
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .admin-grid { grid-template-columns: 1fr; }
+      .modal-body { flex-direction: column; }
+      .modal-poster { width: 100%; min-width: unset; max-width: 200px; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text);
+    }
+
+    .card-title .icon { font-size: 1.1rem; }
+
+    /* ── Form ── */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 0.375rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.625rem 0.875rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(168,85,247, 0.15);
+    }
+
+    .form-input::placeholder { color: var(--muted); }
+
+    .form-row { display: flex; gap: 0.75rem; }
+    .form-row .form-group { flex: 1; }
+
+    .search-result-list {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+      background: var(--surface2);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .search-result-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 0.875rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: var(--surface); }
+
+    .search-result-item img {
+      width: 32px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .search-result-item .result-title { font-size: 0.875rem; font-weight: 600; }
+    .search-result-item .result-year { font-size: 0.75rem; color: var(--muted); }
+
+    .selected-movie-preview {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: rgba(168,85,247, 0.1);
+      border: 1px solid rgba(168,85,247, 0.3);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .selected-movie-preview img {
+      width: 40px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .selected-movie-preview .preview-title { font-size: 0.875rem; font-weight: 700; }
+    .selected-movie-preview .preview-meta { font-size: 0.75rem; color: var(--muted); }
+
+    .showtimes-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .showtime-entry-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .showtime-entry-row .form-input { flex: 1; }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.375rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .btn-icon:hover { color: var(--accent2); background: rgba(244,63,94, 0.1); }
+
+    /* ── Listings Admin Table ── */
+    .listings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .listings-table th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .listings-table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .listings-table tr:last-child td { border-bottom: none; }
+    .listings-table tr:hover td { background: var(--surface2); }
+
+    .listing-thumb {
+      width: 28px;
+      height: 42px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: var(--surface2);
+    }
+
+    /* ── Toast ── */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      max-width: 300px;
+      animation: slideInRight 0.3s ease;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .toast.success { border-left-color: var(--green); }
+    .toast.error { border-left-color: var(--accent2); }
+    .toast.warning { border-left-color: var(--yellow); }
+
+    /* ── Loader ── */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    .loader-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+      padding: 1rem 0;
+    }
+
+    /* ── Skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+
+    /* ── Watchlist ── */
+    .watchlist-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .watchlist-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      display: flex;
+      gap: 0.875rem;
+      align-items: flex-start;
+      transition: border-color 0.2s;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .watchlist-item:hover { border-color: var(--accent); }
+
+    .watchlist-item img {
+      width: 48px;
+      height: 72px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: var(--surface2);
+      flex-shrink: 0;
+    }
+
+    .watchlist-item-body { flex: 1; min-width: 0; }
+
+    .watchlist-item-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .watchlist-item-meta { font-size: 0.75rem; color: var(--muted); }
+
+    /* ── Section header ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
+    .count-badge {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.6rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Status ── */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+
+    /* ── Trailer link ── */
+    .trailer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--accent2);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 0.375rem 0.75rem;
+      background: rgba(244,63,94, 0.1);
+      border: 1px solid rgba(244,63,94, 0.25);
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .trailer-link:hover { background: rgba(244,63,94, 0.2); }
+
+    /* ── Tabs (admin) ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+      gap: 0;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      margin-bottom: -1px;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      main { padding: 1rem; }
+      .header-inner { padding: 0 1rem; }
+      .app-header { padding: 0; }
+      .hero { padding: 1.5rem 0.5rem 1rem; }
+      .filter-bar { gap: 0.5rem; }
+      .movie-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+    }
+
+    /* ── Now Showing badge ── */
+    .now-showing-badge {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.5rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* === Film/Books v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 700px 500px at 50% -5%, rgba(0,192,48,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
+    h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent2); }
+    h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .movie, .book, .show, .comic, .series, .reading, .pick,
+    [class*="card"], [class*="item"], [class*="result"], [class*="movie"], [class*="book"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: transform 0.2s, background 0.2s;
+      animation: mediaFade 0.4s ease both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent2); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent2);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 0.75rem 2rem;
+      font-family: var(--font-body);
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { transform: scale(1.02); filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .genre, .category, .label, .format, .status {
+      display: inline-block;
+      background: rgba(232,160,32,0.12);
+      border: 1px solid rgba(232,160,32,0.25);
+      color: var(--accent2);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .rating, .score, .pages, .runtime {
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--accent2);
+    }
+
+    /* Star rating */
+    .stars, .rating-stars { color: var(--accent2); letter-spacing: 0.1em; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+    @keyframes mediaFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="movieModal" role="dialog" aria-modal="true" aria-label="Movie details">
+  <div class="modal" id="modalInner">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle"></div>
+        <div class="modal-tagline" id="modalTagline"></div>
+      </div>
+      <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-poster" id="modalPoster"></div>
+      <div class="modal-info">
+        <div class="modal-meta-row" id="modalMeta"></div>
+        <p class="modal-overview" id="modalOverview"></p>
+        <div class="modal-showtimes" id="modalShowtimes"></div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;">
+          <button class="btn btn-secondary btn-sm" id="modalWatchlistBtn">+ Watchlist</button>
+          <a class="trailer-link" id="modalTrailerLink" href="#" target="_blank" rel="noopener" style="display:none">
+            &#9654; Watch Trailer
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- App Header -->
+<header class="app-header">
+  <div class="header-inner">
+    <div class="logo" onclick="showView('showtimes')" role="button" tabindex="0" aria-label="CineList home">
+      <div class="logo-icon">&#127916;</div>
+      Cine<span>List</span>
+    </div>
+    <nav role="navigation" aria-label="Main navigation">
+      <button class="nav-btn active" id="navShowtimes" onclick="showView('showtimes')" aria-label="Showtimes">
+        &#127916; Showtimes
+      </button>
+      <button class="nav-btn" id="navWatchlist" onclick="showView('watchlist')" aria-label="Watchlist">
+        &#9825; Watchlist <span class="watchlist-badge" id="watchlistBadge" style="display:none">0</span>
+      </button>
+      <button class="nav-btn" id="navAdmin" onclick="showView('admin')" aria-label="Admin">
+        &#9881; Admin
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Showtimes View ── -->
+  <section class="view active" id="viewShowtimes" aria-label="Showtimes">
+    <div class="hero fade-in">
+      <div class="hero-badge"><span class="status-dot"></span> &nbsp;Live Listings</div>
+      <h1>What's Showing Near You</h1>
+      <p>Find showtimes, explore film details, and save your favourites — all in one place.</p>
+    </div>
+
+    <div class="filter-bar" role="search">
+      <label for="filterSearch">Search:</label>
+      <input class="filter-input" id="filterSearch" type="search" placeholder="Search movies..." aria-label="Search movies" />
+      <label for="filterDate">Date:</label>
+      <select class="filter-select" id="filterDate" aria-label="Filter by date"></select>
+      <label for="filterGenre">Genre:</label>
+      <select class="filter-select" id="filterGenre" aria-label="Filter by genre">
+        <option value="">All Genres</option>
+      </select>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title" id="showtimesHeading">Now Showing</div>
+      <span class="count-badge" id="movieCount">0 films</span>
+    </div>
+
+    <div class="movie-grid" id="movieGrid" role="list">
+      <!-- populated by JS -->
+    </div>
+    <div id="movieGridLoader" class="loader-inline">
+      <div class="spinner"></div> Loading showtimes...
+    </div>
+    <div id="movieGridEmpty" class="empty-state" style="display:none">
+      <div class="empty-icon">&#127916;</div>
+      <h3>No movies found</h3>
+      <p>Try adjusting your filters or check back for new listings.</p>
+    </div>
+  </section>
+
+  <!-- ── Watchlist View ── -->
+  <section class="view" id="viewWatchlist" aria-label="Watchlist">
+    <div class="section-header" style="margin-top:2rem">
+      <div class="section-title">My Watchlist</div>
+      <span class="count-badge" id="watchlistCount">0 saved</span>
+    </div>
+    <div class="watchlist-grid" id="watchlistGrid">
+      <!-- populated by JS -->
+    </div>
+    <div id="watchlistEmpty" class="empty-state" style="display:none">
+      <div class="empty-icon">&#9825;</div>
+      <h3>Your watchlist is empty</h3>
+      <p>Browse showtimes and tap the heart icon to save movies.</p>
+    </div>
+  </section>
+
+  <!-- ── Admin View ── -->
+  <section class="view" id="viewAdmin" aria-label="Admin dashboard">
+    <div style="margin-top:2rem;margin-bottom:1.5rem">
+      <div style="font-size:1.375rem;font-weight:800;margin-bottom:0.25rem">Admin Dashboard</div>
+      <div style="color:var(--muted);font-size:0.875rem">Manage cinema listings and showtimes</div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" id="tabAdd" role="tab" aria-selected="true" onclick="switchTab('add')">Add Listing</button>
+      <button class="tab-btn" id="tabManage" role="tab" aria-selected="false" onclick="switchTab('manage')">Manage Listings</button>
+    </div>
+
+    <!-- Add Listing Tab -->
+    <div class="tab-content active" id="tabContentAdd">
+      <div class="admin-grid">
+        <!-- Entry Form -->
+        <div class="card">
+          <div class="card-title"><span class="icon">&#127917;</span> Add Showtime</div>
+
+          <div class="form-group" id="movieSearchGroup">
+            <label class="form-label" for="movieSearchInput">Movie Title</label>
+            <input class="form-input" id="movieSearchInput" type="text" placeholder="Search for a movie..." autocomplete="off" aria-autocomplete="list" aria-controls="searchResults" />
+            <div class="search-result-list" id="searchResults" style="display:none" role="listbox" aria-label="Movie search results"></div>
+          </div>
+
+          <div id="selectedMoviePreview" style="display:none"></div>
+
+          <div class="form-group">
+            <label class="form-label" for="screenInput">Screen / Auditorium</label>
+            <input class="form-input" id="screenInput" type="text" placeholder="e.g. Screen 1, Dolby, IMAX" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Showtimes</label>
+            <div class="showtimes-input-group" id="showtimesInputGroup">
+              <div class="form-row">
+                <div class="form-group">
+                  <input class="form-input" type="date" id="showtimeDate" aria-label="Showtime date" />
+                </div>
+                <div class="form-group">
+                  <input class="form-input" type="time" id="showtimeTime" aria-label="Showtime time" />
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="addShowtimeSlot()" style="margin-top:0;align-self:flex-end;height:38px" aria-label="Add time slot">+ Add</button>
+              </div>
+            </div>
+            <div id="showtimeSlots" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.375rem"></div>
+          </div>
+
+          <button class="btn btn-primary" id="addListingBtn" onclick="submitListing()" style="width:100%;justify-content:center">
+            Add to Schedule
+          </button>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="card" id="previewCard">
+          <div class="card-title"><span class="icon">&#128065;</span> Preview</div>
+          <div id="previewContent" style="color:var(--muted);font-size:0.875rem;text-align:center;padding:2rem 0">
+            Search for a movie to see a preview
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Listings Tab -->
+    <div class="tab-content" id="tabContentManage">
+      <div class="card">
+        <div class="section-header" style="margin-bottom:1rem">
+          <div class="card-title" style="margin-bottom:0">Current Listings</div>
+          <span class="count-badge" id="listingsCount">0</span>
+        </div>
+        <div id="listingsTableWrap" style="overflow-x:auto">
+          <table class="listings-table" aria-label="Cinema listings">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Title</th>
+                <th>Screen</th>
+                <th>Showtimes</th>
+                <th>Rating</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="listingsTableBody"></tbody>
+          </table>
+          <div id="listingsEmpty" class="empty-state" style="display:none">
+            <div class="empty-icon">&#128196;</div>
+            <h3>No listings yet</h3>
+            <p>Add your first showtime using the form above.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+'use strict';
+
+/* ========================================================
+   CONFIG & STATE
+======================================================== */
+const TMDB_KEY = `2dca580c2a14b55200e784d157207b4d`;
+const TMDB_BASE = `https://api.themoviedb.org/3`;
+const TMDB_IMG = `https://image.tmdb.org/t/p/w300`;
+
+const GENRE_MAP = {
+  28:'Action',18:'Drama',35:'Comedy',27:'Horror',878:'Sci-Fi',
+  10749:'Romance',16:'Animation',53:'Thriller',12:'Adventure',
+  80:'Crime',99:'Documentary',14:'Fantasy',36:'History',10402:'Music',
+  9648:'Mystery',10752:'War',37:'Western',10751:'Family',
+};
+
+let state = {
+  listings: [],        // cinema staff entries
+  nowPlaying: [],      // from TMDB
+  watchlist: [],       // localStorage
+  selectedMovie: null, // currently selected TMDB movie for form
+  showtimeSlots: [],   // pending slots in admin form
+  searchDebounce: null,
+  currentModal: null,
+};
+
+/* ========================================================
+   PERSISTENCE
+======================================================== */
+function loadFromStorage() {
+  try {
+    const saved = localStorage.getItem(`cinelist_listings`);
+    if (saved) state.listings = JSON.parse(saved);
+    const wl = localStorage.getItem(`cinelist_watchlist`);
+    if (wl) state.watchlist = JSON.parse(wl);
+  } catch (_) { /* ignore */ }
+}
+
+function saveListings() {
+  try { localStorage.setItem(`cinelist_listings`, JSON.stringify(state.listings)); } catch (_) { /* ignore */ }
+}
+
+function saveWatchlist() {
+  try { localStorage.setItem(`cinelist_watchlist`, JSON.stringify(state.watchlist)); } catch (_) { /* ignore */ }
+}
+
+/* ========================================================
+   TOAST
+======================================================== */
+function toast(msg, type = `info`) {
+  const container = document.getElementById(`toastContainer`);
+  const el = document.createElement(`div`);
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = `0`;
+    el.style.transform = `translateX(20px)`;
+    el.style.transition = `all 0.3s`;
+    setTimeout(() => el.remove(), 300);
+  }, 3000);
+}
+
+/* ========================================================
+   VIEW SWITCHING
+======================================================== */
+function showView(name) {
+  document.querySelectorAll(`.view`).forEach(v => v.classList.remove(`active`));
+  document.querySelectorAll(`.nav-btn`).forEach(b => b.classList.remove(`active`));
+  document.getElementById(`view${capitalize(name)}`).classList.add(`active`);
+  document.getElementById(`nav${capitalize(name)}`).classList.add(`active`);
+  if (name === `watchlist`) renderWatchlist();
+  if (name === `admin`) renderListingsTable();
+}
+
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/* ========================================================
+   TAB SWITCHING (admin)
+======================================================== */
+function switchTab(name) {
+  document.querySelectorAll(`.tab-btn`).forEach(b => { b.classList.remove(`active`); b.setAttribute(`aria-selected`, `false`); });
+  document.querySelectorAll(`.tab-content`).forEach(c => c.classList.remove(`active`));
+  document.getElementById(`tab${capitalize(name)}`).classList.add(`active`);
+  document.getElementById(`tab${capitalize(name)}`).setAttribute(`aria-selected`, `true`);
+  document.getElementById(`tabContent${capitalize(name)}`).classList.add(`active`);
+  if (name === `manage`) renderListingsTable();
+}
+
+/* ========================================================
+   TMDB API
+======================================================== */
+async function fetchNowPlaying() {
+  try {
+    const res = await fetch(`${TMDB_BASE}/movie/now_playing?api_key=${TMDB_KEY}&language=en-US`);
+    if (!res.ok) throw new Error(`TMDB status ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
+  } catch (err) {
+    toast(`Could not fetch now playing list — showing demo data`, `warning`);
+    return generateDemoMovies();
+  }
+}
+
+async function searchTMDB(query) {
+  if (!query.trim()) return [];
+  try {
+    const res = await fetch(`${TMDB_BASE}/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error(`TMDB status ${res.status}`);
+    const data = await res.json();
+    return (data.results || []).slice(0, 6);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function fetchMovieDetails(id) {
+  try {
+    const [detailRes, videosRes] = await Promise.all([
+      fetch(`${TMDB_BASE}/movie/${id}?api_key=${TMDB_KEY}&language=en-US`),
+      fetch(`${TMDB_BASE}/movie/${id}/videos?api_key=${TMDB_KEY}&language=en-US`)
+    ]);
+    const detail = await detailRes.json();
+    const videos = await videosRes.json();
+    const trailer = (videos.results || []).find(v => v.type === `Trailer` && v.site === `YouTube`);
+    return { ...detail, trailerKey: trailer ? trailer.key : null };
+  } catch (_) {
+    return null;
+  }
+}
+
+/* ========================================================
+   DEMO DATA (fallback when TMDB unreachable)
+======================================================== */
+function generateDemoMovies() {
+  return [
+    { id: 1, title: `Neon Horizon`, poster_path: null, vote_average: 7.8, genre_ids: [878, 28], overview: `A lone astronaut discovers a signal from beyond known space, pulling her into a conspiracy that spans centuries.`, release_date: `2025-01-15` },
+    { id: 2, title: `The Last Garden`, poster_path: null, vote_average: 8.1, genre_ids: [18, 10749], overview: `Two strangers find solace in tending an abandoned community garden — and each other — during a city-wide blackout.`, release_date: `2025-02-20` },
+    { id: 3, title: `Pixel Rush`, poster_path: null, vote_average: 6.9, genre_ids: [35, 16], overview: `A clumsy game designer accidentally uploads himself into his own creation and must survive to find the exit.`, release_date: `2025-03-05` },
+    { id: 4, title: `Shadowgate`, poster_path: null, vote_average: 7.3, genre_ids: [27, 9648], overview: `An archivist cataloguing a decommissioned asylum uncovers documents hinting that its patients never really left.`, release_date: `2025-03-18` },
+    { id: 5, title: `Blue Meridian`, poster_path: null, vote_average: 7.6, genre_ids: [12, 14], overview: `A deep-sea expedition stumbles upon an ancient underwater city teeming with life unlike anything on Earth.`, release_date: `2025-04-10` },
+    { id: 6, title: `Quiet Hours`, poster_path: null, vote_average: 8.4, genre_ids: [18, 80], overview: `A forensic accountant unravels her firm's decades-old cover-up while caring for her ailing father.`, release_date: `2025-04-22` },
+  ];
+}
+
+/* ========================================================
+   SHOWTIME GENERATION
+======================================================== */
+function generateShowtimes(movieId) {
+  const today = new Date();
+  const slots = [];
+  const times = [`10:30`, `13:15`, `16:00`, `18:45`, `21:30`];
+  const screens = [`Screen 1`, `Screen 2`, `Screen 3`];
+  for (let d = 0; d < 5; d++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + d);
+    const dateStr = date.toISOString().slice(0, 10);
+    const count = 2 + (movieId % 3);
+    for (let t = 0; t < count; t++) {
+      slots.push({
+        date: dateStr,
+        time: times[(movieId + d + t) % times.length],
+        screen: screens[(movieId + t) % screens.length],
+      });
+    }
+  }
+  return slots;
+}
+
+/* ========================================================
+   BUILD DISPLAY LISTINGS
+   Merges now-playing TMDB data with staff-entered listings
+======================================================== */
+function buildDisplayListings(filters) {
+  const combined = [];
+
+  // Staff-entered listings
+  state.listings.forEach(listing => {
+    combined.push({
+      ...listing,
+      isStaffEntry: true,
+    });
+  });
+
+  // Auto-showtimes from TMDB now-playing (not already in staff listings)
+  const staffTmdbIds = new Set(state.listings.map(l => String(l.tmdbId)));
+  state.nowPlaying.slice(0, 12).forEach(movie => {
+    if (!staffTmdbIds.has(String(movie.id))) {
+      combined.push({
+        tmdbId: movie.id,
+        title: movie.title,
+        posterPath: movie.poster_path,
+        rating: movie.vote_average,
+        genreIds: movie.genre_ids || [],
+        overview: movie.overview,
+        releaseDate: movie.release_date,
+        screen: `Screen 1`,
+        showtimes: generateShowtimes(movie.id),
+        isStaffEntry: false,
+      });
+    }
+  });
+
+  // Apply filters
+  let result = combined;
+
+  if (filters.search) {
+    const q = filters.search.toLowerCase();
+    result = result.filter(m => m.title.toLowerCase().includes(q));
+  }
+
+  if (filters.genre) {
+    result = result.filter(m => {
+      const ids = m.genreIds || [];
+      return ids.map(String).includes(String(filters.genre)) ||
+             (m.genres || []).some(g => String(g.id) === String(filters.genre));
+    });
+  }
+
+  if (filters.date) {
+    result = result.filter(m => {
+      const slots = m.showtimes || [];
+      return slots.some(s => s.date === filters.date);
+    });
+  }
+
+  return result;
+}
+
+/* ========================================================
+   RENDER MOVIES
+======================================================== */
+function renderMovies() {
+  const grid = document.getElementById(`movieGrid`);
+  const loader = document.getElementById(`movieGridLoader`);
+  const empty = document.getElementById(`movieGridEmpty`);
+  const countEl = document.getElementById(`movieCount`);
+
+  const filters = {
+    search: document.getElementById(`filterSearch`).value,
+    genre: document.getElementById(`filterGenre`).value,
+    date: document.getElementById(`filterDate`).value,
+  };
+
+  const movies = buildDisplayListings(filters);
+  countEl.textContent = `${movies.length} film${movies.length !== 1 ? `s` : ``}`;
+
+  loader.style.display = `none`;
+
+  if (movies.length === 0) {
+    grid.innerHTML = ``;
+    empty.style.display = `block`;
+    return;
+  }
+
+  empty.style.display = `none`;
+  grid.innerHTML = ``;
+
+  movies.forEach((movie, i) => {
+    const card = document.createElement(`div`);
+    card.className = `movie-card`;
+    card.style.animationDelay = `${i * 0.05}s`;
+    card.setAttribute(`role`, `listitem`);
+    card.setAttribute(`tabindex`, `0`);
+    card.setAttribute(`aria-label`, `${movie.title} — click for details`);
+
+    const isWatchlisted = state.watchlist.some(w => String(w.tmdbId) === String(movie.tmdbId));
+    const poster = movie.posterPath
+      ? `<img class="movie-poster" src="${TMDB_IMG}${movie.posterPath}" alt="${escHtml(movie.title)} poster" loading="lazy" />`
+      : `<div class="poster-placeholder">&#127916;</div>`;
+
+    const genres = (movie.genreIds || [])
+      .slice(0, 2)
+      .map(id => GENRE_MAP[id])
+      .filter(Boolean)
+      .map(g => `<span class="genre-tag">${g}</span>`)
+      .join(``);
+
+    const todaySlots = (movie.showtimes || [])
+      .filter(s => s.date === todayStr())
+      .slice(0, 4)
+      .map(s => `<span class="showtime-chip">${s.time}</span>`)
+      .join(``);
+
+    const rating = movie.rating ? `<span class="rating-badge">&#11088; ${movie.rating.toFixed(1)}</span>` : ``;
+
+    card.innerHTML = `
+      ${movie.isStaffEntry ? `` : `<div class="now-showing-badge">Now Showing</div>`}
+      ${poster}
+      <button class="watchlist-btn ${isWatchlisted ? `saved` : ``}"
+        aria-label="${isWatchlisted ? `Remove from` : `Add to`} watchlist"
+        data-id="${movie.tmdbId}"
+        onclick="event.stopPropagation(); toggleWatchlist(this, ${JSON.stringify(movie).replace(/"/g, `&quot;`)})">
+        ${isWatchlisted ? `&#9829;` : `&#9825;`}
+      </button>
+      <div class="movie-card-body">
+        <div class="movie-card-title">${escHtml(movie.title)}</div>
+        <div class="movie-card-meta">${rating}${genres}</div>
+        ${todaySlots ? `<div class="showtime-chips">${todaySlots}</div>` : `<div style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem">No showings today</div>`}
+      </div>
+    `;
+
+    card.addEventListener(`click`, () => openMovieModal(movie));
+    card.addEventListener(`keydown`, e => { if (e.key === `Enter` || e.key === ` `) { e.preventDefault(); openMovieModal(movie); } });
+    grid.appendChild(card);
+  });
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`).replace(/"/g, `&quot;`);
+}
+
+/* ========================================================
+   DATE FILTER OPTIONS
+======================================================== */
+function buildDateOptions() {
+  const sel = document.getElementById(`filterDate`);
+  const today = new Date();
+  sel.innerHTML = `<option value="">All Dates</option>`;
+  for (let d = 0; d < 7; d++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + d);
+    const val = date.toISOString().slice(0, 10);
+    const label = d === 0 ? `Today` : d === 1 ? `Tomorrow` : date.toLocaleDateString(`en-US`, { weekday: `short`, month: `short`, day: `numeric` });
+    const opt = document.createElement(`option`);
+    opt.value = val;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  }
+}
+
+/* ========================================================
+   GENRE FILTER OPTIONS
+======================================================== */
+function buildGenreOptions() {
+  const sel = document.getElementById(`filterGenre`);
+  sel.innerHTML = `<option value="">All Genres</option>`;
+  Object.entries(GENRE_MAP).forEach(([id, name]) => {
+    const opt = document.createElement(`option`);
+    opt.value = id;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+/* ========================================================
+   MODAL
+======================================================== */
+async function openMovieModal(movie) {
+  state.currentModal = movie;
+  const overlay = document.getElementById(`movieModal`);
+
+  document.getElementById(`modalTitle`).textContent = movie.title;
+  document.getElementById(`modalTagline`).textContent = ``;
+  document.getElementById(`modalMeta`).innerHTML = `<div class="spinner"></div>`;
+  document.getElementById(`modalOverview`).textContent = movie.overview || ``;
+  document.getElementById(`modalTrailerLink`).style.display = `none`;
+
+  // Poster
+  const posterEl = document.getElementById(`modalPoster`);
+  if (movie.posterPath) {
+    posterEl.innerHTML = `<img src="${TMDB_IMG}${movie.posterPath}" alt="${escHtml(movie.title)} poster" style="width:100%;display:block;border-radius:8px" />`;
+  } else {
+    posterEl.innerHTML = `<div class="modal-poster-placeholder">&#127916;</div>`;
+  }
+
+  // Showtimes
+  renderModalShowtimes(movie);
+
+  // Watchlist button
+  const wlBtn = document.getElementById(`modalWatchlistBtn`);
+  const isWL = state.watchlist.some(w => String(w.tmdbId) === String(movie.tmdbId));
+  wlBtn.textContent = isWL ? `&#9829; Saved` : `+ Watchlist`;
+
+  overlay.classList.add(`open`);
+  document.body.style.overflow = `hidden`;
+
+  // Fetch enriched details async
+  if (movie.tmdbId) {
+    const details = await fetchMovieDetails(movie.tmdbId);
+    if (details && state.currentModal === movie) {
+      // Tagline
+      if (details.tagline) document.getElementById(`modalTagline`).textContent = `"${details.tagline}"`;
+
+      // Meta
+      const runtime = details.runtime ? `${details.runtime} min` : ``;
+      const year = details.release_date ? details.release_date.slice(0, 4) : ``;
+      const rating = details.vote_average ? `&#11088; ${details.vote_average.toFixed(1)}` : ``;
+      const genres = (details.genres || []).slice(0, 3).map(g => `<span class="genre-tag">${g.name}</span>`).join(` `);
+
+      document.getElementById(`modalMeta`).innerHTML = `
+        ${year ? `<div class="meta-item"><strong>${year}</strong></div>` : ``}
+        ${runtime ? `<div class="meta-item">&#128337; <strong>${runtime}</strong></div>` : ``}
+        ${rating ? `<div class="meta-item">${rating}</div>` : ``}
+        <div style="display:flex;gap:0.375rem;flex-wrap:wrap">${genres}</div>
+      `;
+
+      if (details.overview) document.getElementById(`modalOverview`).textContent = details.overview;
+
+      // Trailer
+      if (details.trailerKey) {
+        const trailerLink = document.getElementById(`modalTrailerLink`);
+        trailerLink.href = `https://www.youtube.com/watch?v=${details.trailerKey}`;
+        trailerLink.style.display = `inline-flex`;
+      }
+    }
+  } else {
+    document.getElementById(`modalMeta`).innerHTML = ``;
+  }
+}
+
+function renderModalShowtimes(movie) {
+  const container = document.getElementById(`modalShowtimes`);
+  const slots = movie.showtimes || [];
+  if (!slots.length) { container.innerHTML = ``; return; }
+
+  // Group by date
+  const byDate = {};
+  slots.forEach(s => {
+    if (!byDate[s.date]) byDate[s.date] = [];
+    byDate[s.date].push(s);
+  });
+
+  let html = `<h4>Showtimes</h4><div class="modal-showtime-list">`;
+  Object.entries(byDate).slice(0, 5).forEach(([date, times]) => {
+    const label = formatDate(date);
+    times.forEach(s => {
+      html += `<div class="modal-showtime-item">
+        <div class="time">${s.time}</div>
+        <div class="screen">${escHtml(label)} &middot; ${escHtml(s.screen)}</div>
+      </div>`;
+    });
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + `T00:00:00`);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(d); target.setHours(0,0,0,0);
+  const diff = Math.round((target - today) / 86400000);
+  if (diff === 0) return `Today`;
+  if (diff === 1) return `Tomorrow`;
+  return d.toLocaleDateString(`en-US`, { weekday: `short`, month: `short`, day: `numeric` });
+}
+
+function closeModal() {
+  document.getElementById(`movieModal`).classList.remove(`open`);
+  document.body.style.overflow = ``;
+  state.currentModal = null;
+}
+
+/* ========================================================
+   WATCHLIST
+======================================================== */
+function toggleWatchlist(btn, movie) {
+  const id = String(movie.tmdbId);
+  const idx = state.watchlist.findIndex(w => String(w.tmdbId) === id);
+  if (idx === -1) {
+    state.watchlist.push(movie);
+    toast(`${movie.title} added to watchlist`, `success`);
+    if (btn) {
+      btn.innerHTML = `&#9829;`;
+      btn.classList.add(`saved`);
+      btn.setAttribute(`aria-label`, `Remove from watchlist`);
+    }
+    // Update modal button if open
+    if (state.currentModal && String(state.currentModal.tmdbId) === id) {
+      document.getElementById(`modalWatchlistBtn`).textContent = `♥ Saved`;
+    }
+  } else {
+    state.watchlist.splice(idx, 1);
+    toast(`${movie.title} removed from watchlist`, `info`);
+    if (btn) {
+      btn.innerHTML = `&#9825;`;
+      btn.classList.remove(`saved`);
+      btn.setAttribute(`aria-label`, `Add to watchlist`);
+    }
+    if (state.currentModal && String(state.currentModal.tmdbId) === id) {
+      document.getElementById(`modalWatchlistBtn`).textContent = `+ Watchlist`;
+    }
+  }
+  saveWatchlist();
+  updateWatchlistBadge();
+}
+
+function updateWatchlistBadge() {
+  const badge = document.getElementById(`watchlistBadge`);
+  const count = state.watchlist.length;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? `inline-flex` : `none`;
+}
+
+function renderWatchlist() {
+  const grid = document.getElementById(`watchlistGrid`);
+  const empty = document.getElementById(`watchlistEmpty`);
+  const count = document.getElementById(`watchlistCount`);
+  count.textContent = `${state.watchlist.length} saved`;
+
+  if (!state.watchlist.length) {
+    grid.innerHTML = ``;
+    empty.style.display = `block`;
+    return;
+  }
+
+  empty.style.display = `none`;
+  grid.innerHTML = ``;
+
+  state.watchlist.forEach(movie => {
+    const item = document.createElement(`div`);
+    item.className = `watchlist-item`;
+    item.innerHTML = `
+      ${movie.posterPath
+        ? `<img src="${TMDB_IMG}${movie.posterPath}" alt="${escHtml(movie.title)} poster" loading="lazy" />`
+        : `<div style="width:48px;height:72px;background:var(--surface2);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0">&#127916;</div>`
+      }
+      <div class="watchlist-item-body">
+        <div class="watchlist-item-title">${escHtml(movie.title)}</div>
+        <div class="watchlist-item-meta">${movie.rating ? `&#11088; ${movie.rating.toFixed(1)}` : ``}</div>
+        <div style="margin-top:0.5rem;display:flex;gap:0.375rem">
+          <button class="btn btn-secondary btn-sm" onclick="openMovieModal(${JSON.stringify(movie).replace(/"/g, `&quot;`)})">Details</button>
+          <button class="btn btn-danger btn-sm" onclick="toggleWatchlist(null, ${JSON.stringify(movie).replace(/"/g, `&quot;`)}); renderWatchlist()">Remove</button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(item);
+  });
+}
+
+/* ========================================================
+   ADMIN — MOVIE SEARCH
+======================================================== */
+function setupAdminSearch() {
+  const input = document.getElementById(`movieSearchInput`);
+  const results = document.getElementById(`searchResults`);
+
+  input.addEventListener(`input`, () => {
+    clearTimeout(state.searchDebounce);
+    const q = input.value.trim();
+    if (!q) { results.style.display = `none`; return; }
+    state.searchDebounce = setTimeout(async () => {
+      results.innerHTML = `<div class="loader-inline" style="padding:0.75rem"><div class="spinner"></div> Searching...</div>`;
+      results.style.display = `block`;
+      const movies = await searchTMDB(q);
+      if (!movies.length) {
+        results.innerHTML = `<div style="padding:0.75rem;color:var(--muted);font-size:0.875rem">No results found</div>`;
+        return;
+      }
+      results.innerHTML = ``;
+      movies.forEach(m => {
+        const item = document.createElement(`div`);
+        item.className = `search-result-item`;
+        item.setAttribute(`role`, `option`);
+        item.setAttribute(`tabindex`, `0`);
+        const year = m.release_date ? m.release_date.slice(0, 4) : ``;
+        item.innerHTML = `
+          <img src="${m.poster_path ? TMDB_IMG + m.poster_path : ``}" alt="${escHtml(m.title)}" onerror="this.style.display='none'" />
+          <div>
+            <div class="result-title">${escHtml(m.title)}</div>
+            <div class="result-year">${year}</div>
+          </div>
+        `;
+        item.addEventListener(`click`, () => selectMovie(m));
+        item.addEventListener(`keydown`, e => { if (e.key === `Enter`) selectMovie(m); });
+        results.appendChild(item);
+      });
+    }, 350);
+  });
+
+  document.addEventListener(`click`, e => {
+    if (!e.target.closest(`#movieSearchGroup`)) results.style.display = `none`;
+  });
+}
+
+function selectMovie(movie) {
+  state.selectedMovie = movie;
+  document.getElementById(`searchResults`).style.display = `none`;
+  document.getElementById(`movieSearchInput`).value = ``;
+
+  const preview = document.getElementById(`selectedMoviePreview`);
+  const year = movie.release_date ? movie.release_date.slice(0, 4) : ``;
+  const genres = (movie.genre_ids || []).slice(0, 2).map(id => GENRE_MAP[id]).filter(Boolean).join(`, `);
+  preview.innerHTML = `
+    <div class="selected-movie-preview">
+      <img src="${movie.poster_path ? TMDB_IMG + movie.poster_path : ``}" alt="${escHtml(movie.title)}" onerror="this.style.display='none'" />
+      <div>
+        <div class="preview-title">${escHtml(movie.title)}</div>
+        <div class="preview-meta">${year}${genres ? ` &middot; ${genres}` : ``}</div>
+      </div>
+      <button class="btn-icon" onclick="clearSelectedMovie()" aria-label="Clear selection" style="margin-left:auto">&times;</button>
+    </div>
+  `;
+  preview.style.display = `block`;
+
+  // Update preview panel
+  updatePreviewPanel(movie);
+}
+
+function clearSelectedMovie() {
+  state.selectedMovie = null;
+  document.getElementById(`selectedMoviePreview`).style.display = `none`;
+  document.getElementById(`previewContent`).innerHTML = `<div style="color:var(--muted);font-size:0.875rem;text-align:center;padding:2rem 0">Search for a movie to see a preview</div>`;
+}
+
+function updatePreviewPanel(movie) {
+  const panel = document.getElementById(`previewContent`);
+  const year = movie.release_date ? movie.release_date.slice(0, 4) : ``;
+  const rating = movie.vote_average ? `&#11088; ${movie.vote_average.toFixed(1)}` : ``;
+  const genres = (movie.genre_ids || []).map(id => GENRE_MAP[id]).filter(Boolean).map(g => `<span class="genre-tag">${g}</span>`).join(` `);
+
+  panel.innerHTML = `
+    <div style="text-align:center;margin-bottom:1rem">
+      ${movie.poster_path
+        ? `<img src="${TMDB_IMG}${movie.poster_path}" alt="${escHtml(movie.title)}" style="width:100px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4)" />`
+        : `<div style="width:100px;height:150px;background:var(--surface2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:2rem">&#127916;</div>`
+      }
+    </div>
+    <div style="font-size:1rem;font-weight:700;margin-bottom:0.25rem">${escHtml(movie.title)}</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem">${year} ${rating}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-bottom:0.75rem">${genres}</div>
+    <p style="font-size:0.8rem;color:var(--muted);line-height:1.6">${escHtml((movie.overview || ``).slice(0, 200))}${movie.overview && movie.overview.length > 200 ? `...` : ``}</p>
+  `;
+}
+
+/* ========================================================
+   ADMIN — SHOWTIME SLOTS
+======================================================== */
+function addShowtimeSlot() {
+  const dateInput = document.getElementById(`showtimeDate`);
+  const timeInput = document.getElementById(`showtimeTime`);
+  const date = dateInput.value;
+  const time = timeInput.value;
+
+  if (!date || !time) {
+    toast(`Please select both a date and time`, `warning`);
+    return;
+  }
+
+  state.showtimeSlots.push({ date, time, screen: document.getElementById(`screenInput`).value || `Screen 1` });
+  renderShowtimeSlots();
+  timeInput.value = ``;
+}
+
+function renderShowtimeSlots() {
+  const container = document.getElementById(`showtimeSlots`);
+  container.innerHTML = state.showtimeSlots.map((s, i) => `
+    <div style="display:inline-flex;align-items:center;gap:0.375rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0.25rem 0.5rem;font-size:0.75rem">
+      <span style="color:var(--green);font-family:monospace">${escHtml(s.time)}</span>
+      <span style="color:var(--muted)">${escHtml(s.date)}</span>
+      <button class="btn-icon" onclick="removeShowtimeSlot(${i})" aria-label="Remove slot" style="font-size:0.7rem;padding:0.15rem">&times;</button>
+    </div>
+  `).join(``);
+}
+
+function removeShowtimeSlot(i) {
+  state.showtimeSlots.splice(i, 1);
+  renderShowtimeSlots();
+}
+
+/* ========================================================
+   ADMIN — SUBMIT LISTING
+======================================================== */
+async function submitListing() {
+  if (!state.selectedMovie) {
+    toast(`Please search and select a movie first`, `warning`);
+    return;
+  }
+
+  const screen = document.getElementById(`screenInput`).value || `Screen 1`;
+  const slots = state.showtimeSlots.length > 0
+    ? state.showtimeSlots
+    : generateShowtimes(state.selectedMovie.id).slice(0, 3);
+
+  const movie = state.selectedMovie;
+
+  const listing = {
+    tmdbId: movie.id,
+    title: movie.title,
+    posterPath: movie.poster_path || null,
+    rating: movie.vote_average || 0,
+    genreIds: movie.genre_ids || [],
+    overview: movie.overview || ``,
+    releaseDate: movie.release_date || ``,
+    screen,
+    showtimes: slots,
+    isStaffEntry: true,
+    addedAt: Date.now(),
+  };
+
+  // Avoid duplicates
+  const existing = state.listings.findIndex(l => String(l.tmdbId) === String(movie.id));
+  if (existing !== -1) {
+    // Merge showtimes
+    const existingDates = new Set(state.listings[existing].showtimes.map(s => `${s.date}|${s.time}`));
+    slots.forEach(s => {
+      if (!existingDates.has(`${s.date}|${s.time}`)) {
+        state.listings[existing].showtimes.push(s);
+      }
+    });
+    toast(`Showtimes updated for "${movie.title}"`, `success`);
+  } else {
+    state.listings.unshift(listing);
+    toast(`"${movie.title}" added to schedule`, `success`);
+  }
+
+  saveListings();
+  renderMovies();
+  renderListingsTable();
+
+  // Reset form
+  state.selectedMovie = null;
+  state.showtimeSlots = [];
+  document.getElementById(`selectedMoviePreview`).style.display = `none`;
+  document.getElementById(`screenInput`).value = ``;
+  document.getElementById(`showtimeDate`).value = ``;
+  document.getElementById(`showtimeTime`).value = ``;
+  renderShowtimeSlots();
+  document.getElementById(`previewContent`).innerHTML = `<div style="color:var(--muted);font-size:0.875rem;text-align:center;padding:2rem 0">Search for a movie to see a preview</div>`;
+}
+
+/* ========================================================
+   ADMIN — MANAGE LISTINGS
+======================================================== */
+function renderListingsTable() {
+  const tbody = document.getElementById(`listingsTableBody`);
+  const empty = document.getElementById(`listingsEmpty`);
+  const count = document.getElementById(`listingsCount`);
+
+  const all = state.listings;
+  count.textContent = all.length;
+
+  if (!all.length) {
+    tbody.innerHTML = ``;
+    empty.style.display = `block`;
+    return;
+  }
+
+  empty.style.display = `none`;
+  tbody.innerHTML = ``;
+
+  all.forEach((listing, idx) => {
+    const tr = document.createElement(`tr`);
+    const timesText = (listing.showtimes || []).slice(0, 3).map(s => s.time).join(`, `);
+    tr.innerHTML = `
+      <td>
+        ${listing.posterPath
+          ? `<img class="listing-thumb" src="${TMDB_IMG}${listing.posterPath}" alt="${escHtml(listing.title)}" />`
+          : `<div style="width:28px;height:42px;background:var(--surface2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.875rem">&#127916;</div>`
+        }
+      </td>
+      <td style="font-weight:600">${escHtml(listing.title)}</td>
+      <td style="color:var(--muted)">${escHtml(listing.screen)}</td>
+      <td style="color:var(--green);font-family:monospace;font-size:0.75rem">${escHtml(timesText)}${listing.showtimes.length > 3 ? ` +${listing.showtimes.length - 3}` : ``}</td>
+      <td>${listing.rating ? `&#11088; ${listing.rating.toFixed(1)}` : `—`}</td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="removeListing(${idx})" aria-label="Remove ${escHtml(listing.title)}">Remove</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function removeListing(idx) {
+  const title = state.listings[idx].title;
+  state.listings.splice(idx, 1);
+  saveListings();
+  renderListingsTable();
+  renderMovies();
+  toast(`"${title}" removed from schedule`, `info`);
+}
+
+/* ========================================================
+   MODAL WATCHLIST BUTTON
+======================================================== */
+document.getElementById(`modalWatchlistBtn`).addEventListener(`click`, () => {
+  if (state.currentModal) {
+    toggleWatchlist(null, state.currentModal);
+    renderMovies();
+  }
+});
+
+/* ========================================================
+   CLOSE MODAL
+======================================================== */
+document.getElementById(`modalClose`).addEventListener(`click`, closeModal);
+document.getElementById(`movieModal`).addEventListener(`click`, e => {
+  if (e.target === document.getElementById(`movieModal`)) closeModal();
+});
+document.addEventListener(`keydown`, e => {
+  if (e.key === `Escape`) closeModal();
+});
+
+/* ========================================================
+   LOGO KEYBOARD
+======================================================== */
+document.querySelector(`.logo`).addEventListener(`keydown`, e => {
+  if (e.key === `Enter`) showView(`showtimes`);
+});
+
+/* ========================================================
+   FILTER LISTENERS
+======================================================== */
+document.getElementById(`filterSearch`).addEventListener(`input`, renderMovies);
+document.getElementById(`filterDate`).addEventListener(`change`, renderMovies);
+document.getElementById(`filterGenre`).addEventListener(`change`, renderMovies);
+
+/* ========================================================
+   DEFAULT DATE IN ADMIN FORM
+======================================================== */
+function setDefaultAdminDate() {
+  const dateInput = document.getElementById(`showtimeDate`);
+  dateInput.value = todayStr();
+}
+
+/* ========================================================
+   INIT
+======================================================== */
+async function init() {
+  loadFromStorage();
+  updateWatchlistBadge();
+  buildDateOptions();
+  buildGenreOptions();
+  setupAdminSearch();
+  setDefaultAdminDate();
+
+  // Show skeleton grid
+  const grid = document.getElementById(`movieGrid`);
+  grid.innerHTML = Array(8).fill(0).map(() => `
+    <div class="movie-card" style="pointer-events:none">
+      <div class="skeleton" style="width:100%;aspect-ratio:2/3"></div>
+      <div class="movie-card-body">
+        <div class="skeleton" style="height:14px;margin-bottom:8px;width:80%"></div>
+        <div class="skeleton" style="height:12px;width:50%"></div>
+      </div>
+    </div>
+  `).join(``);
+
+  // Fetch now playing
+  state.nowPlaying = await fetchNowPlaying();
+  renderMovies();
+}
+
+init();
+</script>
+</body>
+</html>

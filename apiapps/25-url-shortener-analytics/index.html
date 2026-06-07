@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkSpark — URL Shortener & Analytics</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --border: rgba(255,255,255,0.08);
+      --accent: #ffffff;
+      --accent2: #3b82f6;
+      --text: #ededed;
+      --muted: #6b7280;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font: 'Inter', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 { font-weight: 700; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    input, select, textarea, button { font-family: inherit; }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .badge-green { background: rgba(67,217,173,0.15); color: var(--green); }
+    .badge-accent { background: rgba(0,229,255,0.2); color: var(--accent); }
+    .badge-yellow { background: rgba(247,201,72,0.15); color: var(--yellow); }
+    .badge-muted { background: rgba(136,146,176,0.15); color: var(--muted); }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 8px 12px 4px;
+      margin-top: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(0,229,255,0.15); color: var(--accent); }
+    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .nav-count {
+      margin-left: auto;
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 2px 7px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Main */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px;
+    }
+
+    /* Views */
+    .view { display: none; animation: fadeIn 0.2s ease; }
+    .view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+    .stat-card.green::before { background: linear-gradient(90deg, var(--green), #2ec4b6); }
+    .stat-card.yellow::before { background: linear-gradient(90deg, var(--yellow), #f4a261); }
+    .stat-card.pink::before { background: linear-gradient(90deg, var(--accent2), #f472b6); }
+
+    .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .stat-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+    .stat-change { font-size: 12px; margin-top: 6px; }
+    .stat-change.up { color: var(--green); }
+    .stat-change.down { color: var(--accent2); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+      outline: none;
+    }
+    .btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #7c73ff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,229,255,0.4); }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-ghost { background: transparent; color: var(--muted); }
+    .btn-ghost:hover { color: var(--text); background: var(--surface2); }
+    .btn-danger { background: rgba(124,58,237,0.15); color: var(--accent2); }
+    .btn-danger:hover { background: rgba(124,58,237,0.25); }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+    /* Form */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.3px; }
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.15); }
+    .form-input::placeholder { color: var(--muted); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* Input group */
+    .input-group { display: flex; }
+    .input-group .form-input { border-radius: 8px 0 0 8px; border-right: none; }
+    .input-group .btn { border-radius: 0 8px 8px 0; white-space: nowrap; }
+
+    /* Shorten box */
+    .shorten-hero {
+      background: linear-gradient(135deg, rgba(0,229,255,0.1), rgba(124,58,237,0.05));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .shorten-hero h2 { font-size: 20px; margin-bottom: 6px; }
+    .shorten-hero p { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+
+    .advanced-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      margin-top: 12px;
+    }
+    .advanced-toggle:hover { color: var(--text); }
+    .advanced-panel { display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+    .advanced-panel.open { display: block; }
+
+    /* Links table */
+    .links-table { width: 100%; border-collapse: collapse; }
+    .links-table th {
+      text-align: left;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .links-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(46,51,80,0.5);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    .links-table tr:last-child td { border-bottom: none; }
+    .links-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .link-original { color: var(--muted); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .link-short { font-weight: 600; color: var(--accent); }
+    .link-short:hover { text-decoration: underline; }
+
+    .click-bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .click-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      min-width: 4px;
+      transition: width 0.4s ease;
+    }
+
+    /* Analytics panel */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .analytics-grid.thirds {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    /* Chart containers */
+    .chart-wrap { position: relative; }
+    .chart-svg { width: 100%; overflow: visible; }
+
+    /* Bar chart */
+    .bar-group rect { transition: opacity 0.15s; }
+    .bar-group:hover rect { opacity: 0.8; }
+
+    /* Donut */
+    .donut-legend { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .donut-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .donut-legend-label { color: var(--muted); flex: 1; }
+    .donut-legend-val { font-weight: 600; }
+    .donut-legend-pct { color: var(--muted); font-size: 12px; }
+
+    /* Progress bars */
+    .progress-list { display: flex; flex-direction: column; gap: 10px; }
+    .progress-item { display: flex; flex-direction: column; gap: 4px; }
+    .progress-header { display: flex; justify-content: space-between; font-size: 13px; }
+    .progress-label { color: var(--text); font-weight: 500; }
+    .progress-val { color: var(--muted); }
+    .progress-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      animation: slideIn 0.25s ease;
+      min-width: 260px;
+      max-width: 340px;
+    }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error { border-left: 3px solid var(--accent2); }
+    .toast.info { border-left: 3px solid var(--accent); }
+    .toast.exit { animation: slideOut 0.25s ease forwards; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+    @keyframes slideOut { from { transform: none; opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+    .toast-icon { font-size: 18px; }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 580px;
+      max-width: calc(100vw - 48px);
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* QR code */
+    .qr-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      background: var(--surface2);
+      border-radius: 10px;
+    }
+    .qr-wrap img { border-radius: 8px; background: #fff; padding: 8px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .tab {
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.6; }
+    .empty-state h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+    .empty-state p { font-size: 14px; max-width: 300px; }
+
+    /* UTM builder */
+    .utm-output {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--green);
+      word-break: break-all;
+      min-height: 42px;
+    }
+
+    /* Sparkline */
+    .sparkline { display: inline-block; vertical-align: middle; }
+
+    /* Section header */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .section-title { font-size: 18px; font-weight: 700; }
+    .section-sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+
+    /* Search */
+    .search-wrap { position: relative; }
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .search-wrap .form-input { padding-left: 36px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* Action row */
+    .action-row {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .tooltip-wrap { position: relative; display: inline-flex; }
+    .tooltip-wrap .tooltip {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 50;
+    }
+    .tooltip-wrap:hover .tooltip { opacity: 1; }
+
+    /* Line chart area */
+    .line-chart-area { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .line-chart-fill { fill-opacity: 0.12; stroke: none; }
+
+    /* Tag */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* Status dot */
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.expired { background: var(--accent2); }
+    .status-dot.paused { background: var(--yellow); }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .analytics-grid { grid-template-columns: 1fr; }
+      .analytics-grid.thirds { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+
+    /* === Dev Tools v2 Design System === */
+    body {
+      background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+    h3 { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-family: var(--font-body); }
+
+    .code, .value, .data, pre, code, .mono, .hash, .short-url, .slug {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.2rem 0.5rem;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .tag, .badge, .status, .label, .definition-type, .part-of-speech {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-family: var(--font-mono);
+    }
+
+    .valid, .success, .ok, .pass, .active { color: var(--green); }
+    .invalid, .error, .fail, .danger { color: var(--red); }
+    .warning, .pending { color: var(--yellow); }
+    .info, .note { color: var(--accent2); }
+
+    .stat, .metric, .count { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; color: var(--text); }
+    .stat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+
+    @keyframes toolsFade {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes copyPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.93); }
+      100% { transform: scale(1); }
+    }
+
+    .copied { animation: copyPop 0.2s ease; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    LinkSpark
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="badge badge-green">● Live Demo</span>
+    <span style="font-size:13px;color:var(--muted);" id="header-link-count">0 links</span>
+    <button class="btn btn-primary btn-sm" onclick="showCreateModal()">+ New Link</button>
+  </div>
+</header>
+
+<div class="app-container">
+  <!-- Sidebar -->
+  <nav class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-section">Overview</div>
+    <button class="nav-item active" onclick="switchView('dashboard')" id="nav-dashboard" aria-current="page">
+      <span class="nav-icon">📊</span> Dashboard
+    </button>
+    <button class="nav-item" onclick="switchView('links')" id="nav-links">
+      <span class="nav-icon">🔗</span> My Links
+      <span class="nav-count" id="sidebar-count">0</span>
+    </button>
+    <button class="nav-item" onclick="switchView('analytics')" id="nav-analytics">
+      <span class="nav-icon">📈</span> Analytics
+    </button>
+
+    <div class="sidebar-section">Tools</div>
+    <button class="nav-item" onclick="switchView('utm')" id="nav-utm">
+      <span class="nav-icon">🏷️</span> UTM Builder
+    </button>
+    <button class="nav-item" onclick="switchView('qr')" id="nav-qr">
+      <span class="nav-icon">📷</span> QR Codes
+    </button>
+
+    <div style="margin-top:auto;padding-top:20px;border-top:1px solid var(--border);margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px;">
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;">
+        <div style="font-weight:600;color:var(--text);margin-bottom:4px;">Free Plan</div>
+        <div id="plan-links-used">0 / 5 links used</div>
+        <div class="progress-track" style="margin-top:6px;">
+          <div class="progress-fill" id="plan-bar" style="width:0%;background:var(--accent);"></div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main-content" role="main">
+
+    <!-- Dashboard -->
+    <div class="view active" id="view-dashboard">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Dashboard</div>
+          <div class="section-sub">Overview of all your shortened links</div>
+        </div>
+        <button class="btn btn-primary" onclick="showCreateModal()">+ Shorten URL</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Clicks</div>
+          <div class="stat-value" id="stat-total-clicks">0</div>
+          <div class="stat-change up" id="stat-clicks-change">— no data yet</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Active Links</div>
+          <div class="stat-value" id="stat-active-links">0</div>
+          <div class="stat-change" style="color:var(--muted)" id="stat-links-change">Create your first link</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Avg CTR</div>
+          <div class="stat-value" id="stat-ctr">0%</div>
+          <div class="stat-change" style="color:var(--muted)">Click-through rate</div>
+        </div>
+        <div class="stat-card pink">
+          <div class="stat-label">Top Country</div>
+          <div class="stat-value" id="stat-top-country" style="font-size:20px;">—</div>
+          <div class="stat-change" style="color:var(--muted)">Most traffic source</div>
+        </div>
+      </div>
+
+      <!-- Quick Shorten -->
+      <div class="shorten-hero">
+        <h2>Shorten a URL</h2>
+        <p>Paste any long URL and get a branded short link instantly.</p>
+        <div class="input-group">
+          <input class="form-input" id="quick-url" type="url" placeholder="https://your-long-url.com/with/many/parameters?q=something" aria-label="URL to shorten" />
+          <button class="btn btn-primary" onclick="quickShorten()">Shorten ⚡</button>
+        </div>
+        <div class="advanced-toggle" onclick="toggleAdvanced()" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleAdvanced()" aria-expanded="false" id="adv-toggle">
+          <span id="adv-arrow">▶</span> Advanced options
+        </div>
+        <div class="advanced-panel" id="advanced-panel">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="custom-slug">Custom Slug</label>
+              <input class="form-input" id="custom-slug" type="text" placeholder="my-link" aria-label="Custom slug" />
+              <div class="form-hint">Leave blank for auto-generated</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="link-expires">Expiry</label>
+              <select class="form-input" id="link-expires" aria-label="Link expiry">
+                <option value="never">Never</option>
+                <option value="7d">7 days</option>
+                <option value="30d">30 days</option>
+                <option value="90d">90 days</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="link-tag">Tag / Campaign</label>
+              <input class="form-input" id="link-tag" type="text" placeholder="summer-campaign" aria-label="Tag" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="link-password">Password (optional)</label>
+              <input class="form-input" id="link-password" type="password" placeholder="••••••" aria-label="Password protection" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent links -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Recent Links</div>
+          <button class="btn btn-ghost btn-sm" onclick="switchView('links')">View all →</button>
+        </div>
+        <div id="dashboard-links-container">
+          <div class="empty-state" id="dashboard-empty">
+            <div class="empty-icon">🔗</div>
+            <h3>No links yet</h3>
+            <p>Shorten your first URL above to see it here.</p>
+          </div>
+          <table class="links-table" id="dashboard-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Short Link</th>
+                <th>Destination</th>
+                <th>Clicks</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Links -->
+    <div class="view" id="view-links">
+      <div class="section-header">
+        <div>
+          <div class="section-title">My Links</div>
+          <div class="section-sub" id="links-subtitle">All shortened links</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input class="form-input" id="links-search" type="search" placeholder="Search links..." oninput="renderLinksView()" aria-label="Search links" style="width:220px;" />
+          </div>
+          <button class="btn btn-primary" onclick="showCreateModal()">+ New Link</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="links-container">
+          <div class="empty-state" id="links-empty">
+            <div class="empty-icon">🔗</div>
+            <h3>No links yet</h3>
+            <p>Create your first shortened link to get started.</p>
+          </div>
+          <table class="links-table" id="links-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Short Link</th>
+                <th>Destination</th>
+                <th>Tag</th>
+                <th>Clicks</th>
+                <th>Trend</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="links-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="view" id="view-analytics">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Analytics</div>
+          <div class="section-sub">Aggregated data across all links</div>
+        </div>
+        <select class="form-input" id="analytics-link-select" onchange="renderAnalyticsView()" style="width:240px;" aria-label="Select link to view analytics">
+          <option value="all">All Links</option>
+        </select>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat-card">
+          <div class="stat-label">Total Clicks</div>
+          <div class="stat-value" id="an-total">0</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Unique Visitors</div>
+          <div class="stat-value" id="an-unique">0</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label">Avg. Daily Clicks</div>
+          <div class="stat-value" id="an-daily">0</div>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- Line chart: clicks over time -->
+        <div class="card" style="grid-column:1/-1;">
+          <div class="card-header">
+            <div class="card-title">Clicks Over Time (30 days)</div>
+            <span class="badge badge-accent">Daily</span>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="line-chart" height="180" viewBox="0 0 600 180" preserveAspectRatio="none"></svg>
+          </div>
+        </div>
+
+        <!-- Countries -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top Countries</div>
+          </div>
+          <div class="progress-list" id="an-countries"></div>
+        </div>
+
+        <!-- Referrers -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Referrers</div>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="referrer-chart" height="180"></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-grid thirds" style="margin-top:16px;">
+        <!-- Devices donut -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Devices</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <svg id="device-donut" viewBox="0 0 100 100" width="100" height="100" style="flex-shrink:0;"></svg>
+            <div class="donut-legend" id="device-legend"></div>
+          </div>
+        </div>
+
+        <!-- Browsers -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Browsers</div>
+          </div>
+          <div class="progress-list" id="an-browsers"></div>
+        </div>
+
+        <!-- Time of day bar -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Hour of Day</div>
+          </div>
+          <div class="chart-wrap">
+            <svg class="chart-svg" id="hour-chart" height="120"></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UTM Builder -->
+    <div class="view" id="view-utm">
+      <div class="section-header">
+        <div>
+          <div class="section-title">UTM Parameter Builder</div>
+          <div class="section-sub">Build trackable campaign URLs, then shorten them</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Campaign Parameters</div></div>
+          <div class="form-group">
+            <label class="form-label" for="utm-url">Destination URL <span style="color:var(--accent2)">*</span></label>
+            <input class="form-input" id="utm-url" type="url" placeholder="https://example.com/page" oninput="buildUTM()" aria-required="true" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="utm-source">utm_source</label>
+            <input class="form-input" id="utm-source" type="text" placeholder="newsletter, google, facebook" oninput="buildUTM()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="utm-medium">utm_medium</label>
+            <input class="form-input" id="utm-medium" type="text" placeholder="email, cpc, social" oninput="buildUTM()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="utm-campaign">utm_campaign</label>
+            <input class="form-input" id="utm-campaign" type="text" placeholder="spring-sale-2025" oninput="buildUTM()" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="utm-term">utm_term</label>
+              <input class="form-input" id="utm-term" type="text" placeholder="running+shoes" oninput="buildUTM()" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="utm-content">utm_content</label>
+              <input class="form-input" id="utm-content" type="text" placeholder="banner-a" oninput="buildUTM()" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card-header"><div class="card-title">Generated URL</div></div>
+          <div class="utm-output" id="utm-output">Your tagged URL will appear here...</div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-secondary" onclick="copyUTM()" style="flex:1;">📋 Copy URL</button>
+            <button class="btn btn-primary" onclick="shortenUTM()" style="flex:1;">⚡ Shorten</button>
+          </div>
+
+          <div style="border-top:1px solid var(--border);padding-top:16px;">
+            <div class="card-title" style="font-size:14px;margin-bottom:12px;">Quick Templates</div>
+            <div style="display:flex;flex-direction:column;gap:8px;" id="utm-templates"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Codes -->
+    <div class="view" id="view-qr">
+      <div class="section-header">
+        <div>
+          <div class="section-title">QR Codes</div>
+          <div class="section-sub">Generate QR codes for your short links</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header"><div class="card-title">Generate QR Code</div></div>
+        <div style="display:flex;gap:12px;align-items:flex-end;">
+          <div class="form-group" style="flex:1;margin-bottom:0;">
+            <label class="form-label" for="qr-input">URL or short link</label>
+            <input class="form-input" id="qr-input" type="url" placeholder="https://example.com" aria-label="URL for QR code" />
+          </div>
+          <button class="btn btn-primary" onclick="generateQR()">Generate QR</button>
+        </div>
+      </div>
+
+      <div id="qr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Create Link Modal -->
+<div class="modal-backdrop" id="create-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="card-title" id="modal-title">Create Short Link</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()" aria-label="Close modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="modal-url">Destination URL <span style="color:var(--accent2)">*</span></label>
+        <input class="form-input" id="modal-url" type="url" placeholder="https://example.com/your-long-link" aria-required="true" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="modal-slug">Custom Slug</label>
+          <input class="form-input" id="modal-slug" type="text" placeholder="auto-generated" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-tag">Tag</label>
+          <input class="form-input" id="modal-tag" type="text" placeholder="e.g. social, email" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="modal-expires">Expiry</label>
+          <select class="form-input" id="modal-expires">
+            <option value="never">Never</option>
+            <option value="7d">7 days</option>
+            <option value="30d">30 days</option>
+            <option value="90d">90 days</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-password">Password</label>
+          <input class="form-input" id="modal-password" type="password" placeholder="optional" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createLink()">Create Link ⚡</button>
+    </div>
+  </div>
+</div>
+
+<!-- Analytics Modal -->
+<div class="modal-backdrop" id="analytics-modal" role="dialog" aria-modal="true" aria-labelledby="an-modal-title">
+  <div class="modal" style="width:680px;" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2 class="card-title" id="an-modal-title">Link Analytics</h2>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="an-modal-url"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeAnalyticsModal()" aria-label="Close analytics modal">✕</button>
+    </div>
+    <div class="modal-body" id="an-modal-body"></div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<script>
+// ─── Constants ───────────────────────────────────────────────────────────────
+const STORAGE_KEY = `linkspark_links_v1`;
+const BASE_DOMAIN = `lnk.spark`;
+const COLORS = [`#6c63ff`,`#ff6584`,`#43d9ad`,`#f7c948`,`#60a5fa`,`#fb923c`,`#a78bfa`,`#34d399`];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function randomBase62(len) {
+  const chars = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789`;
+  let result = ``;
+  for (let i = 0; i < len; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+  return result;
+}
+
+function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function randomChoice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function formatNum(n) { return n >= 1000 ? `${(n/1000).toFixed(1)}k` : String(n); }
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff/60000), h = Math.floor(diff/3600000), d = Math.floor(diff/86400000);
+  if (d > 0) return `${d}d ago`;
+  if (h > 0) return `${h}h ago`;
+  if (m > 0) return `${m}m ago`;
+  return `just now`;
+}
+
+function isExpired(link) {
+  if (!link.expires || link.expires === `never`) return false;
+  return Date.now() > link.expiresAt;
+}
+
+// ─── Mock analytics generator ────────────────────────────────────────────────
+const COUNTRIES = [
+  {name:`United States`,flag:`🇺🇸`},{name:`United Kingdom`,flag:`🇬🇧`},
+  {name:`Germany`,flag:`🇩🇪`},{name:`France`,flag:`🇫🇷`},
+  {name:`Canada`,flag:`🇨🇦`},{name:`Australia`,flag:`🇦🇺`},
+  {name:`Netherlands`,flag:`🇳🇱`},{name:`India`,flag:`🇮🇳`},
+  {name:`Brazil`,flag:`🇧🇷`},{name:`Japan`,flag:`🇯🇵`}
+];
+
+const REFERRERS = [`Direct`,`Google`,`Twitter/X`,`LinkedIn`,`Facebook`,`Instagram`,`Reddit`,`Email`,`YouTube`,`Slack`];
+const DEVICES = [`Desktop`,`Mobile`,`Tablet`];
+const BROWSERS = [`Chrome`,`Safari`,`Firefox`,`Edge`,`Opera`];
+
+function generateAnalytics(totalClicks) {
+  // Daily clicks for 30 days (weighted toward recent)
+  const daily = [];
+  for (let i = 29; i >= 0; i--) {
+    const weight = 1 + (29 - i) * 0.04;
+    daily.push(Math.max(0, Math.round((totalClicks / 30) * weight * (0.6 + Math.random() * 0.8))));
+  }
+
+  // Country distribution
+  const countryWeights = [35,18,10,8,7,6,5,4,4,3];
+  const countries = COUNTRIES.map((c, i) => ({
+    ...c,
+    clicks: Math.round(totalClicks * countryWeights[i] / 100)
+  }));
+
+  // Referrer distribution
+  const refWeights = [22,20,15,12,9,6,5,4,4,3];
+  const referrers = REFERRERS.map((r, i) => ({
+    name: r,
+    clicks: Math.round(totalClicks * refWeights[i] / 100)
+  }));
+
+  // Device distribution
+  const deviceWeights = [55, 38, 7];
+  const devices = DEVICES.map((d, i) => ({
+    name: d,
+    clicks: Math.round(totalClicks * deviceWeights[i] / 100)
+  }));
+
+  // Browser distribution
+  const browserWeights = [62, 18, 10, 7, 3];
+  const browsers = BROWSERS.map((b, i) => ({
+    name: b,
+    clicks: Math.round(totalClicks * browserWeights[i] / 100)
+  }));
+
+  // Hour of day distribution (bell curve around noon-3pm)
+  const hours = Array.from({length: 24}, (_, h) => {
+    const peak = Math.exp(-0.5 * Math.pow((h - 14) / 5, 2));
+    return { hour: h, clicks: Math.max(0, Math.round(totalClicks * peak / 12 * (0.8 + Math.random() * 0.4))) };
+  });
+
+  return { daily, countries, referrers, devices, browsers, hours };
+}
+
+// ─── Storage ─────────────────────────────────────────────────────────────────
+function loadLinks() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || `[]`); }
+  catch { return []; }
+}
+
+function saveLinks(links) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+}
+
+function addLink(originalUrl, slug, tag, expires, password) {
+  const links = loadLinks();
+  const code = slug || randomBase62(6);
+  const totalClicks = randomInt(12, 1850);
+  const expiresAt = expires === `7d` ? Date.now() + 7*86400000
+    : expires === `30d` ? Date.now() + 30*86400000
+    : expires === `90d` ? Date.now() + 90*86400000
+    : null;
+  const link = {
+    id: randomBase62(10),
+    originalUrl,
+    code,
+    shortUrl: `${BASE_DOMAIN}/${code}`,
+    tag: tag || ``,
+    expires: expires || `never`,
+    expiresAt,
+    hasPassword: !!password,
+    createdAt: Date.now(),
+    totalClicks,
+    uniqueClicks: Math.round(totalClicks * (0.65 + Math.random() * 0.25)),
+    analytics: generateAnalytics(totalClicks)
+  };
+  links.unshift(link);
+  saveLinks(links);
+  return link;
+}
+
+function deleteLink(id) {
+  const links = loadLinks().filter(l => l.id !== id);
+  saveLinks(links);
+}
+
+// ─── UI State ─────────────────────────────────────────────────────────────────
+let currentView = `dashboard`;
+
+function switchView(view) {
+  document.querySelectorAll(`.view`).forEach(v => v.classList.remove(`active`));
+  document.querySelectorAll(`.nav-item`).forEach(n => { n.classList.remove(`active`); n.removeAttribute(`aria-current`); });
+  document.getElementById(`view-${view}`).classList.add(`active`);
+  const navEl = document.getElementById(`nav-${view}`);
+  if (navEl) { navEl.classList.add(`active`); navEl.setAttribute(`aria-current`,`page`); }
+  currentView = view;
+  if (view === `dashboard`) renderDashboard();
+  if (view === `links`) renderLinksView();
+  if (view === `analytics`) renderAnalyticsView();
+  if (view === `utm`) renderUTMTemplates();
+  if (view === `qr`) renderQRView();
+}
+
+// ─── Render helpers ──────────────────────────────────────────────────────────
+function renderLinkRow(link, mode = `dashboard`) {
+  const expired = isExpired(link);
+  const statusDot = expired ? `<span class="status-dot expired"></span>` : `<span class="status-dot active"></span>`;
+  const statusLabel = expired ? `<span style="color:var(--accent2);font-size:12px;">Expired</span>` : `<span style="color:var(--green);font-size:12px;">Active</span>`;
+
+  const clickWidth = Math.min(100, Math.round(link.totalClicks / 20));
+  const clickBar = `<div class="click-bar-wrap"><div class="click-bar" style="width:${clickWidth}px;"></div><span>${formatNum(link.totalClicks)}</span></div>`;
+
+  // Sparkline
+  const recent7 = link.analytics.daily.slice(-7);
+  const maxSpark = Math.max(...recent7, 1);
+  const sparkPts = recent7.map((v, i) => `${i*10},${20 - (v/maxSpark)*18}`).join(` `);
+  const sparkline = `<svg class="sparkline" width="60" height="20" viewBox="0 0 60 20">
+    <polyline points="${sparkPts}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+  const tagBadge = link.tag ? `<span class="badge badge-accent">${link.tag}</span>` : `<span style="color:var(--muted);font-size:12px;">—</span>`;
+
+  if (mode === `dashboard`) {
+    return `<tr>
+      <td><span class="link-short" title="${BASE_DOMAIN}/${link.code}">${BASE_DOMAIN}/${link.code}</span>${link.hasPassword ? ` 🔒` : ``}</td>
+      <td><div class="link-original" title="${link.originalUrl}">${link.originalUrl}</div></td>
+      <td>${clickBar}</td>
+      <td style="color:var(--muted);font-size:12px;">${timeAgo(link.createdAt)}</td>
+      <td>${statusDot} ${statusLabel}</td>
+      <td>
+        <div class="action-row">
+          <div class="tooltip-wrap"><button class="btn btn-ghost btn-sm" onclick="copyShortUrl('${link.code}')" aria-label="Copy short URL">📋</button><span class="tooltip">Copy</span></div>
+          <div class="tooltip-wrap"><button class="btn btn-ghost btn-sm" onclick="showLinkAnalytics('${link.id}')" aria-label="View analytics">📊</button><span class="tooltip">Analytics</span></div>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  return `<tr>
+    <td><span class="link-short">${BASE_DOMAIN}/${link.code}</span>${link.hasPassword ? ` 🔒` : ``}</td>
+    <td><div class="link-original" title="${link.originalUrl}">${link.originalUrl}</div></td>
+    <td>${tagBadge}</td>
+    <td>${clickBar}</td>
+    <td>${sparkline}</td>
+    <td>${statusDot} ${statusLabel}</td>
+    <td>
+      <div class="action-row">
+        <div class="tooltip-wrap"><button class="btn btn-ghost btn-sm" onclick="copyShortUrl('${link.code}')" aria-label="Copy short URL">📋</button><span class="tooltip">Copy</span></div>
+        <div class="tooltip-wrap"><button class="btn btn-ghost btn-sm" onclick="showLinkAnalytics('${link.id}')" aria-label="Analytics">📊</button><span class="tooltip">Analytics</span></div>
+        <div class="tooltip-wrap"><button class="btn btn-ghost btn-sm" onclick="openQRForLink('${link.code}')" aria-label="QR Code">📷</button><span class="tooltip">QR Code</span></div>
+        <div class="tooltip-wrap"><button class="btn btn-danger btn-sm" onclick="confirmDelete('${link.id}')" aria-label="Delete link">🗑</button><span class="tooltip">Delete</span></div>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function renderDashboard() {
+  const links = loadLinks();
+  updateHeaderCount(links.length);
+
+  const totalClicks = links.reduce((a, l) => a + l.totalClicks, 0);
+  const activeLinks = links.filter(l => !isExpired(l)).length;
+  const avgCTR = links.length ? Math.round(links.reduce((a,l) => a + (l.uniqueClicks/Math.max(l.totalClicks,1)), 0) / links.length * 100) : 0;
+
+  document.getElementById(`stat-total-clicks`).textContent = formatNum(totalClicks);
+  document.getElementById(`stat-active-links`).textContent = activeLinks;
+  document.getElementById(`stat-ctr`).textContent = `${avgCTR}%`;
+
+  if (links.length > 0) {
+    const allCountries = {};
+    links.forEach(l => l.analytics.countries.forEach(c => { allCountries[c.name] = (allCountries[c.name] || 0) + c.clicks; }));
+    const topCountry = Object.entries(allCountries).sort((a,b) => b[1]-a[1])[0];
+    const topFlag = COUNTRIES.find(c => c.name === topCountry[0])?.flag || ``;
+    document.getElementById(`stat-top-country`).textContent = `${topFlag} ${topCountry[0].split(` `)[0]}`;
+    document.getElementById(`stat-clicks-change`).textContent = `↑ ${formatNum(Math.round(totalClicks * 0.12))} vs last period`;
+    document.getElementById(`stat-links-change`).textContent = `${links.length} total link${links.length !== 1 ? `s` : ``}`;
+  }
+
+  const empty = document.getElementById(`dashboard-empty`);
+  const table = document.getElementById(`dashboard-table`);
+  const tbody = document.getElementById(`dashboard-tbody`);
+
+  if (links.length === 0) {
+    empty.style.display = ``;
+    table.style.display = `none`;
+  } else {
+    empty.style.display = `none`;
+    table.style.display = ``;
+    tbody.innerHTML = links.slice(0, 5).map(l => renderLinkRow(l, `dashboard`)).join(``);
+  }
+
+  updatePlanBar(links.length);
+}
+
+function renderLinksView() {
+  const query = (document.getElementById(`links-search`)?.value || ``).toLowerCase();
+  let links = loadLinks();
+  if (query) links = links.filter(l => l.code.includes(query) || l.originalUrl.toLowerCase().includes(query) || (l.tag && l.tag.toLowerCase().includes(query)));
+
+  document.getElementById(`links-subtitle`).textContent = `${links.length} link${links.length !== 1 ? `s` : ``}`;
+
+  const empty = document.getElementById(`links-empty`);
+  const table = document.getElementById(`links-table`);
+  const tbody = document.getElementById(`links-tbody`);
+
+  if (links.length === 0) {
+    empty.style.display = ``;
+    table.style.display = `none`;
+  } else {
+    empty.style.display = `none`;
+    table.style.display = ``;
+    tbody.innerHTML = links.map(l => renderLinkRow(l, `full`)).join(``);
+  }
+
+  updateSidebarCount(loadLinks().length);
+}
+
+function renderAnalyticsView() {
+  const links = loadLinks();
+  const sel = document.getElementById(`analytics-link-select`);
+
+  // Update select options
+  const current = sel.value;
+  sel.innerHTML = `<option value="all">All Links</option>` +
+    links.map(l => `<option value="${l.id}">${BASE_DOMAIN}/${l.code}</option>`).join(``);
+  if (current && links.find(l => l.id === current)) sel.value = current;
+
+  const selectedId = sel.value;
+  const subset = selectedId === `all` ? links : links.filter(l => l.id === selectedId);
+
+  if (subset.length === 0) {
+    document.getElementById(`an-total`).textContent = `0`;
+    document.getElementById(`an-unique`).textContent = `0`;
+    document.getElementById(`an-daily`).textContent = `0`;
+    document.getElementById(`an-countries`).innerHTML = `<div style="color:var(--muted);font-size:14px;text-align:center;padding:20px 0;">No data</div>`;
+    document.getElementById(`an-browsers`).innerHTML = `<div style="color:var(--muted);font-size:14px;text-align:center;padding:20px 0;">No data</div>`;
+    return;
+  }
+
+  const totalClicks = subset.reduce((a,l) => a + l.totalClicks, 0);
+  const uniqueClicks = subset.reduce((a,l) => a + l.uniqueClicks, 0);
+  document.getElementById(`an-total`).textContent = formatNum(totalClicks);
+  document.getElementById(`an-unique`).textContent = formatNum(uniqueClicks);
+  document.getElementById(`an-daily`).textContent = formatNum(Math.round(totalClicks / 30));
+
+  // Aggregate daily
+  const dailyAgg = Array(30).fill(0);
+  subset.forEach(l => l.analytics.daily.forEach((v,i) => { dailyAgg[i] += v; }));
+  renderLineChart(`line-chart`, dailyAgg);
+
+  // Countries
+  const countryAgg = {};
+  subset.forEach(l => l.analytics.countries.forEach(c => { countryAgg[c.name] = (countryAgg[c.name] || 0) + c.clicks; }));
+  const countrySorted = Object.entries(countryAgg).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const maxC = countrySorted[0]?.[1] || 1;
+  const progColors = [`#6c63ff`,`#ff6584`,`#43d9ad`,`#f7c948`,`#60a5fa`];
+  document.getElementById(`an-countries`).innerHTML = countrySorted.map(([name, clicks], i) => {
+    const flag = COUNTRIES.find(c => c.name === name)?.flag || ``;
+    return `<div class="progress-item">
+      <div class="progress-header"><span class="progress-label">${flag} ${name}</span><span class="progress-val">${formatNum(clicks)}</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${(clicks/maxC*100).toFixed(1)}%;background:${progColors[i]};"></div></div>
+    </div>`;
+  }).join(``);
+
+  // Referrers bar chart
+  const refAgg = {};
+  subset.forEach(l => l.analytics.referrers.forEach(r => { refAgg[r.name] = (refAgg[r.name] || 0) + r.clicks; }));
+  const refSorted = Object.entries(refAgg).sort((a,b) => b[1]-a[1]).slice(0,6);
+  renderBarChart(`referrer-chart`, refSorted.map(([n,v]) => ({label:n, value:v})), 180);
+
+  // Devices donut
+  const devAgg = {};
+  subset.forEach(l => l.analytics.devices.forEach(d => { devAgg[d.name] = (devAgg[d.name] || 0) + d.clicks; }));
+  const devTotal = Object.values(devAgg).reduce((a,b) => a+b, 0);
+  const devColors = {Desktop:`#6c63ff`, Mobile:`#ff6584`, Tablet:`#43d9ad`};
+  renderDonut(`device-donut`, `device-legend`, Object.entries(devAgg).map(([n,v]) => ({name:n, value:v, color:devColors[n]||COLORS[3]})), devTotal);
+
+  // Browsers
+  const brAgg = {};
+  subset.forEach(l => l.analytics.browsers.forEach(b => { brAgg[b.name] = (brAgg[b.name] || 0) + b.clicks; }));
+  const brSorted = Object.entries(brAgg).sort((a,b) => b[1]-a[1]);
+  const maxBr = brSorted[0]?.[1] || 1;
+  document.getElementById(`an-browsers`).innerHTML = brSorted.map(([name, clicks], i) => {
+    return `<div class="progress-item">
+      <div class="progress-header"><span class="progress-label">${name}</span><span class="progress-val">${formatNum(clicks)}</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${(clicks/maxBr*100).toFixed(1)}%;background:${COLORS[i%COLORS.length]};"></div></div>
+    </div>`;
+  }).join(``);
+
+  // Hour chart
+  const hourAgg = Array(24).fill(0);
+  subset.forEach(l => l.analytics.hours.forEach((h,i) => { hourAgg[i] += h.clicks; }));
+  renderHourChart(`hour-chart`, hourAgg);
+}
+
+// ─── SVG Charts ──────────────────────────────────────────────────────────────
+function renderLineChart(svgId, data) {
+  const svg = document.getElementById(svgId);
+  if (!svg) return;
+  const W = 600, H = 180, pad = {top:16, right:16, bottom:24, left:40};
+  const iW = W - pad.left - pad.right;
+  const iH = H - pad.top - pad.bottom;
+  const maxV = Math.max(...data, 1);
+
+  const pts = data.map((v, i) => `${pad.left + (i / (data.length-1)) * iW},${pad.top + iH - (v/maxV)*iH}`);
+  const polyPts = pts.join(` `);
+  const areaPath = `M${pts[0]} ${pts.slice(1).map(p => `L${p}`).join(` `)} L${pad.left+iW},${pad.top+iH} L${pad.left},${pad.top+iH} Z`;
+
+  // Y axis labels
+  const yLabels = [0, Math.round(maxV/2), maxV].map(v =>
+    `<text x="${pad.left - 6}" y="${pad.top + iH - (v/maxV)*iH + 4}" fill="var(--muted)" font-size="10" text-anchor="end">${formatNum(v)}</text>`
+  ).join(``);
+
+  // X axis labels (every 5 days)
+  const xLabels = data.map((_, i) => {
+    if (i % 5 !== 0) return ``;
+    const d = new Date(Date.now() - (data.length-1-i) * 86400000);
+    const label = `${d.getMonth()+1}/${d.getDate()}`;
+    return `<text x="${pad.left + (i/(data.length-1))*iW}" y="${H - 4}" fill="var(--muted)" font-size="10" text-anchor="middle">${label}</text>`;
+  }).join(``);
+
+  // Grid lines
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f =>
+    `<line x1="${pad.left}" y1="${pad.top + iH - f*iH}" x2="${pad.left+iW}" y2="${pad.top + iH - f*iH}" stroke="var(--border)" stroke-width="1" />`
+  ).join(``);
+
+  svg.setAttribute(`viewBox`, `0 0 ${W} ${H}`);
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${gridLines}
+    ${yLabels}
+    ${xLabels}
+    <path d="${areaPath}" fill="url(#lineGrad)"/>
+    <polyline points="${polyPts}" class="line-chart-area" stroke="var(--accent)"/>
+    ${pts.map((p, i) => i === data.length-1 ? `<circle cx="${p.split(`,`)[0]}" cy="${p.split(`,`)[1]}" r="4" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>` : ``).join(``)}
+  `;
+}
+
+function renderBarChart(svgId, items, svgH) {
+  const svg = document.getElementById(svgId);
+  if (!svg) return;
+  const W = 400, H = svgH || 180, pad = {top:10, right:16, bottom:50, left:16};
+  const iW = W - pad.left - pad.right;
+  const iH = H - pad.top - pad.bottom;
+  const maxV = Math.max(...items.map(i => i.value), 1);
+  const bW = (iW / items.length) - 8;
+
+  const bars = items.map((item, i) => {
+    const x = pad.left + i * (iW / items.length) + 4;
+    const barH = Math.max(2, (item.value / maxV) * iH);
+    const y = pad.top + iH - barH;
+    const color = COLORS[i % COLORS.length];
+    const labelLines = item.label.split(`/`);
+    const labelY = H - pad.bottom + 14;
+    return `<g class="bar-group">
+      <rect x="${x}" y="${y}" width="${bW}" height="${barH}" fill="${color}" rx="4"/>
+      <text x="${x + bW/2}" y="${labelY}" fill="var(--muted)" font-size="9" text-anchor="middle">${labelLines[0]}</text>
+      <text x="${x + bW/2}" y="${labelY+11}" fill="var(--muted)" font-size="8" text-anchor="middle" opacity="0.7">${formatNum(item.value)}</text>
+    </g>`;
+  }).join(``);
+
+  svg.setAttribute(`viewBox`, `0 0 ${W} ${H}`);
+  svg.innerHTML = bars;
+}
+
+function renderDonut(svgId, legendId, items, total) {
+  const svg = document.getElementById(svgId);
+  const legend = document.getElementById(legendId);
+  if (!svg) return;
+
+  const cx = 50, cy = 50, r = 38, stroke = 12;
+  let offset = 0;
+  const circumference = 2 * Math.PI * r;
+
+  const segments = items.map(item => {
+    const pct = total > 0 ? item.value / total : 0;
+    const dash = pct * circumference;
+    const gap = circumference - dash;
+    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${item.color}" stroke-width="${stroke}"
+      stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-offset * circumference}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += pct;
+    return seg;
+  }).join(``);
+
+  svg.innerHTML = `${segments}<text x="${cx}" y="${cy+4}" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">${formatNum(total)}</text>`;
+
+  if (legend) {
+    legend.innerHTML = items.map(item => {
+      const pct = total > 0 ? Math.round(item.value/total*100) : 0;
+      return `<div class="donut-legend-item">
+        <div class="donut-legend-dot" style="background:${item.color}"></div>
+        <span class="donut-legend-label">${item.name}</span>
+        <span class="donut-legend-val">${formatNum(item.value)}</span>
+        <span class="donut-legend-pct">${pct}%</span>
+      </div>`;
+    }).join(``);
+  }
+}
+
+function renderHourChart(svgId, data) {
+  const svg = document.getElementById(svgId);
+  if (!svg) return;
+  const W = 360, H = 120, pad = {top:8, right:8, bottom:20, left:8};
+  const iW = W - pad.left - pad.right;
+  const iH = H - pad.top - pad.bottom;
+  const maxV = Math.max(...data, 1);
+  const bW = Math.floor(iW / 24) - 2;
+
+  const bars = data.map((v, h) => {
+    const x = pad.left + h * (iW / 24) + 1;
+    const barH = Math.max(1, (v/maxV)*iH);
+    const y = pad.top + iH - barH;
+    const isWorkHour = h >= 9 && h <= 17;
+    const color = isWorkHour ? `var(--accent)` : `var(--surface2)`;
+    const border = isWorkHour ? `` : `stroke="var(--border)" stroke-width="1"`;
+    const label = h % 6 === 0 ? `<text x="${x+bW/2}" y="${H-4}" fill="var(--muted)" font-size="8" text-anchor="middle">${h}h</text>` : ``;
+    return `<rect x="${x}" y="${y}" width="${bW}" height="${barH}" fill="${color}" rx="2" ${border}/>${label}`;
+  }).join(``);
+
+  svg.setAttribute(`viewBox`, `0 0 ${W} ${H}`);
+  svg.innerHTML = bars;
+}
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+function quickShorten() {
+  const url = document.getElementById(`quick-url`).value.trim();
+  if (!url) { toast(`Please enter a URL`, `error`); document.getElementById(`quick-url`).focus(); return; }
+  if (!isValidURL(url)) { toast(`Please enter a valid URL (include https://)`, `error`); return; }
+  const slug = document.getElementById(`custom-slug`).value.trim();
+  const tag = document.getElementById(`link-tag`).value.trim();
+  const expires = document.getElementById(`link-expires`).value;
+  const password = document.getElementById(`link-password`).value;
+  const link = addLink(url, slug, tag, expires, password);
+  document.getElementById(`quick-url`).value = ``;
+  document.getElementById(`custom-slug`).value = ``;
+  document.getElementById(`link-tag`).value = ``;
+  toast(`Link created: ${link.shortUrl}`, `success`);
+  renderDashboard();
+}
+
+function createLink() {
+  const url = document.getElementById(`modal-url`).value.trim();
+  if (!url) { toast(`Please enter a URL`, `error`); return; }
+  if (!isValidURL(url)) { toast(`Please enter a valid URL (include https://)`, `error`); return; }
+  const slug = document.getElementById(`modal-slug`).value.trim();
+  const tag = document.getElementById(`modal-tag`).value.trim();
+  const expires = document.getElementById(`modal-expires`).value;
+  const password = document.getElementById(`modal-password`).value;
+  const link = addLink(url, slug, tag, expires, password);
+  closeModal();
+  toast(`Link created: ${link.shortUrl}`, `success`);
+  if (currentView === `dashboard`) renderDashboard();
+  if (currentView === `links`) renderLinksView();
+  if (currentView === `analytics`) renderAnalyticsView();
+  updateSidebarCount(loadLinks().length);
+}
+
+function isValidURL(str) {
+  try { const u = new URL(str); return u.protocol === `http:` || u.protocol === `https:`; }
+  catch { return false; }
+}
+
+function copyShortUrl(code) {
+  const url = `https://${BASE_DOMAIN}/${code}`;
+  navigator.clipboard?.writeText(url).then(() => toast(`Copied: ${url}`, `success`)).catch(() => {
+    toast(`Short URL: ${url}`, `info`);
+  });
+}
+
+function confirmDelete(id) {
+  const link = loadLinks().find(l => l.id === id);
+  if (!link) return;
+  if (!confirm(`Delete ${link.shortUrl}? This cannot be undone.`)) return;
+  deleteLink(id);
+  toast(`Link deleted`, `info`);
+  renderLinksView();
+  renderDashboard();
+  updateSidebarCount(loadLinks().length);
+}
+
+function showLinkAnalytics(id) {
+  const link = loadLinks().find(l => l.id === id);
+  if (!link) return;
+
+  document.getElementById(`an-modal-title`).textContent = `${BASE_DOMAIN}/${link.code}`;
+  document.getElementById(`an-modal-url`).textContent = link.originalUrl.length > 70 ? link.originalUrl.slice(0,70)+`...` : link.originalUrl;
+
+  const daily7 = link.analytics.daily.slice(-7);
+  const sparkPts = daily7.map((v, i) => `${i*16+4},${34 - (v/Math.max(...daily7,1))*30}`).join(` `);
+
+  const topCountry = link.analytics.countries.sort((a,b) => b.clicks-a.clicks)[0];
+  const topRef = link.analytics.referrers.sort((a,b) => b.clicks-a.clicks)[0];
+
+  const devColors = {Desktop:`#6c63ff`, Mobile:`#ff6584`, Tablet:`#43d9ad`};
+
+  document.getElementById(`an-modal-body`).innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-label">Total Clicks</div><div class="stat-value">${formatNum(link.totalClicks)}</div></div>
+      <div class="stat-card green"><div class="stat-label">Unique</div><div class="stat-value">${formatNum(link.uniqueClicks)}</div></div>
+      <div class="stat-card yellow"><div class="stat-label">Top Source</div><div class="stat-value" style="font-size:16px;">${topRef?.name||`—`}</div></div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="card-title" style="font-size:14px;margin-bottom:10px;">Last 7 Days</div>
+      <svg width="100%" height="40" viewBox="0 0 100 38" preserveAspectRatio="none">
+        <polyline points="${sparkPts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div>
+        <div class="card-title" style="font-size:13px;margin-bottom:10px;">Top Countries</div>
+        <div class="progress-list">
+          ${link.analytics.countries.slice(0,4).map((c, i) => {
+            const flag = COUNTRIES.find(x => x.name === c.name)?.flag || ``;
+            return `<div class="progress-item">
+              <div class="progress-header"><span class="progress-label">${flag} ${c.name}</span><span class="progress-val">${formatNum(c.clicks)}</span></div>
+              <div class="progress-track"><div class="progress-fill" style="width:${Math.round(c.clicks/link.totalClicks*100)}%;background:${COLORS[i]};"></div></div>
+            </div>`;
+          }).join(``)}
+        </div>
+      </div>
+      <div>
+        <div class="card-title" style="font-size:13px;margin-bottom:10px;">Devices</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <svg id="modal-donut" viewBox="0 0 100 100" width="80" height="80" style="flex-shrink:0;"></svg>
+          <div id="modal-donut-legend" class="donut-legend"></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card-title" style="font-size:13px;margin-bottom:10px;">QR Code</div>
+      <div class="qr-wrap" style="flex-direction:row;align-items:center;gap:20px;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://${link.shortUrl}" alt="QR code for ${link.shortUrl}" width="120" height="120" />
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;">https://${link.shortUrl}</div>
+          <div style="color:var(--muted);font-size:13px;margin-bottom:10px;">Scan to open the short link</div>
+          <a href="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://${link.shortUrl}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Download QR</a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById(`analytics-modal`).classList.add(`open`);
+
+  // Render donut after DOM update
+  setTimeout(() => {
+    const devData = link.analytics.devices.map(d => ({...d, color: devColors[d.name]||COLORS[3]}));
+    renderDonut(`modal-donut`, `modal-donut-legend`, devData, link.totalClicks);
+  }, 10);
+}
+
+function closeAnalyticsModal() {
+  document.getElementById(`analytics-modal`).classList.remove(`open`);
+}
+
+function showCreateModal() {
+  document.getElementById(`modal-url`).value = ``;
+  document.getElementById(`modal-slug`).value = ``;
+  document.getElementById(`modal-tag`).value = ``;
+  document.getElementById(`modal-expires`).value = `never`;
+  document.getElementById(`modal-password`).value = ``;
+  document.getElementById(`create-modal`).classList.add(`open`);
+  setTimeout(() => document.getElementById(`modal-url`).focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById(`create-modal`).classList.remove(`open`);
+}
+
+// ─── UTM Builder ──────────────────────────────────────────────────────────────
+function buildUTM() {
+  const base = document.getElementById(`utm-url`).value.trim();
+  const source = document.getElementById(`utm-source`).value.trim();
+  const medium = document.getElementById(`utm-medium`).value.trim();
+  const campaign = document.getElementById(`utm-campaign`).value.trim();
+  const term = document.getElementById(`utm-term`).value.trim();
+  const content = document.getElementById(`utm-content`).value.trim();
+
+  if (!base) { document.getElementById(`utm-output`).textContent = `Your tagged URL will appear here...`; return; }
+
+  try {
+    const url = new URL(base);
+    if (source) url.searchParams.set(`utm_source`, source);
+    if (medium) url.searchParams.set(`utm_medium`, medium);
+    if (campaign) url.searchParams.set(`utm_campaign`, campaign);
+    if (term) url.searchParams.set(`utm_term`, term);
+    if (content) url.searchParams.set(`utm_content`, content);
+    document.getElementById(`utm-output`).textContent = url.toString();
+  } catch {
+    document.getElementById(`utm-output`).textContent = `Enter a valid URL above (include https://)`;
+  }
+}
+
+function copyUTM() {
+  const output = document.getElementById(`utm-output`).textContent;
+  if (output.includes(`https://`) || output.includes(`http://`)) {
+    navigator.clipboard?.writeText(output).then(() => toast(`UTM URL copied!`, `success`)).catch(() => toast(`Copy failed`, `error`));
+  } else {
+    toast(`Build a URL first`, `error`);
+  }
+}
+
+function shortenUTM() {
+  const output = document.getElementById(`utm-output`).textContent;
+  if (!isValidURL(output)) { toast(`Build a valid URL first`, `error`); return; }
+  const link = addLink(output, ``, `utm`, `never`, ``);
+  toast(`Shortened: ${link.shortUrl}`, `success`);
+  updateSidebarCount(loadLinks().length);
+}
+
+const UTM_TEMPLATES = [
+  {label:`📧 Email Newsletter`, source:`newsletter`, medium:`email`, campaign:`weekly-digest`},
+  {label:`📘 Facebook Ad`, source:`facebook`, medium:`cpc`, campaign:`brand-awareness`},
+  {label:`🐦 Twitter/X Post`, source:`twitter`, medium:`social`, campaign:`organic`},
+  {label:`🔎 Google Search`, source:`google`, medium:`cpc`, campaign:`search-brand`},
+];
+
+function renderUTMTemplates() {
+  document.getElementById(`utm-templates`).innerHTML = UTM_TEMPLATES.map(t =>
+    `<button class="btn btn-secondary btn-sm" onclick="applyUTMTemplate('${t.source}','${t.medium}','${t.campaign}')" style="text-align:left;">${t.label}</button>`
+  ).join(``);
+}
+
+function applyUTMTemplate(source, medium, campaign) {
+  document.getElementById(`utm-source`).value = source;
+  document.getElementById(`utm-medium`).value = medium;
+  document.getElementById(`utm-campaign`).value = campaign;
+  buildUTM();
+  toast(`Template applied`, `success`);
+}
+
+// ─── QR Codes ────────────────────────────────────────────────────────────────
+function generateQR() {
+  const input = document.getElementById(`qr-input`).value.trim();
+  if (!input) { toast(`Please enter a URL`, `error`); return; }
+  const url = isValidURL(input) ? input : `https://${input}`;
+  const grid = document.getElementById(`qr-grid`);
+  const card = document.createElement(`div`);
+  card.className = `card`;
+  card.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;`;
+  card.innerHTML = `
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}" alt="QR for ${url}" width="150" height="150" style="border-radius:8px;background:#fff;padding:8px;" loading="lazy"/>
+    <div style="font-size:12px;color:var(--muted);word-break:break-all;max-width:180px;">${url}</div>
+    <a href="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Download</a>
+  `;
+  grid.prepend(card);
+  document.getElementById(`qr-input`).value = ``;
+  toast(`QR code generated`, `success`);
+}
+
+function renderQRView() {
+  const links = loadLinks();
+  const grid = document.getElementById(`qr-grid`);
+  if (grid.children.length === 0 && links.length > 0) {
+    links.slice(0,4).forEach(link => {
+      const url = `https://${link.shortUrl}`;
+      const card = document.createElement(`div`);
+      card.className = `card`;
+      card.style.cssText = `display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;`;
+      card.innerHTML = `
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}" alt="QR for ${url}" width="150" height="150" style="border-radius:8px;background:#fff;padding:8px;" loading="lazy"/>
+        <div style="font-size:12px;color:var(--muted);">${link.shortUrl}</div>
+        <a href="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">Download</a>
+      `;
+      grid.appendChild(card);
+    });
+  }
+}
+
+function openQRForLink(code) {
+  document.getElementById(`qr-input`).value = `https://${BASE_DOMAIN}/${code}`;
+  switchView(`qr`);
+  generateQR();
+}
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+function toggleAdvanced() {
+  const panel = document.getElementById(`advanced-panel`);
+  const toggle = document.getElementById(`adv-toggle`);
+  const arrow = document.getElementById(`adv-arrow`);
+  const isOpen = panel.classList.toggle(`open`);
+  arrow.textContent = isOpen ? `▼` : `▶`;
+  toggle.setAttribute(`aria-expanded`, String(isOpen));
+}
+
+function updateHeaderCount(n) {
+  document.getElementById(`header-link-count`).textContent = `${n} link${n !== 1 ? `s` : ``}`;
+}
+
+function updateSidebarCount(n) {
+  document.getElementById(`sidebar-count`).textContent = n;
+  updatePlanBar(n);
+}
+
+function updatePlanBar(n) {
+  document.getElementById(`plan-links-used`).textContent = `${Math.min(n,5)} / 5 links used`;
+  document.getElementById(`plan-bar`).style.width = `${Math.min(100, n/5*100)}%`;
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, type = `info`) {
+  const icons = {success:`✅`, error:`❌`, info:`ℹ️`};
+  const container = document.getElementById(`toast-container`);
+  const el = document.createElement(`div`);
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type]||`ℹ️`}</span><span>${msg}</span>`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add(`exit`);
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
+document.addEventListener(`keydown`, e => {
+  if (e.key === `Escape`) {
+    closeModal();
+    closeAnalyticsModal();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === `k`) {
+    e.preventDefault();
+    showCreateModal();
+  }
+});
+
+// Close modals on backdrop click
+document.getElementById(`create-modal`).addEventListener(`click`, closeModal);
+document.getElementById(`analytics-modal`).addEventListener(`click`, closeAnalyticsModal);
+
+// Enter key on quick shorten
+document.getElementById(`quick-url`).addEventListener(`keydown`, e => {
+  if (e.key === `Enter`) quickShorten();
+});
+
+// ─── Seed demo data ────────────────────────────────────────────────────────────
+function seedDemoData() {
+  if (loadLinks().length > 0) return;
+  const demos = [
+    {url:`https://www.notion.so/team-wiki/Product-Roadmap-2025`, tag:`internal`},
+    {url:`https://webflow.com/templates/html/startup-saas-website-template`, tag:`marketing`},
+    {url:`https://github.com/vercel/next.js/blob/canary/docs/app/api-reference`, tag:`dev`},
+    {url:`https://mailchimp.com/resources/email-marketing-benchmarks/`, tag:`email`},
+  ];
+  demos.forEach(d => addLink(d.url, ``, d.tag, `never`, ``));
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+seedDemoData();
+renderDashboard();
+updateSidebarCount(loadLinks().length);
+</script>
+</body>
+</html>

@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Language Detector — Dark Factory</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface2: #1a1a1a;
+  --border: rgba(255,255,255,0.08);
+  --accent: #ffffff;
+  --accent2: #3b82f6;
+  --text: #ededed;
+  --muted: #6b7280;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --radius: 6px;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 800px 600px at 20% 10%, rgba(0,229,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 600px 400px at 80% 80%, rgba(124,58,237,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 36px;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(0,229,255,0.35);
+  }
+
+  h1 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .tagline {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(67,217,173,0.12);
+    border: 1px solid rgba(67,217,173,0.25);
+    color: var(--green);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* Main layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 720px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: rgba(0,229,255,0.3); }
+
+  .card-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title-icon {
+    width: 20px;
+    height: 20px;
+    background: rgba(0,229,255,0.15);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+  }
+
+  /* Textarea */
+  .textarea-wrap {
+    position: relative;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 200px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 0.95rem;
+    padding: 16px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.7;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  textarea::placeholder { color: var(--muted); opacity: 0.6; }
+
+  textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,255,0.15);
+  }
+
+  .char-counter {
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  /* Action row */
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    outline: none;
+    font-family: inherit;
+  }
+
+  .btn:focus-visible { box-shadow: 0 0 0 3px rgba(0,229,255,0.4); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(0,229,255,0.35);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,229,255,0.5);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    color: var(--text);
+    border-color: rgba(0,229,255,0.3);
+    background: rgba(0,229,255,0.08);
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Sample buttons */
+  .sample-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .sample-btn {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+
+  .sample-btn:hover {
+    background: rgba(0,229,255,0.1);
+    border-color: rgba(0,229,255,0.4);
+    color: var(--text);
+  }
+
+  .sample-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 14px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  /* Stats strip */
+  .stats-strip {
+    display: flex;
+    gap: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 16px;
+  }
+
+  .stat-item {
+    flex: 1;
+    padding: 12px 14px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .stat-item:last-child { border-right: none; }
+  .stat-item:hover { background: rgba(0,229,255,0.06); }
+
+  .stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* Results column */
+  .results-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Detection result */
+  .result-main {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .result-main.has-result {
+    border-color: rgba(0,229,255,0.4);
+    box-shadow: 0 0 0 1px rgba(0,229,255,0.1);
+  }
+
+  .result-hero {
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(124,58,237,0.04));
+    border-bottom: 1px solid var(--border);
+    min-height: 130px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .result-empty {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .result-empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.3;
+  }
+
+  .lang-flag {
+    font-size: 2.8rem;
+    margin-bottom: 8px;
+    animation: fadeInUp 0.4s ease;
+  }
+
+  .lang-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    animation: fadeInUp 0.4s ease 0.05s both;
+  }
+
+  .lang-native {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-top: 2px;
+    animation: fadeInUp 0.4s ease 0.1s both;
+  }
+
+  .lang-iso {
+    display: inline-block;
+    background: rgba(0,229,255,0.18);
+    border: 1px solid rgba(0,229,255,0.3);
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-top: 8px;
+    text-transform: uppercase;
+    animation: fadeInUp 0.4s ease 0.15s both;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Confidence bar */
+  .confidence-section {
+    padding: 16px 24px;
+  }
+
+  .confidence-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .confidence-bar-wrap {
+    background: var(--surface2);
+    border-radius: 6px;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  .confidence-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    border-radius: 6px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0;
+  }
+
+  .confidence-pct {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--green);
+    margin-top: 6px;
+    display: block;
+  }
+
+  /* Script detection */
+  .script-badge-area {
+    padding: 0 24px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .script-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .script-latin   { background: rgba(0,229,255,0.1); border-color: rgba(0,229,255,0.3); color: var(--accent); }
+  .script-cyrillic{ background: rgba(247,201,72,0.1); border-color: rgba(247,201,72,0.3); color: var(--yellow); }
+  .script-arabic  { background: rgba(124,58,237,0.1); border-color: rgba(124,58,237,0.3); color: var(--accent2); }
+  .script-cjk    { background: rgba(67,217,173,0.1); border-color: rgba(67,217,173,0.3); color: var(--green); }
+  .script-devanagari { background: rgba(255,150,80,0.1); border-color: rgba(255,150,80,0.3); color: #ff9650; }
+  .script-hangul  { background: rgba(100,200,255,0.1); border-color: rgba(100,200,255,0.3); color: #64c8ff; }
+  .script-thai    { background: rgba(200,100,255,0.1); border-color: rgba(200,100,255,0.3); color: #c864ff; }
+  .script-hebrew  { background: rgba(255,200,100,0.1); border-color: rgba(255,200,100,0.3); color: #ffc864; }
+  .script-greek   { background: rgba(80,220,180,0.1); border-color: rgba(80,220,180,0.3); color: #50dcb4; }
+  .script-other   { background: rgba(136,146,176,0.1); border-color: rgba(136,146,176,0.3); color: var(--muted); }
+
+  /* Top candidates */
+  .candidates-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    transition: border-color 0.2s;
+  }
+
+  .candidates-card:hover { border-color: rgba(0,229,255,0.25); }
+
+  .candidate-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(46,51,80,0.5);
+    transition: all 0.15s;
+    animation: fadeInUp 0.35s ease both;
+  }
+
+  .candidate-row:last-child { border-bottom: none; }
+
+  .candidate-rank {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .candidate-rank.top { background: rgba(0,229,255,0.2); color: var(--accent); }
+
+  .candidate-flag { font-size: 1.1rem; flex-shrink: 0; }
+
+  .candidate-name {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .candidate-iso {
+    font-size: 0.65rem;
+    color: var(--muted);
+    font-family: monospace;
+  }
+
+  .candidate-bar-wrap {
+    width: 80px;
+    height: 5px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .candidate-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .candidate-bar.rank1 { background: linear-gradient(90deg, var(--accent), #8b5cf6); }
+  .candidate-bar.rank2 { background: var(--green); }
+  .candidate-bar.rank3 { background: var(--yellow); }
+  .candidate-bar.rank4 { background: var(--accent2); }
+  .candidate-bar.rank5 { background: var(--muted); }
+
+  .candidate-pct {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted);
+    width: 34px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Placeholder candidates */
+  .placeholder-row {
+    height: 38px;
+    background: var(--surface2);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    opacity: 0.3;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.15; }
+  }
+
+  /* Processing animation */
+  .processing-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(15,17,23,0.85);
+    backdrop-filter: blur(4px);
+    border-radius: var(--radius);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+  }
+
+  .processing-overlay.active { display: flex; }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .processing-text {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .input-section {
+    position: relative;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    color: var(--text);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    max-width: 300px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(67,217,173,0.4); }
+  .toast.error   { border-color: rgba(124,58,237,0.4); }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 48px;
+    padding: 20px 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  footer span { color: var(--accent); }
+
+  /* Routing card */
+  .routing-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-top: 24px;
+  }
+
+  .routing-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(46,51,80,0.5);
+    font-size: 0.82rem;
+  }
+
+  .routing-row:last-child { border-bottom: none; }
+
+  .routing-lang { font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .routing-arrow { color: var(--muted); font-size: 0.75rem; }
+  .routing-agent { color: var(--accent); font-weight: 600; }
+
+  /* History strip */
+  .history-section {
+    margin-top: 24px;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    animation: fadeInUp 0.3s ease;
+  }
+
+  .history-item:hover {
+    border-color: rgba(0,229,255,0.35);
+    background: rgba(0,229,255,0.05);
+  }
+
+  .history-flag { font-size: 1rem; }
+  .history-lang { font-weight: 600; color: var(--text); flex: 1; }
+  .history-snippet {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+    font-size: 0.75rem;
+  }
+
+  .history-conf {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--green);
+    white-space: nowrap;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+    padding: 20px;
+  }
+
+/* === Dev Tools v2 Design System === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.6;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
+h3 { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-family: var(--font-body); }
+
+.container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.card, .result, .item, .output, .box, .panel, .section, .info,
+[class*="card"], [class*="result"], [class*="item"], [class*="output"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  animation: toolsFade 0.25s ease both;
+}
+
+.code, .value, .data, pre, code, .mono, .number, .ip, .hash, .url, .phone, .email {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  color: var(--text);
+  word-break: break-all;
+}
+
+pre, .output-block, .terminal {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  color: var(--green);
+  line-height: 1.7;
+}
+
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.65rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.3);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
+}
+
+button, .btn, input[type="submit"], input[type="button"] {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.5rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+button:hover { opacity: 0.9; }
+button:active { transform: scale(0.97); }
+
+button.secondary, .btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.tag, .badge, .status, .label {
+  display: inline-block;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+}
+
+.valid, .success, .ok, .pass, .active { color: var(--green); }
+.invalid, .error, .fail, .danger { color: var(--red); }
+.warning, .pending { color: var(--yellow); }
+.info, .note { color: var(--accent2); }
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--green);
+  margin-right: 6px;
+}
+.status-dot.red { background: var(--red); }
+.status-dot.yellow { background: var(--yellow); }
+
+table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-weight: 600; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+tr:hover td { background: var(--surface); }
+
+@keyframes toolsFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor::after { content: '▋'; animation: blink 1s step-end infinite; color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="header-inner">
+      <div class="logo-area">
+        <div class="logo-icon">🌐</div>
+        <div>
+          <h1>Language Detector</h1>
+          <div class="tagline">Instant language identification — 30+ languages, 100% offline</div>
+        </div>
+      </div>
+      <div class="badge">
+        <div class="badge-dot"></div>
+        Offline &amp; Private
+      </div>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- Left: Input column -->
+    <div class="left-col">
+      <div class="card input-section" id="inputSection">
+        <div class="card-title">
+          <div class="card-title-icon">✏️</div>
+          Paste Your Text
+        </div>
+
+        <div class="textarea-wrap">
+          <textarea
+            id="inputText"
+            placeholder="Paste a support message, ticket, or any text here to detect its language..."
+            aria-label="Text to detect language"
+            spellcheck="false"
+          ></textarea>
+          <span class="char-counter" id="charCounter">0 chars</span>
+        </div>
+
+        <div class="action-row">
+          <button class="btn btn-primary" id="detectBtn" onclick="detectLanguage()" disabled>
+            <span>🔍</span> Detect Language
+          </button>
+          <button class="btn btn-secondary" id="clearBtn" onclick="clearInput()">
+            <span>✕</span> Clear
+          </button>
+        </div>
+
+        <div class="sample-label">Try a sample</div>
+        <div class="sample-row" id="sampleRow">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="stats-strip" id="statsStrip" style="margin-top:20px;">
+          <div class="stat-item">
+            <span class="stat-value" id="statChars">0</span>
+            <span class="stat-label">Characters</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statWords">0</span>
+            <span class="stat-label">Words</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statSents">0</span>
+            <span class="stat-label">Sentences</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="statScript">—</span>
+            <span class="stat-label">Script</span>
+          </div>
+        </div>
+
+        <div class="processing-overlay" id="processingOverlay">
+          <div class="spinner"></div>
+          <span class="processing-text">Analyzing language patterns...</span>
+        </div>
+      </div>
+
+      <!-- Detection history -->
+      <div class="history-section" id="historySection">
+        <div class="card-title" style="margin-bottom:0;">
+          <div class="card-title-icon">🕑</div>
+          Recent Detections
+        </div>
+        <div class="history-list" id="historyList">
+          <div class="empty-state">No detections yet — paste some text above.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Results column -->
+    <div class="results-col">
+
+      <!-- Main result card -->
+      <div class="result-main" id="resultMain">
+        <div class="result-hero">
+          <div class="result-empty" id="resultEmpty">
+            <div class="result-empty-icon">🔍</div>
+            <div>Your detection result will appear here</div>
+          </div>
+          <div id="resultContent" style="display:none; width:100%;">
+            <div class="lang-flag" id="resultFlag"></div>
+            <div class="lang-name" id="resultLangName"></div>
+            <div class="lang-native" id="resultNative"></div>
+            <div class="lang-iso" id="resultIso"></div>
+          </div>
+        </div>
+
+        <div class="confidence-section" id="confidenceSection" style="display:none;">
+          <div class="confidence-label">Confidence Score</div>
+          <div class="confidence-bar-wrap">
+            <div class="confidence-bar" id="confidenceBar"></div>
+          </div>
+          <span class="confidence-pct" id="confidencePct"></span>
+        </div>
+
+        <div class="script-badge-area" id="scriptBadgeArea" style="display:none;">
+        </div>
+      </div>
+
+      <!-- Top 5 candidates -->
+      <div class="candidates-card" id="candidatesCard">
+        <div class="card-title">
+          <div class="card-title-icon">📊</div>
+          Top Candidates
+        </div>
+        <div id="candidatesList">
+          <div class="placeholder-row"></div>
+          <div class="placeholder-row" style="opacity:0.2;"></div>
+          <div class="placeholder-row" style="opacity:0.12;"></div>
+          <div class="placeholder-row" style="opacity:0.08;"></div>
+          <div class="placeholder-row" style="opacity:0.04;"></div>
+        </div>
+      </div>
+
+      <!-- Routing suggestion -->
+      <div class="routing-card" id="routingCard" style="display:none;">
+        <div class="card-title">
+          <div class="card-title-icon">🔀</div>
+          Routing Suggestion
+        </div>
+        <div id="routingContent"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <p>Built for <span>Dark Factory</span> &mdash; 100% offline &middot; No API keys &middot; n-gram statistical analysis across 30+ languages</p>
+  </footer>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+<script>
+// ============================================================
+//  LANGUAGE PROFILES — trigram frequency tables (top 50 each)
+//  Source: statistical n-gram analysis of common texts
+// ============================================================
+
+const LANG_DATA = {
+  en: {
+    name: 'English', native: 'English', flag: '🇬🇧', iso: 'en',
+    family: 'Germanic', script: 'Latin',
+    trigrams: ['the','and','ing','ion','ent','tio','for','ati','her','ter','hat','tha','ere','con','res','ver','all','ons','nce','men','int','est','ith','ted','ers','pro','com','are','ith','not','oun','rea','tin','ess','ite','ive','sio','nde','ine','str','was','hin','ant','ort','oun','ple','ive','rin','man','his'],
+    bigrams: ['th','he','in','er','an','re','on','en','at','ou','nd','to','ea','it','ng','as','or','is','ha','et','hi','se','le','al','de','st','nt','ar','te','ti','es','of','me','ne','ed','ed','si','ve','ll','ly']
+  },
+  de: {
+    name: 'German', native: 'Deutsch', flag: '🇩🇪', iso: 'de',
+    family: 'Germanic', script: 'Latin',
+    trigrams: ['ein','sch','die','und','der','ich','cht','gen','ung','eit','den','nen','hen','ver','auf','ist','ies','ste','des','nte','mit','ten','nge','cht','ber','für','hat','dem','aus','ers','ren','ier','lie','her','ang','hin','ere','ess','nte','ges','bei','man','ion','ach','ndt','tet','lic','wei','nds','tig'],
+    bigrams: ['en','er','ch','de','ei','te','nd','ie','ge','in','st','un','es','be','re','ng','an','he','al','ar','se','le','di','ni','ti','au','zu','it','ne','ke','nt','ig','am','or','ha','fe','on','so','me','ge']
+  },
+  fr: {
+    name: 'French', native: 'Français', flag: '🇫🇷', iso: 'fr',
+    family: 'Romance', script: 'Latin',
+    trigrams: ['les','des','ent','que','ion','est','une','ons','ant','ait','par','sur','our','eur','tre','res','ans','ont','ous','ple','con','ère','pas','ers','ais','man','ine','tte','men','ait','pro','ire','ses','aus','mer','ils','ien','ces','ter','ati','ble','ous','las','qui','mes','int','les','duc','ais','ect'],
+    bigrams: ['es','le','de','en','re','nt','on','la','et','er','te','se','ou','an','it','is','ai','au','ie','el','ar','ne','al','ti','me','ce','qu','si','co','pa','ma','pr','un','pe','us','ro','mo','il','ch','lo']
+  },
+  es: {
+    name: 'Spanish', native: 'Español', flag: '🇪🇸', iso: 'es',
+    family: 'Romance', script: 'Latin',
+    trigrams: ['que','ion','del','los','las','ent','con','par','est','aci','una','ade','des','res','ado','nte','ien','tra','tos','ica','pro','ria','nes','der','por','cia','ero','ers','ara','ste','man','ale','mos','ese','mer','nte','ado','sin','ue','ien','nto','eso','ida','ame','aba','ini','ist','tic','unc','cos'],
+    bigrams: ['es','de','en','la','el','os','al','ue','se','re','ar','nt','co','te','an','as','un','ra','st','ió','ad','ci','me','lo','ta','pr','ti','ro','do','le','no','ma','ue','ec','ri','ca','li','po','so','si']
+  },
+  it: {
+    name: 'Italian', native: 'Italiano', flag: '🇮🇹', iso: 'it',
+    family: 'Romance', script: 'Latin',
+    trigrams: ['che','ell','ion','ent','del','gli','one','per','con','est','ati','are','ant','ero','ato','ess','res','ven','ver','lla','pro','les','nte','esi','nes','ali','ite','int','ell','ong','eri','ato','non','men','man','ssi','ero','ter','esi','ora','nel','all','ben','cos','riv','dit','ral','amo','dis','ava'],
+    bigrams: ['di','in','re','er','to','la','ch','an','ti','li','at','si','co','al','de','ne','on','it','le','ri','ar','es','no','ci','so','un','el','ma','il','pa','ra','te','ni','me','et','ta','or','ad','st','va']
+  },
+  pt: {
+    name: 'Portuguese', native: 'Português', flag: '🇵🇹', iso: 'pt',
+    family: 'Romance', script: 'Latin',
+    trigrams: ['que','ção','ent','dos','das','nte','ade','eis','res','pro','est','con','par','uma','ado','com','por','ita','des','oca','tro','tos','oes','ens','lar','aci','ion','ais','ter','ali','tra','mos','oes','men','ber','der','ras','iss','iss','cia','als','ato','ism','ões','ber','oss','ica','ual','tos','rar'],
+    bigrams: ['de','es','do','as','os','da','em','qu','ar','re','nt','te','se','co','ra','an','ão','is','no','al','ro','me','ma','li','un','pa','ri','ca','la','en','to','pr','ti','ne','si','er','io','di','lo','na']
+  },
+  nl: {
+    name: 'Dutch', native: 'Nederlands', flag: '🇳🇱', iso: 'nl',
+    family: 'Germanic', script: 'Latin',
+    trigrams: ['een','van','het','der','den','ing','cht','gen','ber','aar','oor','ver','ons','ste','nde','and','sch','ens','eid','ten','ren','ijk','aan','nge','net','ien','zel','jes','ook','rin','ter','ges','nst','ees','elt','bij','men','nat','erd','ons','ert','eer','ond','ijt','nis','nen','ied','ier','nog','ger'],
+    bigrams: ['de','en','er','an','te','in','el','nd','ge','re','et','ee','st','ie','be','aa','he','ze','ze','nt','ar','oe','ng','ou','oo','me','ri','ke','di','pr','at','le','ni','vo','ve','ne','om','ti','so','al']
+  },
+  ru: {
+    name: 'Russian', native: 'Русский', flag: '🇷🇺', iso: 'ru',
+    family: 'Slavic', script: 'Cyrillic',
+    trigrams: ['что','это','ого','ени','ест','ани','ова','ель','ный','ного','ость','ные','ной','для','при','все','его','они','ном','ете','аль','ите','нии','тов','ких','дел','ние','ере','ная','нал'],
+    bigrams: ['ко','то','на','по','не','ен','ст','ра','во','ка','го','ал','ни','ти','ов','ро','ан','ли','ат','ел','ом','та','ле','их','за','ла','но','ор','ск','ри']
+  },
+  uk: {
+    name: 'Ukrainian', native: 'Українська', flag: '🇺🇦', iso: 'uk',
+    family: 'Slavic', script: 'Cyrillic',
+    trigrams: ['що','це','для','про','але','він','від','його','або','вона','той','при','між','ним','над','під','так','ось','ще','вже','щоб','там','коли','якщо','бути','мати','може','дуже','якого','після'],
+    bigrams: ['на','не','по','ко','до','та','за','як','він','від','що','це','ий','ом','ен','ти','ав','ли','ла','ра','ва','ни','ат','ст','ки','ри','ор','ар','тр','ес']
+  },
+  pl: {
+    name: 'Polish', native: 'Polski', flag: '🇵🇱', iso: 'pl',
+    family: 'Slavic', script: 'Latin',
+    trigrams: ['nie','nia','się','ych','ego','owi','iem','ani','ych','ent','pro','jes','ale','wie','sto','prz','ach','owa','cze','dzi','sta','trz','rze','iem','ies','zas','ców','iem','isz','oże'],
+    bigrams: ['ie','na','po','ni','pr','za','ro','ow','si','ch','je','do','ar','te','an','ys','cz','wn','ta','ię','wi','ko','st','wy','zn','no','or','em','rz','go']
+  },
+  cs: {
+    name: 'Czech', native: 'Čeština', flag: '🇨🇿', iso: 'cs',
+    family: 'Slavic', script: 'Latin',
+    trigrams: ['pro','ost','sti','ání','ení','ách','nes','ter','ale','při','pod','ech','roz','ani','neb','jak','byl','ové','ích','tím','jem','jako','byl','ení','věc','eno','říc','dle','pes','ích'],
+    bigrams: ['na','po','se','je','ho','od','do','ve','ní','ov','to','em','ní','př','st','an','ro','ri','vý','ko','né','va','ci','li','al','ro','te','sk','za','pr']
+  },
+  sv: {
+    name: 'Swedish', native: 'Svenska', flag: '🇸🇪', iso: 'sv',
+    family: 'Germanic', script: 'Latin',
+    trigrams: ['och','att','det','för','som','den','ska','har','med','inte','men','ett','kan','var','till','han','sig','sin','när','upp','men','mot','vad','ett','dig','hon','dom','alla','ger','vid'],
+    bigrams: ['en','er','ar','et','de','om','te','an','st','in','or','ka','se','la','ti','ge','at','nd','va','ha','at','ig','il','ör','un','re','li','mo','är','nt']
+  },
+  da: {
+    name: 'Danish', native: 'Dansk', flag: '🇩🇰', iso: 'da',
+    family: 'Germanic', script: 'Latin',
+    trigrams: ['der','for','den','det','med','til','har','sig','han','men','som','jeg','ikke','ved','kan','vil','hun','var','ind','des','lle','ste','est','ere','ene','ren','res','and','der','ede'],
+    bigrams: ['er','en','de','et','ar','at','re','nd','ti','se','te','or','an','in','ig','st','el','le','al','ne','ge','he','so','me','om','sk','ro','op','nt','il']
+  },
+  nb: {
+    name: 'Norwegian', native: 'Norsk', flag: '🇳🇴', iso: 'nb',
+    family: 'Germanic', script: 'Latin',
+    trigrams: ['det','for','den','med','til','har','kan','men','som','jeg','ikke','var','han','ved','vil','hun','sin','ste','ere','ene','ren','res','der','ede','opp','ved','gje','inn','kom','seg'],
+    bigrams: ['er','en','de','et','ar','at','re','nd','ti','se','te','or','an','in','ig','st','el','le','al','ne','ge','he','me','om','sk','ro','nt','il','og','av']
+  },
+  fi: {
+    name: 'Finnish', native: 'Suomi', flag: '🇫🇮', iso: 'fi',
+    family: 'Uralic', script: 'Latin',
+    trigrams: ['ssa','sta','lla','tta','nta','nen','mää','kin','ään','käy','tää','van','sen','lla','oli','ist','iin','nee','esi','kun','tai','hän','ela','ula','ion','yks','ksi','all','ett','aks'],
+    bigrams: ['an','en','in','on','ta','st','la','ss','aa','is','ti','ko','al','ma','ka','se','aa','ll','te','ra','sa','ei','si','ha','tt','ku','va','ki','nt','ri']
+  },
+  hu: {
+    name: 'Hungarian', native: 'Magyar', flag: '🇭🇺', iso: 'hu',
+    family: 'Uralic', script: 'Latin',
+    trigrams: ['ogy','meg','ent','len','ész','val','ban','ben','nek','hoz','hoz','nak','ész','tás','és ','nem','let','egy','ság','hat','ból','ból','hoz','vál','tel','más','azt','kap','vel','get'],
+    bigrams: ['an','en','gy','el','et','ek','is','em','at','eg','re','ne','sz','le','te','er','al','it','es','ok','ki','ar','ra','be','se','ke','ni','me','ov','ás']
+  },
+  ro: {
+    name: 'Romanian', native: 'Română', flag: '🇷🇴', iso: 'ro',
+    family: 'Romance', script: 'Latin',
+    trigrams: ['are','est','ent','ste','ror','lor','rea','eni','rii','uri','are','ult','ati','ale','pro','con','iti','ntr','tur','dec','ept','nte','ire','tru','ita','esc','ean','ade','opt','ica'],
+    bigrams: ['re','în','de','ar','un','se','la','ea','nt','at','ri','te','st','le','că','or','in','ul','si','ti','cu','ne','ei','al','ni','ie','ra','ce','ma','pe']
+  },
+  tr: {
+    name: 'Turkish', native: 'Türkçe', flag: '🇹🇷', iso: 'tr',
+    family: 'Turkic', script: 'Latin',
+    trigrams: ['lar','ler','bir','nin','den','nın','dır','ile','için','var','yor','mak','eti','ver','yap','çok','ama','iki','ana','son','ben','bun','olu','gel','her','daha','ine','ilk','ise','gibi'],
+    bigrams: ['an','in','en','ar','er','de','da','el','ir','or','ni','ak','ik','la','le','bu','al','te','se','di','si','ma','na','ta','ra','ri','li','mi','ın','ün']
+  },
+  ar: {
+    name: 'Arabic', native: 'العربية', flag: '🇸🇦', iso: 'ar',
+    family: 'Semitic', script: 'Arabic',
+    trigrams: ['الع','وال','ذلك','هذا','بال','على','ولا','منه','مال','مام','يوم','عمل','كان','ليس','كما','إلى','علي','قال','ذات','لقد','كنت','وهو','ومن','لأن','ذكر','الأ','الم','الك','الس','الت'],
+    bigrams: ['ال','وا','ما','في','من','هذ','إل','ان','ول','عل','لا','مع','كا','نا','بال','قد','لم','كن','يا','له','حا','قا','جا','شا','را','تا','كت','نق','أن','حت']
+  },
+  he: {
+    name: 'Hebrew', native: 'עברית', flag: '🇮🇱', iso: 'he',
+    family: 'Semitic', script: 'Hebrew',
+    trigrams: ['שלה','ותה','ולי','יהי','ולא','יהו','לוה','הכל','שהי','כול','ותי','אות','יאמ','ויא','הזה','הזו','כאש','יסר','הנה','שני','ישר','ינה','כאל','יים','ולה','הדב','ראל','האד','הנה','כאח'],
+    bigrams: ['ות','ים','ית','של','לא','הם','אל','הי','כי','יה','מה','עם','הן','את','כן','אן','תי','שה','הנ','ור','ול','רה','יא','לה','וה','הז','שי','מי','לי','זה']
+  },
+  zh: {
+    name: 'Chinese', native: '中文', flag: '🇨🇳', iso: 'zh',
+    family: 'Sino-Tibetan', script: 'CJK',
+    trigrams: ['的的','是的','了的','在的','有的','我的','他的','这的','个的','们的','来的','时的','大的','地的','年的','说的','中的','国的','也的','就的','到的','上的','所的','要的','以的','人的','可的','对的','经的','公的'],
+    bigrams: ['的','是','了','在','有','我','他','这','个','们','来','时','大','地','年','说','中','国','也','就','到','上','所','要','以','人','可','对','经','公']
+  },
+  ja: {
+    name: 'Japanese', native: '日本語', flag: '🇯🇵', iso: 'ja',
+    family: 'Japonic', script: 'CJK',
+    trigrams: ['する','です','ます','ある','これ','それ','あな','とい','にな','てい','から','まし','れた','おり','でし','につ','にお','また','ため','れて','にし','りま','たち','もの','との','いう','その','かし','とも','じゃ'],
+    bigrams: ['の','に','は','が','を','た','て','で','い','し','れ','も','と','な','か','る','す','あ','ら','け','や','ま','う','よ','こ','し','ど','わ','み','き']
+  },
+  ko: {
+    name: 'Korean', native: '한국어', flag: '🇰🇷', iso: 'ko',
+    family: 'Koreanic', script: 'Hangul',
+    trigrams: ['습니','니다','이다','하고','하는','지만','해서','이라','이며','했다','에서','것이','하게','하였','에게','이에','이는','우리','에도','시며','있다','없다','까지','에서','거나','으로','라고','한다','부터','통해'],
+    bigrams: ['이','에','의','가','은','는','을','를','하','고','한','도','로','서','과','와','게','으','면','다','지','들','만','도','까','며','나','어','자','라']
+  },
+  hi: {
+    name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳', iso: 'hi',
+    family: 'Indo-Aryan', script: 'Devanagari',
+    trigrams: ['के','का','को','है','कर','एक','से','भी','हो','कि','पर','यह','वह','था','हम','आप','तो','जो','मे','ने','पा','ही','गई','रह','गए','दी','दे','नह','लि','मा'],
+    bigrams: ['के','का','में','को','है','से','पर','एक','भी','हम','आ','वह','था','या','हो','जो','कर','यह','जा','तो','ने','दे','रह','जब','तक','इस','उस','मत','गई','पा']
+  },
+  bn: {
+    name: 'Bengali', native: 'বাংলা', flag: '🇧🇩', iso: 'bn',
+    family: 'Indo-Aryan', script: 'Bengali',
+    trigrams: ['এর','এই','তার','বলে','করে','থেকে','আর','হয়','সে','আছে','যে','আমি','তুমি','এটা','কি','হলো','না','নেই','কেন','কখন','কোথায়','কিন্তু','তাই','এবং','দিয়ে','নিয়ে','গেল','হবে','দেখ','চাই'],
+    bigrams: ['এর','তা','রে','কে','আর','সে','বল','হয়','থে','আছ','যে','আম','তু','এট','কি','হল','না','নে','কে','কখ','কো','কি','তা','এব','দি','নি','গে','হব','দে','চা']
+  },
+  el: {
+    name: 'Greek', native: 'Ελληνικά', flag: '🇬🇷', iso: 'el',
+    family: 'Hellenic', script: 'Greek',
+    trigrams: ['και','την','αρα','ειν','ωσι','τηο','τηρ','ιου','αστ','τας','ποτ','ματ','σται','γει','τοτ','ουν','εστ','ωτα','ακι','ηθε','αφε','ιλε','ντε','στη','κομ','λος','στο','ελε','νεα','δει'],
+    bigrams: ['αι','ει','τη','ην','στ','ου','σε','μα','κα','τα','νε','αρ','ελ','οτ','ιο','πο','λα','νο','τι','μο','ρα','αν','θε','ιν','τρ','ετ','ρε','ιτ','λι','εν']
+  },
+  th: {
+    name: 'Thai', native: 'ภาษาไทย', flag: '🇹🇭', iso: 'th',
+    family: 'Tai-Kadai', script: 'Thai',
+    trigrams: ['การ','ที่','เป็น','ของ','และ','ใน','มี','ว่า','ไม่','จาก','ได้','ให้','นั้น','เขา','คน','ใช้','เมื่อ','เรา','หรือ','ทำ','อยู่','เดิน','มาก','เรื่อง','บาง','แต่','ต้อง','เต็ม','เพราะ','ดี'],
+    bigrams: ['าร','ที','ัน','าน','อง','กา','ีั','ัน','ให','ไม','าก','าง','ึง','งา','นา','าม','มี','เป','ให','อา','วา','ีก','นั','ตา','มา','นาน','ีน','กน','าว','าว']
+  },
+  vi: {
+    name: 'Vietnamese', native: 'Tiếng Việt', flag: '🇻🇳', iso: 'vi',
+    family: 'Austroasiatic', script: 'Latin',
+    trigrams: ['các','những','trong','một','với','khi','cho','đến','này','của','như','được','là ','có ','và ','từ ','đã ','rằng','thì','vào','trên','sau','hay','nếu','lại','còn','cũng','bởi','giữa','nhưng'],
+    bigrams: ['nh','gh','ch','ng','qu','th','tr','ph','kh','gi','ại','ến','ủa','ổn','ươ','à ','và','ầu','ải','ây','ột','ộc','ác','ối','ưa','ụt','ữa','ổng','ực','ổi']
+  },
+  id: {
+    name: 'Indonesian', native: 'Bahasa Indonesia', flag: '🇮🇩', iso: 'id',
+    family: 'Austronesian', script: 'Latin',
+    trigrams: ['yang','dan','ini','itu','tidak','dalam','dengan','untuk','dari','ada','juga','sudah','bisa','saya','kami','kita','mereka','akan','pada','oleh','atau','seperti','lebih','telah','hanya','lain','oleh','kepada','bahwa','masih'],
+    bigrams: ['an','ng','ya','da','di','ka','me','ke','be','ter','se','pe','ha','ti','ba','la','ra','ta','ri','ma','ni','in','un','sa','ar','gi','ga','li','re','si']
+  },
+  ms: {
+    name: 'Malay', native: 'Bahasa Melayu', flag: '🇲🇾', iso: 'ms',
+    family: 'Austronesian', script: 'Latin',
+    trigrams: ['yang','dan','ini','itu','tidak','dalam','dengan','untuk','dari','ada','juga','sudah','boleh','saya','kami','kita','mereka','akan','pada','oleh','atau','seperti','lebih','telah','hanya','lain','kepada','bahawa','masih','selain'],
+    bigrams: ['an','ng','ya','da','di','ka','me','ke','be','ter','se','pe','ha','ti','ba','la','ra','ta','ri','ma','ni','in','un','sa','ar','gi','ga','li','re','si']
+  },
+  sk: {
+    name: 'Slovak', native: 'Slovenčina', flag: '🇸🇰', iso: 'sk',
+    family: 'Slavic', script: 'Latin',
+    trigrams: ['nie','nia','sti','pri','pre','ako','ale','ale','ved','str','ova','ter','iny','ent','rom','ies','van','ách','nes','ova','ods','obr','pra','kor','nak','ods','ial','iač','ist','ček'],
+    bigrams: ['ie','na','po','ni','pr','za','ro','ov','si','ch','je','do','ar','te','an','st','rz','ta','ię','wi','ko','wy','zn','no','or','em','rz','go','aj','ak']
+  },
+  hr: {
+    name: 'Croatian', native: 'Hrvatski', flag: '🇭🇷', iso: 'hr',
+    family: 'Slavic', script: 'Latin',
+    trigrams: ['oji','nih','ima','pri','jer','nje','eni','ija','gra','van','ako','ali','što','sam','bio','kao','kad','sve','tek','oda','ste','ine','ada','nov','ije','red','roj','ist','ovo','ven'],
+    bigrams: ['je','na','se','ni','ko','sa','ne','od','da','su','za','li','ma','ra','oj','st','ti','al','re','ka','no','vi','me','pr','ar','os','te','ak','ri','de']
+  },
+  ca: {
+    name: 'Catalan', native: 'Català', flag: '🏳️', iso: 'ca',
+    family: 'Romance', script: 'Latin',
+    trigrams: ['que','ent','els','les','del','una','amb','per','ció','est','pro','com','aci','els','res','men','ita','als','ens','ion','ini','ons','ali','ble','ats','des','ecs','ats','ric','iss'],
+    bigrams: ['es','de','en','la','el','os','al','ue','se','re','ar','nt','co','te','an','as','un','ra','st','io','ad','ci','me','lo','ta','pr','ti','ro','do','le']
+  },
+  af: {
+    name: 'Afrikaans', native: 'Afrikaans', flag: '🇿🇦', iso: 'af',
+    family: 'Germanic', script: 'Latin',
+    trigrams: ['die','van','het','is ','die','een','vir','nie','met','wat','wat','dat','aan','hul','ook','nou','hoe','kan','ons','was','kom','dit','wil','ver','het','tot','sal','kon','deur','maar'],
+    bigrams: ['di','an','er','et','en','is','in','de','ge','re','at','ie','aa','ee','te','ar','ke','se','nt','ra','na','ve','he','ri','ka','le','st','ga','ne','om']
+  }
+};
+
+// Script detection ranges
+const SCRIPTS = {
+  Latin:      [/[A-Za-zÀ-ÖØ-öø-ÿ]/g],
+  Cyrillic:   [/[Ѐ-ӿ]/g],
+  Arabic:     [/[؀-ۿݐ-ݿ]/g],
+  Hebrew:     [/[֐-׿]/g],
+  CJK:        [/[一-鿿぀-ゟ゠-ヿ가-힯]/g],
+  Devanagari: [/[ऀ-ॿ]/g],
+  Hangul:     [/[가-힯ᄀ-ᇿ]/g],
+  Thai:       [/[฀-๿]/g],
+  Greek:      [/[Ͱ-Ͽ]/g],
+  Bengali:    [/[ঀ-৿]/g]
+};
+
+// Agent routing map (sample)
+const ROUTING_MAP = {
+  en: 'English Support Queue',
+  de: 'German Support — Team DE',
+  fr: 'French Support — Team FR',
+  es: 'Spanish Support — Team ES',
+  it: 'Italian Support — Team IT',
+  pt: 'Portuguese Support — Team PT',
+  nl: 'Dutch Support — Team NL',
+  ru: 'Russian Support — Team RU',
+  uk: 'Ukrainian Support — Team UA',
+  pl: 'Polish Support — Team PL',
+  cs: 'Czech Support — Team CZ',
+  sv: 'Nordic Support — Team SV',
+  da: 'Nordic Support — Team DA',
+  nb: 'Nordic Support — Team NO',
+  fi: 'Finnish Support — Team FI',
+  hu: 'Hungarian Support — Team HU',
+  ro: 'Romanian Support — Team RO',
+  tr: 'Turkish Support — Team TR',
+  ar: 'Arabic Support — Team AR',
+  he: 'Hebrew Support — Team IL',
+  zh: 'Chinese Support — Team ZH',
+  ja: 'Japanese Support — Team JP',
+  ko: 'Korean Support — Team KR',
+  hi: 'Hindi Support — Team HI',
+  bn: 'Bengali Support — Team BN',
+  el: 'Greek Support — Team GR',
+  th: 'Thai Support — Team TH',
+  vi: 'Vietnamese Support — Team VN',
+  id: 'Indonesian Support — Team ID',
+  ms: 'Malay Support — Team MY'
+};
+
+// Sample texts for demos
+const SAMPLES = [
+  { lang: 'en', text: `Hello, I'm having trouble logging into my account. I've tried resetting my password but the email isn't arriving.` },
+  { lang: 'de', text: `Guten Tag, ich habe ein Problem mit meiner Bestellung. Die Lieferung kam nicht an und ich brauche eine Rückerstattung.` },
+  { lang: 'fr', text: `Bonjour, je rencontre un problème avec mon compte. Le mot de passe ne fonctionne plus et je ne reçois pas l'email de réinitialisation.` },
+  { lang: 'es', text: `Hola, tengo un problema con mi suscripción. El cobro se realizó dos veces este mes y necesito un reembolso urgente.` },
+  { lang: 'it', text: `Buongiorno, ho un problema con il mio ordine. Il prodotto non è arrivato e vorrei sapere dove si trova la mia spedizione.` },
+  { lang: 'ja', text: `こんにちは。先日注文した商品がまだ届いておりません。配送状況を確認していただけますでしょうか。` },
+  { lang: 'zh', text: `您好，我的订单出现了问题。商品已经付款但是还没有发货，请问什么时候可以发货？` },
+  { lang: 'ar', text: `مرحباً، أواجه مشكلة في حسابي. لا أستطيع تسجيل الدخول ولم يصلني بريد إعادة تعيين كلمة المرور.` },
+  { lang: 'ru', text: `Здравствуйте, у меня проблема с заказом. Товар не был доставлен, хотя прошло уже две недели с момента оплаты.` },
+  { lang: 'pt', text: `Olá, estou com um problema na minha conta. Não consigo fazer login e o e-mail de redefinição de senha não chega.` },
+  { lang: 'ko', text: `안녕하세요. 주문한 제품이 아직 도착하지 않았습니다. 배송 상태를 확인해 주실 수 있나요?` },
+  { lang: 'hi', text: `नमस्ते, मुझे मेरे खाते में समस्या हो रही है। मैं लॉगिन नहीं कर पा रहा हूँ और पासवर्ड रीसेट ईमेल भी नहीं आ रहा है।` }
+];
+
+// State
+let detectionHistory = [];
+let currentText = '';
+
+// ============================================================
+//  CORE: n-gram language detection
+// ============================================================
+
+function getNgrams(text, n) {
+  const clean = text.toLowerCase().replace(/\s+/g, ' ');
+  const grams = {};
+  for (let i = 0; i <= clean.length - n; i++) {
+    const g = clean.slice(i, i + n);
+    grams[g] = (grams[g] || 0) + 1;
+  }
+  return grams;
+}
+
+function scoreLanguage(textTrigrams, textBigrams, lang) {
+  const { trigrams, bigrams } = LANG_DATA[lang];
+  let score = 0;
+
+  // Trigram score
+  const topTri = trigrams.slice(0, 50);
+  for (const tri of topTri) {
+    if (textTrigrams[tri]) {
+      score += textTrigrams[tri] * 3;
+    }
+  }
+
+  // Bigram score
+  const topBi = bigrams.slice(0, 40);
+  for (const bi of topBi) {
+    if (textBigrams[bi]) {
+      score += textBigrams[bi] * 1.5;
+    }
+  }
+
+  return score;
+}
+
+function detectScript(text) {
+  const counts = {};
+  for (const [name, patterns] of Object.entries(SCRIPTS)) {
+    let count = 0;
+    for (const pattern of patterns) {
+      const matches = text.match(new RegExp(pattern.source, 'g'));
+      if (matches) count += matches.length;
+    }
+    if (count > 0) counts[name] = count;
+  }
+  if (Object.keys(counts).length === 0) return ['Other'];
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  // Return scripts that account for >10% of characters
+  return Object.entries(counts)
+    .filter(([, c]) => c / total > 0.1)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name]) => name);
+}
+
+function detectLanguage() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text || text.length < 5) {
+    showToast('Please enter at least a few words of text.', 'error');
+    return;
+  }
+
+  // Show processing
+  document.getElementById('processingOverlay').classList.add('active');
+  document.getElementById('detectBtn').disabled = true;
+
+  // Small delay for UX
+  setTimeout(() => {
+    try {
+      const result = runDetection(text);
+      displayResults(result, text);
+    } catch (err) {
+      showToast(`Detection error: ${err.message}`, 'error');
+    } finally {
+      document.getElementById('processingOverlay').classList.remove('active');
+      document.getElementById('detectBtn').disabled = false;
+    }
+  }, 350);
+}
+
+function runDetection(text) {
+  const textTrigrams = getNgrams(text, 3);
+  const textBigrams  = getNgrams(text, 2);
+  const scripts = detectScript(text);
+
+  // Determine dominant script to narrow candidates
+  const dominantScript = scripts[0] || 'Latin';
+
+  // Score all languages
+  const scores = [];
+  for (const [code, info] of Object.entries(LANG_DATA)) {
+    // Skip clearly wrong script languages (big speedup + accuracy)
+    if (dominantScript === 'Cyrillic' && info.script !== 'Cyrillic') continue;
+    if (dominantScript === 'Arabic'   && info.script !== 'Arabic')   continue;
+    if (dominantScript === 'Hebrew'   && info.script !== 'Hebrew')   continue;
+    if (dominantScript === 'CJK'      && info.script !== 'CJK')      continue;
+    if (dominantScript === 'Devanagari' && info.script !== 'Devanagari') continue;
+    if (dominantScript === 'Hangul'   && info.script !== 'Hangul')   continue;
+    if (dominantScript === 'Thai'     && info.script !== 'Thai')     continue;
+    if (dominantScript === 'Greek'    && info.script !== 'Greek')    continue;
+    if (dominantScript === 'Bengali'  && info.script !== 'Bengali')  continue;
+
+    const rawScore = scoreLanguage(textTrigrams, textBigrams, code);
+    scores.push({ code, score: rawScore, info });
+  }
+
+  scores.sort((a, b) => b.score - a.score);
+
+  // Normalise to confidence %
+  const topScore = scores[0]?.score || 1;
+  const total = scores.reduce((acc, s) => acc + s.score, 0) || 1;
+
+  const candidates = scores.slice(0, 5).map((s, i) => ({
+    rank: i + 1,
+    code: s.code,
+    name: s.info.name,
+    native: s.info.native,
+    flag: s.info.flag,
+    iso: s.info.iso,
+    confidence: total > 0 ? Math.round((s.score / total) * 100) : 0,
+    relativeScore: topScore > 0 ? Math.round((s.score / topScore) * 100) : 0
+  }));
+
+  // Compute text stats
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const chars = text.length;
+  const sents = (text.match(/[.!?]+/g) || []).length || 1;
+
+  return { candidates, scripts, words, chars, sents };
+}
+
+function displayResults(result, text) {
+  const top = result.candidates[0];
+  if (!top) {
+    showToast('Could not determine language — try more text.', 'error');
+    return;
+  }
+
+  // Hero result
+  document.getElementById('resultEmpty').style.display = 'none';
+  document.getElementById('resultContent').style.display = 'block';
+  document.getElementById('resultFlag').textContent = top.flag;
+  document.getElementById('resultLangName').textContent = top.name;
+  document.getElementById('resultNative').textContent = top.native;
+  document.getElementById('resultIso').textContent = `ISO 639-1: ${top.iso.toUpperCase()}`;
+  document.getElementById('resultMain').classList.add('has-result');
+
+  // Confidence bar
+  document.getElementById('confidenceSection').style.display = 'block';
+  requestAnimationFrame(() => {
+    document.getElementById('confidenceBar').style.width = `${top.confidence}%`;
+  });
+  const confEl = document.getElementById('confidencePct');
+  const confLabel = top.confidence >= 80 ? '🟢 High' : top.confidence >= 50 ? '🟡 Medium' : '🔴 Low';
+  confEl.textContent = `${top.confidence}% — ${confLabel} confidence`;
+
+  // Script badges
+  const scriptArea = document.getElementById('scriptBadgeArea');
+  scriptArea.style.display = 'flex';
+  scriptArea.innerHTML = '';
+  for (const s of result.scripts) {
+    const cls = `script-${s.toLowerCase()}`;
+    const badge = document.createElement('span');
+    badge.className = `script-badge ${cls}`;
+    badge.innerHTML = `<span>✦</span> ${s} script`;
+    scriptArea.appendChild(badge);
+  }
+
+  // Stats
+  document.getElementById('statChars').textContent = result.chars.toLocaleString();
+  document.getElementById('statWords').textContent = result.words.toLocaleString();
+  document.getElementById('statSents').textContent = result.sents.toLocaleString();
+  document.getElementById('statScript').textContent = result.scripts[0] || '?';
+
+  // Candidates
+  renderCandidates(result.candidates);
+
+  // Routing
+  renderRouting(top.code, top.name, top.flag);
+
+  // History
+  addToHistory(text, top, top.confidence);
+
+  showToast(`Detected: ${top.flag} ${top.name} (${top.confidence}% confidence)`, 'success');
+}
+
+function renderCandidates(candidates) {
+  const el = document.getElementById('candidatesList');
+  el.innerHTML = '';
+  candidates.forEach((c, i) => {
+    const row = document.createElement('div');
+    row.className = 'candidate-row';
+    row.style.animationDelay = `${i * 0.06}s`;
+    row.innerHTML = `
+      <div class="candidate-rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
+      <span class="candidate-flag">${c.flag}</span>
+      <div class="candidate-name">${c.name}
+        <div class="candidate-iso">${c.iso.toUpperCase()}</div>
+      </div>
+      <div class="candidate-bar-wrap">
+        <div class="candidate-bar rank${i + 1}" style="width:0" data-width="${c.relativeScore}%"></div>
+      </div>
+      <div class="candidate-pct">${c.confidence}%</div>
+    `;
+    el.appendChild(row);
+  });
+  // Animate bars
+  requestAnimationFrame(() => {
+    el.querySelectorAll('.candidate-bar').forEach(bar => {
+      bar.style.width = bar.dataset.width;
+    });
+  });
+}
+
+function renderRouting(code, langName, flag) {
+  const routingCard = document.getElementById('routingCard');
+  const content = document.getElementById('routingContent');
+  const agent = ROUTING_MAP[code] || 'General Support Queue';
+
+  content.innerHTML = `
+    <div class="routing-row">
+      <span class="routing-lang">${flag} ${langName}</span>
+      <span class="routing-arrow">→</span>
+      <span class="routing-agent">${agent}</span>
+    </div>
+    <div class="routing-row" style="font-size:0.75rem; color:var(--muted);">
+      <span>ISO Tag</span>
+      <span style="font-family:monospace; color:var(--accent);">${code.toUpperCase()}</span>
+    </div>
+    <div class="routing-row" style="font-size:0.75rem; color:var(--muted);">
+      <span>Status</span>
+      <span style="color:var(--green);">✓ Auto-tagged</span>
+    </div>
+  `;
+  routingCard.style.display = 'block';
+}
+
+function addToHistory(text, top, confidence) {
+  const snippet = text.slice(0, 60).replace(/\n/g, ' ');
+  detectionHistory.unshift({ flag: top.flag, lang: top.name, snippet, confidence, ts: Date.now() });
+  if (detectionHistory.length > 8) detectionHistory.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (detectionHistory.length === 0) {
+    list.innerHTML = '<div class="empty-state">No detections yet — paste some text above.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  detectionHistory.forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.setAttribute('tabindex', '0');
+    item.setAttribute('role', 'button');
+    item.setAttribute('aria-label', `Detected language: ${h.lang} with ${h.confidence}% confidence`);
+    item.innerHTML = `
+      <span class="history-flag">${h.flag}</span>
+      <span class="history-lang">${h.lang}</span>
+      <span class="history-snippet">${h.snippet}${h.snippet.length >= 60 ? '…' : ''}</span>
+      <span class="history-conf">${h.confidence}%</span>
+    `;
+    list.appendChild(item);
+  });
+}
+
+// ============================================================
+//  UI helpers
+// ============================================================
+
+function clearInput() {
+  document.getElementById('inputText').value = '';
+  updateStats('');
+  document.getElementById('detectBtn').disabled = true;
+}
+
+function updateStats(text) {
+  const chars = text.length;
+  const words = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+  const sents = text ? (text.match(/[.!?]+/g) || []).length : 0;
+  document.getElementById('statChars').textContent = chars.toLocaleString();
+  document.getElementById('statWords').textContent = words.toLocaleString();
+  document.getElementById('statSents').textContent = sents.toLocaleString();
+  document.getElementById('charCounter').textContent = `${chars} chars`;
+  document.getElementById('detectBtn').disabled = text.trim().length < 5;
+}
+
+let toastTimer = null;
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  t.innerHTML = `<span>${icon}</span> ${msg}`;
+  t.className = `toast show ${type}`;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.remove('show'); }, 3500);
+}
+
+function loadSample(idx) {
+  const s = SAMPLES[idx];
+  document.getElementById('inputText').value = s.text;
+  updateStats(s.text);
+  document.getElementById('inputText').focus();
+}
+
+// Build sample buttons
+function buildSampleButtons() {
+  const row = document.getElementById('sampleRow');
+  SAMPLES.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'sample-btn';
+    btn.textContent = `${s.flag || LANG_DATA[s.lang]?.flag || ''} ${LANG_DATA[s.lang]?.name || s.lang}`;
+    btn.onclick = () => loadSample(i);
+    btn.setAttribute('aria-label', `Load ${LANG_DATA[s.lang]?.name} sample`);
+    row.appendChild(btn);
+  });
+  // Add flag to sample objects
+  SAMPLES.forEach(s => { s.flag = LANG_DATA[s.lang]?.flag || ''; });
+}
+
+// Keyboard: Enter in textarea triggers detect
+document.getElementById('inputText').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    detectLanguage();
+  }
+});
+
+document.getElementById('inputText').addEventListener('input', e => {
+  updateStats(e.target.value);
+});
+
+// Paste shortcut
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    const ta = document.getElementById('inputText');
+    if (document.activeElement !== ta && ta.value.trim().length >= 5) {
+      detectLanguage();
+    }
+  }
+});
+
+// Init
+buildSampleButtons();
+updateStats('');
+</script>
+</body>
+</html>

@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SubSwap — Ingredient Substitution Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Search */
+.search-wrap {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+  font-size: var(--text-sm);
+}
+
+.input-search {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3) var(--space-2) 32px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.input-search::placeholder { color: var(--color-ink-muted); }
+
+/* Sidebar section label */
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+/* Diet filter chips — two column grid */
+.diet-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+.chip:hover { border-color: var(--color-accent-line); color: var(--color-ink); }
+.chip.active {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-line);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: currentColor;
+}
+
+/* Select inputs */
+.select-sm {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  padding-right: var(--space-8);
+}
+.select-sm:focus { outline: none; border-color: var(--color-accent); }
+
+/* Recent searches */
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.recent-item:hover { background: oklch(90% 0.018 95); color: var(--color-ink); }
+
+.recent-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.recent-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-muted);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  line-height: 1;
+  transition: color 0.1s ease;
+  opacity: 0;
+}
+.recent-item:hover .recent-remove { opacity: 1; }
+.recent-remove:hover { color: var(--color-danger); }
+
+.recent-empty {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-style: italic;
+  padding: var(--space-2) 0;
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* Empty state */
+.main-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  text-align: center;
+  gap: var(--space-4);
+}
+
+.main-empty-icon {
+  font-size: 3rem;
+  line-height: 1;
+  opacity: 0.35;
+}
+
+.main-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.main-empty-sub {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  max-width: 340px;
+  line-height: 1.65;
+}
+
+/* Results area */
+.main-results {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main-results.visible { display: flex; }
+
+/* Results scroll */
+.results-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Ingredient header */
+.ing-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ing-header-text { flex: 1; min-width: 0; }
+
+.ing-title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  line-height: 1.1;
+  text-transform: capitalize;
+}
+
+.ing-category-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: 99px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
+}
+
+.ing-count {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-2);
+}
+
+/* Compare button */
+.btn-compare {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.btn-compare:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+.btn-compare.has-items { color: var(--color-accent); border-color: var(--color-accent-line); background: var(--color-accent-subtle); }
+
+/* Subs grid */
+.subs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Sub card */
+.sub-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+.sub-card:hover {
+  border-color: var(--color-accent-line);
+  box-shadow: 0 4px 16px oklch(52% 0.14 155 / 0.08);
+}
+.sub-card.selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px oklch(52% 0.14 155 / 0.15);
+}
+
+.sub-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sub-card-info { flex: 1; min-width: 0; }
+
+.sub-name {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.25;
+}
+
+.sub-ratio {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Confidence badge */
+.confidence-badge {
+  flex-shrink: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.confidence-badge.best { background: oklch(55% 0.14 155 / 0.12); color: var(--color-success); }
+.confidence-badge.good { background: oklch(62% 0.15 72 / 0.12); color: var(--color-warn); }
+.confidence-badge.acceptable { background: oklch(55% 0.20 25 / 0.08); color: var(--color-danger); }
+
+/* Flavor note */
+.sub-flavor {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--color-border);
+  font-style: italic;
+}
+
+/* Tag rows */
+.sub-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.tag {
+  padding: 2px var(--space-2);
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.tag.diet { background: var(--color-accent-subtle); color: var(--color-accent); border: 1px solid var(--color-accent-line); }
+.tag.context { background: var(--color-paper-2); color: var(--color-ink-muted); border: 1px solid var(--color-border); }
+
+/* Select toggle */
+.sub-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.btn-select-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.btn-select-sub:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.sub-card.selected .btn-select-sub { border-color: var(--color-accent); color: var(--color-accent); }
+
+.btn-quick-ref {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.btn-quick-ref:hover { color: var(--color-accent); background: var(--color-accent-subtle); }
+
+/* ── Compare view ── */
+.compare-overlay {
+  display: none;
+  position: fixed;
+  inset: 52px 0 0 280px;
+  z-index: 100;
+  background: var(--color-paper);
+  flex-direction: column;
+  overflow: hidden;
+}
+.compare-overlay.visible { display: flex; }
+
+.compare-head {
+  padding: var(--space-4) var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+.compare-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.btn-close-compare {
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+.btn-close-compare:hover { color: var(--color-ink); }
+
+.compare-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-6) var(--space-8);
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.compare-table th {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px solid var(--color-border);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-base);
+  color: var(--color-ink);
+}
+
+.compare-table th:first-child {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  width: 140px;
+}
+
+.compare-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+  color: var(--color-ink-muted);
+}
+.compare-table td:first-child {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+.compare-table td:not(:first-child) { color: var(--color-ink); }
+.compare-table tr:last-child td { border-bottom: none; }
+
+.compare-no-items {
+  text-align: center;
+  padding: var(--space-16);
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+}
+
+/* ── Quick ref modal ── */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: oklch(18% 0.04 155 / 0.4);
+  align-items: center;
+  justify-content: center;
+}
+.modal-backdrop.visible { display: flex; }
+
+.modal {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: min(480px, calc(100vw - 2rem));
+  box-shadow: 0 24px 64px oklch(18% 0.04 155 / 0.2);
+  overflow: hidden;
+}
+
+.modal-head {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: color 0.12s ease;
+}
+.btn-close-modal:hover { color: var(--color-ink); }
+
+.modal-body { padding: var(--space-6); }
+
+.qr-subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-4);
+}
+
+.qr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.qr-table th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+.qr-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-variant-numeric: tabular-nums;
+}
+.qr-table tr:last-child td { border-bottom: none; }
+.qr-table td:last-child { font-weight: 600; color: var(--color-accent); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* No results */
+.no-results {
+  padding: var(--space-12);
+  text-align: center;
+}
+.no-results-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--color-ink);
+  margin-bottom: var(--space-2);
+}
+.no-results-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+/* Filtered-out indicator on card */
+.sub-card.filtered-out {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+  }
+
+  .sidebar-scroll { overflow: visible; }
+
+  .main { overflow: visible; }
+
+  .main-results.visible { overflow: visible; }
+
+  .results-scroll { overflow: visible; padding: var(--space-4); }
+
+  .subs-grid { grid-template-columns: 1fr; }
+
+  .compare-overlay {
+    inset: 52px 0 0 0;
+  }
+
+  .results-scroll { padding: var(--space-4); }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .sub-card, .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- N9 nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Sub<span>Swap</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Ingredient Substitution Tool</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Search and filter">
+    <div class="sidebar-scroll">
+
+      <!-- Search -->
+      <div>
+        <label class="section-label" for="ing-search">Search Ingredient</label>
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            class="input-search"
+            id="ing-search"
+            placeholder="e.g. butter, eggs, flour…"
+            autocomplete="off"
+            aria-label="Search for an ingredient"
+          >
+        </div>
+      </div>
+
+      <!-- Diet filters -->
+      <div>
+        <span class="section-label">Dietary Filters</span>
+        <div class="diet-chips" role="group" aria-label="Dietary requirement filters">
+          <button class="chip" data-diet="vegan" aria-pressed="false"><span class="chip-dot" aria-hidden="true"></span>Vegan</button>
+          <button class="chip" data-diet="vegetarian" aria-pressed="false"><span class="chip-dot" aria-hidden="true"></span>Vegetarian</button>
+          <button class="chip" data-diet="gf" aria-pressed="false"><span class="chip-dot" aria-hidden="true"></span>Gluten-Free</button>
+          <button class="chip" data-diet="df" aria-pressed="false"><span class="chip-dot" aria-hidden="true"></span>Dairy-Free</button>
+          <button class="chip" data-diet="nf" aria-pressed="false"><span class="chip-dot" aria-hidden="true"></span>Nut-Free</button>
+          <button class="chip" data-diet="keto" aria-pressed="false"><span class="chip-dot" aria-hidden="true"></span>Keto</button>
+          <button class="chip" data-diet="ls" aria-pressed="false"><span class="chip-dot" aria-hidden="true"></span>Low-Sodium</button>
+        </div>
+      </div>
+
+      <!-- Recipe context -->
+      <div>
+        <label class="section-label" for="ctx-select">Recipe Context</label>
+        <select class="select-sm" id="ctx-select" aria-label="Recipe context affects which substitutes are shown first">
+          <option value="">All contexts</option>
+          <option value="baking">Baking</option>
+          <option value="cooking">Cooking</option>
+          <option value="raw">Raw / Salads</option>
+          <option value="beverages">Beverages</option>
+        </select>
+      </div>
+
+      <!-- Reason -->
+      <div>
+        <label class="section-label" for="reason-select">Reason for Substituting</label>
+        <select class="select-sm" id="reason-select" aria-label="Reason for substituting">
+          <option value="">Any reason</option>
+          <option value="oos">Out of stock</option>
+          <option value="allergy">Allergy</option>
+          <option value="dietary">Dietary restriction</option>
+          <option value="healthier">Healthier option</option>
+        </select>
+      </div>
+
+      <!-- Recent searches -->
+      <div>
+        <span class="section-label">Recent Searches</span>
+        <div class="recent-list" id="recent-list" aria-label="Recent ingredient searches">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Substitution results">
+
+    <!-- Empty state -->
+    <div class="main-empty" id="main-empty">
+      <div class="main-empty-icon" aria-hidden="true">⟳</div>
+      <p class="main-empty-title">Search an ingredient</p>
+      <p class="main-empty-sub">Type any ingredient — butter, eggs, flour — to see curated substitutes with ratios, dietary tags, and flavor notes.</p>
+    </div>
+
+    <!-- Results -->
+    <div class="main-results" id="main-results" role="region" aria-label="Substitution results" aria-live="polite">
+
+      <div class="results-scroll">
+
+        <!-- Ingredient header -->
+        <div class="ing-header" id="ing-header">
+          <div class="ing-header-text">
+            <h1 class="ing-title" id="ing-title">—</h1>
+            <span class="ing-category-badge" id="ing-badge">—</span>
+            <p class="ing-count" id="ing-count"></p>
+          </div>
+          <button class="btn-compare" id="btn-compare" aria-label="Compare selected substitutes">
+            Compare (0)
+          </button>
+        </div>
+
+        <!-- Subs grid -->
+        <div class="subs-grid" id="subs-grid" role="list" aria-label="Substitution options">
+          <!-- populated by JS -->
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Compare overlay (inside main) -->
+    <div class="compare-overlay" id="compare-overlay" role="region" aria-label="Compare substitutes">
+      <div class="compare-head">
+        <h2 class="compare-title">Side-by-side Comparison</h2>
+        <button class="btn-close-compare" id="btn-close-compare" aria-label="Close comparison view">Close ✕</button>
+      </div>
+      <div class="compare-scroll">
+        <div id="compare-content">
+          <p class="compare-no-items">Select up to 3 substitutes from the results to compare them here.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<!-- Quick ref modal -->
+<div class="modal-backdrop" id="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 class="modal-title" id="modal-title">Quick Reference</h2>
+      <button class="btn-close-modal" id="btn-close-modal" aria-label="Close quick reference">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="qr-subtitle" id="qr-subtitle"></p>
+      <table class="qr-table" aria-label="Quantity conversion table">
+        <thead>
+          <tr>
+            <th>Original amount</th>
+            <th>Substitute amount</th>
+          </tr>
+        </thead>
+        <tbody id="qr-table-body">
+          <!-- populated by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// SUBSTITUTION DATABASE
+// ─────────────────────────────────────────────────────────────────
+const DB = [
+  // ── DAIRY ──────────────────────────────────────────────────────
+  {
+    id: 'butter', name: 'Butter', category: 'Dairy',
+    subs: [
+      { name: 'Olive oil', ratio: '¾ cup per 1 cup butter', ratioNum: 0.75, confidence: 'good', flavor: 'Adds subtle savory, fruity flavor. Works great in savory dishes; mild taste impact in baking.', diets: ['vegan','df','gf','keto'], contexts: ['baking','cooking'] },
+      { name: 'Coconut oil', ratio: '1 cup per 1 cup butter', ratioNum: 1, confidence: 'best', flavor: 'Adds mild coconut flavor. Solid at room temp. Excellent 1:1 swap for most baking.', diets: ['vegan','df','gf','keto'], contexts: ['baking','cooking'] },
+      { name: 'Applesauce (unsweetened)', ratio: '½ cup per 1 cup butter', ratioNum: 0.5, confidence: 'acceptable', flavor: 'Reduces fat; makes baked goods moist and slightly denser. Reduces browning.', diets: ['vegan','df','gf','ls'], contexts: ['baking'] },
+      { name: 'Mashed avocado', ratio: '½ cup per 1 cup butter', ratioNum: 0.5, confidence: 'good', flavor: 'Adds creamy texture and mild avocado flavor. Gives green tint; best in dark recipes.', diets: ['vegan','df','gf','keto'], contexts: ['baking','cooking'] },
+      { name: 'Greek yogurt', ratio: '½ cup per 1 cup butter', ratioNum: 0.5, confidence: 'good', flavor: 'Adds tang; keeps baked goods moist. Reduces fat. Not suitable for vegan or dairy-free.', diets: ['vegetarian','gf','ls'], contexts: ['baking'] },
+    ]
+  },
+  {
+    id: 'milk', name: 'Milk', category: 'Dairy',
+    subs: [
+      { name: 'Oat milk', ratio: '1 cup per 1 cup milk', ratioNum: 1, confidence: 'best', flavor: 'Mildly sweet, creamy. Best all-round neutral milk alternative. Works in nearly any recipe.', diets: ['vegan','df','nf','ls'], contexts: ['baking','cooking','beverages','raw'] },
+      { name: 'Almond milk', ratio: '1 cup per 1 cup milk', ratioNum: 1, confidence: 'good', flavor: 'Light, slightly nutty flavor. Lower protein than dairy milk. Thinner consistency.', diets: ['vegan','df','gf','keto'], contexts: ['baking','cooking','beverages','raw'] },
+      { name: 'Coconut milk (full fat)', ratio: '1 cup per 1 cup milk', ratioNum: 1, confidence: 'good', flavor: 'Rich and creamy with coconut flavor. Excellent in curries, soups, and tropical baking.', diets: ['vegan','df','gf','nf','keto'], contexts: ['baking','cooking','beverages'] },
+      { name: 'Soy milk', ratio: '1 cup per 1 cup milk', ratioNum: 1, confidence: 'best', flavor: 'Closest protein content to dairy. Mild flavor; excellent for baking and cooking.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking','beverages','raw'] },
+      { name: 'Cashew milk', ratio: '1 cup per 1 cup milk', ratioNum: 1, confidence: 'good', flavor: 'Creamy, mildly sweet. Great for sauces and soups; thicker than almond milk.', diets: ['vegan','df','gf','ls'], contexts: ['baking','cooking','beverages','raw'] },
+    ]
+  },
+  {
+    id: 'heavy-cream', name: 'Heavy Cream', category: 'Dairy',
+    subs: [
+      { name: 'Coconut cream', ratio: '1 cup per 1 cup heavy cream', ratioNum: 1, confidence: 'best', flavor: 'Rich and fatty. Adds coconut flavor. Whips beautifully for desserts. Best dairy-free swap.', diets: ['vegan','df','gf','nf'], contexts: ['baking','cooking','raw'] },
+      { name: 'Cashew cream (blended cashews)', ratio: '1 cup per 1 cup heavy cream', ratioNum: 1, confidence: 'good', flavor: 'Smooth, neutral, rich. Soak raw cashews then blend. Great in soups and pasta sauces.', diets: ['vegan','df','gf'], contexts: ['cooking','raw'] },
+      { name: 'Silken tofu (blended)', ratio: '1 cup per 1 cup heavy cream', ratioNum: 1, confidence: 'acceptable', flavor: 'Neutral flavor when blended smooth. Lower fat. Works well in soups and creamy dressings.', diets: ['vegan','df','gf','nf'], contexts: ['cooking','raw'] },
+      { name: 'Evaporated milk', ratio: '1 cup per 1 cup heavy cream', ratioNum: 1, confidence: 'good', flavor: 'Richer than regular milk. Slightly caramelized flavor. Good for soups and casseroles.', diets: ['vegetarian','gf','nf','ls'], contexts: ['baking','cooking'] },
+    ]
+  },
+  {
+    id: 'sour-cream', name: 'Sour Cream', category: 'Dairy',
+    subs: [
+      { name: 'Greek yogurt', ratio: '1 cup per 1 cup sour cream', ratioNum: 1, confidence: 'best', flavor: 'Same tangy flavor and creamy texture. Lower fat. One of the best 1:1 swaps.', diets: ['vegetarian','gf','nf','ls'], contexts: ['baking','cooking','raw'] },
+      { name: 'Coconut cream + lemon juice', ratio: '1 cup + 1 tbsp lemon per 1 cup sour cream', ratioNum: 1, confidence: 'good', flavor: 'Coconut cream provides fat; lemon adds tang. Slight coconut flavor in final dish.', diets: ['vegan','df','gf','nf'], contexts: ['baking','cooking','raw'] },
+      { name: 'Cottage cheese (blended)', ratio: '1 cup per 1 cup sour cream', ratioNum: 1, confidence: 'acceptable', flavor: 'Blend smooth for creamy texture. Higher protein. Mild flavor; less tangy.', diets: ['vegetarian','gf','nf'], contexts: ['baking','cooking','raw'] },
+    ]
+  },
+  {
+    id: 'cream-cheese', name: 'Cream Cheese', category: 'Dairy',
+    subs: [
+      { name: 'Cashew cream cheese', ratio: '1 cup per 1 cup cream cheese', ratioNum: 1, confidence: 'best', flavor: 'Soaked cashews blended with lemon and nutritional yeast. Tangy and creamy. Best vegan option.', diets: ['vegan','df','gf'], contexts: ['baking','cooking','raw'] },
+      { name: 'Tofu cream cheese', ratio: '1 cup per 1 cup cream cheese', ratioNum: 1, confidence: 'good', flavor: 'Firm tofu blended with lemon, oil, and vinegar. Neutral; good for cheesecakes and spreads.', diets: ['vegan','df','gf','nf'], contexts: ['baking','raw'] },
+      { name: 'Ricotta cheese', ratio: '1 cup per 1 cup cream cheese', ratioNum: 1, confidence: 'acceptable', flavor: 'Softer and grainier texture. Milder, less tangy. Works in baked goods and pasta fillings.', diets: ['vegetarian','gf','nf'], contexts: ['baking','cooking'] },
+    ]
+  },
+  {
+    id: 'buttermilk', name: 'Buttermilk', category: 'Dairy',
+    subs: [
+      { name: 'Milk + lemon juice', ratio: '1 cup milk + 1 tbsp lemon per 1 cup buttermilk', ratioNum: 1, confidence: 'best', flavor: 'Let sit 5 minutes to curdle. Identical tang and acidity. Perfect 1:1 in pancakes and cakes.', diets: ['vegetarian','gf','nf'], contexts: ['baking'] },
+      { name: 'Yogurt (thinned)', ratio: '¾ cup yogurt + ¼ cup water per 1 cup buttermilk', ratioNum: 1, confidence: 'good', flavor: 'Thin plain yogurt with water. Similar tang and thickness. Works great in quick breads.', diets: ['vegetarian','gf','nf'], contexts: ['baking'] },
+      { name: 'Kefir', ratio: '1 cup per 1 cup buttermilk', ratioNum: 1, confidence: 'best', flavor: 'Fermented milk drink. Tangy, slightly thicker. Excellent 1:1 substitute; adds probiotics.', diets: ['vegetarian','gf','nf'], contexts: ['baking'] },
+      { name: 'Oat milk + apple cider vinegar', ratio: '1 cup oat milk + 1 tbsp ACV per 1 cup buttermilk', ratioNum: 1, confidence: 'good', flavor: 'Let sit 5 minutes to curdle. Vegan and dairy-free. Works well in pancakes and muffins.', diets: ['vegan','df','nf','ls'], contexts: ['baking'] },
+    ]
+  },
+  {
+    id: 'mayonnaise', name: 'Mayonnaise', category: 'Dairy',
+    subs: [
+      { name: 'Greek yogurt', ratio: '1 cup per 1 cup mayonnaise', ratioNum: 1, confidence: 'best', flavor: 'Tangy, creamy, lower fat. Excellent in salads, dressings, and dips.', diets: ['vegetarian','gf','nf'], contexts: ['cooking','raw'] },
+      { name: 'Mashed avocado', ratio: '1 cup per 1 cup mayonnaise', ratioNum: 1, confidence: 'good', flavor: 'Rich, creamy with avocado flavor and green color. High healthy fat. Best in sandwiches.', diets: ['vegan','df','gf','nf','keto'], contexts: ['cooking','raw'] },
+      { name: 'Silken tofu (blended)', ratio: '1 cup per 1 cup mayonnaise', ratioNum: 1, confidence: 'acceptable', flavor: 'Neutral, creamy when blended. Add lemon for tang. Lower fat and calories.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking','raw'] },
+    ]
+  },
+
+  // ── EGGS ───────────────────────────────────────────────────────
+  {
+    id: 'eggs', name: 'Eggs', category: 'Egg',
+    subs: [
+      { name: 'Flax egg', ratio: '1 tbsp ground flax + 3 tbsp water per 1 egg', ratioNum: 1, confidence: 'best', flavor: 'Mild, slightly nutty. Bind very well. Best for dense baked goods (muffins, pancakes, cookies).', diets: ['vegan','df','gf','nf'], contexts: ['baking'] },
+      { name: 'Chia egg', ratio: '1 tbsp chia seeds + 3 tbsp water per 1 egg', ratioNum: 1, confidence: 'best', flavor: 'Gel-like binder. Mild flavor. Works similarly to flax egg. Adds omega-3s.', diets: ['vegan','df','gf','nf'], contexts: ['baking'] },
+      { name: 'Aquafaba', ratio: '3 tbsp per 1 egg (or 2 tbsp per white)', ratioNum: 3, confidence: 'best', flavor: 'Liquid from canned chickpeas. Whips like egg whites. Excellent for meringue and mousse.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['baking','raw'] },
+      { name: 'Unsweetened applesauce', ratio: '¼ cup per 1 egg', ratioNum: 0.25, confidence: 'good', flavor: 'Moist, mild apple flavor. Adds sweetness. Works well in quick breads, cakes, muffins.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking'] },
+      { name: 'Mashed banana', ratio: '¼ cup per 1 egg', ratioNum: 0.25, confidence: 'good', flavor: 'Adds banana flavor and natural sweetness. Best in banana breads, muffins, and pancakes.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking'] },
+      { name: 'Silken tofu (blended)', ratio: '¼ cup per 1 egg', ratioNum: 0.25, confidence: 'acceptable', flavor: 'Neutral, dense binder. No noticeable flavor. Great for custards, quiches, and dense cakes.', diets: ['vegan','df','gf','nf'], contexts: ['baking','cooking'] },
+    ]
+  },
+
+  // ── FLOUR ──────────────────────────────────────────────────────
+  {
+    id: 'all-purpose-flour', name: 'All-Purpose Flour', category: 'Flour',
+    subs: [
+      { name: 'Almond flour', ratio: '1 cup per 1 cup AP flour (with adjustments)', ratioNum: 1, confidence: 'acceptable', flavor: 'Nutty flavor, dense and moist. Use ¼ less fat. Not a 1:1 — add binder (egg/flax). Gluten-free.', diets: ['gf','keto'], contexts: ['baking'] },
+      { name: 'Oat flour', ratio: '1¼ cup per 1 cup AP flour', ratioNum: 1.25, confidence: 'good', flavor: 'Mild, slightly sweet. Denser texture. Works great in cookies, pancakes, and quick breads.', diets: ['vegan','df','nf','ls'], contexts: ['baking'] },
+      { name: 'Rice flour', ratio: '¾ cup per 1 cup AP flour', ratioNum: 0.75, confidence: 'good', flavor: 'Neutral, slightly gritty. Often blended with tapioca starch for better texture.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking'] },
+      { name: 'Coconut flour', ratio: '¼ cup per 1 cup AP flour', ratioNum: 0.25, confidence: 'acceptable', flavor: 'Highly absorbent — use only ¼ and increase liquids. Slightly sweet coconut flavor.', diets: ['vegan','df','gf','nf','keto'], contexts: ['baking'] },
+      { name: 'Cassava flour', ratio: '1 cup per 1 cup AP flour', ratioNum: 1, confidence: 'good', flavor: 'Most neutral, closest texture to AP flour. Best gluten-free 1:1 substitute for most recipes.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking'] },
+    ]
+  },
+  {
+    id: 'breadcrumbs', name: 'Breadcrumbs', category: 'Flour',
+    subs: [
+      { name: 'Rolled oats', ratio: '1 cup per 1 cup breadcrumbs', ratioNum: 1, confidence: 'good', flavor: 'Heartier texture. Adds fiber. Great for meatballs, coatings, and casserole toppings.', diets: ['vegan','df','nf','ls'], contexts: ['baking','cooking'] },
+      { name: 'Panko (Japanese breadcrumbs)', ratio: '1 cup per 1 cup breadcrumbs', ratioNum: 1, confidence: 'best', flavor: 'Lighter and crispier than regular breadcrumbs. Excellent for coatings and toppings.', diets: ['vegan','df','nf'], contexts: ['baking','cooking'] },
+      { name: 'Crushed crackers', ratio: '1 cup per 1 cup breadcrumbs', ratioNum: 1, confidence: 'good', flavor: 'Varies by cracker type. Buttery or salty notes. Works well for toppings and meatloaf.', diets: ['vegetarian','nf'], contexts: ['baking','cooking'] },
+      { name: 'Almond meal', ratio: '1 cup per 1 cup breadcrumbs', ratioNum: 1, confidence: 'acceptable', flavor: 'Nutty, moist. Great gluten-free coating. Doesn\'t get as crispy as traditional breadcrumbs.', diets: ['vegan','df','gf','keto'], contexts: ['cooking'] },
+    ]
+  },
+
+  // ── SWEETENERS ─────────────────────────────────────────────────
+  {
+    id: 'sugar', name: 'Sugar (White)', category: 'Sweetener',
+    subs: [
+      { name: 'Honey', ratio: '¾ cup per 1 cup sugar (reduce liquids by ¼)', ratioNum: 0.75, confidence: 'good', flavor: 'Sweeter than sugar with floral notes. Adds moisture; reduces oven temp by 25°F to prevent over-browning.', diets: ['vegetarian','df','gf','nf'], contexts: ['baking','cooking','raw','beverages'] },
+      { name: 'Maple syrup', ratio: '¾ cup per 1 cup sugar (reduce liquids by 3 tbsp)', ratioNum: 0.75, confidence: 'good', flavor: 'Distinct maple flavor. Adds depth. Great in pancakes, baked goods, and marinades.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking','raw','beverages'] },
+      { name: 'Coconut sugar', ratio: '1 cup per 1 cup sugar', ratioNum: 1, confidence: 'best', flavor: 'Caramel-like flavor. Lower glycemic index. Best direct 1:1 substitute for baking.', diets: ['vegan','df','gf','nf'], contexts: ['baking','cooking','beverages'] },
+      { name: 'Stevia (liquid)', ratio: '1 tsp per 1 cup sugar', ratioNum: 0.02, confidence: 'acceptable', flavor: 'Zero calories, much sweeter. Can have bitter aftertaste. Best for beverages; tricky in baking.', diets: ['vegan','df','gf','nf','keto','ls'], contexts: ['beverages','raw'] },
+      { name: 'Date paste', ratio: '¾ cup per 1 cup sugar', ratioNum: 0.75, confidence: 'good', flavor: 'Rich caramel-like sweetness. Whole-food sweetener. Adds moisture and depth of flavor.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','raw'] },
+      { name: 'Agave nectar', ratio: '⅔ cup per 1 cup sugar', ratioNum: 0.67, confidence: 'good', flavor: 'Sweeter and milder than honey. Neutral flavor. Liquid — reduce other liquids slightly.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking','beverages','raw'] },
+    ]
+  },
+  {
+    id: 'honey', name: 'Honey', category: 'Sweetener',
+    subs: [
+      { name: 'Maple syrup', ratio: '1 cup per 1 cup honey', ratioNum: 1, confidence: 'best', flavor: 'Similar consistency. Maple flavor instead of floral. Best vegan swap for honey.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking','raw','beverages'] },
+      { name: 'Agave nectar', ratio: '¾ cup per 1 cup honey', ratioNum: 0.75, confidence: 'good', flavor: 'Thinner consistency, neutral sweet flavor. Good for beverages and light sauces.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking','beverages','raw'] },
+      { name: 'Brown rice syrup', ratio: '1¼ cup per 1 cup honey', ratioNum: 1.25, confidence: 'acceptable', flavor: 'Mild, butterscotch-like sweetness. Less sweet than honey. Works for granola bars and sauces.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking'] },
+    ]
+  },
+  {
+    id: 'brown-sugar', name: 'Brown Sugar', category: 'Sweetener',
+    subs: [
+      { name: 'Coconut sugar', ratio: '1 cup per 1 cup brown sugar', ratioNum: 1, confidence: 'best', flavor: 'Similar caramel-like flavor profile. Slightly less moisture. Best 1:1 swap.', diets: ['vegan','df','gf','nf'], contexts: ['baking','cooking'] },
+      { name: 'White sugar + molasses', ratio: '1 cup white sugar + 1 tbsp molasses per 1 cup brown sugar', ratioNum: 1, confidence: 'best', flavor: 'Classic homemade brown sugar. Mix well. Identical flavor and texture.', diets: ['vegan','df','gf','nf'], contexts: ['baking','cooking'] },
+      { name: 'Maple syrup', ratio: '¾ cup per 1 cup brown sugar (reduce other liquids)', ratioNum: 0.75, confidence: 'good', flavor: 'Adds maple notes and moisture. Adjust liquids. Works well in cookies and glazes.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking'] },
+    ]
+  },
+  {
+    id: 'powdered-sugar', name: 'Powdered Sugar', category: 'Sweetener',
+    subs: [
+      { name: 'Blended granulated sugar + cornstarch', ratio: '1 cup sugar + 1 tbsp cornstarch blended per 1 cup powdered sugar', ratioNum: 1, confidence: 'best', flavor: 'Blend until fine powder. Identical texture and sweetness. Perfect for frostings.', diets: ['vegan','df','nf'], contexts: ['baking','raw'] },
+      { name: 'Coconut sugar (finely ground)', ratio: '1 cup per 1 cup powdered sugar', ratioNum: 1, confidence: 'acceptable', flavor: 'Grind in blender until powdery. Caramel flavor; not as white. Works in frostings.', diets: ['vegan','df','gf','nf'], contexts: ['baking','raw'] },
+    ]
+  },
+
+  // ── LEAVENING ──────────────────────────────────────────────────
+  {
+    id: 'baking-powder', name: 'Baking Powder', category: 'Leavening',
+    subs: [
+      { name: 'Baking soda + cream of tartar', ratio: '¼ tsp soda + ½ tsp cream of tartar per 1 tsp baking powder', ratioNum: 0.75, confidence: 'best', flavor: 'Classic DIY baking powder. Identical lift. Use immediately — double-acting effect differs slightly.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking'] },
+      { name: 'Baking soda + lemon juice', ratio: '¼ tsp soda + ½ tsp lemon juice per 1 tsp baking powder', ratioNum: 0.75, confidence: 'good', flavor: 'Provides acid for baking soda to react. Adds subtle citrus note. Use in cakes and quick breads.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking'] },
+      { name: 'Baking soda + yogurt', ratio: '¼ tsp soda (reduce yogurt in recipe) per 1 tsp baking powder', ratioNum: 0.25, confidence: 'acceptable', flavor: 'Yogurt provides acidity. Adjust recipe liquids. Works well in pancakes and quick breads.', diets: ['vegetarian','gf','nf'], contexts: ['baking'] },
+    ]
+  },
+  {
+    id: 'baking-soda', name: 'Baking Soda', category: 'Leavening',
+    subs: [
+      { name: 'Baking powder', ratio: '3 tsp per 1 tsp baking soda', ratioNum: 3, confidence: 'good', flavor: 'Use 3× the amount. Less powerful; can add slightly salty taste. Works for most recipes.', diets: ['vegan','df','gf','nf'], contexts: ['baking'] },
+      { name: 'Baker\'s ammonia', ratio: '1:1 swap', ratioNum: 1, confidence: 'acceptable', flavor: 'Traditional leavener. Produces very crispy results. Best for thin, dry cookies and crackers.', diets: ['vegan','df','gf','nf'], contexts: ['baking'] },
+    ]
+  },
+  {
+    id: 'yeast', name: 'Yeast (active dry)', category: 'Leavening',
+    subs: [
+      { name: 'Baking powder', ratio: '1 tsp baking powder per ¼ oz packet yeast', ratioNum: 1, confidence: 'acceptable', flavor: 'Chemical leavener, not fermentation. No rise time needed. Texture differs — less chewy, no yeast flavor.', diets: ['vegan','df','gf','nf'], contexts: ['baking'] },
+      { name: 'Sourdough starter', ratio: '1 cup starter per 2¼ tsp yeast (adjust recipe)', ratioNum: 1, confidence: 'good', flavor: 'Tangy, complex flavor. Longer fermentation time needed. Great for artisan breads.', diets: ['vegan','df','nf'], contexts: ['baking'] },
+    ]
+  },
+
+  // ── THICKENERS ─────────────────────────────────────────────────
+  {
+    id: 'cornstarch', name: 'Cornstarch', category: 'Thickener',
+    subs: [
+      { name: 'Arrowroot powder', ratio: '2 tsp per 1 tbsp cornstarch', ratioNum: 0.67, confidence: 'best', flavor: 'Neutral flavor, clear glossy finish. Great for fruit pies and clear sauces. Better at low temps.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['baking','cooking','raw'] },
+      { name: 'Tapioca starch', ratio: '2 tbsp per 1 tbsp cornstarch', ratioNum: 2, confidence: 'good', flavor: 'Adds slight chewiness. Clear finish. Excellent for fruit fillings and Asian-style sauces.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking'] },
+      { name: 'Potato starch', ratio: '1 tbsp per 1 tbsp cornstarch', ratioNum: 1, confidence: 'good', flavor: 'Neutral flavor, excellent thickener. Works well in soups, stews, and gravies.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking'] },
+      { name: 'All-purpose flour', ratio: '2 tbsp per 1 tbsp cornstarch', ratioNum: 2, confidence: 'acceptable', flavor: 'Use double amount. Thickens but adds slight flour taste and makes sauces opaque. Not gluten-free.', diets: ['vegan','df','nf'], contexts: ['cooking'] },
+    ]
+  },
+  {
+    id: 'gelatin', name: 'Gelatin', category: 'Thickener',
+    subs: [
+      { name: 'Agar-agar', ratio: '1 tsp powder per 1 tsp gelatin', ratioNum: 1, confidence: 'best', flavor: 'Plant-based gelling agent. Sets firmer and more brittle than gelatin. Vegan and halal.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking','raw'] },
+      { name: 'Pectin', ratio: '2 tbsp liquid or 4 tsp powder per 1 tbsp gelatin', ratioNum: 2, confidence: 'acceptable', flavor: 'Fruit-derived. Works best with acidic fruit and sugar. Great for jams but not for savory dishes.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','raw'] },
+    ]
+  },
+
+  // ── FATS & OILS ────────────────────────────────────────────────
+  {
+    id: 'vegetable-oil', name: 'Vegetable Oil', category: 'Fat/Oil',
+    subs: [
+      { name: 'Canola oil', ratio: '1 cup per 1 cup vegetable oil', ratioNum: 1, confidence: 'best', flavor: 'Nearly identical — neutral flavor, similar smoke point. Seamless 1:1 swap.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking'] },
+      { name: 'Sunflower oil', ratio: '1 cup per 1 cup vegetable oil', ratioNum: 1, confidence: 'best', flavor: 'Neutral flavor, high smoke point. Excellent for baking and sautéing. Direct 1:1 swap.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking'] },
+      { name: 'Applesauce', ratio: '½ cup per 1 cup vegetable oil', ratioNum: 0.5, confidence: 'good', flavor: 'Reduces fat by 50%. Moist texture, slight apple flavor. Best in muffins and quick breads.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking'] },
+      { name: 'Greek yogurt', ratio: '½ cup per 1 cup vegetable oil', ratioNum: 0.5, confidence: 'good', flavor: 'Reduces fat. Adds tang and moisture. Works well in cakes, muffins, and quick breads.', diets: ['vegetarian','gf','nf'], contexts: ['baking'] },
+    ]
+  },
+  {
+    id: 'lard', name: 'Lard / Shortening', category: 'Fat/Oil',
+    subs: [
+      { name: 'Coconut oil (solid)', ratio: '1 cup per 1 cup lard', ratioNum: 1, confidence: 'best', flavor: 'Best vegan shortening substitute. Creates flaky pastry. Mild coconut flavor in lighter recipes.', diets: ['vegan','df','gf','nf'], contexts: ['baking'] },
+      { name: 'Vegan butter / margarine', ratio: '1 cup per 1 cup lard', ratioNum: 1, confidence: 'best', flavor: 'Designed to replace butter/shortening. Works well for cookies, pie crusts, and pastries.', diets: ['vegan','df','nf'], contexts: ['baking'] },
+      { name: 'Avocado', ratio: '1 cup per 1 cup lard', ratioNum: 1, confidence: 'acceptable', flavor: 'Rich fat content but adds green color and avocado flavor. Best in strongly flavored recipes.', diets: ['vegan','df','gf','nf','keto'], contexts: ['baking','cooking'] },
+    ]
+  },
+
+  // ── LIQUIDS ────────────────────────────────────────────────────
+  {
+    id: 'white-wine', name: 'White Wine', category: 'Liquid',
+    subs: [
+      { name: 'White grape juice', ratio: '1 cup per 1 cup white wine', ratioNum: 1, confidence: 'good', flavor: 'Sweet, fruity; add a splash of white wine vinegar for acidity. Good for sauces and braises.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking'] },
+      { name: 'Chicken or vegetable broth', ratio: '1 cup per 1 cup white wine', ratioNum: 1, confidence: 'good', flavor: 'Savory, less fruity. Best for risottos and savory sauces. Lose the wine\'s acidity; add lemon.', diets: ['df','gf','nf'], contexts: ['cooking'] },
+      { name: 'Apple cider vinegar (diluted)', ratio: '1 tbsp ACV + water to make 1 cup per 1 cup white wine', ratioNum: 1, confidence: 'acceptable', flavor: 'Provides acidity. Stronger flavor — use sparingly. Good for deglazing pans.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking'] },
+    ]
+  },
+  {
+    id: 'red-wine', name: 'Red Wine', category: 'Liquid',
+    subs: [
+      { name: 'Red grape juice + red wine vinegar', ratio: '¾ cup grape juice + ¼ cup vinegar per 1 cup red wine', ratioNum: 1, confidence: 'good', flavor: 'Provides color, sweetness, and acidity. Good for braising and stews.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking'] },
+      { name: 'Beef or mushroom broth', ratio: '1 cup per 1 cup red wine', ratioNum: 1, confidence: 'acceptable', flavor: 'Savory depth without the alcohol. Add tomato paste for color. Best for stews and braises.', diets: ['df','gf','nf'], contexts: ['cooking'] },
+      { name: 'Pomegranate juice', ratio: '1 cup per 1 cup red wine', ratioNum: 1, confidence: 'good', flavor: 'Deep red color, tangy-fruity. Works well in lamb dishes, marinades, and slow-cooked stews.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking'] },
+    ]
+  },
+  {
+    id: 'beer', name: 'Beer', category: 'Liquid',
+    subs: [
+      { name: 'Chicken or beef broth', ratio: '1 cup per 1 cup beer', ratioNum: 1, confidence: 'good', flavor: 'Savory depth without bitterness. Works in stews, batters, and braised meats.', diets: ['df','gf','nf'], contexts: ['cooking'] },
+      { name: 'Ginger ale', ratio: '1 cup per 1 cup beer', ratioNum: 1, confidence: 'acceptable', flavor: 'Light carbonation, sweet-ginger flavor. Good for beer batter and light meat braises.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking','baking'] },
+      { name: 'Non-alcoholic beer', ratio: '1 cup per 1 cup beer', ratioNum: 1, confidence: 'best', flavor: 'Identical flavor profile, essentially the same. Best direct substitute.', diets: ['vegan','df','nf'], contexts: ['cooking','baking'] },
+    ]
+  },
+
+  // ── PROTEINS ───────────────────────────────────────────────────
+  {
+    id: 'ground-beef', name: 'Ground Beef', category: 'Protein',
+    subs: [
+      { name: 'Lentils', ratio: '1 cup cooked per ½ lb ground beef', ratioNum: 1, confidence: 'good', flavor: 'Hearty, earthy flavor. High protein and fiber. Excellent in tacos, bolognese, and chili.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking'] },
+      { name: 'Mushrooms (chopped)', ratio: '2 cups per ½ lb ground beef', ratioNum: 2, confidence: 'good', flavor: 'Umami-rich, meaty texture especially when finely chopped. Best in burgers, sauces, and stuffing.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking'] },
+      { name: 'Ground turkey or chicken', ratio: '1:1 swap', ratioNum: 1, confidence: 'best', flavor: 'Leaner, milder flavor. Almost identical texture. Season well for full flavor.', diets: ['df','gf','nf','ls','keto'], contexts: ['cooking'] },
+      { name: 'Textured vegetable protein (TVP)', ratio: '1 cup rehydrated per ½ lb ground beef', ratioNum: 1, confidence: 'good', flavor: 'Neutral until seasoned. Takes on spices well. High protein, low fat. Great for tacos and chili.', diets: ['vegan','df','nf','ls'], contexts: ['cooking'] },
+    ]
+  },
+  {
+    id: 'chicken-breast', name: 'Chicken Breast', category: 'Protein',
+    subs: [
+      { name: 'Tofu (extra firm)', ratio: '1:1 by weight', ratioNum: 1, confidence: 'good', flavor: 'Press out moisture first. Absorbs marinades well. Neutral base; texture slightly chewier when baked.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking'] },
+      { name: 'Tempeh', ratio: '1:1 by weight', ratioNum: 1, confidence: 'good', flavor: 'Nutty, fermented flavor. Denser and firmer than tofu. Great marinated and grilled.', diets: ['vegan','df','nf'], contexts: ['cooking'] },
+      { name: 'Jackfruit (young, canned)', ratio: '1 can (~20oz) per 2 chicken breasts', ratioNum: 1, confidence: 'acceptable', flavor: 'Stringy, pulled-meat texture. Neutral flavor; takes on BBQ and spice sauces well.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking'] },
+    ]
+  },
+  {
+    id: 'bacon', name: 'Bacon', category: 'Protein',
+    subs: [
+      { name: 'Turkey bacon', ratio: '1:1 swap', ratioNum: 1, confidence: 'best', flavor: 'Lower fat, similar smoky flavor. Slightly less fatty. Works in almost all bacon applications.', diets: ['df','gf','nf'], contexts: ['cooking'] },
+      { name: 'Smoked paprika + coconut aminos', ratio: 'seasoning mix to taste', ratioNum: 1, confidence: 'acceptable', flavor: 'Provides smoky-salty profile. Use with mushrooms, tempeh, or rice paper for vegan bacon.', diets: ['vegan','df','gf','nf','keto'], contexts: ['cooking'] },
+      { name: 'Tempeh strips', ratio: '1:1 by weight, marinated', ratioNum: 1, confidence: 'good', flavor: 'Marinate in soy, liquid smoke, and maple syrup. Crispy when pan-fried. Nutty-smoky flavor.', diets: ['vegan','df','nf'], contexts: ['cooking'] },
+    ]
+  },
+
+  // ── VEGETABLES ─────────────────────────────────────────────────
+  {
+    id: 'onion', name: 'Onion', category: 'Vegetable',
+    subs: [
+      { name: 'Shallots', ratio: '3 shallots per 1 medium onion', ratioNum: 3, confidence: 'best', flavor: 'Milder, sweeter, more delicate. Best in vinaigrettes, pan sauces, and fine dining dishes.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','raw'] },
+      { name: 'Leeks', ratio: '1 cup sliced per 1 medium onion', ratioNum: 1, confidence: 'good', flavor: 'Milder, sweeter flavor. Use the white and light green parts only. Great in soups and quiches.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking'] },
+      { name: 'Scallions (green onions)', ratio: '1 bunch per 1 medium onion', ratioNum: 1, confidence: 'good', flavor: 'Milder raw onion flavor. Use white and green parts. Great raw in salads and light cooking.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','raw'] },
+      { name: 'Onion powder', ratio: '1 tsp per 1 medium onion', ratioNum: 0.05, confidence: 'acceptable', flavor: 'Concentrated onion flavor. No texture. Best for soups, stews, and dry rubs.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking'] },
+    ]
+  },
+  {
+    id: 'garlic', name: 'Garlic', category: 'Vegetable',
+    subs: [
+      { name: 'Garlic powder', ratio: '⅛ tsp per 1 fresh clove', ratioNum: 0.125, confidence: 'good', flavor: 'Less sharp than fresh; more mellow and consistent. Good for rubs, soups, and slow-cooked dishes.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking'] },
+      { name: 'Roasted garlic', ratio: '½ tsp per 1 fresh clove', ratioNum: 0.5, confidence: 'good', flavor: 'Sweet, caramelized, mellow. Excellent in spreads, dressings, and pasta. Richer flavor.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','raw'] },
+      { name: 'Asafoetida (hing)', ratio: 'pinch per 2 cloves garlic', ratioNum: 0.1, confidence: 'acceptable', flavor: 'Pungent onion-garlic aroma when cooked. Use very sparingly. Good for allium-free diets.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking'] },
+    ]
+  },
+
+  // ── SPICES & HERBS ─────────────────────────────────────────────
+  {
+    id: 'fresh-herbs', name: 'Fresh Herbs', category: 'Spice/Herb',
+    subs: [
+      { name: 'Dried herbs', ratio: '1 tsp dried per 1 tbsp fresh', ratioNum: 0.33, confidence: 'good', flavor: 'More concentrated — use ⅓ the amount. Flavor is less bright; add at start of cooking.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','baking'] },
+      { name: 'Herb paste (from tube)', ratio: '1 tsp per 1 tbsp fresh herbs', ratioNum: 0.33, confidence: 'good', flavor: 'Convenient, fresh-tasting. Slightly less vibrant. Works well for basil, cilantro, and ginger.', diets: ['vegan','df','gf','nf'], contexts: ['cooking','raw'] },
+      { name: 'Frozen herbs', ratio: '1 tbsp per 1 tbsp fresh', ratioNum: 1, confidence: 'best', flavor: 'Closest to fresh. Slightly softer texture; best for cooked dishes, not garnishes.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking'] },
+    ]
+  },
+  {
+    id: 'soy-sauce', name: 'Soy Sauce', category: 'Spice/Herb',
+    subs: [
+      { name: 'Tamari', ratio: '1:1 swap', ratioNum: 1, confidence: 'best', flavor: 'Richer, slightly less salty. Gluten-free. Nearly identical flavor; best soy sauce substitute.', diets: ['vegan','df','gf','nf'], contexts: ['cooking','raw'] },
+      { name: 'Coconut aminos', ratio: '1:1 swap', ratioNum: 1, confidence: 'good', flavor: 'Milder, slightly sweet. Soy-free and gluten-free. Lower sodium. Use in marinades and dressings.', diets: ['vegan','df','gf','nf','ls'], contexts: ['cooking','raw'] },
+      { name: 'Fish sauce (for umami)', ratio: '½ tsp per 1 tsp soy sauce', ratioNum: 0.5, confidence: 'acceptable', flavor: 'Intense salty-umami flavor. Use half as much. Not vegan. Adds depth to Asian dishes.', diets: ['df','gf','nf','keto'], contexts: ['cooking'] },
+      { name: 'Liquid aminos', ratio: '1:1 swap', ratioNum: 1, confidence: 'good', flavor: 'Soy-derived but less sodium. Similar taste to soy sauce. Works in all soy sauce applications.', diets: ['vegan','df','gf','nf'], contexts: ['cooking','raw'] },
+    ]
+  },
+  {
+    id: 'vanilla-extract', name: 'Vanilla Extract', category: 'Spice/Herb',
+    subs: [
+      { name: 'Vanilla paste', ratio: '1 tsp per 1 tsp vanilla extract', ratioNum: 1, confidence: 'best', flavor: 'Thicker, with real vanilla seeds. Intense vanilla flavor and aroma. Premium substitute.', diets: ['vegan','df','gf','nf'], contexts: ['baking','raw','beverages'] },
+      { name: 'Vanilla bean', ratio: '½ bean per 1 tsp extract', ratioNum: 0.5, confidence: 'best', flavor: 'Most intense, fragrant vanilla flavor. Split and scrape seeds. Best for custards and ice cream.', diets: ['vegan','df','gf','nf'], contexts: ['baking','cooking','raw'] },
+      { name: 'Maple syrup', ratio: '1 tbsp per 1 tsp vanilla extract', ratioNum: 3, confidence: 'acceptable', flavor: 'Adds maple sweetness. Use less of other sweeteners. Subtle flavor change; works in baking.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking'] },
+      { name: 'Almond extract', ratio: '½ tsp per 1 tsp vanilla extract', ratioNum: 0.5, confidence: 'acceptable', flavor: 'More intense, nutty-floral. Use half the amount. Good in cookies, cakes, and pastries.', diets: ['vegan','df','gf','keto'], contexts: ['baking'] },
+    ]
+  },
+
+  // ── FRUITS ─────────────────────────────────────────────────────
+  {
+    id: 'lemon-juice', name: 'Lemon Juice', category: 'Fruit',
+    subs: [
+      { name: 'Lime juice', ratio: '1:1 swap', ratioNum: 1, confidence: 'best', flavor: 'Similar acidity, slightly more tropical. Works in most recipes — different but complementary.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','raw','beverages','baking'] },
+      { name: 'White wine vinegar', ratio: '½ tsp per 1 tbsp lemon juice', ratioNum: 0.5, confidence: 'good', flavor: 'Provides acidity. Less fruity. Good for dressings, marinades, and baked goods.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','raw','baking'] },
+      { name: 'Apple cider vinegar', ratio: '½ tsp per 1 tbsp lemon juice', ratioNum: 0.5, confidence: 'acceptable', flavor: 'Fruity, apple-forward. Strong — use sparingly. Works in marinades and some baked goods.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','raw','baking'] },
+    ]
+  },
+  {
+    id: 'bananas', name: 'Bananas', category: 'Fruit',
+    subs: [
+      { name: 'Plantains', ratio: '1:1 swap', ratioNum: 1, confidence: 'best', flavor: 'Starchier, less sweet when unripe. Very ripe plantains match ripe banana sweetness.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','cooking','raw'] },
+      { name: 'Mango', ratio: '1 cup per 1 cup sliced banana', ratioNum: 1, confidence: 'good', flavor: 'Sweeter, tropical flavor. Different texture but works in smoothies and some baked goods.', diets: ['vegan','df','gf','nf','ls'], contexts: ['raw','beverages'] },
+      { name: 'Avocado (for texture)', ratio: '½ avocado per 1 banana (in baking)', ratioNum: 0.5, confidence: 'acceptable', flavor: 'Creamy binder — add sweetener separately. No fruity flavor. Works in brownies and dense cakes.', diets: ['vegan','df','gf','nf','keto'], contexts: ['baking'] },
+    ]
+  },
+
+  // ── MISC ───────────────────────────────────────────────────────
+  {
+    id: 'chocolate', name: 'Chocolate (unsweetened)', category: 'Sweetener',
+    subs: [
+      { name: 'Cocoa powder + fat', ratio: '3 tbsp cocoa powder + 1 tbsp oil per 1 oz unsweetened chocolate', ratioNum: 3, confidence: 'best', flavor: 'Identical intensity. Mix well. Works in all recipes that call for melted chocolate.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['baking'] },
+      { name: 'Carob powder', ratio: '1 tbsp per 1 tbsp cocoa powder', ratioNum: 1, confidence: 'acceptable', flavor: 'Naturally sweet, no caffeine or theobromine. Milder flavor; add less sweetener.', diets: ['vegan','df','gf','nf','ls'], contexts: ['baking','raw','beverages'] },
+    ]
+  },
+  {
+    id: 'peanut-butter', name: 'Peanut Butter', category: 'Protein',
+    subs: [
+      { name: 'Almond butter', ratio: '1:1 swap', ratioNum: 1, confidence: 'best', flavor: 'Milder, slightly sweeter. Similar fat and protein content. Works in all peanut butter recipes.', diets: ['vegan','df','gf','keto'], contexts: ['baking','cooking','raw'] },
+      { name: 'Sunflower seed butter', ratio: '1:1 swap', ratioNum: 1, confidence: 'good', flavor: 'Nut-free! Slightly earthy, less sweet. Can turn green in baked goods (harmless reaction). Great for allergies.', diets: ['vegan','df','gf','nf','keto'], contexts: ['baking','cooking','raw'] },
+      { name: 'Tahini (sesame paste)', ratio: '1:1 swap', ratioNum: 1, confidence: 'acceptable', flavor: 'Nutty, bitter-savory. Lower in sugar. Works in cookies, dressings, and sauces.', diets: ['vegan','df','gf','nf','keto','ls'], contexts: ['baking','cooking','raw'] },
+    ]
+  },
+  {
+    id: 'cream-of-tartar', name: 'Cream of Tartar', category: 'Leavening',
+    subs: [
+      { name: 'Lemon juice', ratio: '1½ tsp per 1 tsp cream of tartar', ratioNum: 1.5, confidence: 'good', flavor: 'Similar acidity. Adds slight citrus flavor. Good for stabilizing whipped cream and meringue.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['baking'] },
+      { name: 'White vinegar', ratio: '1½ tsp per 1 tsp cream of tartar', ratioNum: 1.5, confidence: 'good', flavor: 'Neutral acidifier. Works well for stabilizing egg whites and preventing sugar crystallization.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['baking'] },
+    ]
+  },
+  {
+    id: 'apple-cider-vinegar', name: 'Apple Cider Vinegar', category: 'Liquid',
+    subs: [
+      { name: 'White wine vinegar', ratio: '1:1 swap', ratioNum: 1, confidence: 'best', flavor: 'Similar acidity, less fruity-apple flavor. Works in dressings, marinades, and baking.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','raw','baking'] },
+      { name: 'Lemon juice', ratio: '1:1 swap', ratioNum: 1, confidence: 'good', flavor: 'Bright citrus acidity. Slightly different flavor. Works in dressings and baking applications.', diets: ['vegan','df','gf','nf','ls','keto'], contexts: ['cooking','raw','baking'] },
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────
+// LOOKUP MAP
+// ─────────────────────────────────────────────────────────────────
+const nameToEntry = new Map();
+DB.forEach(entry => {
+  nameToEntry.set(entry.name.toLowerCase(), entry);
+  // also index by id segments
+  nameToEntry.set(entry.id, entry);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────
+let currentEntry = null;
+let activeFilters = new Set(); // diet keys
+let activeContext = '';
+let selectedSubs = new Set(); // sub names selected for compare
+
+const RECENT_KEY = 'subswap_recent';
+const RECENT_MAX = 10;
+
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; }
+}
+function saveRecent(list) {
+  localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+}
+function addRecent(name) {
+  let list = getRecent().filter(n => n.toLowerCase() !== name.toLowerCase());
+  list.unshift(name);
+  if (list.length > RECENT_MAX) list = list.slice(0, RECENT_MAX);
+  saveRecent(list);
+  renderRecent();
+}
+function removeRecent(name) {
+  const list = getRecent().filter(n => n.toLowerCase() !== name.toLowerCase());
+  saveRecent(list);
+  renderRecent();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SEARCH
+// ─────────────────────────────────────────────────────────────────
+function findEntry(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+
+  // Exact match first
+  if (nameToEntry.has(q)) return nameToEntry.get(q);
+
+  // Partial match
+  for (const entry of DB) {
+    if (entry.name.toLowerCase().includes(q) || entry.id.includes(q)) return entry;
+    // Check if query matches a sub name
+  }
+  return null;
+}
+
+function doSearch(query) {
+  const entry = findEntry(query);
+  if (!entry) {
+    showNoResults(query);
+    return;
+  }
+  currentEntry = entry;
+  selectedSubs.clear();
+  updateCompareBtn();
+  addRecent(entry.name);
+  renderResults();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// RENDER RESULTS
+// ─────────────────────────────────────────────────────────────────
+function renderResults() {
+  if (!currentEntry) return;
+
+  document.getElementById('main-empty').style.display = 'none';
+  document.getElementById('main-results').classList.add('visible');
+
+  document.getElementById('ing-title').textContent = currentEntry.name;
+  document.getElementById('ing-badge').textContent = currentEntry.category;
+
+  const grid = document.getElementById('subs-grid');
+  grid.innerHTML = '';
+
+  // Sort: context-matching subs first, then by confidence
+  const confOrder = { best: 0, good: 1, acceptable: 2 };
+  let subs = [...currentEntry.subs];
+
+  if (activeContext) {
+    subs.sort((a, b) => {
+      const aHas = a.contexts.includes(activeContext) ? 0 : 1;
+      const bHas = b.contexts.includes(activeContext) ? 0 : 1;
+      if (aHas !== bHas) return aHas - bHas;
+      return confOrder[a.confidence] - confOrder[b.confidence];
+    });
+  } else {
+    subs.sort((a, b) => confOrder[a.confidence] - confOrder[b.confidence]);
+  }
+
+  let visibleCount = 0;
+
+  subs.forEach(sub => {
+    const passes = passesFilters(sub);
+    if (passes) visibleCount++;
+    const card = buildCard(sub, !passes);
+    grid.appendChild(card);
+  });
+
+  document.getElementById('ing-count').textContent =
+    `${visibleCount} substitute${visibleCount !== 1 ? 's' : ''} found${activeFilters.size ? ' matching your filters' : ''}`;
+
+  if (visibleCount === 0 && subs.length > 0) {
+    const note = document.createElement('p');
+    note.className = 'no-results-sub';
+    note.style.gridColumn = '1/-1';
+    note.textContent = 'All substitutes are filtered out. Try adjusting your dietary filters.';
+    grid.appendChild(note);
+  }
+}
+
+function passesFilters(sub) {
+  if (activeFilters.size === 0) return true;
+  for (const f of activeFilters) {
+    if (!sub.diets.includes(f)) return false;
+  }
+  return true;
+}
+
+function buildCard(sub, filteredOut) {
+  const card = document.createElement('div');
+  card.className = 'sub-card' + (filteredOut ? ' filtered-out' : '') + (selectedSubs.has(sub.name) ? ' selected' : '');
+  card.role = 'listitem';
+
+  const dietTags = sub.diets.map(d => `<span class="tag diet">${DIET_LABELS[d] || d}</span>`).join('');
+  const contextTags = sub.contexts.map(c => `<span class="tag context">${capitalize(c)}</span>`).join('');
+
+  card.innerHTML = `
+    <div class="sub-card-top">
+      <div class="sub-card-info">
+        <div class="sub-name">${esc(sub.name)}</div>
+        <div class="sub-ratio">${esc(sub.ratio)}</div>
+      </div>
+      <span class="confidence-badge ${sub.confidence}">${capitalize(sub.confidence)}</span>
+    </div>
+    <div class="sub-flavor">${esc(sub.flavor)}</div>
+    <div class="sub-tags">${dietTags}</div>
+    <div class="sub-tags">${contextTags}</div>
+    <div class="sub-card-footer">
+      <button class="btn-select-sub" aria-pressed="${selectedSubs.has(sub.name)}" aria-label="Select ${esc(sub.name)} for comparison">
+        ${selectedSubs.has(sub.name) ? '✓ Selected' : '+ Compare'}
+      </button>
+      <button class="btn-quick-ref" aria-label="View quick reference for ${esc(sub.name)}">Quick ref ↗</button>
+    </div>
+  `;
+
+  card.querySelector('.btn-select-sub').addEventListener('click', () => toggleSelect(sub, card));
+  card.querySelector('.btn-quick-ref').addEventListener('click', () => openQuickRef(sub));
+
+  return card;
+}
+
+function showNoResults(query) {
+  document.getElementById('main-empty').style.display = 'none';
+  document.getElementById('main-results').classList.add('visible');
+  document.getElementById('ing-title').textContent = query;
+  document.getElementById('ing-badge').textContent = 'Not found';
+  document.getElementById('ing-count').textContent = '';
+  const grid = document.getElementById('subs-grid');
+  grid.innerHTML = `
+    <div class="no-results" style="grid-column:1/-1">
+      <p class="no-results-title">No substitutes found</p>
+      <p class="no-results-sub">Try searching for: butter, eggs, flour, milk, sugar, baking powder, cornstarch, or any of 60+ common ingredients.</p>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPARE
+// ─────────────────────────────────────────────────────────────────
+function toggleSelect(sub, card) {
+  if (selectedSubs.has(sub.name)) {
+    selectedSubs.delete(sub.name);
+    card.classList.remove('selected');
+    card.querySelector('.btn-select-sub').textContent = '+ Compare';
+    card.querySelector('.btn-select-sub').setAttribute('aria-pressed', 'false');
+  } else {
+    if (selectedSubs.size >= 3) { toast('Max 3 substitutes for comparison'); return; }
+    selectedSubs.add(sub.name);
+    card.classList.add('selected');
+    card.querySelector('.btn-select-sub').textContent = '✓ Selected';
+    card.querySelector('.btn-select-sub').setAttribute('aria-pressed', 'true');
+  }
+  updateCompareBtn();
+}
+
+function updateCompareBtn() {
+  const btn = document.getElementById('btn-compare');
+  btn.textContent = `Compare (${selectedSubs.size})`;
+  btn.className = 'btn-compare' + (selectedSubs.size > 0 ? ' has-items' : '');
+}
+
+function openCompare() {
+  if (selectedSubs.size === 0) { toast('Select at least 1 substitute to compare'); return; }
+
+  const subs = currentEntry.subs.filter(s => selectedSubs.has(s.name));
+  const content = document.getElementById('compare-content');
+
+  if (subs.length === 0) {
+    content.innerHTML = '<p class="compare-no-items">Select substitutes from the results first.</p>';
+  } else {
+    const headers = subs.map(s => `<th>${esc(s.name)}</th>`).join('');
+    const ratioRow = subs.map(s => `<td>${esc(s.ratio)}</td>`).join('');
+    const confRow = subs.map(s => `<td><span class="confidence-badge ${s.confidence}">${capitalize(s.confidence)}</span></td>`).join('');
+    const dietRow = subs.map(s => `<td>${s.diets.map(d => DIET_LABELS[d] || d).join(', ')}</td>`).join('');
+    const ctxRow = subs.map(s => `<td>${s.contexts.map(capitalize).join(', ')}</td>`).join('');
+    const flavorRow = subs.map(s => `<td style="font-style:italic;font-size:var(--text-xs);color:var(--color-ink-muted)">${esc(s.flavor)}</td>`).join('');
+
+    content.innerHTML = `
+      <table class="compare-table">
+        <thead><tr><th></th>${headers}</tr></thead>
+        <tbody>
+          <tr><td>Ratio</td>${ratioRow}</tr>
+          <tr><td>Confidence</td>${confRow}</tr>
+          <tr><td>Dietary tags</td>${dietRow}</tr>
+          <tr><td>Best for</td>${ctxRow}</tr>
+          <tr><td>Flavor / texture</td>${flavorRow}</tr>
+        </tbody>
+      </table>`;
+  }
+
+  document.getElementById('compare-overlay').classList.add('visible');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// QUICK REF MODAL
+// ─────────────────────────────────────────────────────────────────
+const QUANTITIES = ['1 tsp', '1 tbsp', '¼ cup', '½ cup', '1 cup'];
+const QTY_ML = { '1 tsp': 1, '1 tbsp': 3, '¼ cup': 12, '½ cup': 24, '1 cup': 48 }; // relative units
+
+function openQuickRef(sub) {
+  document.getElementById('modal-title').textContent = `Quick Ref: ${sub.name}`;
+  document.getElementById('qr-subtitle').textContent = `Substitute for ${currentEntry ? currentEntry.name : ''}. Ratio: ${sub.ratio}`;
+
+  const tbody = document.getElementById('qr-table-body');
+  tbody.innerHTML = '';
+
+  // Parse ratio numerator
+  const ratio = sub.ratioNum || 1;
+
+  QUANTITIES.forEach(qty => {
+    const units = QTY_ML[qty];
+    const resultUnits = units * ratio;
+    const resultStr = formatQty(resultUnits);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${qty} ${currentEntry ? currentEntry.name : ''}</td><td>${resultStr} ${sub.name}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('modal-backdrop').classList.add('visible');
+}
+
+function formatQty(units) {
+  // Convert back to human-readable fractions
+  if (units < 1) return `${fractionStr(units)} tsp`;
+  if (units < 3) return `${fractionStr(units)} tsp`;
+  if (units < 12) return `${fractionStr(units / 3)} tbsp`;
+  if (units < 48) return `${fractionStr(units / 12)} cup`;
+  return `${fractionStr(units / 48)} cups`;
+}
+
+function fractionStr(n) {
+  if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
+  const fracs = [[1,4],[1,3],[1,2],[2,3],[3,4]];
+  for (const [num, den] of fracs) {
+    if (Math.abs(n - num/den) < 0.07) return `${num}/${den}`;
+  }
+  for (const [num, den] of fracs) {
+    const whole = Math.floor(n);
+    const rem = n - whole;
+    if (Math.abs(rem - num/den) < 0.07) return whole > 0 ? `${whole} ${num}/${den}` : `${num}/${den}`;
+  }
+  return n.toFixed(1);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// RECENT SEARCHES
+// ─────────────────────────────────────────────────────────────────
+function renderRecent() {
+  const list = getRecent();
+  const el = document.getElementById('recent-list');
+  if (!list.length) {
+    el.innerHTML = '<p class="recent-empty">No searches yet</p>';
+    return;
+  }
+  el.innerHTML = '';
+  list.forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'recent-item';
+    item.tabIndex = 0;
+    item.setAttribute('role', 'button');
+    item.setAttribute('aria-label', `Search for ${name}`);
+    item.innerHTML = `<span class="recent-item-name">${esc(name)}</span><button class="recent-remove" aria-label="Remove ${esc(name)} from recent searches" title="Remove">✕</button>`;
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('recent-remove')) return;
+      document.getElementById('ing-search').value = name;
+      doSearch(name);
+    });
+    item.addEventListener('keydown', (e) => { if (e.key === 'Enter') { document.getElementById('ing-search').value = name; doSearch(name); } });
+    item.querySelector('.recent-remove').addEventListener('click', (e) => { e.stopPropagation(); removeRecent(name); });
+    el.appendChild(item);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────
+const DIET_LABELS = { vegan: 'Vegan', vegetarian: 'Vegetarian', gf: 'GF', df: 'Dairy-Free', nf: 'Nut-Free', keto: 'Keto', ls: 'Low-Na' };
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const capitalize = (s) => s ? s[0].toUpperCase() + s.slice(1) : '';
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 2800);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// EVENT WIRING
+// ─────────────────────────────────────────────────────────────────
+
+// Search input — live filter with debounce
+let searchTimer;
+document.getElementById('ing-search').addEventListener('input', (e) => {
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  if (!q) {
+    document.getElementById('main-results').classList.remove('visible');
+    document.getElementById('main-empty').style.display = '';
+    currentEntry = null;
+    return;
+  }
+  searchTimer = setTimeout(() => doSearch(q), 280);
+});
+
+document.getElementById('ing-search').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    clearTimeout(searchTimer);
+    doSearch(e.target.value.trim());
+  }
+});
+
+// Diet filter chips
+document.querySelectorAll('.chip[data-diet]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const d = btn.dataset.diet;
+    if (activeFilters.has(d)) {
+      activeFilters.delete(d);
+      btn.classList.remove('active');
+      btn.setAttribute('aria-pressed', 'false');
+    } else {
+      activeFilters.add(d);
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
+    }
+    if (currentEntry) renderResults();
+  });
+});
+
+// Context selector
+document.getElementById('ctx-select').addEventListener('change', (e) => {
+  activeContext = e.target.value;
+  if (currentEntry) renderResults();
+});
+
+// Reason selector (cosmetic — could filter by confidence or tag in future)
+document.getElementById('reason-select').addEventListener('change', () => {
+  if (currentEntry) renderResults();
+});
+
+// Compare
+document.getElementById('btn-compare').addEventListener('click', openCompare);
+document.getElementById('btn-close-compare').addEventListener('click', () => {
+  document.getElementById('compare-overlay').classList.remove('visible');
+});
+
+// Modal
+document.getElementById('btn-close-modal').addEventListener('click', () => {
+  document.getElementById('modal-backdrop').classList.remove('visible');
+});
+document.getElementById('modal-backdrop').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('modal-backdrop').classList.remove('visible');
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.getElementById('modal-backdrop').classList.remove('visible');
+    document.getElementById('compare-overlay').classList.remove('visible');
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────
+renderRecent();
+</script>
+</body>
+</html>

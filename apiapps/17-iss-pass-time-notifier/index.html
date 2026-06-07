@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISS Pass Time Notifier</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+    :root {
+      --bg: #070c1a;
+      --surface: #0d1526;
+      --surface2: #141f36;
+      --border: rgba(245,158,11,0.2);
+      --accent: #f59e0b;
+      --accent2: #3b82f6;
+      --text: #e8eaf6;
+      --muted: #6b7da8;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f97316;
+      --radius: 8px;
+      --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Stars background */
+    .stars-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: #fff;
+      animation: twinkle var(--dur, 3s) ease-in-out infinite;
+      opacity: 0;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0; }
+      50% { opacity: var(--max-op, 0.7); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .logo-orbit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      margin-bottom: 16px;
+      position: relative;
+      animation: pulse-ring 3s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+      50% { box-shadow: 0 0 0 16px rgba(74,222,128,0); }
+    }
+    .logo-orbit svg {
+      width: 40px;
+      height: 40px;
+    }
+    .iss-orbit-ring {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      border: 2px dashed rgba(74,222,128,0.4);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: spin-ring 8s linear infinite;
+    }
+    .iss-orbit-dot {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--yellow);
+      border-radius: 50%;
+      top: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 0 8px var(--yellow);
+    }
+    @keyframes spin-ring {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .status-dot.live { background: var(--green); animation: blink 1.5s ease-in-out infinite; }
+    .status-dot.error { background: var(--accent2); }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Main grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 700px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .card-full { grid-column: 1 / -1; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .card-badge {
+      margin-left: auto;
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: rgba(74,222,128,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(74,222,128,0.3);
+    }
+
+    /* Data rows */
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-row:last-child { border-bottom: none; }
+    .data-label { font-size: 0.85rem; color: var(--muted); }
+    .data-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .data-value.accent { color: var(--accent); }
+    .data-value.green { color: var(--green); }
+    .data-value.yellow { color: var(--yellow); }
+
+    /* World Map SVG */
+    .map-wrapper {
+      position: relative;
+      background: var(--surface2);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    #world-map {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ISS dot on map */
+    .iss-map-dot {
+      transition: cx 0.8s ease, cy 0.8s ease;
+    }
+
+    /* Pass prediction card */
+    .pass-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .location-prompt {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .location-prompt p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #7b74ff; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+    /* Input row */
+    .input-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 120px;
+    }
+    .input-group label {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .input-group input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .input-group input::placeholder { color: var(--muted); }
+
+    /* Pass countdown */
+    .pass-countdown {
+      text-align: center;
+      padding: 20px;
+      background: var(--surface2);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .countdown-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .countdown-value {
+      font-size: 2.4rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .countdown-detail {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Pass list */
+    .pass-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pass-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+      font-size: 0.85rem;
+    }
+    .pass-item:first-child {
+      border-color: var(--accent);
+      background: rgba(74,222,128,0.07);
+    }
+    .pass-item:hover { border-color: var(--accent); }
+    .pass-time { font-weight: 600; }
+    .pass-duration { color: var(--muted); }
+    .pass-elevation {
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .elev-high { background: rgba(67,217,173,0.15); color: var(--green); }
+    .elev-med { background: rgba(247,201,72,0.15); color: var(--yellow); }
+    .elev-low { background: rgba(142,146,176,0.1); color: var(--muted); }
+
+    /* Alert toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      color: var(--text);
+      z-index: 1000;
+      max-width: 320px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateX(120%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+    .toast-body { flex: 1; }
+    .toast-title { font-weight: 600; margin-bottom: 2px; }
+    .toast-msg { color: var(--muted); font-size: 0.82rem; }
+    .toast-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .toast-close:hover { color: var(--text); }
+
+    /* Loader spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+      height: 16px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Geolocation error */
+    .info-box {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .info-box.warn {
+      background: rgba(247,201,72,0.1);
+      border: 1px solid rgba(247,201,72,0.3);
+      color: var(--yellow);
+    }
+    .info-box.error {
+      background: rgba(56,189,248,0.1);
+      border: 1px solid rgba(56,189,248,0.3);
+      color: var(--accent2);
+    }
+    .info-box.success {
+      background: rgba(67,217,173,0.1);
+      border: 1px solid rgba(67,217,173,0.3);
+      color: var(--green);
+    }
+
+    /* Visibility angle gauge */
+    .gauge-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .gauge-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .gauge-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      transition: width 0.8s ease;
+    }
+
+    /* Refresh timer */
+    .refresh-ring {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-right: 4px;
+      animation: spin 5s linear infinite;
+    }
+
+    /* ISS info grid */
+    .iss-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .stat-box {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+    .stat-box:hover { border-color: var(--accent); }
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+    .stat-unit {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-left: 3px;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* Responsive tweaks */
+    @media (max-width: 500px) {
+      .iss-stats { grid-template-columns: 1fr 1fr; }
+      .input-row { flex-direction: column; }
+    }
+
+    /* === Travel v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 800px 500px at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 400px 300px at 90% 90%, rgba(245,158,11,0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.02em; }
+    h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
+    h2 { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .flight, .route, .delay, .alert, .station, .transit, .park, .trail, .ev-station, .transport,
+    [class*="card"], [class*="item"], [class*="flight"], [class*="route"], [class*="result"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      animation: boardSlide 0.35s cubic-bezier(0.4,0,0.2,1) both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { background: var(--surface2); }
+
+    .time, .code, .flight-number, .gate, .terminal, .delay-time, .duration, .distance,
+    .iss-time, .coords, .lat, .lon, .pass-time, .co2, .emission, .minutes, .seconds,
+    .countdown, .stat, .number, .metric, pre, code, .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    .big-time, .big-number, .countdown, .pass-time {
+      font-family: var(--font-mono);
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0.65rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.7rem 1.75rem;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.88rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .status, .label, .type, .mode, .line, .provider {
+      display: inline-block;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--font-mono);
+    }
+
+    .on-time, .normal, .open, .available, .active, .lower { color: var(--green); }
+    .delayed, .late, .closed, .disrupted, .higher { color: var(--red); }
+    .caution, .minor-delay, .check { color: var(--orange); }
+
+    .status-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
+    .status-fill { height: 100%; background: var(--accent2); border-radius: 2px; transition: width 0.6s ease; }
+
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(245,158,11,0.06); font-variant-numeric: tabular-nums; }
+    tr:hover td { background: var(--surface2); }
+
+    @keyframes boardSlide {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes alertBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .delayed, .alert-active, .disrupted { animation: alertBlink 1.8s ease infinite; }
+  </style>
+</head>
+<body>
+
+<!-- Stars background -->
+<div class="stars-bg" id="stars-bg" aria-hidden="true"></div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" role="alert" aria-live="polite">
+  <span class="toast-icon" id="toast-icon"></span>
+  <div class="toast-body">
+    <div class="toast-title" id="toast-title"></div>
+    <div class="toast-msg" id="toast-msg"></div>
+  </div>
+  <button class="toast-close" id="toast-close" aria-label="Close notification">&#10005;</button>
+</div>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="logo-orbit" aria-hidden="true">
+      <div class="iss-orbit-ring">
+        <div class="iss-orbit-dot"></div>
+      </div>
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- ISS icon simplified -->
+        <rect x="16" y="18" width="8" height="4" rx="1" fill="white"/>
+        <rect x="4" y="19" width="12" height="2" rx="1" fill="#f7c948"/>
+        <rect x="24" y="19" width="12" height="2" rx="1" fill="#f7c948"/>
+        <rect x="18" y="13" width="4" height="6" rx="1" fill="white" opacity="0.6"/>
+        <rect x="18" y="21" width="4" height="6" rx="1" fill="white" opacity="0.6"/>
+        <circle cx="20" cy="20" r="3" fill="#6c63ff"/>
+      </svg>
+    </div>
+    <h1>ISS Pass Notifier</h1>
+    <p class="subtitle">Live International Space Station tracker &amp; pass time predictor</p>
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Connecting to ISS telemetry&hellip;</span>
+      <span>|</span>
+      <span><span class="refresh-ring" aria-hidden="true"></span>Updates every 5s</span>
+    </div>
+  </header>
+
+  <!-- Live ISS stats -->
+  <div class="card card-full" style="margin-bottom:20px;">
+    <div class="card-header">
+      <div class="card-icon" aria-hidden="true">🛰️</div>
+      <span class="card-title">Live ISS Telemetry</span>
+      <span class="card-badge" id="last-updated">Loading&hellip;</span>
+    </div>
+    <div class="iss-stats">
+      <div class="stat-box">
+        <div class="stat-label">Latitude</div>
+        <div class="stat-value" id="stat-lat">
+          <div class="skeleton" style="width:80px;"></div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Longitude</div>
+        <div class="stat-value" id="stat-lon">
+          <div class="skeleton" style="width:80px;"></div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Altitude</div>
+        <div class="stat-value" id="stat-alt">
+          <div class="skeleton" style="width:80px;"></div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Velocity</div>
+        <div class="stat-value" id="stat-vel">
+          <div class="skeleton" style="width:80px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- World map + Pass predictor -->
+  <div class="main-grid">
+
+    <!-- World Map -->
+    <div class="card card-full" style="padding:16px;">
+      <div class="card-header">
+        <div class="card-icon" aria-hidden="true">🗺️</div>
+        <span class="card-title">Live World Position</span>
+        <span class="card-badge" id="map-region">—</span>
+      </div>
+      <div class="map-wrapper">
+        <svg id="world-map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg"
+             role="img" aria-label="World map showing ISS position">
+          <title>ISS Live Position Map</title>
+          <rect width="1000" height="500" fill="#0d1421"/>
+          <!-- Grid lines -->
+          <g stroke="#1e2640" stroke-width="0.5" opacity="0.6">
+            <line x1="0" y1="125" x2="1000" y2="125"/>
+            <line x1="0" y1="250" x2="1000" y2="250"/>
+            <line x1="0" y1="375" x2="1000" y2="375"/>
+            <line x1="250" y1="0" x2="250" y2="500"/>
+            <line x1="500" y1="0" x2="500" y2="500"/>
+            <line x1="750" y1="0" x2="750" y2="500"/>
+          </g>
+          <!-- Simplified world landmasses as paths -->
+          <g fill="#1e2d4a" stroke="#2e3f60" stroke-width="0.5" opacity="0.85">
+            <!-- North America -->
+            <path d="M80,60 L100,55 L140,60 L175,70 L200,85 L210,105 L220,115 L215,130 L200,145 L185,155 L170,165 L155,175 L145,185 L140,200 L130,220 L120,230 L110,225 L95,215 L82,200 L70,185 L65,165 L60,145 L55,120 L58,95 L70,75 Z"/>
+            <!-- Greenland -->
+            <path d="M210,30 L240,25 L260,35 L265,55 L250,65 L230,68 L215,55 L208,42 Z"/>
+            <!-- South America -->
+            <path d="M185,230 L205,220 L220,225 L235,240 L245,260 L250,285 L248,310 L240,335 L225,355 L210,370 L195,375 L180,365 L170,345 L165,320 L162,295 L165,270 L170,250 Z"/>
+            <!-- Europe -->
+            <path d="M440,60 L465,55 L490,60 L505,75 L510,90 L500,105 L480,115 L460,118 L445,110 L435,95 L432,78 Z"/>
+            <!-- Scandinavia -->
+            <path d="M460,38 L475,32 L488,40 L490,55 L478,62 L465,58 L456,48 Z"/>
+            <!-- UK -->
+            <path d="M430,72 L440,68 L448,75 L445,85 L435,88 L428,82 Z"/>
+            <!-- Africa -->
+            <path d="M450,125 L490,115 L520,118 L545,130 L555,155 L558,180 L555,210 L545,240 L530,270 L510,295 L490,310 L470,315 L450,310 L432,290 L420,265 L415,238 L418,210 L425,185 L435,160 L442,140 Z"/>
+            <!-- Asia (simplified) -->
+            <path d="M510,58 L560,50 L620,45 L680,42 L730,45 L775,50 L810,58 L830,72 L840,90 L835,108 L820,122 L800,132 L770,138 L740,142 L710,145 L680,148 L650,150 L620,148 L590,142 L565,132 L545,118 L525,102 L512,88 L508,72 Z"/>
+            <!-- Middle East -->
+            <path d="M545,130 L580,125 L610,128 L625,142 L620,160 L605,170 L580,172 L558,165 L548,150 Z"/>
+            <!-- India -->
+            <path d="M610,148 L640,142 L660,148 L670,165 L668,185 L655,205 L638,218 L622,215 L610,200 L605,178 L605,162 Z"/>
+            <!-- Southeast Asia -->
+            <path d="M710,145 L740,138 L765,142 L778,158 L772,175 L752,182 L728,178 L712,165 Z"/>
+            <!-- Australia -->
+            <path d="M720,290 L770,278 L820,278 L855,288 L870,308 L865,335 L845,355 L815,368 L780,372 L748,365 L722,348 L708,325 L707,305 Z"/>
+            <!-- Japan -->
+            <path d="M800,105 L815,100 L825,108 L822,120 L810,125 L800,118 Z"/>
+            <!-- UK & Ireland simplified -->
+            <path d="M428,70 L442,65 L450,72 L448,82 L436,85 L428,78 Z"/>
+            <!-- Alaska -->
+            <path d="M35,45 L60,38 L78,45 L80,60 L70,68 L50,65 L38,55 Z"/>
+          </g>
+
+          <!-- Orbital track (ground track) -->
+          <polyline id="iss-track-behind" points="" stroke="rgba(108,99,255,0.3)" stroke-width="1.5" fill="none" stroke-dasharray="4 3"/>
+          <polyline id="iss-track-ahead" points="" stroke="rgba(67,217,173,0.2)" stroke-width="1.5" fill="none" stroke-dasharray="4 3"/>
+
+          <!-- User location marker -->
+          <g id="user-marker" display="none">
+            <circle id="user-dot" cx="500" cy="250" r="5" fill="var(--yellow)" opacity="0.9"/>
+            <circle id="user-ring" cx="500" cy="250" r="10" fill="none" stroke="var(--yellow)" stroke-width="1" opacity="0.5"/>
+          </g>
+
+          <!-- Visibility circle -->
+          <ellipse id="vis-circle" cx="500" cy="250" rx="0" ry="0" fill="none" stroke="rgba(67,217,173,0.25)" stroke-width="1" stroke-dasharray="3 3" display="none"/>
+
+          <!-- ISS marker -->
+          <g id="iss-marker">
+            <circle class="iss-map-dot" id="iss-glow" cx="500" cy="250" r="12" fill="rgba(108,99,255,0.2)">
+              <animate attributeName="r" values="10;16;10" dur="2s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.4;0.1;0.4" dur="2s" repeatCount="indefinite"/>
+            </circle>
+            <circle class="iss-map-dot" id="iss-dot" cx="500" cy="250" r="5" fill="var(--accent)"/>
+            <line id="iss-cross-h" x1="492" y1="250" x2="508" y2="250" stroke="var(--accent)" stroke-width="1.5" opacity="0.6"/>
+            <line id="iss-cross-v" x1="500" y1="242" x2="500" y2="258" stroke="var(--accent)" stroke-width="1.5" opacity="0.6"/>
+          </g>
+
+          <!-- Legend -->
+          <g transform="translate(10,470)" font-size="9" fill="var(--muted)" font-family="system-ui">
+            <circle cx="5" cy="-3" r="4" fill="var(--accent)"/>
+            <text x="13" y="0">ISS</text>
+            <circle cx="50" cy="-3" r="4" fill="var(--yellow)"/>
+            <text x="58" y="0">You</text>
+            <line x1="95" y1="-3" x2="110" y2="-3" stroke="rgba(67,217,173,0.5)" stroke-width="1.5" stroke-dasharray="3 2"/>
+            <text x="114" y="0">Visibility zone</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ISS Position details -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" aria-hidden="true">📡</div>
+        <span class="card-title">Position Details</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Hemisphere</span>
+        <span class="data-value accent" id="detail-hemisphere">—</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Day / Night</span>
+        <span class="data-value" id="detail-daynight">—</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Orbital Period</span>
+        <span class="data-value">~92 min</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Inclination</span>
+        <span class="data-value">51.6°</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Footprint Radius</span>
+        <span class="data-value" id="detail-footprint">~2,200 km</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Crew Aboard</span>
+        <span class="data-value green">7 astronauts</span>
+      </div>
+    </div>
+
+    <!-- Pass Predictor -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" aria-hidden="true">⏱️</div>
+        <span class="card-title">Pass Predictor</span>
+        <span class="card-badge" id="pass-badge">Set location</span>
+      </div>
+      <div class="pass-section" id="pass-section">
+        <div class="location-prompt" id="location-prompt">
+          <p>Enter your coordinates or use GPS to predict when the ISS will pass over your location.</p>
+          <div class="input-row">
+            <div class="input-group">
+              <label for="inp-lat">Latitude</label>
+              <input type="number" id="inp-lat" placeholder="e.g. 52.37" min="-90" max="90" step="0.01" aria-label="Your latitude"/>
+            </div>
+            <div class="input-group">
+              <label for="inp-lon">Longitude</label>
+              <input type="number" id="inp-lon" placeholder="e.g. 4.90" min="-180" max="180" step="0.01" aria-label="Your longitude"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btn-gps" aria-label="Use my GPS location">
+              <span>📍</span> Use GPS
+            </button>
+            <button class="btn btn-secondary" id="btn-manual" aria-label="Calculate passes from manual coordinates">
+              <span>🔍</span> Calculate
+            </button>
+          </div>
+          <div id="location-status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming passes (shows after location set) -->
+  <div class="card" id="passes-card" style="display:none;">
+    <div class="card-header">
+      <div class="card-icon" aria-hidden="true">📅</div>
+      <span class="card-title">Upcoming Passes</span>
+      <span class="card-badge" id="passes-location-badge">—</span>
+    </div>
+    <div id="passes-container">
+      <div class="pass-list" id="pass-list"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>ISS telemetry via <a href="https://wheretheiss.at" target="_blank" rel="noopener">Where the ISS at?</a> &mdash; updated every 5 seconds</p>
+    <p style="margin-top:6px;">Pass times calculated using orbital mechanics (period ~92 min, inclination 51.6°). For precise predictions use <a href="https://heavens-above.com" target="_blank" rel="noopener">Heavens-Above</a>.</p>
+  </footer>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ─── Constants ───────────────────────────────────────────────────────────────
+  const ISS_API = 'https://api.wheretheiss.at/v1/satellites/25544';
+  const REFRESH_MS = 5000;
+  const ORBIT_PERIOD_MIN = 92.68;
+  const ORBIT_INCLINATION = 51.6;
+  const EARTH_RADIUS_KM = 6371;
+  const ISS_AVG_ALT_KM = 408;
+  // Ground footprint half-angle (visibility cone)
+  const FOOTPRINT_HALF_ANGLE = Math.acos(EARTH_RADIUS_KM / (EARTH_RADIUS_KM + ISS_AVG_ALT_KM)) * (180 / Math.PI);
+
+  // ─── State ────────────────────────────────────────────────────────────────────
+  let issData = null;
+  let userLat = null;
+  let userLon = null;
+  let passes = [];
+  let countdownInterval = null;
+  let fetchInterval = null;
+
+  // ─── DOM refs ─────────────────────────────────────────────────────────────────
+  const statusDot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  const lastUpdated = document.getElementById('last-updated');
+  const statLat = document.getElementById('stat-lat');
+  const statLon = document.getElementById('stat-lon');
+  const statAlt = document.getElementById('stat-alt');
+  const statVel = document.getElementById('stat-vel');
+  const detailHemisphere = document.getElementById('detail-hemisphere');
+  const detailDaynight = document.getElementById('detail-daynight');
+  const detailFootprint = document.getElementById('detail-footprint');
+  const mapRegion = document.getElementById('map-region');
+  const issDot = document.getElementById('iss-dot');
+  const issGlow = document.getElementById('iss-glow');
+  const issCrossH = document.getElementById('iss-cross-h');
+  const issCrossV = document.getElementById('iss-cross-v');
+  const issTrackBehind = document.getElementById('iss-track-behind');
+  const issTrackAhead = document.getElementById('iss-track-ahead');
+  const userMarker = document.getElementById('user-marker');
+  const userDot = document.getElementById('user-dot');
+  const userRing = document.getElementById('user-ring');
+  const visCircle = document.getElementById('vis-circle');
+  const passSection = document.getElementById('pass-section');
+  const locationPrompt = document.getElementById('location-prompt');
+  const locationStatus = document.getElementById('location-status');
+  const passBadge = document.getElementById('pass-badge');
+  const passesCard = document.getElementById('passes-card');
+  const passList = document.getElementById('pass-list');
+  const passesLocationBadge = document.getElementById('passes-location-badge');
+  const btnGPS = document.getElementById('btn-gps');
+  const btnManual = document.getElementById('btn-manual');
+  const inpLat = document.getElementById('inp-lat');
+  const inpLon = document.getElementById('inp-lon');
+  const toast = document.getElementById('toast');
+  const toastIcon = document.getElementById('toast-icon');
+  const toastTitle = document.getElementById('toast-title');
+  const toastMsg = document.getElementById('toast-msg');
+  const toastClose = document.getElementById('toast-close');
+
+  // ─── Stars ────────────────────────────────────────────────────────────────────
+  function createStars() {
+    const bg = document.getElementById('stars-bg');
+    const count = 120;
+    for (let i = 0; i < count; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = Math.random() * 2.5 + 0.5;
+      star.style.cssText = [
+        `width:${size}px`,
+        `height:${size}px`,
+        `top:${Math.random() * 100}%`,
+        `left:${Math.random() * 100}%`,
+        `--dur:${(Math.random() * 4 + 2).toFixed(1)}s`,
+        `--max-op:${(Math.random() * 0.6 + 0.2).toFixed(2)}`,
+        `animation-delay:${(Math.random() * 5).toFixed(1)}s`
+      ].join(';');
+      bg.appendChild(star);
+    }
+  }
+
+  // ─── Coordinate → SVG pixel ───────────────────────────────────────────────────
+  function latLonToSVG(lat, lon) {
+    const x = ((lon + 180) / 360) * 1000;
+    const y = ((90 - lat) / 180) * 500;
+    return { x, y };
+  }
+
+  // ─── Move ISS marker ──────────────────────────────────────────────────────────
+  function updateISSMarker(lat, lon) {
+    const { x, y } = latLonToSVG(lat, lon);
+    const setXY = (el, cx, cy) => {
+      el.setAttribute('cx', cx);
+      el.setAttribute('cy', cy);
+    };
+    setXY(issDot, x, y);
+    setXY(issGlow, x, y);
+    issCrossH.setAttribute('x1', x - 8); issCrossH.setAttribute('x2', x + 8);
+    issCrossH.setAttribute('y1', y); issCrossH.setAttribute('y2', y);
+    issCrossV.setAttribute('x1', x); issCrossV.setAttribute('x2', x);
+    issCrossV.setAttribute('y1', y - 8); issCrossV.setAttribute('y2', y + 8);
+    return { x, y };
+  }
+
+  // ─── Draw orbital ground track ────────────────────────────────────────────────
+  function drawGroundTrack(lat, lon) {
+    // Approximate ground track: step backward and forward by orbit math
+    const speedDegPerSec = 360 / (ORBIT_PERIOD_MIN * 60);
+    const earthRotDegPerSec = 360 / 86400;
+    const pointsBehind = [];
+    const pointsAhead = [];
+    const steps = 30;
+    const stepSec = 120; // 2-minute steps
+
+    for (let i = steps; i >= 1; i--) {
+      const dt = -i * stepSec;
+      const pLon = ((lon + (speedDegPerSec + earthRotDegPerSec) * dt + 540) % 360) - 180;
+      const pLat = lat; // simplified — doesn't account for inclination shift per step
+      const p = latLonToSVG(pLat, pLon);
+      pointsBehind.push(`${p.x},${p.y}`);
+    }
+    for (let i = 1; i <= steps; i++) {
+      const dt = i * stepSec;
+      const pLon = ((lon + (speedDegPerSec + earthRotDegPerSec) * dt + 540) % 360) - 180;
+      const pLat = lat;
+      const p = latLonToSVG(pLat, pLon);
+      pointsAhead.push(`${p.x},${p.y}`);
+    }
+
+    issTrackBehind.setAttribute('points', pointsBehind.join(' '));
+    issTrackAhead.setAttribute('points', pointsAhead.join(' '));
+  }
+
+  // ─── Update user marker on map ────────────────────────────────────────────────
+  function updateUserMarker(lat, lon) {
+    const { x, y } = latLonToSVG(lat, lon);
+    userDot.setAttribute('cx', x);
+    userDot.setAttribute('cy', y);
+    userRing.setAttribute('cx', x);
+    userRing.setAttribute('cy', y);
+    userMarker.setAttribute('display', 'block');
+
+    // Draw visibility footprint as ellipse
+    // Footprint radius ~2200km → in SVG pixels
+    const footprintKm = 2 * Math.PI * EARTH_RADIUS_KM * FOOTPRINT_HALF_ANGLE / 360;
+    const kmsPerDegLon = Math.cos(lat * Math.PI / 180) * 111.32;
+    const rx = (footprintKm / kmsPerDegLon) * (1000 / 360);
+    const ry = (footprintKm / 111.32) * (500 / 180);
+    visCircle.setAttribute('cx', x);
+    visCircle.setAttribute('cy', y);
+    visCircle.setAttribute('rx', rx);
+    visCircle.setAttribute('ry', ry);
+    visCircle.setAttribute('display', 'block');
+  }
+
+  // ─── Approximate region name ──────────────────────────────────────────────────
+  function getRegionName(lat, lon) {
+    if (lat > 60) return 'Arctic';
+    if (lat < -60) return 'Antarctic';
+    if (lon < -30 && lat > 15) return 'N. Atlantic';
+    if (lon < -30 && lat < 15) return 'S. Atlantic';
+    if (lon > 100 && lat > 0) return 'Pacific / Asia';
+    if (lon > 100 && lat < 0) return 'S. Pacific';
+    if (lon > -20 && lon < 60 && lat > 35) return 'Europe';
+    if (lon > -20 && lon < 60 && lat > 0) return 'Africa / Europe';
+    if (lon > -20 && lon < 60 && lat < 0) return 'Africa';
+    if (lon > 60 && lon < 100) return 'Central Asia';
+    if (lon > -90 && lon < -30 && lat > 15) return 'N. America';
+    if (lon > -90 && lon < -30 && lat < 15) return 'S. America';
+    return 'Pacific Ocean';
+  }
+
+  // ─── Day/night determination ──────────────────────────────────────────────────
+  function isDaytime(lat, lon) {
+    const now = new Date();
+    const utcHour = now.getUTCHours() + now.getUTCMinutes() / 60;
+    const localHour = (utcHour + lon / 15 + 24) % 24;
+    return localHour > 6 && localHour < 18;
+  }
+
+  // ─── Update telemetry UI ──────────────────────────────────────────────────────
+  function updateTelemetryUI(data) {
+    const lat = parseFloat(data.latitude.toFixed(4));
+    const lon = parseFloat(data.longitude.toFixed(4));
+    const alt = (data.altitude).toFixed(1);
+    const vel = (data.velocity).toFixed(0);
+
+    statLat.innerHTML = `${lat >= 0 ? '+' : ''}${lat}<span class="stat-unit">°</span>`;
+    statLon.innerHTML = `${lon >= 0 ? '+' : ''}${lon}<span class="stat-unit">°</span>`;
+    statAlt.innerHTML = `${alt}<span class="stat-unit">km</span>`;
+    statVel.innerHTML = `${Number(vel).toLocaleString()}<span class="stat-unit">km/h</span>`;
+
+    detailHemisphere.textContent = `${lat >= 0 ? 'Northern' : 'Southern'} / ${lon >= 0 ? 'Eastern' : 'Western'}`;
+    detailDaynight.textContent = isDaytime(lat, lon) ? '☀️ Daytime' : '🌙 Nighttime';
+
+    const footprintKm = Math.round(2 * Math.PI * EARTH_RADIUS_KM * FOOTPRINT_HALF_ANGLE / 360);
+    detailFootprint.textContent = `~${footprintKm.toLocaleString()} km`;
+
+    mapRegion.textContent = getRegionName(lat, lon);
+
+    const now = new Date();
+    lastUpdated.textContent = `Updated ${now.toLocaleTimeString()}`;
+  }
+
+  // ─── Fetch ISS data ───────────────────────────────────────────────────────────
+  async function fetchISS() {
+    try {
+      const res = await fetch(ISS_API);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      issData = data;
+
+      const lat = data.latitude;
+      const lon = data.longitude;
+
+      updateISSMarker(lat, lon);
+      drawGroundTrack(lat, lon);
+      updateTelemetryUI(data);
+
+      statusDot.className = 'status-dot live';
+      statusText.textContent = 'Live ISS telemetry — tracking active';
+
+      if (userLat !== null && userLon !== null) {
+        recalculatePasses();
+      }
+    } catch (err) {
+      statusDot.className = 'status-dot error';
+      statusText.textContent = `Connection issue: ${err.message}`;
+      showToast('error', '⚠️', 'Connection Issue', `Could not fetch ISS data: ${err.message}`);
+    }
+  }
+
+  // ─── Great-circle distance ────────────────────────────────────────────────────
+  function greatCircleDist(lat1, lon1, lat2, lon2) {
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a));
+  }
+
+  // ─── Predict ISS position at future time ─────────────────────────────────────
+  function predictISSPosition(currentLat, currentLon, minutesAhead) {
+    const periodMin = ORBIT_PERIOD_MIN;
+    const speedDegPerMin = 360 / periodMin; // ground track angular speed
+    const earthRotDegPerMin = 360 / (24 * 60);
+
+    // ISS moves eastward, Earth rotates eastward
+    const totalLonShift = (speedDegPerMin - earthRotDegPerMin) * minutesAhead;
+    const predLon = ((currentLon + totalLonShift + 540) % 360) - 180;
+
+    // Latitude oscillates between +/-inclination (51.6°)
+    const orbitFraction = (minutesAhead / periodMin) % 1;
+    const predLat = ORBIT_INCLINATION * Math.sin(orbitFraction * 2 * Math.PI + Math.asin(currentLat / ORBIT_INCLINATION));
+
+    return { lat: predLat, lon: predLon };
+  }
+
+  // ─── Calculate passes ────────────────────────────────────────────────────────
+  function calculatePasses(userLat, userLon, issLat, issLon) {
+    const visibilityRadius = 2200; // km, approximate ground footprint radius
+    const passes = [];
+    const nowMin = 0;
+    const scanMin = 10 * 24 * 60; // 10 days
+    const stepMin = 1; // 1-minute resolution
+
+    let inPass = false;
+    let passStart = null;
+    let passMaxElev = 0;
+    let passMaxElevTime = null;
+
+    for (let t = nowMin; t <= scanMin; t += stepMin) {
+      const pos = predictISSPosition(issLat, issLon, t);
+      const dist = greatCircleDist(userLat, userLon, pos.lat, pos.lon);
+
+      if (dist <= visibilityRadius) {
+        const elev = Math.asin((visibilityRadius - dist) / visibilityRadius) * (180 / Math.PI);
+        if (!inPass) {
+          inPass = true;
+          passStart = t;
+          passMaxElev = elev;
+          passMaxElevTime = t;
+        } else if (elev > passMaxElev) {
+          passMaxElev = elev;
+          passMaxElevTime = t;
+        }
+      } else if (inPass) {
+        inPass = false;
+        const duration = t - passStart;
+        if (duration >= 1) {
+          passes.push({
+            minutesFromNow: passStart,
+            duration,
+            maxElevation: Math.round(passMaxElev * 10) / 10,
+            at: new Date(Date.now() + passStart * 60000)
+          });
+          if (passes.length >= 10) break;
+        }
+      }
+    }
+    return passes;
+  }
+
+  // ─── Render passes ───────────────────────────────────────────────────────────
+  function renderPasses(passData, lat, lon) {
+    passList.innerHTML = '';
+    if (passData.length === 0) {
+      passList.innerHTML = `<div class="info-box warn">No visible passes found in the next 10 days for your latitude. The ISS orbit only reaches ±51.6° latitude.</div>`;
+      return;
+    }
+
+    passData.forEach((p, i) => {
+      const item = document.createElement('div');
+      item.className = 'pass-item';
+      item.setAttribute('role', 'listitem');
+
+      const elevClass = p.maxElevation >= 40 ? 'elev-high' : p.maxElevation >= 15 ? 'elev-med' : 'elev-low';
+      const timeStr = p.at.toLocaleString(undefined, {
+        month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      const minsStr = p.minutesFromNow < 60
+        ? `${Math.round(p.minutesFromNow)} min`
+        : `${Math.round(p.minutesFromNow / 60 * 10) / 10} hr`;
+
+      item.innerHTML = `
+        <div>
+          <div class="pass-time">${timeStr}</div>
+          <div class="pass-duration" style="margin-top:2px;">In ${minsStr} &bull; ${p.duration} min pass</div>
+        </div>
+        <span class="pass-elevation ${elevClass}">${p.maxElevation}° max</span>
+      `;
+      passList.appendChild(item);
+    });
+
+    passesCard.style.display = 'block';
+    passesLocationBadge.textContent = `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+
+    // Setup countdown to first pass
+    setupCountdown(passData[0]);
+  }
+
+  // ─── Countdown to next pass ───────────────────────────────────────────────────
+  function setupCountdown(firstPass) {
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    // Remove existing countdown if any
+    const existing = document.getElementById('pass-countdown');
+    if (existing) existing.remove();
+
+    const countdown = document.createElement('div');
+    countdown.className = 'pass-countdown';
+    countdown.id = 'pass-countdown';
+    countdown.innerHTML = `
+      <div class="countdown-label">Next pass in</div>
+      <div class="countdown-value" id="cd-value">—</div>
+      <div class="countdown-detail" id="cd-detail">Calculating&hellip;</div>
+    `;
+
+    // Insert before pass list card
+    passSection.insertBefore(countdown, passSection.firstChild);
+
+    function tick() {
+      const now = Date.now();
+      const diff = firstPass.at.getTime() - now;
+      if (diff <= 0) {
+        document.getElementById('cd-value').textContent = 'NOW!';
+        document.getElementById('cd-detail').textContent = 'ISS is passing overhead!';
+        clearInterval(countdownInterval);
+        return;
+      }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      const parts = [];
+      if (h > 0) parts.push(`${h}h`);
+      if (m > 0 || h > 0) parts.push(`${m}m`);
+      parts.push(`${s}s`);
+      document.getElementById('cd-value').textContent = parts.join(' ');
+      document.getElementById('cd-detail').textContent = `Max elevation: ${firstPass.maxElevation}° — Duration: ${firstPass.duration} min`;
+    }
+    tick();
+    countdownInterval = setInterval(tick, 1000);
+  }
+
+  // ─── Recalculate passes ───────────────────────────────────────────────────────
+  function recalculatePasses() {
+    if (!issData || userLat === null || userLon === null) return;
+    const passData = calculatePasses(userLat, userLon, issData.latitude, issData.longitude);
+    passes = passData;
+    renderPasses(passData, userLat, userLon);
+    updatePassBadge(passData);
+  }
+
+  function updatePassBadge(passData) {
+    if (passData.length === 0) {
+      passBadge.textContent = 'None in 10 days';
+    } else {
+      const mins = Math.round(passData[0].minutesFromNow);
+      passBadge.textContent = mins < 60 ? `Next: ${mins} min` : `Next: ${Math.round(mins / 60)}h ${mins % 60}m`;
+    }
+  }
+
+  // ─── Set user location ────────────────────────────────────────────────────────
+  function setUserLocation(lat, lon, label) {
+    userLat = lat;
+    userLon = lon;
+
+    updateUserMarker(lat, lon);
+
+    if (Math.abs(lat) > ORBIT_INCLINATION) {
+      setLocationStatus('warn', `⚠️ Your latitude (${lat.toFixed(2)}°) is beyond the ISS orbit range (±51.6°). The ISS will never pass directly overhead, but may appear low on the horizon.`);
+    } else {
+      setLocationStatus('success', `📍 Location set: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`);
+    }
+
+    if (issData) recalculatePasses();
+    showToast('success', '📍', 'Location Set', `${label} — pass predictions calculated`);
+  }
+
+  function setLocationStatus(type, msg) {
+    locationStatus.innerHTML = `<div class="info-box ${type}">${msg}</div>`;
+  }
+
+  // ─── GPS ──────────────────────────────────────────────────────────────────────
+  btnGPS.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('error', 'Geolocation is not supported by your browser. Please enter coordinates manually.');
+      return;
+    }
+    btnGPS.disabled = true;
+    btnGPS.innerHTML = `<span class="spinner" aria-hidden="true"></span> Locating&hellip;`;
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        btnGPS.disabled = false;
+        btnGPS.innerHTML = `<span>📍</span> Use GPS`;
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lon = parseFloat(pos.coords.longitude.toFixed(6));
+        inpLat.value = lat;
+        inpLon.value = lon;
+        setUserLocation(lat, lon, 'GPS location');
+      },
+      err => {
+        btnGPS.disabled = false;
+        btnGPS.innerHTML = `<span>📍</span> Use GPS`;
+        const msgs = {
+          1: 'Permission denied. Please allow location access or enter coordinates manually.',
+          2: 'Position unavailable. Please enter coordinates manually.',
+          3: 'Location request timed out. Please try again.'
+        };
+        setLocationStatus('error', msgs[err.code] || 'Unknown geolocation error.');
+        showToast('error', '⚠️', 'Location Error', msgs[err.code] || 'Geolocation failed');
+      },
+      { timeout: 10000, maximumAge: 60000 }
+    );
+  });
+
+  // ─── Manual coords ────────────────────────────────────────────────────────────
+  btnManual.addEventListener('click', () => {
+    const lat = parseFloat(inpLat.value);
+    const lon = parseFloat(inpLon.value);
+    if (isNaN(lat) || isNaN(lon)) {
+      setLocationStatus('error', 'Please enter valid latitude and longitude values.');
+      return;
+    }
+    if (lat < -90 || lat > 90) {
+      setLocationStatus('error', 'Latitude must be between -90 and 90.');
+      return;
+    }
+    if (lon < -180 || lon > 180) {
+      setLocationStatus('error', 'Longitude must be between -180 and 180.');
+      return;
+    }
+    setUserLocation(lat, lon, `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`);
+  });
+
+  // Allow Enter key on inputs
+  [inpLat, inpLon].forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') btnManual.click();
+    });
+  });
+
+  // ─── Toast ────────────────────────────────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(type, icon, title, msg) {
+    toastIcon.textContent = icon;
+    toastTitle.textContent = title;
+    toastMsg.textContent = msg;
+    toast.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 5000);
+  }
+  toastClose.addEventListener('click', () => {
+    toast.classList.remove('show');
+    if (toastTimer) clearTimeout(toastTimer);
+  });
+
+  // ─── Init ─────────────────────────────────────────────────────────────────────
+  function init() {
+    createStars();
+    fetchISS();
+    fetchInterval = setInterval(fetchISS, REFRESH_MS);
+  }
+
+  init();
+
+})();
+</script>
+</body>
+</html>

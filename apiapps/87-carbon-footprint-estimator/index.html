@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carbon Footprint Estimator — Logistics CO2e Calculator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c10;
+      --surface: #0e1318;
+      --surface2: #141a21;
+      --border: rgba(255,255,255,0.08);
+      --accent: #00d4aa;
+      --accent2: #f59e0b;
+      --text: #e6edf3;
+      --muted: #6b7280;
+      --green: #26a69a;
+      --yellow: #f59e0b;
+      --radius: 6px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .badge {
+      font-size: 11px;
+      background: rgba(0, 212, 170, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(0, 212, 170, 0.3);
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Main Layout ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 3rem 1rem 2.5rem;
+      animation: fadeInUp 0.5s ease both;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--text) 40%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin: 0 auto 2rem;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+      margin-bottom: 2rem;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 8px 20px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--text); background: var(--surface2); }
+    .tab-btn.active { background: var(--accent); color: #fff; }
+
+    /* ── Section Panels ── */
+    .panel {
+      display: none;
+      animation: fadeInUp 0.3s ease both;
+    }
+    .panel.active { display: block; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    /* ── Form ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 10px 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+    }
+
+    input::placeholder { color: var(--muted); opacity: 0.6; }
+
+    select option { background: var(--surface2); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0);
+      transition: background 0.2s;
+    }
+
+    .btn:hover::after { background: rgba(255, 255, 255, 0.06); }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { box-shadow: 0 4px 16px rgba(0, 212, 170, 0.4); }
+
+    .btn-success { background: var(--green); color: #0f1117; }
+    .btn-success:hover { box-shadow: 0 4px 16px rgba(67, 217, 173, 0.4); }
+
+    .btn-danger { background: var(--accent2); color: #fff; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn:disabled:active { transform: none; }
+
+    /* ── Mode selector ── */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .mode-card {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 0.75rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mode-card:hover {
+      border-color: var(--accent);
+      background: rgba(0, 212, 170, 0.08);
+    }
+
+    .mode-card.selected {
+      border-color: var(--accent);
+      background: rgba(0, 212, 170, 0.15);
+    }
+
+    .mode-card .mode-icon { font-size: 28px; }
+    .mode-card .mode-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .mode-card.selected .mode-label { color: var(--accent); }
+
+    /* ── Stat cards ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat-value {
+      font-size: 1.9rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .stat-sub { font-size: 12px; color: var(--muted); }
+
+    .color-accent { color: var(--accent); }
+    .color-green { color: var(--green); }
+    .color-yellow { color: var(--yellow); }
+    .color-accent2 { color: var(--accent2); }
+
+    /* ── Donut Chart ── */
+    .chart-container {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .donut-wrap {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      flex-shrink: 0;
+    }
+
+    .donut-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .donut-center-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text);
+      display: block;
+    }
+
+    .donut-center-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .chart-legend {
+      flex: 1;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-name {
+      font-size: 13px;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .legend-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .legend-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      margin-top: 3px;
+    }
+
+    .legend-bar {
+      height: 4px;
+      border-radius: 2px;
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── Shipment list ── */
+    .shipment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .shipment-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: border-color 0.2s;
+      animation: slideIn 0.3s ease both;
+    }
+
+    .shipment-item:hover { border-color: var(--accent); }
+
+    .shipment-mode-icon {
+      font-size: 22px;
+      width: 40px;
+      height: 40px;
+      background: var(--surface);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .shipment-info { flex: 1; min-width: 0; }
+
+    .shipment-route {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .shipment-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .shipment-co2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green);
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .shipment-co2 span { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 7px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-icon:hover { color: var(--accent2); border-color: var(--accent2); }
+
+    /* ── Tips ── */
+    .tips-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+
+    .tip-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .tip-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      border-color: var(--accent);
+    }
+
+    .tip-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 0.6rem;
+    }
+
+    .tip-icon {
+      font-size: 20px;
+      width: 36px;
+      height: 36px;
+      background: var(--surface);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tip-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .tip-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .tip-saving {
+      margin-top: 0.75rem;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ── History / Trend ── */
+    .trend-chart-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+    }
+
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 1rem; opacity: 0.5; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── Toast ── */
+    #toast-wrap {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 14px;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastIn 0.35s cubic-bezier(0.4,0,0.2,1) both;
+      pointer-events: all;
+      max-width: 320px;
+    }
+
+    .toast.success { border-color: var(--green); }
+    .toast.error { border-color: var(--accent2); }
+    .toast.fadeout { animation: toastOut 0.35s ease forwards; }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      background: var(--surface2);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── Comparison bar ── */
+    .comparison-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 0.75rem;
+    }
+
+    .comparison-label {
+      font-size: 13px;
+      color: var(--muted);
+      width: 100px;
+      flex-shrink: 0;
+    }
+
+    .comparison-bar-wrap {
+      flex: 1;
+      height: 10px;
+      background: var(--surface2);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .comparison-bar {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .comparison-val {
+      font-size: 13px;
+      font-weight: 700;
+      width: 80px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── CSV area ── */
+    .csv-area {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-12px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to   { opacity: 0; transform: translateY(8px) scale(0.96); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .pulse { animation: pulse 1.5s ease-in-out infinite; }
+
+    /* ── Result panel ── */
+    .result-highlight {
+      background: linear-gradient(135deg, rgba(0,212,170,0.1), rgba(16,212,142,0.05));
+      border: 1px solid rgba(0,212,170,0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      animation: fadeInUp 0.4s ease both;
+    }
+
+    .result-value {
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--green);
+      display: block;
+      line-height: 1;
+    }
+
+    .result-unit {
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .result-label {
+      margin-top: 0.5rem;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* ── Factor table ── */
+    .factor-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .factor-table th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .factor-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(46,51,80,0.5);
+      color: var(--text);
+    }
+
+    .factor-table tr:last-child td { border-bottom: none; }
+    .factor-table tr:hover td { background: rgba(0,212,170,0.05); }
+
+    .text-right { text-align: right; }
+    .text-green { color: var(--green); }
+    .text-muted { color: var(--muted); }
+    .text-yellow { color: var(--yellow); }
+    .text-red { color: var(--accent2); }
+
+    /* ── Monthly report ── */
+    .report-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      main { padding: 1.5rem 1rem 3rem; }
+      header { padding: 0 1rem; }
+      .tabs { flex-wrap: wrap; }
+      .tab-btn { padding: 7px 14px; font-size: 13px; }
+      .chart-container { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* ── Finance design system v2 ── */
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(0,212,170,.065) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,.9) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    h1, h2 {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    [class*="price"],[class*="value"],[class*="amount"],[class*="rate"],
+    [class*="stat"],[class*="metric"],[class*="kpi"],td,code,.number {
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+      font-variant-numeric: tabular-nums slashed-zero;
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+    .card,[class*="card"],[class*="metric-card"],[class*="stat-card"] {
+      border-left: 3px solid var(--accent) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    table { border-collapse: collapse; width: 100%; }
+    thead th {
+      font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: right; white-space: nowrap; position: sticky; top: 0; background: var(--bg);
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background 120ms; }
+    tbody tr:hover { background: rgba(255,255,255,.04); }
+    td { padding: 6px 12px; text-align: right; vertical-align: middle; white-space: nowrap; font-size: 13px; }
+    td:first-child { text-align: left; color: var(--text); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.5);} 50%{box-shadow:0 0 0 6px rgba(0,212,170,0);} }
+    .card,[class*="card"],[class*="result"],[class*="item"] { animation: slideUp .35s ease both; }
+    .card:nth-child(2),[class*="item"]:nth-child(2){animation-delay:.05s}
+    .card:nth-child(3),[class*="item"]:nth-child(3){animation-delay:.1s}
+    .card:nth-child(4){animation-delay:.15s}
+    tbody tr { animation: slideUp .2s ease both; }
+    tbody tr:nth-child(2){animation-delay:.03s} tbody tr:nth-child(3){animation-delay:.06s}
+    tbody tr:nth-child(4){animation-delay:.09s}
+    button,[class*="btn"] { transition: all .15s; }
+    button:hover,[class*="btn"]:hover {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0,212,170,.15) !important;
+    }
+    input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 2px rgba(0,212,170,.2); }
+    [class*="live"],[class*="dot"],[class*="indicator"] { animation: livePulse 2s ease-in-out infinite; }
+    [class*="positive"],[class*="gain"],[class*="up"] { color:var(--green)!important; }
+    [class*="negative"],[class*="loss"],[class*="down"] { color:#ef5350!important; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🌿</div>
+      <span>CargoCarbon</span>
+      <span class="badge">OFFLINE</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="header-total" style="font-size:13px;color:var(--muted);"></span>
+      <a href="app.html" class="btn btn-primary" style="padding:7px 14px;font-size:13px;text-decoration:none;">✨ New App</a>
+      <button class="btn btn-ghost" onclick="App.exportCSV()" style="padding:7px 14px;font-size:13px;">⬇ Export CSV</button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main>
+    <div class="hero">
+      <h1>Logistics CO₂e Estimator</h1>
+      <p>Calculate per-shipment carbon emissions instantly — no API keys, no data sent anywhere. Powered by IPCC &amp; EPA emission factors.</p>
+      <a href="app.html" class="btn btn-primary" style="text-decoration:none;margin-top:0.5rem;">🌿 Open Updated Estimator</a>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true"  onclick="App.switchTab('calc',this)">➕ New Shipment</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" onclick="App.switchTab('shipments',this)">📦 Shipments</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" onclick="App.switchTab('report',this)">📊 Report</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" onclick="App.switchTab('factors',this)">📋 Factors</button>
+    </div>
+
+    <!-- Panel: Calculator -->
+    <div id="panel-calc" class="panel active">
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-icon" style="background:rgba(108,99,255,0.15);">🚚</div>
+          Transport Mode
+        </div>
+        <div class="mode-grid" id="mode-grid" role="group" aria-label="Transport mode">
+          <!-- injected by JS -->
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-icon" style="background:rgba(67,217,173,0.15);">📋</div>
+          Shipment Details
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="origin">Origin</label>
+            <input type="text" id="origin" placeholder="e.g. Amsterdam" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="destination">Destination</label>
+            <input type="text" id="destination" placeholder="e.g. Berlin" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="distance">Distance (km)</label>
+            <input type="number" id="distance" min="1" max="50000" placeholder="e.g. 650" />
+          </div>
+          <div class="form-group">
+            <label for="weight">Cargo Weight (tonnes)</label>
+            <input type="number" id="weight" min="0.001" max="100000" step="0.001" placeholder="e.g. 5.5" />
+          </div>
+          <div class="form-group" id="fuel-group" style="display:none;">
+            <label for="fuel-type">Fuel Type</label>
+            <select id="fuel-type">
+              <option value="diesel">Diesel</option>
+              <option value="petrol">Petrol / Gasoline</option>
+              <option value="cng">CNG (Compressed Natural Gas)</option>
+              <option value="electric">Electric (EU grid avg)</option>
+              <option value="hvo">HVO Biofuel</option>
+            </select>
+          </div>
+          <div class="form-group" id="vessel-group" style="display:none;">
+            <label for="vessel-type">Vessel / Class</label>
+            <select id="vessel-type">
+              <option value="general">General Cargo</option>
+              <option value="bulk">Bulk Carrier</option>
+              <option value="container">Container Ship</option>
+              <option value="tanker">Tanker</option>
+              <option value="reefer">Refrigerated (Reefer)</option>
+            </select>
+          </div>
+          <div class="form-group" id="flight-group" style="display:none;">
+            <label for="flight-class">Cargo Class</label>
+            <select id="flight-class">
+              <option value="belly">Belly Freight</option>
+              <option value="freighter">Dedicated Freighter</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ref-id">Reference / PO # (optional)</label>
+            <input type="text" id="ref-id" placeholder="e.g. SHP-2024-001" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" id="calc-btn" onclick="App.calculate()">⚡ Calculate Emissions</button>
+          <button class="btn btn-ghost" onclick="App.clearForm()">✕ Clear</button>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div id="result-area" style="display:none;"></div>
+    </div>
+
+    <!-- Panel: Shipments -->
+    <div id="panel-shipments" class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <h2 style="font-size:1.2rem;font-weight:700;">All Shipments</h2>
+          <p style="font-size:13px;color:var(--muted);margin-top:2px;">Stored locally in your browser</p>
+        </div>
+        <div style="display:flex;gap:0.75rem;">
+          <button class="btn btn-ghost" onclick="App.importCSVPrompt()" style="font-size:13px;padding:8px 14px;">⬆ Bulk Import</button>
+          <button class="btn btn-danger" onclick="App.clearAll()" style="font-size:13px;padding:8px 14px;">🗑 Clear All</button>
+        </div>
+      </div>
+      <div id="shipment-list-wrap"></div>
+
+      <!-- Bulk import area (hidden by default) -->
+      <div id="import-area" style="display:none;" class="card" style="margin-top:1rem;">
+        <div class="card-title">⬆ Bulk CSV Import</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:0.75rem;">Paste CSV rows: <code style="color:var(--green);">origin,destination,mode,distance_km,weight_tonnes,ref</code></p>
+        <textarea id="csv-input" class="csv-area" placeholder="Amsterdam,Berlin,truck,650,5.5,SHP-001&#10;Rotterdam,Hamburg,sea,180,120,SHP-002"></textarea>
+        <div style="margin-top:0.75rem;display:flex;gap:0.75rem;">
+          <button class="btn btn-success" onclick="App.importCSV()">Import</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('import-area').style.display='none'">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Report -->
+    <div id="panel-report" class="panel">
+      <div class="report-actions">
+        <button class="btn btn-primary" onclick="App.renderReport()">🔄 Refresh</button>
+        <button class="btn btn-ghost" onclick="App.exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-ghost" onclick="App.printReport()">🖨 Print Report</button>
+      </div>
+      <div id="report-content"></div>
+    </div>
+
+    <!-- Panel: Factors -->
+    <div id="panel-factors" class="panel">
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-icon" style="background:rgba(247,201,72,0.15);">📋</div>
+          Emission Factors Reference
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem;">
+          Emission factors (kg CO₂e per tonne-km) sourced from IPCC 2022, GLEC Framework, EPA 2023, IMO 4th GHG Study. Values include upstream fuel production (WTW = Well-to-Wheel).
+        </p>
+
+        <h3 style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:0.75rem;">Road Transport (per tonne-km)</h3>
+        <table class="factor-table" style="margin-bottom:1.5rem;">
+          <thead>
+            <tr>
+              <th>Mode / Fuel</th>
+              <th class="text-right">kg CO₂e / t-km</th>
+              <th class="text-right">Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>HGV Truck — Diesel</td><td class="text-right text-yellow">0.0955</td><td class="text-right text-muted">GLEC 2022</td></tr>
+            <tr><td>HGV Truck — Petrol</td><td class="text-right text-yellow">0.1050</td><td class="text-right text-muted">EPA 2023</td></tr>
+            <tr><td>HGV Truck — CNG</td><td class="text-right text-green">0.0712</td><td class="text-right text-muted">GLEC 2022</td></tr>
+            <tr><td>HGV Truck — Electric (EU grid)</td><td class="text-right text-green">0.0320</td><td class="text-right text-muted">IEA 2023</td></tr>
+            <tr><td>HGV Truck — HVO Biofuel</td><td class="text-right text-green">0.0143</td><td class="text-right text-muted">GLEC 2022</td></tr>
+            <tr><td>Van / LCV — Diesel</td><td class="text-right text-yellow">0.2160</td><td class="text-right text-muted">DEFRA 2023</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:0.75rem;">Air Freight (per tonne-km)</h3>
+        <table class="factor-table" style="margin-bottom:1.5rem;">
+          <thead>
+            <tr><th>Type</th><th class="text-right">kg CO₂e / t-km</th><th class="text-right">Source</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Belly Freight (pax aircraft)</td><td class="text-right text-red">0.9200</td><td class="text-right text-muted">GLEC 2022</td></tr>
+            <tr><td>Dedicated Freighter</td><td class="text-right text-red">0.5500</td><td class="text-right text-muted">GLEC 2022</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:0.75rem;">Sea Freight (per tonne-km)</h3>
+        <table class="factor-table" style="margin-bottom:1.5rem;">
+          <thead>
+            <tr><th>Vessel Type</th><th class="text-right">kg CO₂e / t-km</th><th class="text-right">Source</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>General Cargo</td><td class="text-right text-green">0.0220</td><td class="text-right text-muted">IMO GHG 2023</td></tr>
+            <tr><td>Bulk Carrier</td><td class="text-right text-green">0.0079</td><td class="text-right text-muted">IMO GHG 2023</td></tr>
+            <tr><td>Container Ship</td><td class="text-right text-green">0.0160</td><td class="text-right text-muted">IMO GHG 2023</td></tr>
+            <tr><td>Tanker</td><td class="text-right text-green">0.0097</td><td class="text-right text-muted">IMO GHG 2023</td></tr>
+            <tr><td>Refrigerated (Reefer)</td><td class="text-right text-yellow">0.0265</td><td class="text-right text-muted">IMO GHG 2023</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:0.75rem;">Rail Freight (per tonne-km)</h3>
+        <table class="factor-table">
+          <thead>
+            <tr><th>Type</th><th class="text-right">kg CO₂e / t-km</th><th class="text-right">Source</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Diesel Train</td><td class="text-right text-yellow">0.0280</td><td class="text-right text-muted">GLEC 2022</td></tr>
+            <tr><td>Electric Train (EU mix)</td><td class="text-right text-green">0.0176</td><td class="text-right text-muted">GLEC 2022</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🌍 Methodology</div>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7;">
+          Emissions = Distance (km) × Weight (tonnes) × Emission Factor (kg CO₂e / t-km)<br><br>
+          All factors use <strong style="color:var(--text);">Well-to-Wheel (WTW)</strong> boundaries, including upstream fuel extraction, refining, and transport. Factors for sea freight assume average vessel utilisation of 70%. Air factors include Radiative Forcing Index (RFI = 1.9) multiplier for high-altitude climate effects. Values are representative averages — actual emissions may vary ±20% by vehicle specification, load factor, route, and driving conditions.
+        </p>
+      </div>
+    </div>
+
+    <!-- Bottom CTA -->
+    <div style="text-align:center;padding:3rem 1rem 4rem;">
+      <p style="color:var(--muted);font-size:14px;margin-bottom:1rem;">Looking for personal travel estimates and the Garden-theme experience?</p>
+      <a href="app.html" class="btn btn-success" style="text-decoration:none;">🌿 Try the Updated Estimator</a>
+    </div>
+  </main>
+
+  <!-- Toast container -->
+  <div id="toast-wrap" aria-live="polite"></div>
+
+  <script>
+    'use strict';
+
+    /* ─── Emission Factor Database ─── */
+    const EF = {
+      truck: {
+        diesel:   0.0955,
+        petrol:   0.1050,
+        cng:      0.0712,
+        electric: 0.0320,
+        hvo:      0.0143
+      },
+      air: {
+        belly:     0.9200,
+        freighter: 0.5500
+      },
+      sea: {
+        general:   0.0220,
+        bulk:      0.0079,
+        container: 0.0160,
+        tanker:    0.0097,
+        reefer:    0.0265
+      },
+      rail: {
+        diesel:   0.0280,
+        electric: 0.0176
+      },
+      van: {
+        diesel: 0.2160
+      }
+    };
+
+    /* ─── Mode Config ─── */
+    const MODES = [
+      { id: 'truck', label: 'HGV Truck',   icon: '🚛', cat: 'truck' },
+      { id: 'van',   label: 'Van / LCV',   icon: '🚐', cat: 'van'   },
+      { id: 'air',   label: 'Air Freight', icon: '✈️',  cat: 'air'   },
+      { id: 'sea',   label: 'Sea Freight', icon: '🚢', cat: 'sea'   },
+      { id: 'rail',  label: 'Rail',        icon: '🚆', cat: 'rail'  }
+    ];
+
+    /* ─── National average CO2e per tonne-km (for comparison) ─── */
+    const NATIONAL_AVG = {
+      truck: 0.120,
+      air:   0.750,
+      sea:   0.018,
+      rail:  0.022,
+      van:   0.250
+    };
+
+    /* ─── Color palette for charts ─── */
+    const COLORS = ['#6c63ff','#43d9ad','#f7c948','#ff6584','#38bdf8','#a78bfa','#fb923c'];
+
+    /* ─── Storage ─── */
+    const STORE_KEY = 'cargoCarbonShipments_v2';
+
+    function loadShipments() {
+      try {
+        return JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+      } catch(e) {
+        return [];
+      }
+    }
+
+    function saveShipments(list) {
+      localStorage.setItem(STORE_KEY, JSON.stringify(list));
+    }
+
+    /* ─── Toast ─── */
+    function toast(msg, type = 'info') {
+      const wrap = document.getElementById('toast-wrap');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+      el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+      wrap.appendChild(el);
+      setTimeout(() => {
+        el.classList.add('fadeout');
+        setTimeout(() => el.remove(), 400);
+      }, 3000);
+    }
+
+    /* ─── Format helpers ─── */
+    function fmtCO2(kg) {
+      if (kg >= 1000) return `${(kg/1000).toFixed(2)} t`;
+      return `${kg.toFixed(1)} kg`;
+    }
+
+    function fmtNum(n, dec = 1) {
+      return n.toFixed(dec);
+    }
+
+    function fmtDate(ts) {
+      return new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    /* ─── Main App ─── */
+    const App = (() => {
+      let selectedMode = 'truck';
+      let shipments = loadShipments();
+
+      function init() {
+        renderModeGrid();
+        renderShipmentList();
+        renderReport();
+        updateHeaderTotal();
+      }
+
+      /* ── Mode Grid ── */
+      function renderModeGrid() {
+        const grid = document.getElementById('mode-grid');
+        grid.innerHTML = MODES.map(m => `
+          <button
+            class="mode-card ${m.id === selectedMode ? 'selected' : ''}"
+            onclick="App.selectMode('${m.id}')"
+            aria-pressed="${m.id === selectedMode}"
+            aria-label="${m.label}"
+            title="${m.label}"
+          >
+            <span class="mode-icon" aria-hidden="true">${m.icon}</span>
+            <span class="mode-label">${m.label}</span>
+          </button>
+        `).join('');
+      }
+
+      function selectMode(id) {
+        selectedMode = id;
+        renderModeGrid();
+        toggleConditionalFields();
+        document.getElementById('result-area').style.display = 'none';
+      }
+
+      function toggleConditionalFields() {
+        document.getElementById('fuel-group').style.display   = (selectedMode === 'truck') ? '' : 'none';
+        document.getElementById('vessel-group').style.display = (selectedMode === 'sea')   ? '' : 'none';
+        document.getElementById('flight-group').style.display = (selectedMode === 'air')   ? '' : 'none';
+      }
+
+      /* ── Calculate ── */
+      function calculate() {
+        const origin  = document.getElementById('origin').value.trim();
+        const dest    = document.getElementById('destination').value.trim();
+        const distRaw = parseFloat(document.getElementById('distance').value);
+        const wgtRaw  = parseFloat(document.getElementById('weight').value);
+        const ref     = document.getElementById('ref-id').value.trim();
+
+        if (!origin)       { toast('Please enter an origin.', 'error'); return; }
+        if (!dest)         { toast('Please enter a destination.', 'error'); return; }
+        if (!distRaw || distRaw <= 0) { toast('Please enter a valid distance (km).', 'error'); return; }
+        if (!wgtRaw  || wgtRaw  <= 0) { toast('Please enter a valid cargo weight (tonnes).', 'error'); return; }
+
+        /* Get emission factor */
+        let ef;
+        let subType;
+
+        if (selectedMode === 'truck') {
+          subType = document.getElementById('fuel-type').value;
+          ef = EF.truck[subType];
+        } else if (selectedMode === 'van') {
+          subType = 'diesel';
+          ef = EF.van.diesel;
+        } else if (selectedMode === 'air') {
+          subType = document.getElementById('flight-class').value;
+          ef = EF.air[subType];
+        } else if (selectedMode === 'sea') {
+          subType = document.getElementById('vessel-type').value;
+          ef = EF.sea[subType];
+        } else if (selectedMode === 'rail') {
+          subType = 'electric';
+          ef = EF.rail.electric;
+        }
+
+        const kgCO2e = distRaw * wgtRaw * ef;
+        const avgEf  = NATIONAL_AVG[selectedMode] || ef;
+        const avgKg  = distRaw * wgtRaw * avgEf;
+        const saving = avgKg - kgCO2e;
+        const pct    = Math.min(100, (kgCO2e / (Math.max(kgCO2e, avgKg))) * 100);
+        const modeInfo = MODES.find(m => m.id === selectedMode);
+
+        /* Render result */
+        const ra = document.getElementById('result-area');
+        ra.style.display = '';
+        ra.innerHTML = `
+          <div class="result-highlight">
+            <span class="result-value">${fmtCO2(kgCO2e)}</span>
+            <span class="result-unit"> CO₂e</span>
+            <p class="result-label">${modeInfo.icon} ${modeInfo.label} · ${distRaw.toLocaleString()} km · ${wgtRaw} tonnes</p>
+            ${ref ? `<p style="font-size:12px;color:var(--muted);margin-top:4px;">Ref: ${ref}</p>` : ''}
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="stat-label">CO₂e Total</span>
+              <span class="stat-value color-green">${fmtCO2(kgCO2e)}</span>
+              <span class="stat-sub">This shipment</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Per Tonne</span>
+              <span class="stat-value color-accent">${fmtCO2(kgCO2e / wgtRaw)}</span>
+              <span class="stat-sub">CO₂e / tonne</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Intensity</span>
+              <span class="stat-value color-yellow">${(ef * 1000).toFixed(1)}</span>
+              <span class="stat-sub">g CO₂e / t-km</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">vs Avg ${saving >= 0 ? '(saved)' : '(excess)'}</span>
+              <span class="stat-value ${saving >= 0 ? 'color-green' : 'color-accent2'}">${saving >= 0 ? '-' : '+'}${fmtCO2(Math.abs(saving))}</span>
+              <span class="stat-sub">vs modal average</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">📊 Efficiency vs Modal Average</div>
+            <div class="comparison-row">
+              <span class="comparison-label">This shipment</span>
+              <div class="comparison-bar-wrap">
+                <div class="comparison-bar" style="width:0%;background:var(--accent);" id="bar-this"></div>
+              </div>
+              <span class="comparison-val color-accent">${fmtCO2(kgCO2e)}</span>
+            </div>
+            <div class="comparison-row">
+              <span class="comparison-label">Modal avg</span>
+              <div class="comparison-bar-wrap">
+                <div class="comparison-bar" style="width:0%;background:var(--muted);" id="bar-avg"></div>
+              </div>
+              <span class="comparison-val text-muted">${fmtCO2(avgKg)}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">💡 Reduction Tips</div>
+            ${renderTips(selectedMode, subType)}
+          </div>
+
+          <div style="display:flex;gap:0.75rem;margin-top:0.25rem;flex-wrap:wrap;">
+            <button class="btn btn-success" onclick="App.saveShipment(${JSON.stringify(JSON.stringify({
+              id: Date.now(),
+              origin, destination: dest, mode: selectedMode,
+              subType, distance: distRaw, weight: wgtRaw,
+              kgCO2e: Math.round(kgCO2e * 10) / 10,
+              ef, ref, ts: Date.now()
+            }))})">💾 Save Shipment</button>
+            <button class="btn btn-ghost" onclick="App.clearForm()">✕ New Shipment</button>
+          </div>
+        `;
+
+        /* Animate bars */
+        const maxVal = Math.max(kgCO2e, avgKg);
+        setTimeout(() => {
+          const bThis = document.getElementById('bar-this');
+          const bAvg  = document.getElementById('bar-avg');
+          if (bThis) bThis.style.width = `${(kgCO2e / maxVal * 100).toFixed(1)}%`;
+          if (bAvg)  bAvg.style.width  = `${(avgKg  / maxVal * 100).toFixed(1)}%`;
+        }, 80);
+
+        ra.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      /* ── Tips ── */
+      function renderTips(mode, subType) {
+        const tipMap = {
+          truck: [
+            { icon: '⚡', title: 'Switch to Electric', desc: 'Electric HGVs reduce emissions by ~67% vs diesel — ideal for urban last-mile and short haul.', saving: 'Save up to 67%' },
+            { icon: '🌱', title: 'Use HVO Biofuel', desc: 'HVO (Hydrotreated Vegetable Oil) is a drop-in fuel cutting CO₂e by ~85% with no engine changes.', saving: 'Save up to 85%' },
+            { icon: '📦', title: 'Optimise Load Factor', desc: 'Every 10% increase in load factor reduces per-tonne emissions proportionally. Consolidate shipments.', saving: '~10% per 10% load increase' },
+            { icon: '🛣️', title: 'Route Optimisation', desc: 'AI-assisted route planning reduces unnecessary mileage and idle time, cutting fuel use by 10-15%.', saving: '10-15% fuel reduction' }
+          ],
+          van: [
+            { icon: '⚡', title: 'Electric Vans', desc: 'Switching to a BEV van can cut CO₂e by up to 70% depending on grid mix.', saving: 'Save up to 70%' },
+            { icon: '🚴', title: 'Cargo Bikes for Short Haul', desc: 'For city deliveries under 5 km, cargo bikes produce near-zero emissions and avoid congestion.', saving: 'Near-zero emissions' },
+            { icon: '📍', title: 'Micro-Consolidation Hubs', desc: 'Use urban consolidation centres to group small deliveries and reduce total van trips.', saving: '20-30% fewer trips' }
+          ],
+          air: [
+            { icon: '🚢', title: 'Modal Shift to Sea', desc: 'Air freight emits 20-50x more than sea freight. Switching saves massive CO₂e if lead time allows.', saving: 'Save 95-98%' },
+            { icon: '🚆', title: 'Rail as Alternative', desc: 'Rail freight is 10-30x cleaner than air. Europe has extensive cargo rail networks.', saving: 'Save 90-97%' },
+            { icon: '📅', title: 'Plan Ahead', desc: 'Longer lead times reduce the need for air freight. Build 4-6 week buffer into supply chains.', saving: 'Eliminate air freight' },
+            { icon: '✈️', title: 'Freighter over Belly', desc: 'If air is unavoidable, dedicated freighters are ~40% more efficient than belly freight.', saving: 'Save ~40%' }
+          ],
+          sea: [
+            { icon: '🌊', title: 'Slow Steaming', desc: 'Reducing vessel speed by 10% cuts fuel consumption by ~27% (cube law). Request slow steaming.', saving: 'Save ~27% fuel' },
+            { icon: '📦', title: 'Full Container Load', desc: 'FCL is typically more efficient than LCL. Consolidate cargo to fill containers.', saving: '15-25% efficiency gain' },
+            { icon: '⛽', title: 'LNG / Green Methanol', desc: 'New vessels using LNG cut CO₂e by 20-25%. Green methanol offers near-zero well-to-wake.', saving: 'Save 20-90%' }
+          ],
+          rail: [
+            { icon: '⚡', title: 'Electric Rail Routes', desc: `You're already using one of the lowest-emission freight modes. Prioritise electrified corridors.`, saving: 'Already low-carbon' },
+            { icon: '🔗', title: 'Intermodal Integration', desc: 'Combine rail trunk with electric first/last mile to achieve the lowest total supply chain emissions.', saving: 'Optimise total chain' }
+          ]
+        };
+        const tips = tipMap[mode] || tipMap.truck;
+        return `<div class="tips-grid">${tips.map(t => `
+          <div class="tip-card">
+            <div class="tip-header">
+              <div class="tip-icon">${t.icon}</div>
+              <span class="tip-title">${t.title}</span>
+            </div>
+            <p class="tip-desc">${t.desc}</p>
+            <div class="tip-saving">✓ ${t.saving}</div>
+          </div>
+        `).join('')}</div>`;
+      }
+
+      /* ── Save shipment ── */
+      function saveShipment(jsonStr) {
+        const shipment = JSON.parse(jsonStr);
+        shipments.unshift(shipment);
+        saveShipments(shipments);
+        updateHeaderTotal();
+        toast('Shipment saved successfully!', 'success');
+        clearForm();
+      }
+
+      /* ── Clear form ── */
+      function clearForm() {
+        document.getElementById('origin').value = '';
+        document.getElementById('destination').value = '';
+        document.getElementById('distance').value = '';
+        document.getElementById('weight').value = '';
+        document.getElementById('ref-id').value = '';
+        document.getElementById('result-area').style.display = 'none';
+        document.getElementById('result-area').innerHTML = '';
+      }
+
+      /* ── Shipment List ── */
+      function renderShipmentList() {
+        const wrap = document.getElementById('shipment-list-wrap');
+        if (!wrap) return;
+
+        if (!shipments.length) {
+          wrap.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📦</div>
+              <p>No shipments yet. Calculate and save your first one!</p>
+            </div>`;
+          return;
+        }
+
+        /* Summary stats */
+        const totalKg = shipments.reduce((s, sh) => s + sh.kgCO2e, 0);
+        const totalDist = shipments.reduce((s, sh) => s + sh.distance, 0);
+        const byMode = {};
+        shipments.forEach(sh => {
+          byMode[sh.mode] = (byMode[sh.mode] || 0) + sh.kgCO2e;
+        });
+        const topMode = Object.entries(byMode).sort((a,b) => b[1]-a[1])[0];
+
+        wrap.innerHTML = `
+          <div class="stats-row" style="margin-bottom:1.5rem;">
+            <div class="stat-card">
+              <span class="stat-label">Total CO₂e</span>
+              <span class="stat-value color-green">${fmtCO2(totalKg)}</span>
+              <span class="stat-sub">${shipments.length} shipments</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Total Distance</span>
+              <span class="stat-value color-accent">${(totalDist/1000).toFixed(1)}k</span>
+              <span class="stat-sub">km covered</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Avg per Shipment</span>
+              <span class="stat-value color-yellow">${fmtCO2(totalKg / shipments.length)}</span>
+              <span class="stat-sub">CO₂e / shipment</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Top Emitting Mode</span>
+              <span class="stat-value color-accent2" style="font-size:1.3rem;">${topMode ? (MODES.find(m=>m.id===topMode[0])?.icon || '?') : '—'} ${topMode ? topMode[0] : '—'}</span>
+              <span class="stat-sub">${topMode ? fmtCO2(topMode[1]) : '—'}</span>
+            </div>
+          </div>
+
+          <div class="shipment-list">
+            ${shipments.map((sh, i) => {
+              const modeInfo = MODES.find(m => m.id === sh.mode) || { icon: '📦', label: sh.mode };
+              return `
+                <div class="shipment-item">
+                  <div class="shipment-mode-icon" title="${modeInfo.label}">${modeInfo.icon}</div>
+                  <div class="shipment-info">
+                    <div class="shipment-route">${sh.origin} → ${sh.destination}</div>
+                    <div class="shipment-meta">${fmtDate(sh.ts)} · ${sh.distance.toLocaleString()} km · ${sh.weight} t · ${sh.subType || sh.mode}${sh.ref ? ` · ${sh.ref}` : ''}</div>
+                  </div>
+                  <div class="shipment-co2">
+                    ${fmtCO2(sh.kgCO2e)}
+                    <span>CO₂e</span>
+                  </div>
+                  <button class="btn-icon" onclick="App.deleteShipment(${i})" title="Delete shipment" aria-label="Delete shipment">✕</button>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      function deleteShipment(i) {
+        shipments.splice(i, 1);
+        saveShipments(shipments);
+        renderShipmentList();
+        updateHeaderTotal();
+        toast('Shipment removed.', 'info');
+      }
+
+      function clearAll() {
+        if (!shipments.length) { toast('No shipments to clear.', 'info'); return; }
+        if (!confirm(`Delete all ${shipments.length} shipments? This cannot be undone.`)) return;
+        shipments = [];
+        saveShipments(shipments);
+        renderShipmentList();
+        updateHeaderTotal();
+        toast('All shipments cleared.', 'info');
+      }
+
+      /* ── Header total ── */
+      function updateHeaderTotal() {
+        const el = document.getElementById('header-total');
+        if (!el) return;
+        const total = shipments.reduce((s, sh) => s + sh.kgCO2e, 0);
+        el.textContent = shipments.length
+          ? `${shipments.length} shipments · ${fmtCO2(total)} CO₂e`
+          : '';
+      }
+
+      /* ── Report ── */
+      function renderReport() {
+        const wrap = document.getElementById('report-content');
+        if (!wrap) return;
+
+        if (!shipments.length) {
+          wrap.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📊</div>
+              <p>Save shipments to generate your emissions report.</p>
+            </div>`;
+          return;
+        }
+
+        const totalKg = shipments.reduce((s, sh) => s + sh.kgCO2e, 0);
+        const totalDist = shipments.reduce((s, sh) => s + sh.distance, 0);
+        const totalWeight = shipments.reduce((s, sh) => s + sh.weight, 0);
+
+        /* By mode */
+        const byMode = {};
+        shipments.forEach(sh => {
+          if (!byMode[sh.mode]) byMode[sh.mode] = { kg: 0, count: 0, dist: 0, weight: 0 };
+          byMode[sh.mode].kg     += sh.kgCO2e;
+          byMode[sh.mode].count  += 1;
+          byMode[sh.mode].dist   += sh.distance;
+          byMode[sh.mode].weight += sh.weight;
+        });
+
+        /* By month */
+        const byMonth = {};
+        shipments.forEach(sh => {
+          const key = new Date(sh.ts).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+          byMonth[key] = (byMonth[key] || 0) + sh.kgCO2e;
+        });
+
+        /* Donut chart SVG */
+        const modeEntries = Object.entries(byMode).sort((a,b) => b[1].kg - a[1].kg);
+        const donutSvg = buildDonutSVG(modeEntries.map((e,i) => ({
+          label: e[0], value: e[1].kg, color: COLORS[i % COLORS.length]
+        })));
+
+        /* Trend bar chart SVG */
+        const monthEntries = Object.entries(byMonth);
+        const trendSvg = buildTrendSVG(monthEntries);
+
+        wrap.innerHTML = `
+          <!-- Summary stats -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="stat-label">Total CO₂e</span>
+              <span class="stat-value color-green">${fmtCO2(totalKg)}</span>
+              <span class="stat-sub">All shipments</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Shipment Count</span>
+              <span class="stat-value color-accent">${shipments.length}</span>
+              <span class="stat-sub">recorded</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Total Distance</span>
+              <span class="stat-value color-yellow">${(totalDist/1000).toFixed(1)}k km</span>
+              <span class="stat-sub">cumulative</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Total Weight</span>
+              <span class="stat-value color-accent2">${totalWeight.toFixed(1)} t</span>
+              <span class="stat-sub">cargo moved</span>
+            </div>
+          </div>
+
+          <!-- Breakdown chart -->
+          <div class="card">
+            <div class="card-title">🍩 Emissions by Transport Mode</div>
+            <div class="chart-container">
+              <div class="donut-wrap">
+                ${donutSvg}
+                <div class="donut-center">
+                  <span class="donut-center-value">${fmtCO2(totalKg)}</span>
+                  <span class="donut-center-label">Total</span>
+                </div>
+              </div>
+              <div class="chart-legend">
+                ${modeEntries.map((e,i) => {
+                  const modeInfo = MODES.find(m => m.id === e[0]) || { icon: '📦', label: e[0] };
+                  const pct = (e[1].kg / totalKg * 100).toFixed(1);
+                  const color = COLORS[i % COLORS.length];
+                  return `
+                    <div>
+                      <div class="legend-item">
+                        <span class="legend-dot" style="background:${color};"></span>
+                        <span class="legend-name">${modeInfo.icon} ${modeInfo.label}</span>
+                        <span class="legend-val">${fmtCO2(e[1].kg)} <span style="color:var(--muted);font-size:11px;">(${pct}%)</span></span>
+                      </div>
+                      <div class="legend-bar-wrap">
+                        <div class="legend-bar" style="background:${color};width:${pct}%;"></div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Trend chart -->
+          ${monthEntries.length > 1 ? `
+          <div class="card">
+            <div class="card-title">📈 Monthly Emissions Trend</div>
+            <div class="trend-chart-wrap">${trendSvg}</div>
+          </div>
+          ` : ''}
+
+          <!-- By Mode table -->
+          <div class="card">
+            <div class="card-title">🚏 Breakdown by Mode</div>
+            <table class="factor-table">
+              <thead>
+                <tr>
+                  <th>Mode</th>
+                  <th class="text-right">Shipments</th>
+                  <th class="text-right">CO₂e</th>
+                  <th class="text-right">Share</th>
+                  <th class="text-right">Avg / shipment</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${modeEntries.map((e,i) => {
+                  const modeInfo = MODES.find(m => m.id === e[0]) || { icon: '📦', label: e[0] };
+                  const pct = (e[1].kg / totalKg * 100).toFixed(1);
+                  return `
+                    <tr>
+                      <td>${modeInfo.icon} ${modeInfo.label}</td>
+                      <td class="text-right">${e[1].count}</td>
+                      <td class="text-right text-green">${fmtCO2(e[1].kg)}</td>
+                      <td class="text-right">${pct}%</td>
+                      <td class="text-right text-muted">${fmtCO2(e[1].kg / e[1].count)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      /* ── Donut SVG ── */
+      function buildDonutSVG(segments) {
+        const total = segments.reduce((s, seg) => s + seg.value, 0);
+        if (!total) return '';
+
+        const cx = 100, cy = 100, r = 78, strokeW = 28;
+        const circumference = 2 * Math.PI * r;
+        let offset = 0;
+
+        const paths = segments.map(seg => {
+          const fraction = seg.value / total;
+          const dashLen  = fraction * circumference - 2;
+          const dashGap  = circumference - dashLen;
+          const path = `
+            <circle
+              cx="${cx}" cy="${cy}" r="${r}"
+              fill="none"
+              stroke="${seg.color}"
+              stroke-width="${strokeW}"
+              stroke-dasharray="${dashLen.toFixed(2)} ${dashGap.toFixed(2)}"
+              stroke-dashoffset="${(-offset * circumference / total + circumference / 4 + circumference).toFixed(2)}"
+              stroke-linecap="butt"
+            />
+          `;
+          offset += seg.value;
+          return path;
+        });
+
+        return `
+          <svg viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Emissions donut chart">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="${strokeW}" />
+            ${paths.join('')}
+          </svg>
+        `;
+      }
+
+      /* ── Trend SVG ── */
+      function buildTrendSVG(entries) {
+        if (!entries.length) return '';
+        const W = 600, H = 160, PL = 60, PR = 20, PT = 16, PB = 36;
+        const maxVal = Math.max(...entries.map(e => e[1]));
+        const barW   = Math.max(24, Math.floor((W - PL - PR) / entries.length - 8));
+        const barGap = Math.floor((W - PL - PR - barW * entries.length) / Math.max(1, entries.length - 1));
+
+        const bars = entries.map((e, i) => {
+          const barH = maxVal > 0 ? ((e[1] / maxVal) * (H - PT - PB)) : 0;
+          const x    = PL + i * (barW + barGap);
+          const y    = H - PB - barH;
+          return `
+            <rect x="${x}" y="${y.toFixed(1)}" width="${barW}" height="${barH.toFixed(1)}"
+              rx="4" fill="var(--accent)" opacity="0.85" />
+            <text x="${x + barW/2}" y="${H - PB + 16}" text-anchor="middle"
+              font-size="9" fill="var(--muted)" font-family="var(--font)">${e[0]}</text>
+            <text x="${x + barW/2}" y="${(y - 5).toFixed(1)}" text-anchor="middle"
+              font-size="9" fill="var(--text)" font-family="var(--font)">${fmtCO2(e[1])}</text>
+          `;
+        });
+
+        return `
+          <svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:320px;" role="img" aria-label="Monthly emissions trend">
+            <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H - PB}"
+              stroke="var(--border)" stroke-width="1"/>
+            <line x1="${PL}" y1="${H - PB}" x2="${W - PR}" y2="${H - PB}"
+              stroke="var(--border)" stroke-width="1"/>
+            ${bars.join('')}
+          </svg>
+        `;
+      }
+
+      /* ── CSV Export ── */
+      function exportCSV() {
+        if (!shipments.length) { toast('No shipments to export.', 'info'); return; }
+        const header = 'date,origin,destination,mode,sub_type,distance_km,weight_tonnes,kg_co2e,ref';
+        const rows = shipments.map(sh =>
+          [fmtDate(sh.ts), sh.origin, sh.destination, sh.mode, sh.subType || '',
+           sh.distance, sh.weight, sh.kgCO2e.toFixed(2), sh.ref || ''].join(',')
+        );
+        const csv = [header, ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `cargocarbon-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('CSV exported!', 'success');
+      }
+
+      /* ── CSV Import ── */
+      function importCSVPrompt() {
+        const area = document.getElementById('import-area');
+        area.style.display = area.style.display === 'none' ? '' : 'none';
+      }
+
+      function importCSV() {
+        const raw = document.getElementById('csv-input').value.trim();
+        if (!raw) { toast('Please paste CSV rows.', 'error'); return; }
+        const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+        let added = 0;
+        const validModes = MODES.map(m => m.id);
+
+        lines.forEach(line => {
+          const parts = line.split(',').map(p => p.trim());
+          if (parts.length < 5) return;
+          const [origin, destination, mode, distStr, weightStr, ref] = parts;
+          const distance = parseFloat(distStr);
+          const weight   = parseFloat(weightStr);
+          if (!origin || !destination || !validModes.includes(mode) || !distance || !weight) return;
+
+          const subType = mode === 'truck' ? 'diesel' : mode === 'air' ? 'belly' : mode === 'sea' ? 'general' : 'electric';
+          const ef = mode === 'truck' ? EF.truck.diesel
+                   : mode === 'van'   ? EF.van.diesel
+                   : mode === 'air'   ? EF.air.belly
+                   : mode === 'sea'   ? EF.sea.general
+                   : EF.rail.electric;
+          const kgCO2e = distance * weight * ef;
+
+          shipments.unshift({
+            id: Date.now() + added,
+            origin, destination, mode, subType,
+            distance, weight,
+            kgCO2e: Math.round(kgCO2e * 10) / 10,
+            ef, ref: ref || '', ts: Date.now()
+          });
+          added++;
+        });
+
+        if (!added) { toast('No valid rows found. Check format: origin,destination,mode,distance_km,weight_tonnes,ref', 'error'); return; }
+        saveShipments(shipments);
+        renderShipmentList();
+        updateHeaderTotal();
+        document.getElementById('csv-input').value = '';
+        document.getElementById('import-area').style.display = 'none';
+        toast(`Imported ${added} shipment${added !== 1 ? 's' : ''}!`, 'success');
+      }
+
+      /* ── Print ── */
+      function printReport() {
+        window.print();
+      }
+
+      /* ── Tab switching ── */
+      function switchTab(panelId, btn) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        document.getElementById(`panel-${panelId}`).classList.add('active');
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+
+        if (panelId === 'shipments') renderShipmentList();
+        if (panelId === 'report')    renderReport();
+      }
+
+      return {
+        init, selectMode, calculate, saveShipment, clearForm,
+        deleteShipment, clearAll, exportCSV, importCSVPrompt, importCSV,
+        renderReport, printReport, switchTab
+      };
+    })();
+
+    /* ─── Bootstrap ─── */
+    document.addEventListener('DOMContentLoaded', () => {
+      App.init();
+      /* toggle conditional fields to match default mode */
+      document.getElementById('fuel-group').style.display = '';
+    });
+  </script>
+</body>
+</html>

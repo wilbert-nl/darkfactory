@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeatherAds — Weather-Triggered Ad Campaign Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #02091a;
+      --surface: rgba(255,255,255,0.08);
+      --surface2: rgba(255,255,255,0.13);
+      --border: rgba(255,255,255,0.16);
+      --accent: #38bdf8;
+      --accent2: #fb923c;
+      --text: rgba(255,255,255,0.95);
+      --muted: rgba(255,255,255,0.5);
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --radius: 20px;
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    header .title-block h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+    header .title-block p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* ── LAYOUT ── */
+    .app-body {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 75px);
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-section h2 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── CITY SEARCH ── */
+    .city-search-wrap {
+      position: relative;
+    }
+
+    .city-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 36px 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .city-input:focus { border-color: var(--accent); }
+    .city-input::placeholder { color: var(--muted); }
+
+    .city-search-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .city-suggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      z-index: 200;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .city-suggestion-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+
+    .city-suggestion-item:hover { background: var(--border); }
+    .city-suggestion-item .country { color: var(--muted); font-size: 11px; margin-left: 6px; }
+
+    /* ── WEATHER CARD ── */
+    .weather-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .weather-icon-large {
+      font-size: 40px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .weather-details .city-name { font-size: 15px; font-weight: 600; }
+    .weather-details .temp { font-size: 28px; font-weight: 700; color: var(--yellow); }
+    .weather-details .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .weather-details .extra { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    .weather-empty {
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── RULES ── */
+    .rules-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .rule-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      position: relative;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .rule-card.triggered {
+      border-color: var(--green);
+      box-shadow: 0 0 0 1px var(--green)22, 0 0 12px var(--green)22;
+    }
+
+    .rule-card.paused {
+      opacity: 0.55;
+    }
+
+    .rule-card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .rule-badge {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .rule-badge.active { background: rgba(56,189,248,0.18); }
+    .rule-badge.triggered-bg { background: rgba(67,217,173,0.18); }
+
+    .rule-info { flex: 1; min-width: 0; }
+    .rule-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rule-condition { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .rule-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      margin-top: 8px;
+    }
+
+    .rule-status.live { background: rgba(67,217,173,0.15); color: var(--green); }
+    .rule-status.idle { background: rgba(136,146,176,0.15); color: var(--muted); }
+    .rule-status.paused-s { background: rgba(247,201,72,0.15); color: var(--yellow); }
+
+    .rule-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .rule-action-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .rule-action-btn:hover { background: var(--border); color: var(--text); }
+    .rule-action-btn.danger:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(251,146,60,0.08); }
+
+    .no-rules {
+      text-align: center;
+      padding: 24px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main-content {
+      padding: 28px 32px;
+      overflow-y: auto;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .section-header h2 { font-size: 17px; font-weight: 700; }
+    .section-header p { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.18s;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #29a8e0; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(56,189,248,0.35); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--border); }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 12px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .stat-card.c1::before { background: var(--accent); }
+    .stat-card.c2::before { background: var(--green); }
+    .stat-card.c3::before { background: var(--yellow); }
+    .stat-card.c4::before { background: var(--accent2); }
+
+    .stat-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 26px; font-weight: 700; margin-top: 6px; }
+    .stat-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    /* ── FORECAST GRID ── */
+    .forecast-section { margin-bottom: 28px; }
+    .forecast-section h3 { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .forecast-timeline {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
+    }
+
+    .forecast-slot {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    .forecast-slot.has-trigger {
+      border-color: var(--green);
+      background: rgba(67,217,173,0.05);
+    }
+
+    .forecast-slot .slot-time { font-size: 10px; color: var(--muted); }
+    .forecast-slot .slot-icon { font-size: 20px; margin: 4px 0; }
+    .forecast-slot .slot-temp { font-size: 12px; font-weight: 600; }
+    .forecast-slot .slot-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      margin: 4px auto 0;
+      opacity: 0;
+    }
+    .forecast-slot.has-trigger .slot-dot { opacity: 1; }
+
+    /* ── TRIGGER LOG ── */
+    .trigger-log { }
+
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .log-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .log-table td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border)66;
+      vertical-align: middle;
+    }
+
+    .log-table tr:last-child td { border-bottom: none; }
+    .log-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .log-campaign-name { font-weight: 500; }
+    .log-condition { color: var(--muted); }
+    .log-time { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .badge-triggered { background: rgba(67,217,173,0.15); color: var(--green); }
+    .badge-paused { background: rgba(247,201,72,0.15); color: var(--yellow); }
+    .badge-future { background: rgba(56,189,248,0.15); color: var(--accent); }
+
+    .log-empty {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 520px;
+      transform: translateY(12px);
+      transition: transform 0.2s;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .modal .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .form-field { display: flex; flex-direction: column; gap: 7px; }
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+    }
+
+    .form-input, .form-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .form-input:focus, .form-select:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--muted); }
+
+    .condition-builder {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .operator-badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .operator-badge:hover { background: var(--border); }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── TOAST ── */
+    .toast-container {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      animation: slideIn 0.25s ease;
+      pointer-events: all;
+      max-width: 320px;
+    }
+
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error { border-left: 3px solid var(--accent2); }
+    .toast.info { border-left: 3px solid var(--accent); }
+
+    @keyframes slideIn {
+      from { transform: translateX(24px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateX(24px); }
+    }
+
+    .toast.removing { animation: fadeOut 0.25s ease forwards; }
+
+    /* ── SPINNER ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── PULSE ANIM ── */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .pulse { animation: pulse 1.8s ease infinite; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 40px;
+      color: var(--muted);
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.6; }
+    .empty-state h3 { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font-size: 13px; line-height: 1.6; }
+
+    /* ── SECTION PANEL ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-header h3 { font-size: 14px; font-weight: 600; }
+    .panel-header .panel-meta { font-size: 12px; color: var(--muted); }
+
+    /* ── CAMPAIGN PREVIEW ── */
+    .campaign-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+      padding: 20px;
+    }
+
+    .campaign-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.18s, box-shadow 0.18s;
+    }
+
+    .campaign-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+
+    .campaign-card.active-campaign {
+      border-color: var(--green);
+    }
+
+    .campaign-card.active-campaign::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(67,217,173,0.06), transparent);
+      pointer-events: none;
+    }
+
+    .campaign-card-icon { font-size: 28px; margin-bottom: 10px; }
+    .campaign-card-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .campaign-card-trigger { font-size: 11px; color: var(--muted); }
+
+    .campaign-card-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.live { background: var(--green); animation: pulse 1.5s ease infinite; }
+    .status-dot.idle { background: var(--muted); }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── LOADING OVERLAY ── */
+    .fetch-bar {
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 9999;
+      transition: width 0.3s;
+    }
+
+    @media (max-width: 900px) {
+      .app-body { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .forecast-timeline { grid-template-columns: repeat(4, 1fr); }
+    }
+
+/* ── Weather design system v2 ── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(180deg, #02091a 0%, #0d1f3c 50%, #153050 100%) fixed;
+  min-height: 100vh;
+  color: rgba(255,255,255,0.9);
+}
+body::before {
+  content: '';
+  position: fixed;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,.12) 0%, transparent 70%);
+  top: -150px; right: -100px;
+  animation: floatOrb 10s ease-in-out infinite;
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251,146,60,.08) 0%, transparent 70%);
+  bottom: 8%; left: -80px;
+  animation: floatOrb 14s ease-in-out infinite reverse;
+  pointer-events: none; z-index: 0;
+}
+/* Glassmorphism cards */
+.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  border-radius: 20px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 8px 32px rgba(0,0,0,0.3);
+}
+h1 {
+  font-weight: 200;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  letter-spacing: -.02em;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 0 30px rgba(56,189,248,.4);
+  -webkit-text-fill-color: rgba(255,255,255,0.95);
+}
+h2, h3 { font-weight: 300; color: rgba(255,255,255,0.85); letter-spacing: -.01em; -webkit-text-fill-color: rgba(255,255,255,0.85); }
+p, label, span, td, th, li { color: rgba(255,255,255,0.8); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
+@keyframes floatOrb { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-22px) scale(1.04);} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+@keyframes glowPulse { 0%,100%{text-shadow:0 0 10px rgba(56,189,248,.4);} 50%{text-shadow:0 0 30px rgba(56,189,248,.9),0 0 60px rgba(56,189,248,.3);} }
+@keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.5);} 50%{box-shadow:0 0 0 8px rgba(251,146,60,0);} }
+.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] { animation: fadeUp .5s ease both; }
+.card:nth-child(2){animation-delay:.08s} .card:nth-child(3){animation-delay:.16s} .card:nth-child(4){animation-delay:.24s}
+[class*="alert"],[class*="warning"] { animation: alertPulse 2s ease-in-out infinite; }
+button,[class*="btn"] {
+  background: rgba(255,255,255,0.1) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.9) !important;
+  transition: all .2s;
+  border-radius: 12px;
+}
+button:hover,[class*="btn"]:hover {
+  background: rgba(56,189,248,0.2) !important;
+  border-color: rgba(56,189,248,0.5) !important;
+  box-shadow: 0 4px 20px rgba(56,189,248,.3);
+  transform: translateY(-1px);
+}
+input, select {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.9) !important;
+}
+input::placeholder { color: rgba(255,255,255,0.4); }
+input:focus, select:focus {
+  border-color: rgba(56,189,248,.6) !important;
+  box-shadow: 0 0 0 3px rgba(56,189,248,.2);
+  outline: none;
+}
+select option { background: #0d1f3c; color: white; }
+  </style>
+</head>
+<body>
+
+<!-- Fetch progress bar -->
+<div class="fetch-bar" id="fetchBar" style="width:0"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">🌦</div>
+  <div class="title-block">
+    <h1>WeatherAds</h1>
+    <p>Weather-triggered ad campaign manager</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" id="refreshBtn" onclick="refreshWeather()">
+      ↻ Refresh
+    </button>
+    <button class="btn btn-primary btn-sm" onclick="openModal()">
+      + New Rule
+    </button>
+  </div>
+</header>
+
+<!-- APP BODY -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- City search -->
+    <div class="sidebar-section">
+      <h2>Target City</h2>
+      <div class="city-search-wrap">
+        <input
+          type="text"
+          class="city-input"
+          id="cityInput"
+          placeholder="Search city…"
+          autocomplete="off"
+          aria-label="Search for a city"
+          oninput="onCityInput()"
+          onkeydown="onCityKeydown(event)"
+        />
+        <span class="city-search-icon" aria-hidden="true">🔍</span>
+        <div class="city-suggestions" id="citySuggestions" style="display:none" role="listbox"></div>
+      </div>
+    </div>
+
+    <!-- Current weather -->
+    <div class="sidebar-section">
+      <h2>Current Conditions</h2>
+      <div id="weatherDisplay">
+        <div class="weather-empty">Search for a city to load weather data.</div>
+      </div>
+    </div>
+
+    <!-- Rules list -->
+    <div class="sidebar-section" style="flex:1">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h2 style="margin-bottom:0">Campaign Rules</h2>
+        <span id="ruleCount" style="font-size:11px;color:var(--muted)">0 rules</span>
+      </div>
+      <div class="rules-list" id="rulesList">
+        <div class="no-rules">No rules yet. Click <strong>+ New Rule</strong> to create one.</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card c1">
+        <div class="stat-label">Total Rules</div>
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-sub">configured</div>
+      </div>
+      <div class="stat-card c2">
+        <div class="stat-label">Active Now</div>
+        <div class="stat-value" id="statActive">0</div>
+        <div class="stat-sub">campaigns live</div>
+      </div>
+      <div class="stat-card c3">
+        <div class="stat-label">Next 24h</div>
+        <div class="stat-value" id="statNext24">0</div>
+        <div class="stat-sub">triggers forecast</div>
+      </div>
+      <div class="stat-card c4">
+        <div class="stat-label">Triggers Fired</div>
+        <div class="stat-value" id="statFired">0</div>
+        <div class="stat-sub">this session</div>
+      </div>
+    </div>
+
+    <!-- Forecast timeline -->
+    <div class="panel" id="forecastPanel">
+      <div class="panel-header">
+        <h3>72-Hour Trigger Forecast</h3>
+        <span class="panel-meta" id="forecastMeta">—</span>
+      </div>
+      <div style="padding:20px" id="forecastContent">
+        <div class="empty-state">
+          <div class="empty-icon">📡</div>
+          <h3>No city selected</h3>
+          <p>Search for a city in the sidebar to see the 72-hour weather forecast and campaign triggers.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campaign preview -->
+    <div class="panel" id="campaignPanel">
+      <div class="panel-header">
+        <h3>Campaign Previews</h3>
+        <span class="panel-meta" id="campaignMeta">—</span>
+      </div>
+      <div id="campaignContent">
+        <div class="empty-state" style="padding:40px">
+          <div class="empty-icon">📢</div>
+          <h3>No campaigns yet</h3>
+          <p>Add rules with campaign names to preview how they would activate.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trigger log -->
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Trigger Event Log</h3>
+        <span class="panel-meta" id="logMeta">0 events</span>
+      </div>
+      <div id="triggerLogContent">
+        <div class="log-empty">No trigger events yet. Load weather data to evaluate your rules.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- NEW RULE MODAL -->
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" onclick="closeModalIfBg(event)">
+  <div class="modal">
+    <h2 id="modalTitle">Create Campaign Rule</h2>
+    <p class="modal-sub">Define the weather condition that will activate your ad campaign.</p>
+
+    <div class="form-grid">
+      <div class="form-field full">
+        <label class="form-label" for="ruleName">Campaign Name</label>
+        <input type="text" class="form-input" id="ruleName" placeholder="e.g. Umbrella Promo — Rain Days" />
+      </div>
+
+      <div class="form-field full">
+        <label class="form-label">Weather Condition</label>
+        <div class="condition-builder">
+          <div class="form-field" style="gap:7px">
+            <select class="form-select" id="ruleMetric" onchange="onMetricChange()">
+              <option value="temperature">Temperature (°C)</option>
+              <option value="precipitation">Precipitation (mm)</option>
+              <option value="weathercode">Weather Code</option>
+            </select>
+          </div>
+          <div class="operator-badge" id="operatorToggle" onclick="toggleOperator()" title="Click to toggle operator" tabindex="0" role="button" onkeydown="if(event.key==='Enter')toggleOperator()">
+            &gt;
+          </div>
+          <div class="form-field" style="gap:7px">
+            <input type="number" class="form-input" id="ruleThreshold" placeholder="e.g. 5" step="0.1" />
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px" id="metricHint">
+          Trigger when temperature exceeds the threshold.
+        </div>
+      </div>
+
+      <div class="form-field full">
+        <label class="form-label" for="ruleEmoji">Campaign Icon</label>
+        <input type="text" class="form-input" id="ruleEmoji" placeholder="☂️  🌞  ❄️  🧥  🌡️" maxlength="4" />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveRuleBtn" onclick="saveRule()">Save Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<script>
+  // ── STATE ──────────────────────────────────────────────────────────────────
+  const state = {
+    city: null,        // { name, country, lat, lon }
+    weather: null,     // current weather data
+    forecast: null,    // hourly forecast array
+    rules: [],
+    log: [],
+    operator: '>',
+    totalFired: 0
+  };
+
+  // Default sample rules for demo
+  const defaultRules = [
+    { id: 'r1', name: 'Umbrella Promo — Rain Days', metric: 'precipitation', operator: '>', threshold: 2, emoji: '☂️', paused: false },
+    { id: 'r2', name: 'Summer Cooling Sale', metric: 'temperature', operator: '>', threshold: 28, emoji: '🌡️', paused: false },
+    { id: 'r3', name: 'Winter Coats Campaign', metric: 'temperature', operator: '<', threshold: 5, emoji: '🧥', paused: false },
+  ];
+  state.rules = JSON.parse(localStorage.getItem('wt_rules') || 'null') || defaultRules;
+
+  // ── UTILS ──────────────────────────────────────────────────────────────────
+  function uid() {
+    return `r${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+  }
+
+  function saveRules() {
+    localStorage.setItem('wt_rules', JSON.stringify(state.rules));
+  }
+
+  function showToast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => {
+      el.classList.add('removing');
+      setTimeout(() => el.remove(), 280);
+    }, 3200);
+  }
+
+  function setFetchBar(pct) {
+    document.getElementById('fetchBar').style.width = `${pct}%`;
+    if (pct >= 100) setTimeout(() => setFetchBar(0), 400);
+  }
+
+  // ── WEATHER CODE HELPERS ───────────────────────────────────────────────────
+  function wmoIcon(code) {
+    if (code === 0) return '☀️';
+    if (code <= 2) return '🌤️';
+    if (code === 3) return '☁️';
+    if (code <= 49) return '🌫️';
+    if (code <= 59) return '🌦️';
+    if (code <= 69) return '🌧️';
+    if (code <= 79) return '🌨️';
+    if (code <= 84) return '🌧️';
+    if (code <= 99) return '⛈️';
+    return '🌡️';
+  }
+
+  function wmoLabel(code) {
+    if (code === 0) return 'Clear sky';
+    if (code <= 2) return 'Partly cloudy';
+    if (code === 3) return 'Overcast';
+    if (code <= 49) return 'Foggy';
+    if (code <= 59) return 'Drizzle';
+    if (code <= 69) return 'Rain';
+    if (code <= 79) return 'Snow';
+    if (code <= 84) return 'Rain showers';
+    if (code <= 99) return 'Thunderstorm';
+    return 'Unknown';
+  }
+
+  // ── CITY SEARCH ───────────────────────────────────────────────────────────
+  let citySearchTimeout = null;
+  let suggestionItems = [];
+  let selectedSuggIndex = -1;
+
+  function onCityInput() {
+    clearTimeout(citySearchTimeout);
+    const q = document.getElementById('cityInput').value.trim();
+    if (q.length < 2) {
+      hideSuggestions();
+      return;
+    }
+    citySearchTimeout = setTimeout(() => searchCity(q), 350);
+  }
+
+  async function searchCity(q) {
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=en&format=json`);
+      const data = await res.json();
+      suggestionItems = data.results || [];
+      renderSuggestions();
+    } catch {
+      hideSuggestions();
+    }
+  }
+
+  function renderSuggestions() {
+    const el = document.getElementById('citySuggestions');
+    if (!suggestionItems.length) { hideSuggestions(); return; }
+    el.innerHTML = suggestionItems.map((r, i) =>
+      `<div class="city-suggestion-item" role="option" tabindex="-1" onclick="selectCity(${i})" onmouseenter="selectedSuggIndex=${i}">
+        ${r.name}<span class="country">${r.country_code || ''} ${r.admin1 ? '· ' + r.admin1 : ''}</span>
+      </div>`
+    ).join('');
+    el.style.display = 'block';
+    selectedSuggIndex = -1;
+  }
+
+  function hideSuggestions() {
+    document.getElementById('citySuggestions').style.display = 'none';
+    suggestionItems = [];
+    selectedSuggIndex = -1;
+  }
+
+  function onCityKeydown(e) {
+    const items = document.querySelectorAll('.city-suggestion-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedSuggIndex = Math.min(selectedSuggIndex + 1, items.length - 1);
+      items[selectedSuggIndex]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedSuggIndex = Math.max(selectedSuggIndex - 1, -1);
+      if (selectedSuggIndex < 0) document.getElementById('cityInput').focus();
+      else items[selectedSuggIndex]?.focus();
+    } else if (e.key === 'Escape') {
+      hideSuggestions();
+    } else if (e.key === 'Enter' && selectedSuggIndex >= 0) {
+      selectCity(selectedSuggIndex);
+    }
+  }
+
+  async function selectCity(index) {
+    const r = suggestionItems[index];
+    if (!r) return;
+    state.city = { name: r.name, country: r.country || r.country_code, lat: r.latitude, lon: r.longitude };
+    document.getElementById('cityInput').value = `${r.name}, ${r.country || r.country_code || ''}`;
+    hideSuggestions();
+    await fetchWeather();
+  }
+
+  // ── WEATHER FETCH ──────────────────────────────────────────────────────────
+  async function fetchWeather() {
+    if (!state.city) return;
+    setFetchBar(20);
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> Loading`;
+
+    try {
+      setFetchBar(50);
+      const { lat, lon } = state.city;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,precipitation&hourly=temperature_2m,weathercode,precipitation&forecast_days=3&timezone=auto`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setFetchBar(80);
+
+      state.weather = {
+        temp: data.current.temperature_2m,
+        code: data.current.weathercode,
+        precipitation: data.current.precipitation
+      };
+
+      // Build hourly slots (72 hours)
+      const times = data.hourly.time;
+      const temps = data.hourly.temperature_2m;
+      const codes = data.hourly.weathercode;
+      const precips = data.hourly.precipitation;
+      state.forecast = times.map((t, i) => ({
+        time: t,
+        temp: temps[i],
+        code: codes[i],
+        precipitation: precips[i]
+      })).slice(0, 72);
+
+      setFetchBar(100);
+      renderAll();
+      showToast(`Weather loaded for ${state.city.name}`, 'success');
+    } catch (e) {
+      showToast(`Failed to load weather: ${e.message}`, 'error');
+      setFetchBar(100);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '↻ Refresh';
+    }
+  }
+
+  async function refreshWeather() {
+    if (!state.city) {
+      showToast('Select a city first', 'info');
+      return;
+    }
+    await fetchWeather();
+  }
+
+  // ── RULE EVALUATION ────────────────────────────────────────────────────────
+  function evaluate(rule, dataPoint) {
+    const val = dataPoint[rule.metric];
+    if (val === undefined || val === null) return false;
+    return rule.operator === '>' ? val > rule.threshold : val < rule.threshold;
+  }
+
+  function getRuleCurrentStatus(rule) {
+    if (rule.paused) return 'paused';
+    if (!state.weather) return 'idle';
+    const current = {
+      temperature: state.weather.temp,
+      precipitation: state.weather.precipitation,
+      weathercode: state.weather.code
+    };
+    return evaluate(rule, current) ? 'live' : 'idle';
+  }
+
+  // ── RENDER ALL ─────────────────────────────────────────────────────────────
+  function renderAll() {
+    renderWeatherCard();
+    renderRulesList();
+    renderStats();
+    renderForecast();
+    renderCampaigns();
+    renderLog();
+  }
+
+  function renderWeatherCard() {
+    const el = document.getElementById('weatherDisplay');
+    if (!state.weather || !state.city) {
+      el.innerHTML = `<div class="weather-empty">Search for a city above.</div>`;
+      return;
+    }
+    const { temp, code, precipitation } = state.weather;
+    el.innerHTML = `
+      <div class="weather-card">
+        <div class="weather-icon-large">${wmoIcon(code)}</div>
+        <div class="weather-details">
+          <div class="city-name">${state.city.name}, ${state.city.country}</div>
+          <div class="temp">${temp.toFixed(1)}°C</div>
+          <div class="desc">${wmoLabel(code)}</div>
+          <div class="extra">Precipitation: ${precipitation.toFixed(1)} mm</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRulesList() {
+    const el = document.getElementById('rulesList');
+    document.getElementById('ruleCount').textContent = `${state.rules.length} rule${state.rules.length === 1 ? '' : 's'}`;
+
+    if (!state.rules.length) {
+      el.innerHTML = `<div class="no-rules">No rules yet. Click <strong>+ New Rule</strong> to create one.</div>`;
+      return;
+    }
+
+    el.innerHTML = state.rules.map(rule => {
+      const status = getRuleCurrentStatus(rule);
+      const isTrig = status === 'live';
+      const opLabel = rule.operator === '>' ? 'above' : 'below';
+      const metricLabel = rule.metric === 'temperature' ? 'temp' : rule.metric === 'precipitation' ? 'precip' : 'code';
+      return `
+        <div class="rule-card ${isTrig ? 'triggered' : ''} ${rule.paused ? 'paused' : ''}">
+          <div class="rule-card-top">
+            <div class="rule-badge ${isTrig ? 'triggered-bg' : 'active'}">${rule.emoji || '📢'}</div>
+            <div class="rule-info">
+              <div class="rule-name" title="${rule.name}">${rule.name}</div>
+              <div class="rule-condition">${metricLabel} ${rule.operator} ${rule.threshold}</div>
+            </div>
+          </div>
+          <span class="rule-status ${status === 'live' ? 'live' : status === 'paused' ? 'paused-s' : 'idle'}">
+            ${status === 'live' ? '● LIVE' : status === 'paused' ? '⏸ PAUSED' : '○ IDLE'}
+          </span>
+          <div class="rule-actions">
+            <button class="rule-action-btn" onclick="togglePause('${rule.id}')">${rule.paused ? 'Resume' : 'Pause'}</button>
+            <button class="rule-action-btn danger" onclick="deleteRule('${rule.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderStats() {
+    const total = state.rules.length;
+    const active = state.rules.filter(r => getRuleCurrentStatus(r) === 'live').length;
+
+    // Count next-24h triggers
+    let next24 = 0;
+    if (state.forecast) {
+      const now = new Date();
+      const cutoff = new Date(now.getTime() + 24 * 3600 * 1000);
+      state.forecast.forEach(slot => {
+        const t = new Date(slot.time);
+        if (t <= cutoff) {
+          const dp = { temperature: slot.temp, precipitation: slot.precipitation, weathercode: slot.code };
+          if (state.rules.some(r => !r.paused && evaluate(r, dp))) next24++;
+        }
+      });
+    }
+
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statActive').textContent = active;
+    document.getElementById('statNext24').textContent = next24;
+    document.getElementById('statFired').textContent = state.totalFired;
+  }
+
+  function renderForecast() {
+    const content = document.getElementById('forecastContent');
+    const meta = document.getElementById('forecastMeta');
+
+    if (!state.forecast) {
+      content.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">📡</div>
+        <h3>No city selected</h3>
+        <p>Search for a city in the sidebar to see the 72-hour weather forecast and campaign triggers.</p>
+      </div>`;
+      meta.textContent = '—';
+      return;
+    }
+
+    // Show every 6th hour slot = 12 slots
+    const slots = state.forecast.filter((_, i) => i % 6 === 0).slice(0, 12);
+    meta.textContent = `${state.city?.name} · next 72 hours`;
+
+    const hasTrigger = slot => {
+      const dp = { temperature: slot.temp, precipitation: slot.precipitation, weathercode: slot.code };
+      return state.rules.some(r => !r.paused && evaluate(r, dp));
+    };
+
+    content.innerHTML = `
+      <div class="forecast-timeline">
+        ${slots.map(slot => {
+          const d = new Date(slot.time);
+          const label = d.toLocaleDateString('en', { weekday: 'short' }) + ' ' + d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false });
+          const trig = hasTrigger(slot);
+          return `
+            <div class="forecast-slot ${trig ? 'has-trigger' : ''}">
+              <div class="slot-time">${label}</div>
+              <div class="slot-icon">${wmoIcon(slot.code)}</div>
+              <div class="slot-temp">${slot.temp?.toFixed(0) ?? '—'}°</div>
+              <div class="slot-dot"></div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>
+        Green dot = at least one campaign rule triggers at that time
+      </div>
+    `;
+  }
+
+  function renderCampaigns() {
+    const content = document.getElementById('campaignContent');
+    const meta = document.getElementById('campaignMeta');
+
+    if (!state.rules.length) {
+      content.innerHTML = `<div class="empty-state" style="padding:40px">
+        <div class="empty-icon">📢</div>
+        <h3>No campaigns yet</h3>
+        <p>Add rules with campaign names to preview how they would activate.</p>
+      </div>`;
+      meta.textContent = '—';
+      return;
+    }
+
+    meta.textContent = `${state.rules.length} campaign${state.rules.length === 1 ? '' : 's'}`;
+
+    content.innerHTML = `<div class="campaign-preview">
+      ${state.rules.map(rule => {
+        const status = getRuleCurrentStatus(rule);
+        const isLive = status === 'live';
+        const opWord = rule.operator === '>' ? 'exceeds' : 'drops below';
+        const metricWord = rule.metric === 'temperature' ? 'temperature' : rule.metric === 'precipitation' ? 'precipitation' : 'weather code';
+        return `
+          <div class="campaign-card ${isLive ? 'active-campaign' : ''}">
+            <div class="campaign-card-icon">${rule.emoji || '📢'}</div>
+            <div class="campaign-card-name">${rule.name}</div>
+            <div class="campaign-card-trigger">Fires when ${metricWord} ${opWord} ${rule.threshold}${rule.metric === 'temperature' ? '°C' : rule.metric === 'precipitation' ? 'mm' : ''}</div>
+            <div class="campaign-card-status">
+              <span class="status-dot ${isLive ? 'live' : 'idle'}"></span>
+              <span style="color:${isLive ? 'var(--green)' : 'var(--muted)'}">${isLive ? 'CAMPAIGN LIVE' : rule.paused ? 'PAUSED' : 'Waiting…'}</span>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>`;
+  }
+
+  function renderLog() {
+    const content = document.getElementById('triggerLogContent');
+    const meta = document.getElementById('logMeta');
+
+    // Build log from current weather + forecast
+    if (!state.weather || !state.forecast || !state.rules.length) {
+      content.innerHTML = `<div class="log-empty">No trigger events yet. Load weather data to evaluate your rules.</div>`;
+      meta.textContent = '0 events';
+      return;
+    }
+
+    const events = [];
+    const now = new Date();
+
+    // Current conditions
+    state.rules.forEach(rule => {
+      if (rule.paused) return;
+      const current = { temperature: state.weather.temp, precipitation: state.weather.precipitation, weathercode: state.weather.code };
+      if (evaluate(rule, current)) {
+        events.push({
+          campaign: rule.name,
+          emoji: rule.emoji || '📢',
+          condition: `${rule.metric} ${rule.operator} ${rule.threshold}`,
+          actual: current[rule.metric]?.toFixed(1),
+          time: 'Now',
+          type: 'triggered',
+          ts: now
+        });
+      }
+    });
+
+    // Forecast triggers (next 72h, sampled every 3h)
+    state.forecast.filter((_, i) => i % 3 === 0).forEach(slot => {
+      const slotTime = new Date(slot.time);
+      if (slotTime <= now) return;
+      const dp = { temperature: slot.temp, precipitation: slot.precipitation, weathercode: slot.code };
+      state.rules.forEach(rule => {
+        if (rule.paused) return;
+        if (evaluate(rule, dp)) {
+          const diff = slotTime - now;
+          const h = Math.floor(diff / 3600000);
+          const label = h < 24 ? `in ${h}h` : `in ${Math.floor(h/24)}d ${h%24}h`;
+          events.push({
+            campaign: rule.name,
+            emoji: rule.emoji || '📢',
+            condition: `${rule.metric} ${rule.operator} ${rule.threshold}`,
+            actual: dp[rule.metric]?.toFixed(1),
+            time: label,
+            type: 'future',
+            ts: slotTime
+          });
+        }
+      });
+    });
+
+    events.sort((a, b) => a.ts - b.ts);
+    state.totalFired = events.filter(e => e.type === 'triggered').length;
+    meta.textContent = `${events.length} event${events.length === 1 ? '' : 's'}`;
+
+    if (!events.length) {
+      content.innerHTML = `<div class="log-empty">No rules triggered for ${state.city?.name}. Try adjusting your thresholds.</div>`;
+      document.getElementById('statFired').textContent = '0';
+      return;
+    }
+
+    document.getElementById('statFired').textContent = state.totalFired;
+
+    content.innerHTML = `
+      <table class="log-table" aria-label="Trigger event log">
+        <thead>
+          <tr>
+            <th>Campaign</th>
+            <th>Condition</th>
+            <th>Actual Value</th>
+            <th>When</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${events.slice(0, 40).map(e => `
+            <tr>
+              <td><span class="log-campaign-name">${e.emoji} ${e.campaign}</span></td>
+              <td class="log-condition">${e.condition}</td>
+              <td>${e.actual ?? '—'}</td>
+              <td class="log-time">${e.time}</td>
+              <td><span class="badge badge-${e.type === 'triggered' ? 'triggered' : 'future'}">${e.type === 'triggered' ? '✦ LIVE' : '◎ Forecast'}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  // ── RULE MANAGEMENT ────────────────────────────────────────────────────────
+  function togglePause(id) {
+    const rule = state.rules.find(r => r.id === id);
+    if (!rule) return;
+    rule.paused = !rule.paused;
+    saveRules();
+    renderAll();
+    showToast(`"${rule.name}" ${rule.paused ? 'paused' : 'resumed'}`, 'info');
+  }
+
+  function deleteRule(id) {
+    const rule = state.rules.find(r => r.id === id);
+    if (!rule) return;
+    state.rules = state.rules.filter(r => r.id !== id);
+    saveRules();
+    renderAll();
+    showToast(`Rule deleted: "${rule.name}"`, 'info');
+  }
+
+  // ── MODAL ──────────────────────────────────────────────────────────────────
+  function openModal() {
+    document.getElementById('modalOverlay').classList.add('open');
+    document.getElementById('ruleName').value = '';
+    document.getElementById('ruleThreshold').value = '';
+    document.getElementById('ruleEmoji').value = '';
+    document.getElementById('ruleMetric').value = 'temperature';
+    state.operator = '>';
+    document.getElementById('operatorToggle').textContent = '>';
+    onMetricChange();
+    setTimeout(() => document.getElementById('ruleName').focus(), 100);
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+
+  function closeModalIfBg(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  }
+
+  function toggleOperator() {
+    state.operator = state.operator === '>' ? '<' : '>';
+    document.getElementById('operatorToggle').textContent = state.operator;
+  }
+
+  const metricHints = {
+    temperature: 'Trigger when temperature (°C) crosses the threshold.',
+    precipitation: 'Trigger when precipitation (mm) crosses the threshold (e.g., 2 = light rain).',
+    weathercode: 'Trigger by WMO code: 0=clear, 3=overcast, 61=rain, 71=snow, 95=thunder.'
+  };
+
+  function onMetricChange() {
+    const m = document.getElementById('ruleMetric').value;
+    document.getElementById('metricHint').textContent = metricHints[m] || '';
+  }
+
+  function saveRule() {
+    const name = document.getElementById('ruleName').value.trim();
+    const metric = document.getElementById('ruleMetric').value;
+    const threshold = parseFloat(document.getElementById('ruleThreshold').value);
+    const emoji = document.getElementById('ruleEmoji').value.trim() || '📢';
+
+    if (!name) { showToast('Please enter a campaign name', 'error'); document.getElementById('ruleName').focus(); return; }
+    if (isNaN(threshold)) { showToast('Please enter a valid threshold', 'error'); document.getElementById('ruleThreshold').focus(); return; }
+
+    const rule = { id: uid(), name, metric, operator: state.operator, threshold, emoji, paused: false };
+    state.rules.push(rule);
+    saveRules();
+    closeModal();
+    renderAll();
+    showToast(`Rule created: "${name}"`, 'success');
+  }
+
+  // ── KEYBOARD ───────────────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); hideSuggestions(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      if (document.getElementById('modalOverlay').classList.contains('open')) saveRule();
+    }
+  });
+
+  // Click outside suggestions
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.city-search-wrap')) hideSuggestions();
+  });
+
+  // ── INIT ───────────────────────────────────────────────────────────────────
+  function init() {
+    renderAll();
+  }
+
+  init();
+</script>
+</body>
+</html>

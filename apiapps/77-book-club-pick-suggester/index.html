@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Club Pick Suggester — Dark Factory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08);
+      --accent: #00c030;
+      --accent2: #e8a020;
+      --text: #ffffff;
+      --muted: #9ca3af;
+      --radius: 12px;
+      --font-display: 'Bebas Neue', Impact, sans-serif;
+      --font-body: 'Figtree', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;line-height:1.6;}
+
+    /* ── HEADER ── */
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);}
+    .logo-wrap{display:flex;align-items:center;gap:12px;}
+    .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+    header h1{font-size:1.1rem;font-weight:700;color:var(--text);}
+    header h1 small{display:block;font-size:0.7rem;color:var(--muted);font-weight:400;margin-top:1px;}
+
+    /* ── TABS ── */
+    .tab-bar{display:flex;gap:4px;flex-wrap:wrap;}
+    .tab-btn{background:none;border:1px solid transparent;color:var(--muted);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:500;transition:all .2s;}
+    .tab-btn:hover{color:var(--text);border-color:var(--border);}
+    .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+    /* ── LAYOUT ── */
+    main{max-width:1100px;margin:0 auto;padding:28px 20px;}
+    .panel{display:none;}
+    .panel.active{display:block;animation:fadeIn .3s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+    /* ── CARDS ── */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
+    .card-title{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+    .card-title span{background:var(--accent);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:20px;}
+
+    /* ── FORM ELEMENTS ── */
+    label{display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px;font-weight:500;}
+    input[type=text],input[type=date],select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:0.9rem;outline:none;transition:border-color .2s;font-family:inherit;}
+    input[type=text]:focus,input[type=date]:focus,select:focus,textarea:focus{border-color:var(--accent);}
+    textarea{resize:vertical;min-height:80px;}
+
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
+    .form-group{margin-bottom:16px;}
+
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:0.88rem;font-weight:600;transition:all .2s;text-decoration:none;}
+    .btn-primary{background:var(--accent);color:#fff;}
+    .btn-primary:hover{background:#9333ea;transform:translateY(-1px);box-shadow:0 4px 16px rgba(168,85,247,.35);}
+    .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+    .btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-danger{background:var(--accent2);color:#fff;}
+    .btn-danger:hover{opacity:.85;}
+    .btn-sm{padding:6px 12px;font-size:0.78rem;}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;}
+    .btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+
+    /* ── GENRE CHIPS ── */
+    .chip-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+    .chip{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:0.82rem;transition:all .2s;user-select:none;}
+    .chip:hover{border-color:var(--accent);color:var(--accent);}
+    .chip.selected{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+    /* ── BOOK CARDS ── */
+    .books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px;}
+    .book-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .25s;cursor:pointer;position:relative;}
+    .book-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 24px rgba(168,85,247,.2);}
+    .book-card.shortlisted{border-color:var(--green);}
+    .book-cover{width:100%;height:220px;object-fit:cover;background:var(--surface);display:block;}
+    .book-cover-placeholder{width:100%;height:220px;background:linear-gradient(135deg,var(--surface2),var(--surface));display:flex;align-items:center;justify-content:center;font-size:3rem;}
+    .book-info{padding:12px;}
+    .book-title{font-size:0.85rem;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .book-author{font-size:0.75rem;color:var(--muted);margin-bottom:8px;}
+    .book-year{font-size:0.72rem;color:var(--accent2);font-weight:600;}
+    .book-actions{display:flex;gap:6px;margin-top:8px;}
+    .shortlist-badge{position:absolute;top:8px;right:8px;background:var(--green);color:#0f1117;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:20px;}
+
+    /* ── VOTE BARS ── */
+    .vote-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;gap:16px;align-items:flex-start;}
+    .vote-cover{width:60px;height:80px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--surface);}
+    .vote-cover-placeholder{width:60px;height:80px;background:var(--surface);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;}
+    .vote-details{flex:1;}
+    .vote-title{font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:2px;}
+    .vote-author{font-size:0.78rem;color:var(--muted);margin-bottom:10px;}
+    .vote-bar-wrap{margin-bottom:6px;}
+    .vote-bar-label{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-bottom:3px;}
+    .vote-bar{height:6px;background:var(--surface);border-radius:3px;overflow:hidden;}
+    .vote-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .4s ease;}
+    .vote-btn-row{display:flex;gap:6px;margin-top:10px;}
+    .vote-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:0.78rem;transition:all .2s;}
+    .vote-btn:hover{border-color:var(--accent);color:var(--accent);}
+    .vote-btn.voted{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+    /* ── HISTORY ── */
+    .history-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
+    .history-rank{width:32px;height:32px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0;}
+    .history-info{flex:1;}
+    .history-title{font-size:0.88rem;font-weight:700;color:var(--text);}
+    .history-meta{font-size:0.75rem;color:var(--muted);}
+    .history-date{font-size:0.75rem;color:var(--accent2);margin-left:auto;white-space:nowrap;}
+
+    /* ── DISCUSSION ── */
+    .question-list{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+    .question-list li{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:0.88rem;color:var(--text);display:flex;align-items:flex-start;gap:10px;}
+    .question-list li::before{content:'Q';background:var(--accent);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:4px;margin-top:1px;flex-shrink:0;}
+
+    /* ── SCHEDULER ── */
+    .meeting-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
+    .meeting-date-badge{background:var(--accent);color:#fff;border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0;min-width:52px;}
+    .meeting-date-badge .day{font-size:1.2rem;font-weight:700;line-height:1;}
+    .meeting-date-badge .mon{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;}
+    .meeting-info{flex:1;}
+    .meeting-book{font-size:0.88rem;font-weight:700;color:var(--text);}
+    .meeting-notes{font-size:0.75rem;color:var(--muted);}
+
+    /* ── MEMBER INPUT ── */
+    .member-bar{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+    .member-bar label{color:var(--muted);font-size:0.82rem;white-space:nowrap;margin:0;}
+    .member-bar input{flex:1;background:transparent;border:none;color:var(--text);font-size:0.88rem;outline:none;}
+    .member-avatar{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;}
+
+    /* ── TOAST ── */
+    #toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:0.85rem;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.4);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;max-width:320px;}
+    #toast.show{transform:none;opacity:1;}
+    #toast.success{border-color:var(--green);}
+    #toast.error{border-color:var(--accent2);}
+
+    /* ── LOADING SPINNER ── */
+    .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .loading-overlay{display:flex;align-items:center;justify-content:center;gap:12px;padding:40px;color:var(--muted);font-size:0.9rem;}
+
+    /* ── EMPTY STATE ── */
+    .empty{text-align:center;padding:40px;color:var(--muted);}
+    .empty .icon{font-size:2.5rem;margin-bottom:12px;}
+    .empty p{font-size:0.88rem;}
+
+    /* ── PACE SLIDER ── */
+    input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
+    .range-labels{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);margin-top:4px;}
+
+    /* ── TAGS ── */
+    .tag{display:inline-block;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:0.7rem;padding:2px 8px;border-radius:20px;margin:2px;}
+    .tag.genre{border-color:var(--accent);color:var(--accent);}
+
+    /* ── SECTION HEADER ── */
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+    .section-title{font-size:1rem;font-weight:700;color:var(--text);}
+    .section-count{font-size:0.8rem;color:var(--muted);}
+
+    /* ── MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s;}
+    .modal-overlay.open{opacity:1;pointer-events:all;}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:540px;max-height:80vh;overflow-y:auto;padding:28px;position:relative;transform:scale(.95);transition:transform .25s;}
+    .modal-overlay.open .modal{transform:none;}
+    .modal-close{position:absolute;top:16px;right:16px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .2s;}
+    .modal-close:hover{color:var(--text);border-color:var(--accent);}
+    .modal-title{font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:16px;padding-right:32px;}
+    .modal-cover{width:120px;height:160px;object-fit:cover;border-radius:8px;float:right;margin:0 0 12px 16px;background:var(--surface2);}
+    .modal-cover-placeholder{width:120px;height:160px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:3rem;float:right;margin:0 0 12px 16px;}
+    .modal-meta{font-size:0.82rem;color:var(--muted);margin-bottom:6px;}
+    .modal-subjects{margin-top:12px;clear:both;}
+    .modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;}
+
+    /* ── QUIZ STEPS ── */
+    .quiz-step{display:none;}
+    .quiz-step.active{display:block;animation:fadeIn .3s ease;}
+    .quiz-progress{display:flex;gap:6px;margin-bottom:24px;}
+    .quiz-dot{width:24px;height:4px;border-radius:2px;background:var(--border);transition:background .3s;}
+    .quiz-dot.done{background:var(--accent);}
+    .step-nav{display:flex;justify-content:space-between;margin-top:20px;}
+
+    /* === Film/Books v2 Design System === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 700px 500px at 50% -5%, rgba(0,192,48,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
+    h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent2); }
+    h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .card, .result, .item, .movie, .book, .show, .comic, .series, .reading, .pick,
+    [class*="card"], [class*="item"], [class*="result"], [class*="movie"], [class*="book"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: transform 0.2s, background 0.2s;
+      animation: mediaFade 0.4s ease both;
+    }
+    .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
+
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent2); }
+
+    button, .btn, input[type="submit"], input[type="button"] {
+      background: var(--accent2);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 0.75rem 2rem;
+      font-family: var(--font-body);
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    button:hover { transform: scale(1.02); filter: brightness(1.1); }
+    button:active { transform: scale(0.97); }
+
+    .tag, .badge, .genre, .category, .label, .format, .status {
+      display: inline-block;
+      background: rgba(232,160,32,0.12);
+      border: 1px solid rgba(232,160,32,0.25);
+      color: var(--accent2);
+      border-radius: 4px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .rating, .score, .pages, .runtime {
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--accent2);
+    }
+
+    /* Star rating */
+    .stars, .rating-stars { color: var(--accent2); letter-spacing: 0.1em; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
+    td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+    @keyframes mediaFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">📚</div>
+    <h1>Book Club Pick Suggester<small>Library Edition — Powered by Open Library</small></h1>
+  </div>
+  <nav class="tab-bar" role="tablist">
+    <button class="tab-btn active" data-tab="quiz" role="tab">Preferences</button>
+    <button class="tab-btn" data-tab="suggestions" role="tab">Suggestions</button>
+    <button class="tab-btn" data-tab="vote" role="tab">Vote</button>
+    <button class="tab-btn" data-tab="discussion" role="tab">Discussion</button>
+    <button class="tab-btn" data-tab="schedule" role="tab">Schedule</button>
+    <button class="tab-btn" data-tab="history" role="tab">History</button>
+  </nav>
+</header>
+
+<!-- MEMBER NAME BAR -->
+<div style="max-width:1100px;margin:16px auto 0;padding:0 20px;">
+  <div class="member-bar">
+    <div class="member-avatar" id="memberAvatar">?</div>
+    <label for="memberNameInput">Your name:</label>
+    <input type="text" id="memberNameInput" placeholder="Enter your name to vote and track..." maxlength="40" />
+  </div>
+</div>
+
+<main>
+
+  <!-- ── PREFERENCES / QUIZ ── -->
+  <section id="panel-quiz" class="panel active" role="tabpanel">
+    <div class="card">
+      <div class="card-title">📋 Club Preferences Quiz <span>Step <span id="stepLabel">1</span> of 4</span></div>
+      <div class="quiz-progress" id="quizProgress">
+        <div class="quiz-dot done" id="dot0"></div>
+        <div class="quiz-dot" id="dot1"></div>
+        <div class="quiz-dot" id="dot2"></div>
+        <div class="quiz-dot" id="dot3"></div>
+      </div>
+
+      <!-- Step 0: Genres -->
+      <div class="quiz-step active" id="step0">
+        <label>Which genres does your club enjoy? <em style="color:var(--muted);font-style:normal;">(pick any)</em></label>
+        <div class="chip-grid" id="genreChips"></div>
+        <div class="step-nav"><span></span><button class="btn btn-primary" onclick="nextStep()">Next →</button></div>
+      </div>
+
+      <!-- Step 1: Length -->
+      <div class="quiz-step" id="step1">
+        <div class="form-group">
+          <label>Preferred book length</label>
+          <div class="chip-grid" id="lengthChips">
+            <div class="chip" data-group="length" data-val="short">Short (&lt;200 pages)</div>
+            <div class="chip" data-group="length" data-val="medium">Medium (200–400)</div>
+            <div class="chip" data-group="length" data-val="long">Long (400+)</div>
+            <div class="chip selected" data-group="length" data-val="any">No preference</div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+          <label>Reading pace — how quickly does your club read?</label>
+          <input type="range" id="paceSlider" min="1" max="3" value="2" step="1" />
+          <div class="range-labels"><span>Leisurely</span><span>Moderate</span><span>Fast</span></div>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+          <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Themes -->
+      <div class="quiz-step" id="step2">
+        <label>What themes resonate with your club? <em style="color:var(--muted);font-style:normal;">(pick any)</em></label>
+        <div class="chip-grid" id="themeChips"></div>
+        <div class="step-nav">
+          <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+          <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Extra prefs -->
+      <div class="quiz-step" id="step3">
+        <div class="form-group">
+          <label>Avoid books with these subjects (optional, comma-separated)</label>
+          <input type="text" id="avoidInput" placeholder="e.g. violence, horror, explicit content" />
+        </div>
+        <div class="form-group">
+          <label>Publication era preference</label>
+          <div class="chip-grid" id="eraChips">
+            <div class="chip selected" data-group="era" data-val="any">Any era</div>
+            <div class="chip" data-group="era" data-val="classic">Classic (pre-1970)</div>
+            <div class="chip" data-group="era" data-val="modern">Modern (1970–2010)</div>
+            <div class="chip" data-group="era" data-val="recent">Recent (2010+)</div>
+          </div>
+        </div>
+        <div class="step-nav">
+          <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
+          <button class="btn btn-primary" id="findBooksBtn" onclick="fetchSuggestions()">🔍 Find Books</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent prefs summary -->
+    <div class="card" id="prefSummaryCard" style="display:none;">
+      <div class="card-title">💾 Saved Preferences</div>
+      <div id="prefSummary"></div>
+    </div>
+  </section>
+
+  <!-- ── SUGGESTIONS ── -->
+  <section id="panel-suggestions" class="panel" role="tabpanel">
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">📖 Suggested Books</div>
+        <div class="section-count" id="suggestCount">0 suggestions</div>
+      </div>
+      <div id="suggestionsContainer">
+        <div class="empty"><div class="icon">🔍</div><p>Complete the preferences quiz to get personalized book suggestions.</p></div>
+      </div>
+    </div>
+
+    <!-- Shortlist -->
+    <div class="card" id="shortlistCard">
+      <div class="section-header">
+        <div class="section-title">⭐ Shortlist</div>
+        <div class="section-count" id="shortlistCount">0 books</div>
+      </div>
+      <div id="shortlistContainer">
+        <div class="empty"><div class="icon">📌</div><p>Add books to the shortlist to put them up for a vote.</p></div>
+      </div>
+      <div class="btn-group" id="shortlistActions" style="display:none;">
+        <button class="btn btn-primary" onclick="sendToVote()">📊 Send to Vote</button>
+        <button class="btn btn-secondary" onclick="clearShortlist()">🗑 Clear Shortlist</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── VOTE ── -->
+  <section id="panel-vote" class="panel" role="tabpanel">
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">🗳 Member Voting</div>
+        <button class="btn btn-sm btn-secondary" onclick="resetVotes()">Reset votes</button>
+      </div>
+      <div id="voteContainer">
+        <div class="empty"><div class="icon">🗳</div><p>Add books to the shortlist and click "Send to Vote" to start voting.</p></div>
+      </div>
+    </div>
+    <div class="card" id="voteResultCard" style="display:none;">
+      <div class="card-title">🏆 Current Leader</div>
+      <div id="voteLeader"></div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="pickWinner()">✅ Pick as Next Read</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── DISCUSSION ── -->
+  <section id="panel-discussion" class="panel" role="tabpanel">
+    <div class="card">
+      <div class="card-title">💬 Discussion Question Generator</div>
+      <div class="form-group">
+        <label>Select a book to generate discussion questions</label>
+        <select id="discussionBookSelect">
+          <option value="">— Select a book —</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="generateQuestions()">✨ Generate Questions</button>
+      <div id="questionsContainer" style="margin-top:20px;"></div>
+    </div>
+  </section>
+
+  <!-- ── SCHEDULE ── -->
+  <section id="panel-schedule" class="panel" role="tabpanel">
+    <div class="card">
+      <div class="card-title">📅 Meeting Scheduler</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="meetingDate">Meeting Date</label>
+          <input type="date" id="meetingDate" />
+        </div>
+        <div class="form-group">
+          <label for="meetingBook">Book</label>
+          <select id="meetingBook">
+            <option value="">— Select book —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="meetingNotes">Notes / Location</label>
+        <textarea id="meetingNotes" placeholder="e.g. Community Room B, 6:30 PM. Bring snacks!"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="addMeeting()">📅 Schedule Meeting</button>
+    </div>
+
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">Upcoming Meetings</div>
+        <div class="section-count" id="meetingCount">0 meetings</div>
+      </div>
+      <div id="meetingsContainer">
+        <div class="empty"><div class="icon">📅</div><p>No meetings scheduled yet.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HISTORY ── -->
+  <section id="panel-history" class="panel" role="tabpanel">
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">📚 Reading History</div>
+        <button class="btn btn-sm btn-danger" onclick="clearHistory()">Clear All</button>
+      </div>
+      <div id="historyContainer">
+        <div class="empty"><div class="icon">📖</div><p>No reading history yet. Pick your first book!</p></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- BOOK DETAIL MODAL -->
+<div class="modal-overlay" id="bookModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()" aria-label="Close">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" role="alert" aria-live="polite"></div>
+
+<script>
+  /* ================================================================
+     STATE
+  ================================================================ */
+  const GENRES = [
+    'fiction','mystery','romance','science fiction','fantasy','historical fiction',
+    'biography','thriller','horror','literary fiction','young adult','classics',
+    'non-fiction','self-help','philosophy','psychology','travel','humor'
+  ];
+
+  const THEMES = [
+    'identity','family','friendship','love','redemption','justice','power',
+    'war','survival','coming of age','grief','society','adventure','discovery',
+    'betrayal','hope','nature','science','politics','culture'
+  ];
+
+  const DISCUSSION_QUESTIONS = {
+    'fiction': [
+      'Which character did you relate to most and why?',
+      'How did the setting influence the story\'s outcome?',
+      'What would you have done differently if you were the protagonist?',
+      'Were you satisfied with the ending? How might you rewrite it?',
+      'What central theme resonated most with your own life?'
+    ],
+    'mystery': [
+      'Did you guess the culprit before the reveal? What clues pointed you there?',
+      'How did the author build suspense effectively?',
+      'Was the solution satisfying or did it feel contrived?',
+      'Which red herring misled you the most?',
+      'How did the detective\'s method compare to modern crime-solving?'
+    ],
+    'romance': [
+      'Were you rooting for the central relationship from the start?',
+      'What obstacles felt most authentic to overcoming?',
+      'How did the author handle communication (or lack thereof) between characters?',
+      'Would you call this a realistic portrayal of love?',
+      'What would you change about how the conflict was resolved?'
+    ],
+    'science fiction': [
+      'Which technology in the book feels closest to becoming reality?',
+      'What does the world-building say about our current society?',
+      'Is the science plausible or purely speculative?',
+      'How does the protagonist adapt to their extraordinary circumstances?',
+      'What ethical dilemmas in the story mirror real-world debates?'
+    ],
+    'fantasy': [
+      'How did the magic system affect the plot\'s believability?',
+      'Which aspect of the world-building was most inventive?',
+      'Are the characters\' motivations clear despite the fantastical setting?',
+      'What real-world issue does the fantasy setting mirror?',
+      'Would you want to live in this fictional world? Why or why not?'
+    ],
+    'historical fiction': [
+      'How accurate does the historical backdrop feel?',
+      'What did you learn about the era that surprised you?',
+      'How did the author balance historical fact with narrative invention?',
+      'How do the characters\' experiences compare to modern perspectives on the same events?',
+      'Which historical figure or event do you wish had more page time?'
+    ],
+    'biography': [
+      'What aspects of the subject\'s life most changed your view of them?',
+      'Did the author appear to have biases toward the subject?',
+      'Which period of the subject\'s life did you find most compelling?',
+      'What lessons from this person\'s life are most applicable today?',
+      'Were there gaps in the narrative you wish had been explored?'
+    ],
+    'thriller': [
+      'At what point did you feel the most tension?',
+      'Was the pacing consistent, or were there slow sections?',
+      'Did the twists feel earned or gimmicky?',
+      'How does fear serve as a narrative tool here?',
+      'What would you have done in the protagonist\'s most dangerous moment?'
+    ],
+    'default': [
+      'What was your overall impression of the writing style?',
+      'Which passage or moment stood out to you most?',
+      'How did this book change or challenge your perspective?',
+      'Would you recommend this book, and to whom?',
+      'What one word would you use to describe this book?'
+    ]
+  };
+
+  let state = {
+    currentStep: 0,
+    prefs: {
+      genres: [],
+      length: 'any',
+      pace: 2,
+      themes: [],
+      avoid: '',
+      era: 'any'
+    },
+    suggestions: [],
+    shortlist: [],
+    votes: {},    // { memberName: { bookKey: 1 } }
+    history: [],
+    meetings: [],
+    memberName: ''
+  };
+
+  /* ================================================================
+     PERSISTENCE
+  ================================================================ */
+  function saveState() {
+    const toSave = {
+      prefs: state.prefs,
+      shortlist: state.shortlist,
+      votes: state.votes,
+      history: state.history,
+      meetings: state.meetings,
+      memberName: state.memberName
+    };
+    localStorage.setItem('bookclub_state', JSON.stringify(toSave));
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem('bookclub_state');
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      Object.assign(state, saved);
+    } catch (e) {
+      // ignore corrupt data
+    }
+  }
+
+  /* ================================================================
+     TOAST
+  ================================================================ */
+  let toastTimer = null;
+  function showToast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+  }
+
+  /* ================================================================
+     TABS
+  ================================================================ */
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const panelId = `panel-${btn.dataset.tab}`;
+      const panel = document.getElementById(panelId);
+      if (panel) panel.classList.add('active');
+      if (btn.dataset.tab === 'vote') renderVote();
+      if (btn.dataset.tab === 'history') renderHistory();
+      if (btn.dataset.tab === 'schedule') renderMeetings();
+      if (btn.dataset.tab === 'discussion') renderDiscussionSelect();
+    });
+  });
+
+  /* ================================================================
+     MEMBER NAME
+  ================================================================ */
+  const memberInput = document.getElementById('memberNameInput');
+  memberInput.addEventListener('input', () => {
+    state.memberName = memberInput.value.trim();
+    const avatar = document.getElementById('memberAvatar');
+    avatar.textContent = state.memberName ? state.memberName[0].toUpperCase() : '?';
+    saveState();
+  });
+
+  /* ================================================================
+     QUIZ / PREFERENCES
+  ================================================================ */
+  function buildChips(containerId, items, group) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    items.forEach(item => {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.dataset.group = group;
+      chip.dataset.val = item;
+      chip.textContent = item.charAt(0).toUpperCase() + item.slice(1);
+      chip.addEventListener('click', () => toggleChip(chip, group));
+      container.appendChild(chip);
+    });
+  }
+
+  function toggleChip(chip, group) {
+    if (group === 'length' || group === 'era') {
+      document.querySelectorAll(`[data-group="${group}"]`).forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      if (group === 'length') state.prefs.length = chip.dataset.val;
+      if (group === 'era') state.prefs.era = chip.dataset.val;
+    } else {
+      chip.classList.toggle('selected');
+      const arr = group === 'genre' ? state.prefs.genres : state.prefs.themes;
+      const val = chip.dataset.val;
+      const idx = arr.indexOf(val);
+      if (idx === -1) arr.push(val);
+      else arr.splice(idx, 1);
+    }
+    saveState();
+  }
+
+  function nextStep() {
+    if (state.currentStep < 3) {
+      state.currentStep++;
+      showStep(state.currentStep);
+    }
+  }
+
+  function prevStep() {
+    if (state.currentStep > 0) {
+      state.currentStep--;
+      showStep(state.currentStep);
+    }
+  }
+
+  function showStep(n) {
+    document.querySelectorAll('.quiz-step').forEach((s, i) => {
+      s.classList.toggle('active', i === n);
+    });
+    document.getElementById('stepLabel').textContent = n + 1;
+    for (let i = 0; i < 4; i++) {
+      document.getElementById(`dot${i}`).classList.toggle('done', i <= n);
+    }
+  }
+
+  /* ================================================================
+     OPEN LIBRARY API
+  ================================================================ */
+  async function fetchSuggestions() {
+    const btn = document.getElementById('findBooksBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> Searching...`;
+
+    state.prefs.avoid = document.getElementById('avoidInput').value.trim();
+    state.prefs.pace = parseInt(document.getElementById('paceSlider').value);
+    saveState();
+
+    // Switch to suggestions tab
+    switchTab('suggestions');
+
+    const container = document.getElementById('suggestionsContainer');
+    container.innerHTML = `<div class="loading-overlay"><span class="spinner"></span> Fetching books from Open Library…</div>`;
+    document.getElementById('suggestCount').textContent = 'Loading...';
+
+    try {
+      const books = await loadBooks();
+      state.suggestions = books;
+      renderSuggestions();
+      showPrefSummary();
+      showToast(`Found ${books.length} book suggestions!`, 'success');
+    } catch (err) {
+      container.innerHTML = `<div class="empty"><div class="icon">⚠️</div><p>Could not load books. Check your connection and try again.<br><small style="color:var(--muted)">${err.message}</small></p></div>`;
+      showToast('Failed to fetch books', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `🔍 Find Books`;
+    }
+  }
+
+  async function loadBooks() {
+    const genres = state.prefs.genres.length ? state.prefs.genres : ['fiction'];
+    const themes = state.prefs.themes;
+
+    // Build search terms
+    const searchTerms = [...genres.slice(0, 2), ...themes.slice(0, 2)];
+    const allBooks = [];
+    const seen = new Set();
+
+    for (const term of searchTerms.slice(0, 3)) {
+      try {
+        const subject = term.replace(/\s+/g, '_').toLowerCase();
+        const url = `https://openlibrary.org/subjects/${encodeURIComponent(subject)}.json?limit=20`;
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.works) {
+          data.works.forEach(w => {
+            if (!seen.has(w.key)) {
+              seen.add(w.key);
+              allBooks.push(normalizeSubjectWork(w));
+            }
+          });
+        }
+      } catch (e) {
+        // skip failed subject
+      }
+    }
+
+    // If fewer than 5, also do a search query
+    if (allBooks.length < 5) {
+      const q = genres.concat(themes).slice(0, 3).join(' ');
+      try {
+        const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=10`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.docs) {
+            data.docs.forEach(doc => {
+              if (!seen.has(doc.key)) {
+                seen.add(doc.key);
+                allBooks.push(normalizeSearchDoc(doc));
+              }
+            });
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // Filter by era
+    let filtered = applyEraFilter(allBooks);
+
+    // Filter out avoided subjects
+    if (state.prefs.avoid) {
+      const avoid = state.prefs.avoid.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+      filtered = filtered.filter(b => {
+        const combined = (b.subjects || []).join(' ').toLowerCase();
+        return !avoid.some(a => combined.includes(a));
+      });
+    }
+
+    return filtered.slice(0, 15);
+  }
+
+  function normalizeSubjectWork(w) {
+    const coverId = w.cover_id || (w.covers && w.covers[0]);
+    return {
+      key: w.key,
+      title: w.title || 'Unknown Title',
+      author: w.authors && w.authors[0] ? w.authors[0].name : 'Unknown Author',
+      year: w.first_publish_year || null,
+      coverId: coverId || null,
+      subjects: w.subject ? w.subject.slice(0, 8) : [],
+      description: ''
+    };
+  }
+
+  function normalizeSearchDoc(doc) {
+    const coverId = doc.cover_i || null;
+    return {
+      key: doc.key || `/works/${doc.seed}`,
+      title: doc.title || 'Unknown Title',
+      author: doc.author_name && doc.author_name[0] ? doc.author_name[0] : 'Unknown Author',
+      year: doc.first_publish_year || null,
+      coverId: coverId,
+      subjects: doc.subject ? doc.subject.slice(0, 8) : [],
+      description: ''
+    };
+  }
+
+  function applyEraFilter(books) {
+    const era = state.prefs.era;
+    if (era === 'any') return books;
+    return books.filter(b => {
+      if (!b.year) return true; // keep unknowns
+      if (era === 'classic') return b.year < 1970;
+      if (era === 'modern') return b.year >= 1970 && b.year <= 2010;
+      if (era === 'recent') return b.year > 2010;
+      return true;
+    });
+  }
+
+  function coverUrl(coverId, size = 'M') {
+    if (!coverId) return null;
+    return `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg`;
+  }
+
+  /* ================================================================
+     RENDER SUGGESTIONS
+  ================================================================ */
+  function renderSuggestions() {
+    const container = document.getElementById('suggestionsContainer');
+    const count = state.suggestions.length;
+    document.getElementById('suggestCount').textContent = `${count} suggestion${count !== 1 ? 's' : ''}`;
+
+    if (!count) {
+      container.innerHTML = `<div class="empty"><div class="icon">📭</div><p>No books found for your preferences. Try broadening your genre selection.</p></div>`;
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'books-grid';
+
+    state.suggestions.forEach(book => {
+      grid.appendChild(buildBookCard(book, 'suggestion'));
+    });
+
+    container.innerHTML = '';
+    container.appendChild(grid);
+    renderShortlist();
+  }
+
+  function buildBookCard(book, context) {
+    const card = document.createElement('div');
+    card.className = 'book-card';
+    const isShortlisted = state.shortlist.some(b => b.key === book.key);
+    if (isShortlisted) card.classList.add('shortlisted');
+
+    const imgUrl = coverUrl(book.coverId);
+    const imgHtml = imgUrl
+      ? `<img class="book-cover" src="${imgUrl}" alt="Cover of ${escHtml(book.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="book-cover-placeholder" style="display:none;">📖</div>`
+      : `<div class="book-cover-placeholder">📖</div>`;
+
+    card.innerHTML = `
+      ${isShortlisted ? `<div class="shortlist-badge">⭐ Shortlisted</div>` : ''}
+      ${imgHtml}
+      <div class="book-info">
+        <div class="book-title">${escHtml(book.title)}</div>
+        <div class="book-author">${escHtml(book.author)}</div>
+        ${book.year ? `<div class="book-year">${book.year}</div>` : ''}
+        <div class="book-actions">
+          <button class="btn btn-sm btn-secondary" onclick="openModal('${escAttr(book.key)}')">Details</button>
+          ${context === 'suggestion' ? `<button class="btn btn-sm btn-primary" onclick="toggleShortlist('${escAttr(book.key)}')" id="sl-${escAttr(book.key)}">${isShortlisted ? 'Remove' : '+ Shortlist'}</button>` : ''}
+        </div>
+      </div>`;
+
+    return card;
+  }
+
+  /* ================================================================
+     SHORTLIST
+  ================================================================ */
+  function toggleShortlist(key) {
+    const book = state.suggestions.find(b => b.key === key);
+    if (!book) return;
+    const idx = state.shortlist.findIndex(b => b.key === key);
+    if (idx === -1) {
+      state.shortlist.push(book);
+      showToast(`"${book.title}" added to shortlist`, 'success');
+    } else {
+      state.shortlist.splice(idx, 1);
+      showToast(`"${book.title}" removed from shortlist`);
+    }
+    saveState();
+    renderSuggestions();
+    renderShortlist();
+    updateDiscussionSelect();
+    updateMeetingSelect();
+  }
+
+  function renderShortlist() {
+    const container = document.getElementById('shortlistContainer');
+    const actions = document.getElementById('shortlistActions');
+    const count = state.shortlist.length;
+    document.getElementById('shortlistCount').textContent = `${count} book${count !== 1 ? 's' : ''}`;
+
+    if (!count) {
+      container.innerHTML = `<div class="empty"><div class="icon">📌</div><p>Add books to the shortlist to put them up for a vote.</p></div>`;
+      actions.style.display = 'none';
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'books-grid';
+    state.shortlist.forEach(book => grid.appendChild(buildBookCard(book, 'shortlist')));
+    container.innerHTML = '';
+    container.appendChild(grid);
+    actions.style.display = 'flex';
+  }
+
+  function clearShortlist() {
+    if (!state.shortlist.length) return;
+    state.shortlist = [];
+    saveState();
+    renderShortlist();
+    renderSuggestions();
+    showToast('Shortlist cleared');
+  }
+
+  function sendToVote() {
+    if (!state.shortlist.length) { showToast('Add books to shortlist first', 'error'); return; }
+    saveState();
+    switchTab('vote');
+    renderVote();
+    showToast('Books sent to vote!', 'success');
+  }
+
+  /* ================================================================
+     VOTING
+  ================================================================ */
+  function renderVote() {
+    const container = document.getElementById('voteContainer');
+    const resultCard = document.getElementById('voteResultCard');
+
+    if (!state.shortlist.length) {
+      container.innerHTML = `<div class="empty"><div class="icon">🗳</div><p>Add books to the shortlist and click "Send to Vote" to start voting.</p></div>`;
+      resultCard.style.display = 'none';
+      return;
+    }
+
+    container.innerHTML = '';
+    const name = state.memberName;
+
+    state.shortlist.forEach(book => {
+      const totalVotes = getTotalVotes(book.key);
+      const totalPossible = Object.keys(state.votes).length || 1;
+      const pct = Math.round((totalVotes / totalPossible) * 100);
+
+      const myVote = name && state.votes[name] && state.votes[name][book.key];
+      const imgUrl = coverUrl(book.coverId);
+
+      const item = document.createElement('div');
+      item.className = 'vote-item';
+      const imgHtml = imgUrl
+        ? `<img class="vote-cover" src="${imgUrl}" alt="${escHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="vote-cover-placeholder" style="display:none;">📖</div>`
+        : `<div class="vote-cover-placeholder">📖</div>`;
+
+      item.innerHTML = `
+        ${imgHtml}
+        <div class="vote-details">
+          <div class="vote-title">${escHtml(book.title)}</div>
+          <div class="vote-author">${escHtml(book.author)}</div>
+          <div class="vote-bar-wrap">
+            <div class="vote-bar-label"><span>${totalVotes} vote${totalVotes !== 1 ? 's' : ''}</span><span>${pct}%</span></div>
+            <div class="vote-bar"><div class="vote-bar-fill" style="width:${pct}%"></div></div>
+          </div>
+          <div class="vote-btn-row">
+            <button class="vote-btn ${myVote ? 'voted' : ''}" onclick="castVote('${escAttr(book.key)}')">
+              ${myVote ? '✓ Voted' : '👍 Vote'}
+            </button>
+            <button class="vote-btn" onclick="openModal('${escAttr(book.key)}')">Details</button>
+          </div>
+        </div>`;
+      container.appendChild(item);
+    });
+
+    // Show leader
+    const leader = getLeader();
+    if (leader) {
+      resultCard.style.display = 'block';
+      document.getElementById('voteLeader').innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;">
+          ${coverUrl(leader.coverId) ? `<img src="${coverUrl(leader.coverId, 'S')}" style="width:50px;height:66px;object-fit:cover;border-radius:6px;" alt="" />` : ''}
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;">${escHtml(leader.title)}</div>
+            <div style="color:var(--muted);font-size:0.8rem;">${escHtml(leader.author)}</div>
+            <div style="color:var(--green);font-size:0.82rem;margin-top:4px;">${getTotalVotes(leader.key)} vote${getTotalVotes(leader.key) !== 1 ? 's' : ''}</div>
+          </div>
+        </div>`;
+    } else {
+      resultCard.style.display = 'none';
+    }
+  }
+
+  function getTotalVotes(key) {
+    let count = 0;
+    Object.values(state.votes).forEach(memberVotes => {
+      if (memberVotes[key]) count++;
+    });
+    return count;
+  }
+
+  function getLeader() {
+    if (!state.shortlist.length) return null;
+    let best = null;
+    let bestCount = 0;
+    state.shortlist.forEach(book => {
+      const c = getTotalVotes(book.key);
+      if (c > bestCount) { bestCount = c; best = book; }
+    });
+    return best;
+  }
+
+  function castVote(key) {
+    const name = state.memberName;
+    if (!name) { showToast('Enter your name to vote', 'error'); return; }
+    if (!state.votes[name]) state.votes[name] = {};
+    if (state.votes[name][key]) {
+      delete state.votes[name][key];
+      showToast('Vote removed');
+    } else {
+      state.votes[name][key] = 1;
+      showToast('Vote cast!', 'success');
+    }
+    saveState();
+    renderVote();
+  }
+
+  function resetVotes() {
+    state.votes = {};
+    saveState();
+    renderVote();
+    showToast('Votes reset');
+  }
+
+  function pickWinner() {
+    const leader = getLeader();
+    if (!leader) { showToast('No votes yet', 'error'); return; }
+    addToHistory(leader);
+    showToast(`"${leader.title}" added to reading history!`, 'success');
+  }
+
+  /* ================================================================
+     HISTORY
+  ================================================================ */
+  function addToHistory(book) {
+    const exists = state.history.find(h => h.key === book.key);
+    if (exists) { showToast('Already in history'); return; }
+    state.history.unshift({ ...book, pickedAt: new Date().toLocaleDateString() });
+    saveState();
+    renderHistory();
+    switchTab('history');
+  }
+
+  function renderHistory() {
+    const container = document.getElementById('historyContainer');
+    if (!state.history.length) {
+      container.innerHTML = `<div class="empty"><div class="icon">📖</div><p>No reading history yet. Pick your first book!</p></div>`;
+      return;
+    }
+    container.innerHTML = state.history.map((book, i) => `
+      <div class="history-item">
+        <div class="history-rank">${i + 1}</div>
+        <div class="history-info">
+          <div class="history-title">${escHtml(book.title)}</div>
+          <div class="history-meta">by ${escHtml(book.author)}${book.year ? ` · ${book.year}` : ''}</div>
+        </div>
+        <div class="history-date">📅 ${book.pickedAt}</div>
+      </div>`).join('');
+  }
+
+  function clearHistory() {
+    state.history = [];
+    saveState();
+    renderHistory();
+    showToast('History cleared');
+  }
+
+  /* ================================================================
+     DISCUSSION QUESTIONS
+  ================================================================ */
+  function renderDiscussionSelect() {
+    const sel = document.getElementById('discussionBookSelect');
+    const books = [...state.shortlist, ...state.history];
+    sel.innerHTML = `<option value="">— Select a book —</option>`;
+    books.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.key;
+      opt.textContent = b.title;
+      sel.appendChild(opt);
+    });
+  }
+
+  function updateDiscussionSelect() {
+    const panel = document.getElementById('panel-discussion');
+    if (panel.classList.contains('active')) renderDiscussionSelect();
+  }
+
+  function generateQuestions() {
+    const key = document.getElementById('discussionBookSelect').value;
+    const books = [...state.shortlist, ...state.history, ...state.suggestions];
+    const book = books.find(b => b.key === key);
+    const container = document.getElementById('questionsContainer');
+
+    if (!key || !book) {
+      showToast('Select a book first', 'error');
+      return;
+    }
+
+    // Determine genre from subjects or prefs
+    let genre = 'default';
+    const subjects = (book.subjects || []).map(s => s.toLowerCase());
+    const knownGenres = Object.keys(DISCUSSION_QUESTIONS).filter(g => g !== 'default');
+    for (const g of knownGenres) {
+      if (subjects.some(s => s.includes(g)) || state.prefs.genres.includes(g)) {
+        genre = g;
+        break;
+      }
+    }
+
+    const questions = DISCUSSION_QUESTIONS[genre] || DISCUSSION_QUESTIONS['default'];
+
+    container.innerHTML = `
+      <div style="margin-bottom:12px;font-size:0.82rem;color:var(--muted);">
+        Discussion questions for <strong style="color:var(--text)">${escHtml(book.title)}</strong>
+        <span class="tag genre">${genre}</span>
+      </div>
+      <ul class="question-list">
+        ${questions.map(q => `<li>${escHtml(q)}</li>`).join('')}
+      </ul>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" onclick="copyQuestions()">📋 Copy Questions</button>
+      </div>`;
+  }
+
+  function copyQuestions() {
+    const items = document.querySelectorAll('.question-list li');
+    const text = Array.from(items).map((li, i) => `${i + 1}. ${li.textContent}`).join('\n');
+    navigator.clipboard.writeText(text).then(() => showToast('Questions copied!', 'success')).catch(() => showToast('Copy failed'));
+  }
+
+  /* ================================================================
+     MEETING SCHEDULER
+  ================================================================ */
+  function updateMeetingSelect() {
+    const sel = document.getElementById('meetingBook');
+    const books = [...state.shortlist, ...state.history];
+    const current = sel.value;
+    sel.innerHTML = `<option value="">— Select book —</option>`;
+    books.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.key;
+      opt.textContent = b.title;
+      if (opt.value === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  function addMeeting() {
+    const date = document.getElementById('meetingDate').value;
+    const bookKey = document.getElementById('meetingBook').value;
+    const notes = document.getElementById('meetingNotes').value.trim();
+
+    if (!date) { showToast('Select a meeting date', 'error'); return; }
+
+    const books = [...state.shortlist, ...state.history];
+    const book = books.find(b => b.key === bookKey);
+    const bookTitle = book ? book.title : 'General Meeting';
+
+    state.meetings.push({ date, bookTitle, notes, id: Date.now() });
+    state.meetings.sort((a, b) => a.date.localeCompare(b.date));
+    saveState();
+    renderMeetings();
+    document.getElementById('meetingDate').value = '';
+    document.getElementById('meetingNotes').value = '';
+    showToast('Meeting scheduled!', 'success');
+  }
+
+  function renderMeetings() {
+    const container = document.getElementById('meetingsContainer');
+    const count = state.meetings.length;
+    document.getElementById('meetingCount').textContent = `${count} meeting${count !== 1 ? 's' : ''}`;
+
+    if (!count) {
+      container.innerHTML = `<div class="empty"><div class="icon">📅</div><p>No meetings scheduled yet.</p></div>`;
+      return;
+    }
+
+    container.innerHTML = state.meetings.map(m => {
+      const d = new Date(m.date + 'T12:00:00');
+      const day = d.getDate();
+      const mon = d.toLocaleString('default', { month: 'short' });
+      return `
+        <div class="meeting-item">
+          <div class="meeting-date-badge"><div class="day">${day}</div><div class="mon">${mon}</div></div>
+          <div class="meeting-info">
+            <div class="meeting-book">📖 ${escHtml(m.bookTitle)}</div>
+            ${m.notes ? `<div class="meeting-notes">${escHtml(m.notes)}</div>` : ''}
+          </div>
+          <button class="btn btn-sm btn-secondary" onclick="deleteMeeting(${m.id})" aria-label="Delete meeting">✕</button>
+        </div>`;
+    }).join('');
+
+    updateMeetingSelect();
+  }
+
+  function deleteMeeting(id) {
+    state.meetings = state.meetings.filter(m => m.id !== id);
+    saveState();
+    renderMeetings();
+    showToast('Meeting removed');
+  }
+
+  /* ================================================================
+     BOOK DETAIL MODAL
+  ================================================================ */
+  function openModal(key) {
+    const books = [...state.suggestions, ...state.shortlist, ...state.history];
+    const book = books.find(b => b.key === key);
+    if (!book) return;
+
+    const imgUrl = coverUrl(book.coverId, 'L');
+    const isShortlisted = state.shortlist.some(b => b.key === key);
+
+    document.getElementById('modalContent').innerHTML = `
+      <h2 class="modal-title" id="modalTitle">${escHtml(book.title)}</h2>
+      ${imgUrl ? `<img class="modal-cover" src="${imgUrl}" alt="Cover of ${escHtml(book.title)}" onerror="this.style.display='none';" />` : `<div class="modal-cover-placeholder">📖</div>`}
+      <div class="modal-meta">✍️ ${escHtml(book.author)}</div>
+      ${book.year ? `<div class="modal-meta">📅 First published ${book.year}</div>` : ''}
+      <div class="modal-subjects">
+        ${book.subjects.length ? `<div style="margin-bottom:6px;font-size:0.8rem;color:var(--muted);">Subjects:</div>${book.subjects.map(s => `<span class="tag">${escHtml(s)}</span>`).join('')}` : ''}
+      </div>
+      <div class="modal-actions">
+        ${state.suggestions.find(b => b.key === key) ? `<button class="btn btn-primary" onclick="toggleShortlist('${escAttr(key)}');closeModal();">${isShortlisted ? '✕ Remove from Shortlist' : '⭐ Add to Shortlist'}</button>` : ''}
+        <a class="btn btn-secondary" href="https://openlibrary.org${escAttr(key)}" target="_blank" rel="noopener noreferrer">🔗 Open Library Page</a>
+      </div>`;
+
+    document.getElementById('bookModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('bookModal').classList.remove('open');
+  }
+
+  document.getElementById('bookModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('bookModal')) closeModal();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  /* ================================================================
+     PREFERENCES SUMMARY
+  ================================================================ */
+  function showPrefSummary() {
+    const card = document.getElementById('prefSummaryCard');
+    const div = document.getElementById('prefSummary');
+    const p = state.prefs;
+    div.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.82rem;">
+        <div><strong>Genres:</strong> ${p.genres.length ? p.genres.map(g => `<span class="tag genre">${g}</span>`).join('') : '<span class="tag">any</span>'}</div>
+        <div><strong>Themes:</strong> ${p.themes.length ? p.themes.map(t => `<span class="tag">${t}</span>`).join('') : '<span class="tag">any</span>'}</div>
+        <div><strong>Length:</strong> <span class="tag">${p.length}</span></div>
+        <div><strong>Era:</strong> <span class="tag">${p.era}</span></div>
+        ${p.avoid ? `<div><strong>Avoid:</strong> <span class="tag">${escHtml(p.avoid)}</span></div>` : ''}
+      </div>`;
+    card.style.display = 'block';
+  }
+
+  /* ================================================================
+     UTILITY
+  ================================================================ */
+  function escHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function escAttr(str) {
+    return String(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tabName}`));
+  }
+
+  /* ================================================================
+     INIT
+  ================================================================ */
+  function init() {
+    loadState();
+
+    // Restore member name
+    if (state.memberName) {
+      memberInput.value = state.memberName;
+      document.getElementById('memberAvatar').textContent = state.memberName[0].toUpperCase();
+    }
+
+    // Build genre / theme chips
+    buildChips('genreChips', GENRES, 'genre');
+    buildChips('themeChips', THEMES, 'theme');
+
+    // Restore chip selections
+    state.prefs.genres.forEach(g => {
+      const chip = document.querySelector(`#genreChips [data-val="${CSS.escape(g)}"]`);
+      if (chip) chip.classList.add('selected');
+    });
+    state.prefs.themes.forEach(t => {
+      const chip = document.querySelector(`#themeChips [data-val="${CSS.escape(t)}"]`);
+      if (chip) chip.classList.add('selected');
+    });
+
+    // Restore length / era
+    document.querySelectorAll('[data-group="length"]').forEach(c => {
+      c.classList.toggle('selected', c.dataset.val === state.prefs.length);
+    });
+    document.querySelectorAll('[data-group="era"]').forEach(c => {
+      c.classList.toggle('selected', c.dataset.val === state.prefs.era);
+    });
+
+    // Restore pace slider
+    document.getElementById('paceSlider').value = state.prefs.pace;
+
+    // Restore avoid input
+    if (state.prefs.avoid) document.getElementById('avoidInput').value = state.prefs.avoid;
+
+    // Set default meeting date to today
+    document.getElementById('meetingDate').valueAsDate = new Date();
+
+    // Render persisted data
+    if (state.suggestions.length) renderSuggestions();
+    renderShortlist();
+    renderHistory();
+    renderMeetings();
+    renderDiscussionSelect();
+    updateMeetingSelect();
+    if (state.prefs.genres.length || state.prefs.themes.length) showPrefSummary();
+  }
+
+  init();
+</script>
+</body>
+</html>

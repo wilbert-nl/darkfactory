@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UptimeWatch — Website Uptime Monitor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0e;
+      --surface: #0d1117;
+      --surface2: #161b22;
+      --border: rgba(255,255,255,0.08);
+      --accent: #58a6ff;
+      --accent2: #f78166;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font: var(--font-body);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .logo-text span { color: var(--accent); }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .pulse-dot.checking { background: var(--yellow); }
+    .pulse-dot.error { background: var(--red); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* ── Summary bar ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .summary-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .summary-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .summary-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .summary-value.green { color: var(--green); }
+    .summary-value.red { color: var(--red); }
+    .summary-value.yellow { color: var(--yellow); }
+
+    .summary-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Section headers ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #5a52e0; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+      border-color: var(--accent);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid transparent;
+    }
+
+    .btn-danger:hover {
+      background: rgba(255,71,87,0.1);
+      border-color: var(--red);
+    }
+
+    .btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+
+    /* ── Add site form ── */
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 32px;
+      display: none;
+    }
+
+    .add-form.open { display: block; animation: slideDown 0.2s ease; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 200px auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+    .form-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .form-input, .form-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      font-family: var(--font);
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255,0.15);
+    }
+
+    .form-input::placeholder { color: var(--muted); }
+
+    /* ── Site cards ── */
+    .sites-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .site-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .site-card:hover { transform: translateY(-1px); }
+
+    .site-card.status-up { border-left: 3px solid var(--green); }
+    .site-card.status-down { border-left: 3px solid var(--red); }
+    .site-card.status-pending { border-left: 3px solid var(--muted); }
+    .site-card.status-checking { border-left: 3px solid var(--yellow); }
+
+    .site-card-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+    }
+
+    .site-status-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .site-status-icon.up { background: rgba(67,217,173,0.15); }
+    .site-status-icon.down { background: rgba(255,71,87,0.15); }
+    .site-status-icon.pending { background: rgba(136,146,176,0.15); }
+    .site-status-icon.checking { background: rgba(247,201,72,0.15); animation: spin 1s linear infinite; }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .site-info { flex: 1; min-width: 0; }
+
+    .site-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .site-url {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .site-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-shrink: 0;
+    }
+
+    .site-stat {
+      text-align: center;
+    }
+
+    .site-stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .site-stat-value.green { color: var(--green); }
+    .site-stat-value.red { color: var(--red); }
+    .site-stat-value.yellow { color: var(--yellow); }
+
+    .site-stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .site-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── History chart ── */
+    .site-history {
+      padding: 0 20px 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .history-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .history-bars {
+      display: flex;
+      gap: 3px;
+      align-items: flex-end;
+      height: 40px;
+    }
+
+    .history-bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      min-width: 4px;
+      transition: opacity 0.2s;
+      cursor: default;
+      position: relative;
+    }
+
+    .history-bar:hover { opacity: 0.8; }
+
+    .history-bar.up { background: var(--green); }
+    .history-bar.down { background: var(--red); }
+    .history-bar.pending { background: var(--border); }
+
+    /* ── Incidents log ── */
+    .incidents-section {
+      margin-top: 40px;
+    }
+
+    .incidents-table {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .incidents-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .incidents-table th {
+      background: var(--surface2);
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .incidents-table td {
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .incidents-table tr:last-child td { border-bottom: none; }
+
+    .incidents-table tr:hover td { background: var(--surface2); }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .tag-up { background: rgba(67,217,173,0.15); color: var(--green); }
+    .tag-down { background: rgba(255,71,87,0.15); color: var(--red); }
+    .tag-checking { background: rgba(247,201,72,0.15); color: var(--yellow); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 64px 24px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .empty-sub {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── Toast notifications ── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: var(--text);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: all;
+      animation: toastIn 0.3s ease;
+      max-width: 320px;
+    }
+
+    .toast.fade-out { animation: toastOut 0.3s ease forwards; }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error { border-left: 3px solid var(--red); }
+    .toast.warning { border-left: 3px solid var(--yellow); }
+    .toast.info { border-left: 3px solid var(--accent); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(20px); }
+    }
+
+    /* ── Next check countdown ── */
+    .countdown {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .countdown-bar-wrap {
+      width: 80px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .countdown-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 1s linear;
+    }
+
+    /* ── Notification permission banner ── */
+    .notif-banner {
+      background: linear-gradient(135deg, rgba(0,229,255,0.1), rgba(124,58,237,0.1));
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .notif-banner p {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .notif-banner p span { color: var(--accent); font-weight: 600; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .site-meta { gap: 12px; }
+      .site-stat { display: none; }
+      .site-stat:first-child { display: block; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── Loading shimmer ── */
+    .shimmer {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Tooltip ── */
+    [data-tooltip] {
+      position: relative;
+    }
+
+    [data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* === Security/Infra Tools v2 Design System === */
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; line-height: 1.6; background-image: radial-gradient(rgba(88,166,255,0.03) 1px, transparent 1px); background-size: 24px 24px; }
+    h1, h2, .title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
+    h1 { font-size: clamp(1.4rem, 3vw, 1.8rem); color: var(--text); }
+    h2 { font-size: 1rem; color: var(--muted); font-weight: 500; }
+    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .card, .result, .item, .output, .domain, .cert, .check, .breach, .password-result, .ssl-info,
+    [class*="card"], [class*="result"], [class*="item"], [class*="check"] {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; animation: secFade 0.25s ease both;
+    }
+    .card.danger, .result.danger, .breach-found, .expired, .unsafe { border-left: 3px solid var(--red); }
+    .card.safe, .result.safe, .no-breach, .valid, .secure { border-left: 3px solid var(--green); }
+    .card.warning, .result.warning, .expiring-soon { border-left: 3px solid var(--yellow); }
+    .code, .value, pre, code, .mono, .domain-name, .hash, .password, .ip { font-family: var(--font-mono); font-size: 0.85rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.2rem 0.5rem; color: var(--text); word-break: break-all; }
+    pre, .terminal, .log { font-family: var(--font-mono); font-size: 0.82rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; overflow-x: auto; color: var(--green); line-height: 1.8; }
+    input, select, textarea { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 0.65rem 1rem; font-family: var(--font-mono); font-size: 0.88rem; width: 100%; transition: border-color 0.15s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    button, .btn, input[type="submit"], input[type="button"] { background: var(--accent); color: #000; border: none; border-radius: var(--radius); padding: 0.65rem 1.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: transform 0.1s, opacity 0.1s; }
+    button:hover { opacity: 0.9; }
+    button:active { transform: scale(0.97); }
+    .strength-bar, .meter { height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
+    .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
+    .tag, .badge, .status, .label, .tld, .registrar { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+    .available, .valid, .secure, .up, .safe, .strong { color: var(--green); }
+    .taken, .invalid, .expired, .down, .breached, .weak { color: var(--red); }
+    .expiring, .warning, .medium { color: var(--yellow); }
+    .info, .registered { color: var(--accent); }
+    .uptime-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--green); animation: pulse 2s ease infinite; }
+    .uptime-dot.down { background: var(--red); animation: none; }
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
+    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
+    td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    @keyframes secFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63,185,80,0.4); } 50% { box-shadow: 0 0 0 4px rgba(63,185,80,0); } }
+    @keyframes scanLine { from { transform: translateY(-100%); } to { transform: translateY(100vh); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="#" class="logo" aria-label="UptimeWatch Home">
+      <div class="logo-icon" aria-hidden="true">📡</div>
+      <span class="logo-text">Uptime<span>Watch</span></span>
+    </a>
+    <div class="header-actions">
+      <div class="countdown" id="countdown-wrap" aria-live="polite" aria-label="Next check countdown">
+        <span id="countdown-label">Next check in</span>
+        <div class="countdown-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="60">
+          <div class="countdown-bar" id="countdown-bar" style="width:100%"></div>
+        </div>
+        <span id="countdown-secs">60s</span>
+      </div>
+      <div class="status-badge" aria-live="polite">
+        <div class="pulse-dot" id="global-dot"></div>
+        <span id="global-status-text">All systems nominal</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Notification banner -->
+  <div class="notif-banner" id="notif-banner" role="alert" style="display:none">
+    <p><span>🔔 Enable notifications</span> to receive downtime alerts even when this tab is in the background.</p>
+    <button class="btn btn-primary btn-sm" id="notif-btn">Enable Alerts</button>
+  </div>
+
+  <!-- Summary cards -->
+  <section aria-label="Summary statistics">
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Total Sites</div>
+        <div class="summary-value" id="stat-total">0</div>
+        <div class="summary-sub">monitored</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Online</div>
+        <div class="summary-value green" id="stat-up">0</div>
+        <div class="summary-sub">currently up</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Offline</div>
+        <div class="summary-value red" id="stat-down">0</div>
+        <div class="summary-sub">currently down</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Avg Uptime</div>
+        <div class="summary-value green" id="stat-uptime">—</div>
+        <div class="summary-sub">last 30 checks</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Avg Response</div>
+        <div class="summary-value yellow" id="stat-response">—</div>
+        <div class="summary-sub">milliseconds</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sites section -->
+  <section aria-label="Monitored sites">
+    <div class="section-header">
+      <h1 class="section-title">Monitored Sites</h1>
+      <div class="section-actions">
+        <button class="btn btn-secondary" id="check-all-btn" aria-label="Check all sites now">
+          <span aria-hidden="true">🔄</span> Check Now
+        </button>
+        <button class="btn btn-secondary" id="export-btn" aria-label="Export incident log as CSV">
+          <span aria-hidden="true">📥</span> Export CSV
+        </button>
+        <button class="btn btn-primary" id="add-site-btn" aria-expanded="false" aria-controls="add-form">
+          <span aria-hidden="true">＋</span> Add Site
+        </button>
+      </div>
+    </div>
+
+    <!-- Add site form -->
+    <div class="add-form" id="add-form" role="region" aria-label="Add new site form">
+      <form id="site-form" novalidate>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="site-url-input">URL <span style="color:var(--accent2)">*</span></label>
+            <input
+              type="url"
+              id="site-url-input"
+              class="form-input"
+              placeholder="https://example.com"
+              required
+              aria-required="true"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="site-name-input">Display Name</label>
+            <input
+              type="text"
+              id="site-name-input"
+              class="form-input"
+              placeholder="My Client Site"
+            />
+          </div>
+          <button type="submit" class="btn btn-primary" style="align-self:flex-end">Add Monitor</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Sites list -->
+    <div id="sites-list" class="sites-list" role="list" aria-label="Site monitors">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="empty-state" role="status">
+      <div class="empty-icon" aria-hidden="true">📡</div>
+      <h2 class="empty-title">No sites monitored yet</h2>
+      <p class="empty-sub">Add up to 10 websites to start monitoring their uptime in real time.</p>
+      <button class="btn btn-primary" id="empty-add-btn">Add Your First Site</button>
+    </div>
+  </section>
+
+  <!-- Incidents section -->
+  <section class="incidents-section" aria-label="Incident log">
+    <div class="section-header">
+      <h2 class="section-title">Incident Log</h2>
+    </div>
+    <div class="incidents-table" id="incidents-container">
+      <table aria-label="Incident log table">
+        <thead>
+          <tr>
+            <th scope="col">Site</th>
+            <th scope="col">Event</th>
+            <th scope="col">Time</th>
+            <th scope="col">Response</th>
+            <th scope="col">Details</th>
+          </tr>
+        </thead>
+        <tbody id="incidents-body">
+          <tr>
+            <td colspan="5" style="text-align:center;color:var(--muted);padding:32px">No incidents recorded yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+'use strict';
+
+/* ─── State ─── */
+const state = {
+  sites: [],
+  incidents: [],
+  checkInterval: null,
+  countdownTimer: null,
+  secondsUntilCheck: 60,
+  totalSecondsInCycle: 60,
+  isChecking: false,
+  notifPermission: Notification.permission,
+};
+
+const MAX_SITES = 10;
+const CHECK_INTERVAL_MS = 60_000;
+const MAX_HISTORY = 30;
+const PROXY = `https://api.allorigins.win/get?url=`;
+const PROXY_TIMEOUT_MS = 12_000;
+
+/* ─── Persistence ─── */
+function saveState() {
+  try {
+    localStorage.setItem('uptimewatch_sites', JSON.stringify(state.sites));
+    localStorage.setItem('uptimewatch_incidents', JSON.stringify(state.incidents.slice(0, 200)));
+  } catch (e) { /* storage full */ }
+}
+
+function loadState() {
+  try {
+    const sites = localStorage.getItem('uptimewatch_sites');
+    const incidents = localStorage.getItem('uptimewatch_incidents');
+    if (sites) state.sites = JSON.parse(sites);
+    if (incidents) state.incidents = JSON.parse(incidents);
+  } catch (e) {
+    state.sites = [];
+    state.incidents = [];
+  }
+}
+
+/* ─── Toast ─── */
+function showToast(msg, type = 'info', duration = 3500) {
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.setAttribute('role', 'alert');
+  toast.innerHTML = `<span aria-hidden="true">${icons[type]}</span><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    toast.addEventListener('animationend', () => toast.remove());
+  }, duration);
+}
+
+/* ─── Notifications ─── */
+function requestNotifPermission() {
+  if (!('Notification' in window)) { showToast('Browser notifications not supported', 'warning'); return; }
+  Notification.requestPermission().then(perm => {
+    state.notifPermission = perm;
+    if (perm === 'granted') {
+      showToast('Downtime alerts enabled!', 'success');
+      document.getElementById('notif-banner').style.display = 'none';
+    } else {
+      showToast('Notification permission denied', 'warning');
+    }
+  });
+}
+
+function sendNotification(site, status) {
+  if (state.notifPermission !== 'granted') return;
+  const isDown = status === 'down';
+  const n = new Notification(`UptimeWatch: ${site.name}`, {
+    body: isDown ? `${site.url} appears to be DOWN` : `${site.url} is back UP`,
+    icon: `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📡</text></svg>`,
+    tag: `uw-${site.id}`,
+  });
+  setTimeout(() => n.close(), 6000);
+}
+
+/* ─── HTTP Check via proxy ─── */
+async function checkSite(site) {
+  const encoded = encodeURIComponent(site.url);
+  const proxyUrl = `${PROXY}${encoded}`;
+  const start = performance.now();
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), PROXY_TIMEOUT_MS);
+
+  try {
+    const resp = await fetch(proxyUrl, { signal: ctrl.signal, cache: 'no-store' });
+    clearTimeout(timer);
+    const elapsed = Math.round(performance.now() - start);
+
+    if (resp.ok) {
+      const json = await resp.json().catch(() => null);
+      /* allorigins returns status in json.status.http_code */
+      const httpCode = json?.status?.http_code;
+      const isUp = !httpCode || httpCode < 500;
+      return { status: isUp ? 'up' : 'down', responseTime: elapsed, httpCode: httpCode || 200 };
+    } else {
+      return { status: 'down', responseTime: Math.round(performance.now() - start), httpCode: resp.status };
+    }
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      return { status: 'down', responseTime: PROXY_TIMEOUT_MS, httpCode: null, error: 'Timeout' };
+    }
+    return { status: 'down', responseTime: Math.round(performance.now() - start), httpCode: null, error: err.message };
+  }
+}
+
+/* ─── Check all sites ─── */
+async function checkAll() {
+  if (state.isChecking) return;
+  if (state.sites.length === 0) return;
+
+  state.isChecking = true;
+  updateGlobalDot('checking');
+
+  const promises = state.sites.map(async (site) => {
+    site.checking = true;
+    renderSiteCard(site);
+
+    const result = await checkSite(site);
+    const prevStatus = site.status;
+
+    site.status = result.status;
+    site.responseTime = result.responseTime;
+    site.lastChecked = Date.now();
+    site.checking = false;
+
+    /* Push to history */
+    site.history = site.history || [];
+    site.history.push({ status: result.status, time: Date.now(), responseTime: result.responseTime });
+    if (site.history.length > MAX_HISTORY) site.history.shift();
+
+    /* Compute uptime */
+    const ups = site.history.filter(h => h.status === 'up').length;
+    site.uptimePct = site.history.length > 0 ? Math.round((ups / site.history.length) * 100) : null;
+
+    /* Log incident if status changed */
+    if (prevStatus !== null && prevStatus !== result.status) {
+      const incident = {
+        id: Date.now(),
+        siteId: site.id,
+        siteName: site.name,
+        siteUrl: site.url,
+        event: result.status === 'down' ? 'went offline' : 'came back online',
+        status: result.status,
+        time: Date.now(),
+        responseTime: result.responseTime,
+        detail: result.error || (result.httpCode ? `HTTP ${result.httpCode}` : '—'),
+      };
+      state.incidents.unshift(incident);
+      sendNotification(site, result.status);
+
+      if (result.status === 'down') {
+        showToast(`${site.name} is DOWN!`, 'error', 5000);
+      } else {
+        showToast(`${site.name} is back online`, 'success');
+      }
+    }
+
+    renderSiteCard(site);
+  });
+
+  await Promise.all(promises);
+
+  state.isChecking = false;
+  saveState();
+  renderSummary();
+  renderIncidents();
+  updateGlobalDot();
+
+  /* Reset countdown */
+  state.secondsUntilCheck = state.totalSecondsInCycle;
+}
+
+/* ─── Site card rendering ─── */
+function statusIcon(status, checking) {
+  if (checking) return '⟳';
+  if (status === 'up') return '✓';
+  if (status === 'down') return '✕';
+  return '○';
+}
+
+function statusClass(status, checking) {
+  if (checking) return 'checking';
+  if (status === 'up') return 'up';
+  if (status === 'down') return 'down';
+  return 'pending';
+}
+
+function uptimeColor(pct) {
+  if (pct === null || pct === undefined) return '';
+  if (pct >= 99) return 'green';
+  if (pct >= 90) return 'yellow';
+  return 'red';
+}
+
+function responseColor(ms) {
+  if (!ms) return '';
+  if (ms < 1500) return 'green';
+  if (ms < 4000) return 'yellow';
+  return 'red';
+}
+
+function renderHistoryBars(history) {
+  if (!history || history.length === 0) {
+    return `<div style="color:var(--muted);font-size:12px">No data yet</div>`;
+  }
+  const bars = history.map(h => {
+    const height = h.status === 'up' ? `${Math.min(100, Math.max(20, Math.round((1 - h.responseTime / 10000) * 100)))}%` : '20%';
+    const ts = new Date(h.time).toLocaleTimeString();
+    const tip = `${h.status.toUpperCase()} — ${h.responseTime}ms at ${ts}`;
+    return `<div class="history-bar ${h.status}" style="height:${height}" data-tooltip="${tip}" role="img" aria-label="${tip}"></div>`;
+  }).join('');
+  return `<div class="history-bars" aria-label="Uptime history last ${history.length} checks">${bars}</div>`;
+}
+
+function renderSiteCard(site) {
+  const existing = document.getElementById(`site-card-${site.id}`);
+  const sc = statusClass(site.status, site.checking);
+  const icon = statusIcon(site.status, site.checking);
+
+  const uptimeStr = site.uptimePct !== null && site.uptimePct !== undefined
+    ? `${site.uptimePct}%`
+    : '—';
+  const responseStr = site.responseTime ? `${site.responseTime}ms` : '—';
+  const lastCheckStr = site.lastChecked
+    ? new Date(site.lastChecked).toLocaleTimeString()
+    : 'Never';
+
+  const html = `
+    <div
+      class="site-card status-${sc}"
+      id="site-card-${site.id}"
+      role="listitem"
+      aria-label="${site.name}: ${site.status || 'pending'}"
+    >
+      <div class="site-card-header">
+        <div class="site-status-icon ${sc}" aria-hidden="true">${icon}</div>
+        <div class="site-info">
+          <div class="site-name">${escHtml(site.name)}</div>
+          <div class="site-url">${escHtml(site.url)}</div>
+        </div>
+        <div class="site-meta">
+          <div class="site-stat">
+            <div class="site-stat-value ${uptimeColor(site.uptimePct)}">${uptimeStr}</div>
+            <div class="site-stat-label">Uptime</div>
+          </div>
+          <div class="site-stat">
+            <div class="site-stat-value ${responseColor(site.responseTime)}">${responseStr}</div>
+            <div class="site-stat-label">Response</div>
+          </div>
+          <div class="site-stat">
+            <div class="site-stat-value" style="font-size:12px;color:var(--muted)">${lastCheckStr}</div>
+            <div class="site-stat-label">Last Check</div>
+          </div>
+        </div>
+        <div class="site-actions">
+          <button
+            class="btn btn-secondary btn-sm"
+            onclick="checkOneSite('${site.id}')"
+            aria-label="Check ${escHtml(site.name)} now"
+            data-tooltip="Check now"
+          >🔄</button>
+          <button
+            class="btn btn-danger btn-sm"
+            onclick="removeSite('${site.id}')"
+            aria-label="Remove ${escHtml(site.name)}"
+            data-tooltip="Remove"
+          >✕</button>
+        </div>
+      </div>
+      <div class="site-history">
+        <div class="history-label">Last ${Math.min(MAX_HISTORY, (site.history || []).length)} checks</div>
+        ${renderHistoryBars(site.history)}
+      </div>
+    </div>
+  `;
+
+  if (existing) {
+    existing.outerHTML = html;
+  } else {
+    const container = document.getElementById('sites-list');
+    container.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ─── Render all sites ─── */
+function renderAllSites() {
+  const container = document.getElementById('sites-list');
+  container.innerHTML = '';
+  const empty = document.getElementById('empty-state');
+
+  if (state.sites.length === 0) {
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    state.sites.forEach(site => renderSiteCard(site));
+  }
+  renderSummary();
+}
+
+/* ─── Summary stats ─── */
+function renderSummary() {
+  const total = state.sites.length;
+  const up = state.sites.filter(s => s.status === 'up').length;
+  const down = state.sites.filter(s => s.status === 'down').length;
+
+  const allUptimes = state.sites
+    .map(s => s.uptimePct)
+    .filter(p => p !== null && p !== undefined);
+  const avgUptime = allUptimes.length > 0
+    ? Math.round(allUptimes.reduce((a, b) => a + b, 0) / allUptimes.length)
+    : null;
+
+  const allResponses = state.sites
+    .map(s => s.responseTime)
+    .filter(Boolean);
+  const avgResponse = allResponses.length > 0
+    ? Math.round(allResponses.reduce((a, b) => a + b, 0) / allResponses.length)
+    : null;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-up').textContent = up;
+  document.getElementById('stat-down').textContent = down;
+  document.getElementById('stat-uptime').textContent = avgUptime !== null ? `${avgUptime}%` : '—';
+  document.getElementById('stat-response').textContent = avgResponse !== null ? `${avgResponse}ms` : '—';
+
+  /* Color uptime */
+  const uptimeEl = document.getElementById('stat-uptime');
+  uptimeEl.className = `summary-value ${avgUptime !== null ? uptimeColor(avgUptime) : 'green'}`;
+  document.getElementById('stat-down').className = `summary-value ${down > 0 ? 'red' : 'green'}`;
+}
+
+/* ─── Incidents ─── */
+function renderIncidents() {
+  const body = document.getElementById('incidents-body');
+  if (state.incidents.length === 0) {
+    body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">No incidents recorded yet.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = state.incidents.slice(0, 50).map(inc => {
+    const d = new Date(inc.time);
+    const timeStr = `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+    return `
+      <tr>
+        <td><strong>${escHtml(inc.siteName)}</strong><br><span style="color:var(--muted);font-size:11px">${escHtml(inc.siteUrl)}</span></td>
+        <td><span class="tag tag-${inc.status}">${escHtml(inc.event)}</span></td>
+        <td style="color:var(--muted)">${timeStr}</td>
+        <td style="color:${inc.responseTime > 4000 ? 'var(--red)' : 'var(--muted)'}">${inc.responseTime ? `${inc.responseTime}ms` : '—'}</td>
+        <td style="color:var(--muted);font-size:12px">${escHtml(inc.detail || '—')}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* ─── Global status dot ─── */
+function updateGlobalDot(override) {
+  const dot = document.getElementById('global-dot');
+  const text = document.getElementById('global-status-text');
+
+  if (override === 'checking') {
+    dot.className = 'pulse-dot checking';
+    text.textContent = 'Checking...';
+    return;
+  }
+
+  const down = state.sites.filter(s => s.status === 'down').length;
+  if (state.sites.length === 0) {
+    dot.className = 'pulse-dot';
+    text.textContent = 'No sites added';
+  } else if (down > 0) {
+    dot.className = 'pulse-dot error';
+    text.textContent = `${down} site${down > 1 ? 's' : ''} offline`;
+  } else {
+    dot.className = 'pulse-dot';
+    text.textContent = 'All systems nominal';
+  }
+}
+
+/* ─── Countdown ─── */
+function startCountdown() {
+  if (state.countdownTimer) clearInterval(state.countdownTimer);
+  state.secondsUntilCheck = state.totalSecondsInCycle;
+
+  state.countdownTimer = setInterval(() => {
+    state.secondsUntilCheck--;
+    if (state.secondsUntilCheck < 0) state.secondsUntilCheck = 0;
+
+    const pct = (state.secondsUntilCheck / state.totalSecondsInCycle) * 100;
+    document.getElementById('countdown-bar').style.width = `${pct}%`;
+    document.getElementById('countdown-secs').textContent = `${state.secondsUntilCheck}s`;
+  }, 1000);
+}
+
+/* ─── Check interval ─── */
+function startCheckInterval() {
+  if (state.checkInterval) clearInterval(state.checkInterval);
+  state.checkInterval = setInterval(() => {
+    checkAll();
+    startCountdown();
+  }, CHECK_INTERVAL_MS);
+}
+
+/* ─── Add site ─── */
+function addSite(url, name) {
+  if (state.sites.length >= MAX_SITES) {
+    showToast(`Maximum of ${MAX_SITES} sites allowed`, 'warning');
+    return false;
+  }
+
+  /* Normalize URL */
+  let normalized = url.trim();
+  if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+    normalized = `https://${normalized}`;
+  }
+
+  /* Check duplicate */
+  if (state.sites.some(s => s.url === normalized)) {
+    showToast('This URL is already being monitored', 'warning');
+    return false;
+  }
+
+  const displayName = name.trim() || new URL(normalized).hostname;
+
+  const site = {
+    id: `site-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    url: normalized,
+    name: displayName,
+    status: null,
+    responseTime: null,
+    lastChecked: null,
+    history: [],
+    uptimePct: null,
+    checking: false,
+  };
+
+  state.sites.push(site);
+  saveState();
+  renderAllSites();
+  showToast(`Added ${displayName}`, 'success');
+
+  /* Check immediately */
+  (async () => {
+    site.checking = true;
+    renderSiteCard(site);
+    const result = await checkSite(site);
+    site.status = result.status;
+    site.responseTime = result.responseTime;
+    site.lastChecked = Date.now();
+    site.checking = false;
+    site.history.push({ status: result.status, time: Date.now(), responseTime: result.responseTime });
+    site.uptimePct = result.status === 'up' ? 100 : 0;
+    renderSiteCard(site);
+    renderSummary();
+    updateGlobalDot();
+    saveState();
+  })();
+
+  return true;
+}
+
+/* ─── Remove site ─── */
+function removeSite(id) {
+  const site = state.sites.find(s => s.id === id);
+  if (!site) return;
+  state.sites = state.sites.filter(s => s.id !== id);
+  const card = document.getElementById(`site-card-${id}`);
+  if (card) card.remove();
+  saveState();
+  renderSummary();
+  updateGlobalDot();
+  showToast(`Removed ${site.name}`, 'info');
+
+  if (state.sites.length === 0) {
+    document.getElementById('empty-state').style.display = 'block';
+  }
+}
+
+/* ─── Check one site ─── */
+async function checkOneSite(id) {
+  const site = state.sites.find(s => s.id === id);
+  if (!site || site.checking) return;
+
+  const prevStatus = site.status;
+  site.checking = true;
+  renderSiteCard(site);
+
+  const result = await checkSite(site);
+  site.status = result.status;
+  site.responseTime = result.responseTime;
+  site.lastChecked = Date.now();
+  site.checking = false;
+  site.history = site.history || [];
+  site.history.push({ status: result.status, time: Date.now(), responseTime: result.responseTime });
+  if (site.history.length > MAX_HISTORY) site.history.shift();
+  const ups = site.history.filter(h => h.status === 'up').length;
+  site.uptimePct = Math.round((ups / site.history.length) * 100);
+
+  if (prevStatus !== null && prevStatus !== result.status) {
+    const incident = {
+      id: Date.now(),
+      siteId: site.id,
+      siteName: site.name,
+      siteUrl: site.url,
+      event: result.status === 'down' ? 'went offline' : 'came back online',
+      status: result.status,
+      time: Date.now(),
+      responseTime: result.responseTime,
+      detail: result.error || (result.httpCode ? `HTTP ${result.httpCode}` : '—'),
+    };
+    state.incidents.unshift(incident);
+    sendNotification(site, result.status);
+  }
+
+  renderSiteCard(site);
+  renderSummary();
+  renderIncidents();
+  updateGlobalDot();
+  saveState();
+  showToast(`${site.name} checked: ${result.status.toUpperCase()}`, result.status === 'up' ? 'success' : 'error');
+}
+
+/* ─── Export CSV ─── */
+function exportCSV() {
+  if (state.incidents.length === 0 && state.sites.length === 0) {
+    showToast('Nothing to export yet', 'warning');
+    return;
+  }
+
+  const rows = [
+    ['Site', 'URL', 'Event', 'Time', 'Response (ms)', 'Detail'],
+    ...state.incidents.map(inc => [
+      `"${inc.siteName}"`,
+      `"${inc.siteUrl}"`,
+      `"${inc.event}"`,
+      `"${new Date(inc.time).toISOString()}"`,
+      inc.responseTime || '',
+      `"${inc.detail || ''}"`,
+    ]),
+  ];
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `uptime-incidents-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV exported!', 'success');
+}
+
+/* ─── Event listeners ─── */
+document.getElementById('add-site-btn').addEventListener('click', () => {
+  const form = document.getElementById('add-form');
+  const btn = document.getElementById('add-site-btn');
+  const isOpen = form.classList.toggle('open');
+  btn.setAttribute('aria-expanded', String(isOpen));
+  if (isOpen) document.getElementById('site-url-input').focus();
+});
+
+document.getElementById('empty-add-btn').addEventListener('click', () => {
+  document.getElementById('add-site-btn').click();
+});
+
+document.getElementById('site-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const urlInput = document.getElementById('site-url-input');
+  const nameInput = document.getElementById('site-name-input');
+  const url = urlInput.value.trim();
+
+  if (!url) {
+    urlInput.focus();
+    showToast('Please enter a URL', 'warning');
+    return;
+  }
+
+  let valid = true;
+  try {
+    let testUrl = url;
+    if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) testUrl = `https://${testUrl}`;
+    new URL(testUrl);
+  } catch (err) {
+    valid = false;
+  }
+
+  if (!valid) {
+    urlInput.focus();
+    showToast('Please enter a valid URL', 'warning');
+    return;
+  }
+
+  const added = addSite(url, nameInput.value);
+  if (added) {
+    urlInput.value = '';
+    nameInput.value = '';
+    document.getElementById('add-form').classList.remove('open');
+    document.getElementById('add-site-btn').setAttribute('aria-expanded', 'false');
+  }
+});
+
+document.getElementById('check-all-btn').addEventListener('click', () => {
+  if (state.sites.length === 0) {
+    showToast('No sites to check', 'warning');
+    return;
+  }
+  checkAll();
+  startCountdown();
+  showToast('Checking all sites...', 'info');
+});
+
+document.getElementById('export-btn').addEventListener('click', exportCSV);
+
+document.getElementById('notif-btn').addEventListener('click', requestNotifPermission);
+
+/* ─── Keyboard: close form on Escape ─── */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const form = document.getElementById('add-form');
+    if (form.classList.contains('open')) {
+      form.classList.remove('open');
+      document.getElementById('add-site-btn').setAttribute('aria-expanded', 'false');
+      document.getElementById('add-site-btn').focus();
+    }
+  }
+});
+
+/* ─── Init ─── */
+function init() {
+  loadState();
+
+  /* Show notification banner if not yet decided */
+  if (Notification.permission === 'default') {
+    document.getElementById('notif-banner').style.display = 'flex';
+  }
+
+  renderAllSites();
+  renderIncidents();
+  updateGlobalDot();
+  startCountdown();
+  startCheckInterval();
+
+  /* Run initial check if sites exist */
+  if (state.sites.length > 0) {
+    checkAll();
+  }
+}
+
+init();
+</script>
+</body>
+</html>

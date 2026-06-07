@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tide Chart Tool — Charter Guide Planner</title>
+  <style>
+    :root {
+      --bg: #02091a;
+      --surface: rgba(255,255,255,0.08);
+      --surface2: rgba(255,255,255,0.13);
+      --border: rgba(255,255,255,0.16);
+      --accent: #38bdf8;
+      --accent2: #fb923c;
+      --text: rgba(255,255,255,0.95);
+      --muted: rgba(255,255,255,0.5);
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+    }
+
+    .header-meta {
+      color: var(--muted);
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #live-clock {
+      font-variant-numeric: tabular-nums;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Panel / card ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .panel-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    /* ── Location search ── */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-wrap input::placeholder { color: var(--muted); }
+
+    #suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      z-index: 50;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    #suggestions .suggestion-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #suggestions .suggestion-item:hover,
+    #suggestions .suggestion-item:focus {
+      background: var(--border);
+      outline: none;
+    }
+
+    .suggestion-icon { color: var(--accent); font-size: 0.75rem; }
+
+    /* ── Buttons ── */
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 9px 18px;
+      transition: opacity 0.15s, transform 0.1s, background 0.2s;
+    }
+
+    button:hover { opacity: 0.88; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-success { background: var(--green); color: #0f1117; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+
+    /* ── Date picker row ── */
+    .date-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .date-row input[type="date"] {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .date-row input[type="date"]:focus { border-color: var(--accent); }
+
+    /* ── Stat cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .stat-card:hover { border-color: var(--accent); }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .stat-value.high { color: var(--accent2); }
+    .stat-value.low { color: var(--green); }
+
+    /* ── Tide gauge ── */
+    #gauge-wrap {
+      margin-bottom: 16px;
+    }
+
+    .gauge-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .gauge-bar {
+      height: 20px;
+      background: var(--surface2);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+
+    #gauge-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      border-radius: 10px;
+      transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      min-width: 6px;
+    }
+
+    .gauge-current-label {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text);
+      margin-top: 6px;
+    }
+
+    /* ── Recommendation chip ── */
+    .rec-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .rec-excellent { background: rgba(67,217,173,0.15); color: var(--green); border: 1px solid rgba(67,217,173,0.3); }
+    .rec-good      { background: rgba(56,189,248,0.15); color: var(--accent); border: 1px solid rgba(56,189,248,0.3); }
+    .rec-fair      { background: rgba(247,201,72,0.15); color: var(--yellow); border: 1px solid rgba(247,201,72,0.3); }
+    .rec-poor      { background: rgba(251,146,60,0.15); color: var(--accent2); border: 1px solid rgba(251,146,60,0.3); }
+
+    .rec-details {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* ── Trip calendar ── */
+    #trip-section { margin-bottom: 16px; }
+
+    .trip-add-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .trip-add-row input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .trip-add-row input:focus { border-color: var(--accent); }
+
+    #trips-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .trip-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      animation: slideIn 0.25s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .trip-info { flex: 1; min-width: 0; }
+    .trip-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .trip-meta { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+    .trip-tide-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    .trip-del {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 0.9rem;
+      transition: color 0.15s;
+      line-height: 1;
+    }
+
+    .trip-del:hover { color: var(--accent2); transform: none; }
+
+    /* ── SVG Chart ── */
+    #chart-area {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    #tide-svg {
+      width: 100%;
+      height: 260px;
+      overflow: visible;
+    }
+
+    .svg-axis text { fill: var(--muted); font-size: 11px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .svg-axis line, .svg-axis path { stroke: var(--border); }
+    .grid-line { stroke: var(--border); stroke-dasharray: 4 4; opacity: 0.6; }
+    .tide-area { fill: url(#tideGrad); opacity: 0.35; }
+    .tide-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+    .high-dot { fill: var(--accent2); stroke: var(--surface); stroke-width: 2; }
+    .low-dot  { fill: var(--green); stroke: var(--surface); stroke-width: 2; }
+    .now-line { stroke: var(--yellow); stroke-width: 1.5; stroke-dasharray: 5 3; }
+    .now-label { fill: var(--yellow); font-size: 10px; font-family: 'Segoe UI', system-ui, sans-serif; font-weight: 600; }
+    .dot-label { font-size: 9px; font-family: 'Segoe UI', system-ui, sans-serif; font-weight: 600; }
+
+    /* ── 7-day table ── */
+    .tide-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    .tide-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tide-table td {
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(46,51,80,0.5);
+      vertical-align: middle;
+    }
+
+    .tide-table tr:last-child td { border-bottom: none; }
+
+    .tide-table tbody tr {
+      transition: background 0.15s;
+      cursor: pointer;
+    }
+
+    .tide-table tbody tr:hover { background: var(--surface2); }
+    .tide-table tbody tr.today-row { background: rgba(56,189,248,0.08); }
+
+    .day-label { font-weight: 600; }
+    .day-sub   { font-size: 0.7rem; color: var(--muted); }
+
+    .hl-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      padding: 2px 7px;
+      border-radius: 6px;
+      margin: 2px 3px 2px 0;
+    }
+
+    .hl-high { background: rgba(251,146,60,0.12); color: var(--accent2); }
+    .hl-low  { background: rgba(67,217,173,0.12); color: var(--green); }
+
+    .activity-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    /* ── Email template modal ── */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modalIn 0.2s ease;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 { font-size: 1rem; font-weight: 700; }
+    .modal-close { background: transparent; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 4px; }
+    .modal-close:hover { color: var(--text); transform: none; }
+
+    .modal-body { padding: 20px; }
+
+    #email-preview {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-size: 0.83rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      font-family: monospace;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 200;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      animation: toastIn 0.25s ease, toastOut 0.3s ease 2.5s forwards;
+      min-width: 220px;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(30px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(30px); }
+    }
+
+    .toast-icon { font-size: 1rem; }
+
+    /* ── Moon indicator ── */
+    .moon-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      background: var(--surface2);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+    }
+
+    .moon-icon { font-size: 1.2rem; }
+    .moon-info { flex: 1; }
+    .moon-phase-name { font-weight: 600; }
+    .moon-phase-sub  { color: var(--muted); font-size: 0.72rem; }
+
+    /* ── Fishing/surfing windows ── */
+    .window-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .window-card {
+      flex: 1;
+      min-width: 120px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+
+    .window-icon { font-size: 1.1rem; margin-bottom: 4px; }
+    .window-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+    .window-time  { font-size: 0.88rem; font-weight: 700; margin-top: 2px; }
+    .window-sub   { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Location detected bar ── */
+    #location-bar {
+      background: rgba(56,189,248,0.1);
+      border: 1px solid rgba(56,189,248,0.3);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    #location-bar .loc-name { font-weight: 600; color: var(--accent); flex: 1; }
+    #location-bar .loc-coords { color: var(--muted); font-size: 0.72rem; }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .empty-state .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+  
+    /* ── Weather design system v2 ── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(180deg, #02091a 0%, #0d1f3c 50%, #153050 100%) fixed;
+  min-height: 100vh;
+  color: rgba(255,255,255,0.9);
+}
+body::before {
+  content: '';
+  position: fixed;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56,189,248,.12) 0%, transparent 70%);
+  top: -150px; right: -100px;
+  animation: floatOrb 10s ease-in-out infinite;
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251,146,60,.08) 0%, transparent 70%);
+  bottom: 8%; left: -80px;
+  animation: floatOrb 14s ease-in-out infinite reverse;
+  pointer-events: none; z-index: 0;
+}
+.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] {
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  border-radius: 20px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 8px 32px rgba(0,0,0,0.3);
+}
+h1 {
+  font-weight: 200;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  letter-spacing: -.02em;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 0 30px rgba(56,189,248,.4);
+  -webkit-text-fill-color: rgba(255,255,255,0.95);
+}
+h2, h3 { font-weight: 300; color: rgba(255,255,255,0.85); -webkit-text-fill-color: rgba(255,255,255,0.85); }
+p, label, span, td, th, li { color: rgba(255,255,255,0.8); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
+@keyframes floatOrb { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-22px) scale(1.04);} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+@keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.5);} 50%{box-shadow:0 0 0 8px rgba(251,146,60,0);} }
+.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] { animation: fadeUp .5s ease both; }
+.card:nth-child(2){animation-delay:.08s} .card:nth-child(3){animation-delay:.16s} .card:nth-child(4){animation-delay:.24s}
+[class*="alert"],[class*="warning"] { animation: alertPulse 2s ease-in-out infinite; }
+button,[class*="btn"] {
+  background: rgba(255,255,255,0.1) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.9) !important;
+  transition: all .2s;
+  border-radius: 12px;
+}
+button:hover,[class*="btn"]:hover {
+  background: rgba(56,189,248,0.2) !important;
+  border-color: rgba(56,189,248,0.5) !important;
+  box-shadow: 0 4px 20px rgba(56,189,248,.3);
+  transform: translateY(-1px);
+}
+input, select {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+input::placeholder { color: rgba(255,255,255,0.4); }
+input:focus, select:focus {
+  border-color: rgba(56,189,248,.6) !important;
+  box-shadow: 0 0 0 3px rgba(56,189,248,.2);
+  outline: none;
+}
+select option { background: #0d1f3c; color: white; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>
+    <span class="logo-badge">TIDE</span>
+    Charter Tide Planner
+  </h1>
+  <div class="header-meta">
+    <span id="live-clock"></span>
+    <span id="moon-header" style="color:var(--yellow);font-weight:600;"></span>
+    <a href="app.html" style="background:var(--accent);color:#fff;border-radius:8px;padding:5px 14px;font-size:0.8rem;font-weight:700;text-decoration:none;letter-spacing:0.3px;">Open Full App →</a>
+  </div>
+</header>
+
+<main>
+  <!-- ── LEFT SIDEBAR ── -->
+  <aside>
+    <!-- Location search -->
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">Location</div>
+
+      <div class="search-wrap">
+        <input
+          type="text"
+          id="location-input"
+          placeholder="City, coast, or zip code..."
+          autocomplete="off"
+          aria-label="Search location"
+          aria-autocomplete="list"
+          aria-controls="suggestions"
+        />
+        <div id="suggestions" role="listbox" aria-label="Location suggestions"></div>
+      </div>
+
+      <button class="btn-ghost btn-sm" id="detect-btn" style="width:100%;margin-bottom:10px;">
+        &#x25CE; Detect my location
+      </button>
+
+      <div id="location-bar" style="display:none;">
+        <span>&#9741;</span>
+        <span class="loc-name" id="loc-name-display">—</span>
+        <span class="loc-coords" id="loc-coords-display"></span>
+      </div>
+
+      <!-- Moon -->
+      <div class="moon-row" id="moon-row">
+        <span class="moon-icon" id="moon-icon">&#127761;</span>
+        <div class="moon-info">
+          <div class="moon-phase-name" id="moon-phase-name">—</div>
+          <div class="moon-phase-sub" id="moon-phase-sub">Calculating...</div>
+        </div>
+      </div>
+
+      <!-- Date selector -->
+      <div class="date-row">
+        <input type="date" id="date-picker" aria-label="Select date" />
+        <button class="btn-ghost btn-sm" id="today-btn">Today</button>
+      </div>
+
+      <button class="btn-primary" id="calculate-btn" style="width:100%;">
+        Calculate Tides
+      </button>
+      <a href="app.html" style="display:block;text-align:center;margin-top:8px;font-size:0.78rem;color:var(--accent);text-decoration:none;opacity:0.8;">Try the NOAA-powered app →</a>
+    </div>
+
+    <!-- Today highlights -->
+    <div class="panel" style="margin-bottom:16px;" id="highlights-panel">
+      <div class="panel-title">Today&#39;s Tides</div>
+
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">High Tide</div>
+          <div class="stat-value high" id="stat-high">—</div>
+          <div class="stat-sub" id="stat-high-time">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Low Tide</div>
+          <div class="stat-value low" id="stat-low">—</div>
+          <div class="stat-sub" id="stat-low-time">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Range</div>
+          <div class="stat-value" id="stat-range">—</div>
+          <div class="stat-sub">ft today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Current</div>
+          <div class="stat-value" id="stat-current">—</div>
+          <div class="stat-sub" id="stat-trend">—</div>
+        </div>
+      </div>
+
+      <!-- Gauge -->
+      <div id="gauge-wrap">
+        <div class="gauge-label">
+          <span>Low (0 ft)</span>
+          <span id="gauge-max-label">High (—)</span>
+        </div>
+        <div class="gauge-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Current tide level">
+          <div id="gauge-fill" style="width:0%"></div>
+        </div>
+        <div class="gauge-current-label" id="gauge-label-text">—</div>
+      </div>
+
+      <!-- Recommendation -->
+      <div id="rec-wrap">
+        <div class="rec-chip rec-good" id="rec-chip">
+          <span id="rec-icon">&#9864;</span>
+          <span id="rec-label">—</span>
+        </div>
+        <div class="rec-details" id="rec-details">Select a location and date to see tide conditions.</div>
+      </div>
+
+      <!-- Best windows -->
+      <div id="window-section" style="margin-top:12px;">
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Best Activity Windows</div>
+        <div class="window-row">
+          <div class="window-card">
+            <div class="window-icon">&#127941;</div>
+            <div class="window-label">Fishing</div>
+            <div class="window-time" id="fishing-window">—</div>
+            <div class="window-sub" id="fishing-sub">—</div>
+          </div>
+          <div class="window-card">
+            <div class="window-icon">&#127940;</div>
+            <div class="window-label">Surfing</div>
+            <div class="window-time" id="surfing-window">—</div>
+            <div class="window-sub" id="surfing-sub">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trip calendar -->
+    <div class="panel">
+      <div class="panel-title">Trip Calendar</div>
+
+      <div id="trip-section">
+        <div class="trip-add-row">
+          <input type="text" id="trip-name-input" placeholder="Client name or trip label..." aria-label="Trip name" />
+          <button class="btn-success btn-sm" id="add-trip-btn" title="Add trip for selected date">+</button>
+        </div>
+        <div id="trips-list">
+          <div class="empty-state">
+            <div class="empty-icon">&#128197;</div>
+            No trips scheduled yet.
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── RIGHT CONTENT ── -->
+  <section id="chart-area">
+    <!-- 7-day chart -->
+    <div class="chart-container">
+      <div class="panel-title" style="margin-bottom:14px;">7-Day Tide Chart</div>
+
+      <div id="chart-placeholder" class="empty-state" style="height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div class="empty-icon">&#127752;</div>
+        <div>Select a location to render the tide chart.</div>
+      </div>
+
+      <svg id="tide-svg" style="display:none;" aria-label="7-day tide chart" role="img">
+        <defs>
+          <linearGradient id="tideGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6c63ff" stop-opacity="0.7"/>
+            <stop offset="100%" stop-color="#6c63ff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <g id="svg-grid"></g>
+        <g id="svg-axes"></g>
+        <path id="svg-area" class="tide-area"/>
+        <path id="svg-line" class="tide-line"/>
+        <g id="svg-dots"></g>
+        <line id="svg-now" class="now-line" style="display:none;"/>
+        <text id="svg-now-label" class="now-label" style="display:none;">NOW</text>
+      </svg>
+
+      <!-- Chart legend -->
+      <div id="chart-legend" style="display:none;margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;font-size:0.75rem;color:var(--muted);">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent2);margin-right:4px;vertical-align:middle;"></span>High tide</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle;"></span>Low tide</span>
+        <span><span style="display:inline-block;width:20px;height:2px;background:var(--yellow);display:inline-block;vertical-align:middle;margin-right:4px;border-top:2px dashed var(--yellow);"></span>Now</span>
+      </div>
+    </div>
+
+    <!-- 7-day table -->
+    <div class="chart-container">
+      <div class="panel-title" style="margin-bottom:14px;">7-Day Tide Calendar</div>
+
+      <div id="table-placeholder" class="empty-state">
+        <div class="empty-icon">&#128198;</div>
+        <div>Calculate tides to see the weekly forecast.</div>
+      </div>
+
+      <table class="tide-table" id="tide-table" style="display:none;" aria-label="7-day tide calendar">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>High Tides</th>
+            <th>Low Tides</th>
+            <th>Range</th>
+            <th>Activity</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tide-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Email modal -->
+<div id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Client Email Template</h2>
+      <button class="modal-close" id="modal-close-btn" aria-label="Close modal">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <pre id="email-preview" aria-label="Email template preview"></pre>
+      <div class="modal-actions">
+        <button class="btn-primary" id="copy-email-btn">Copy to Clipboard</button>
+        <button class="btn-ghost" id="modal-close-btn2">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<!-- Bottom CTA -->
+<div style="text-align:center;padding:20px 16px 28px;background:var(--surface);border-top:1px solid var(--border);">
+  <a href="app.html" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border-radius:12px;padding:10px 24px;font-size:0.88rem;font-weight:700;text-decoration:none;letter-spacing:0.3px;">
+    🌊 Open NOAA-powered Tide App
+  </a>
+  <div style="margin-top:8px;font-size:0.75rem;color:var(--muted);">Real predictions from NOAA Tides &amp; Currents API — no account needed</div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ═══════════════════════════════════════════════════════
+     TIDE ENGINE — harmonic constituent approximation
+     Uses principal lunar (M2), solar (S2), and diurnal (K1) constituents
+     plus moon phase amplitude modulation.
+  ═══════════════════════════════════════════════════════ */
+
+  const TWO_PI = Math.PI * 2;
+
+  // Returns fractional Julian Day Number for a date
+  function julianDay(date) {
+    const y = date.getUTCFullYear();
+    const m = date.getUTCMonth() + 1;
+    const d = date.getUTCDate();
+    const hr = date.getUTCHours() + date.getUTCMinutes() / 60;
+    const A = Math.floor((14 - m) / 12);
+    const Y = y + 4800 - A;
+    const M = m + 12 * A - 3;
+    return d + Math.floor((153 * M + 2) / 5) + 365 * Y +
+      Math.floor(Y / 4) - Math.floor(Y / 100) + Math.floor(Y / 400) -
+      32045 + hr / 24;
+  }
+
+  // Moon phase 0–1 (0 = new moon, 0.5 = full moon)
+  function moonPhase(date) {
+    const jd = julianDay(date);
+    const knownNewMoon = 2451549.5; // Jan 6, 2000 new moon
+    const synodic = 29.53058867;
+    return ((jd - knownNewMoon) % synodic + synodic) % synodic / synodic;
+  }
+
+  function moonPhaseName(phase) {
+    if (phase < 0.03 || phase > 0.97) return { name: 'New Moon', icon: '\u{1F311}', sub: 'Spring tides — strong tidal range' };
+    if (phase < 0.22) return { name: 'Waxing Crescent', icon: '\u{1F312}', sub: 'Tides moderating' };
+    if (phase < 0.28) return { name: 'First Quarter', icon: '\u{1F313}', sub: 'Neap tides — smaller range' };
+    if (phase < 0.47) return { name: 'Waxing Gibbous', icon: '\u{1F314}', sub: 'Tides building' };
+    if (phase < 0.53) return { name: 'Full Moon', icon: '\u{1F315}', sub: 'Spring tides — strong tidal range' };
+    if (phase < 0.72) return { name: 'Waning Gibbous', icon: '\u{1F316}', sub: 'Tides moderating' };
+    if (phase < 0.78) return { name: 'Last Quarter', icon: '\u{1F317}', sub: 'Neap tides — smaller range' };
+    return { name: 'Waning Crescent', icon: '\u{1F318}', sub: 'Approaching spring tides' };
+  }
+
+  // Amplitude factor based on moon phase (spring/neap cycle)
+  function springNeapFactor(phase) {
+    // Maximum near new/full moon, minimum near quarters
+    return 0.7 + 0.3 * Math.abs(Math.cos(phase * TWO_PI));
+  }
+
+  /**
+   * Compute tide height at a given moment in hours from epoch
+   * Using M2 (12.42h), S2 (12.00h), K1 (23.93h), O1 (25.82h) periods
+   * Amplitudes and phases tuned by latitude for realism.
+   */
+  function tideHeight(hoursFromEpoch, lat, lon, baseAmplitude) {
+    const latFactor = 1 + 0.3 * Math.abs(Math.cos(lat * Math.PI / 180));
+    const A = baseAmplitude * latFactor;
+
+    // Phase offset derived from longitude (rough local time correction)
+    const lonPhase = (lon / 360) * TWO_PI;
+
+    // M2 — principal lunar semidiurnal (dominant)
+    const M2 = A * 0.55 * Math.cos((TWO_PI / 12.4206) * hoursFromEpoch + lonPhase * 0.4);
+    // S2 — principal solar semidiurnal
+    const S2 = A * 0.25 * Math.cos((TWO_PI / 12.0000) * hoursFromEpoch + lonPhase * 0.3);
+    // K1 — lunisolar diurnal
+    const K1 = A * 0.15 * Math.cos((TWO_PI / 23.9345) * hoursFromEpoch + lonPhase * 0.2 + 0.5);
+    // O1 — principal lunar diurnal
+    const O1 = A * 0.10 * Math.cos((TWO_PI / 25.8193) * hoursFromEpoch + lonPhase * 0.15 + 1.2);
+
+    return M2 + S2 + K1 + O1;
+  }
+
+  /**
+   * Sample tide heights for a full day every 6 minutes (240 samples)
+   * Returns array of { hour, height } objects.
+   */
+  function sampleDay(date, lat, lon, baseAmplitude, epochOffset) {
+    const samples = [];
+    for (let m = 0; m < 1440; m += 6) {
+      const hr = m / 60;
+      const h = tideHeight(epochOffset + hr, lat, lon, baseAmplitude);
+      samples.push({ hour: hr, height: h });
+    }
+    return samples;
+  }
+
+  /**
+   * Find local extrema in a sample array.
+   * Returns { highs: [{hour, height}], lows: [{hour, height}] }
+   */
+  function findExtrema(samples) {
+    const highs = [], lows = [];
+    for (let i = 1; i < samples.length - 1; i++) {
+      const prev = samples[i - 1].height;
+      const curr = samples[i].height;
+      const next = samples[i + 1].height;
+      if (curr >= prev && curr >= next) highs.push(samples[i]);
+      else if (curr <= prev && curr <= next) lows.push(samples[i]);
+    }
+    return { highs, lows };
+  }
+
+  function fmtTime(hour) {
+    const h = Math.floor(hour);
+    const m = Math.round((hour - h) * 60);
+    const hh = h % 12 === 0 ? 12 : h % 12;
+    const mm = String(m).padStart(2, '0');
+    const ampm = h < 12 ? 'AM' : 'PM';
+    return `${hh}:${mm} ${ampm}`;
+  }
+
+  function fmtFt(v) {
+    return `${(v >= 0 ? '+' : '')}${v.toFixed(1)} ft`;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     APP STATE
+  ═══════════════════════════════════════════════════════ */
+
+  const state = {
+    lat: null,
+    lon: null,
+    locationName: 'Unknown location',
+    selectedDate: new Date(),
+    baseAmplitude: 3.5,
+    weekData: [],
+    trips: JSON.parse(localStorage.getItem('tide_trips') || '[]'),
+  };
+
+  function saveTrips() {
+    localStorage.setItem('tide_trips', JSON.stringify(state.trips));
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     PRESET LOCATIONS (for suggestions)
+  ═══════════════════════════════════════════════════════ */
+
+  const PRESETS = [
+    { name: 'Miami Beach, FL', lat: 25.79, lon: -80.13, amp: 2.1 },
+    { name: 'Cape Cod, MA', lat: 41.83, lon: -70.02, amp: 4.8 },
+    { name: 'San Diego, CA', lat: 32.72, lon: -117.15, amp: 3.2 },
+    { name: 'Seattle, WA', lat: 47.61, lon: -122.33, amp: 8.5 },
+    { name: 'New Orleans, LA', lat: 29.95, lon: -90.07, amp: 1.2 },
+    { name: 'Charleston, SC', lat: 32.78, lon: -79.93, amp: 5.4 },
+    { name: 'Key West, FL', lat: 24.56, lon: -81.78, amp: 1.5 },
+    { name: 'Portland, ME', lat: 43.66, lon: -70.26, amp: 9.1 },
+    { name: 'Galveston, TX', lat: 29.30, lon: -94.80, amp: 1.4 },
+    { name: 'Annapolis, MD', lat: 38.98, lon: -76.49, amp: 2.8 },
+    { name: 'Newport, RI', lat: 41.49, lon: -71.31, amp: 3.5 },
+    { name: 'Virginia Beach, VA', lat: 36.85, lon: -76.00, amp: 3.0 },
+    { name: 'Myrtle Beach, SC', lat: 33.69, lon: -78.89, amp: 5.0 },
+    { name: 'Santa Barbara, CA', lat: 34.42, lon: -119.70, amp: 3.4 },
+    { name: 'Anchorage, AK', lat: 61.22, lon: -149.90, amp: 28.0 },
+    { name: 'Honolulu, HI', lat: 21.31, lon: -157.86, amp: 1.8 },
+    { name: 'Atlantic City, NJ', lat: 39.36, lon: -74.42, amp: 4.2 },
+    { name: 'Corpus Christi, TX', lat: 27.80, lon: -97.40, amp: 1.6 },
+    { name: 'St. Augustine, FL', lat: 29.89, lon: -81.31, amp: 3.8 },
+    { name: 'San Francisco, CA', lat: 37.77, lon: -122.42, amp: 4.5 },
+  ];
+
+  /* ═══════════════════════════════════════════════════════
+     DOM REFS
+  ═══════════════════════════════════════════════════════ */
+
+  const elLocationInput = document.getElementById('location-input');
+  const elSuggestions   = document.getElementById('suggestions');
+  const elDetectBtn     = document.getElementById('detect-btn');
+  const elDatePicker    = document.getElementById('date-picker');
+  const elTodayBtn      = document.getElementById('today-btn');
+  const elCalcBtn       = document.getElementById('calculate-btn');
+  const elLocBar        = document.getElementById('location-bar');
+  const elLocName       = document.getElementById('loc-name-display');
+  const elLocCoords     = document.getElementById('loc-coords-display');
+  const elMoonIcon      = document.getElementById('moon-icon');
+  const elMoonName      = document.getElementById('moon-phase-name');
+  const elMoonSub       = document.getElementById('moon-phase-sub');
+  const elMoonHeader    = document.getElementById('moon-header');
+
+  const elStatHigh      = document.getElementById('stat-high');
+  const elStatHighTime  = document.getElementById('stat-high-time');
+  const elStatLow       = document.getElementById('stat-low');
+  const elStatLowTime   = document.getElementById('stat-low-time');
+  const elStatRange     = document.getElementById('stat-range');
+  const elStatCurrent   = document.getElementById('stat-current');
+  const elStatTrend     = document.getElementById('stat-trend');
+  const elGaugeFill     = document.getElementById('gauge-fill');
+  const elGaugeMaxLabel = document.getElementById('gauge-max-label');
+  const elGaugeText     = document.getElementById('gauge-label-text');
+  const elRecChip       = document.getElementById('rec-chip');
+  const elRecIcon       = document.getElementById('rec-icon');
+  const elRecLabel      = document.getElementById('rec-label');
+  const elRecDetails    = document.getElementById('rec-details');
+  const elFishingWin    = document.getElementById('fishing-window');
+  const elFishingSub    = document.getElementById('fishing-sub');
+  const elSurfingWin    = document.getElementById('surfing-window');
+  const elSurfingSub    = document.getElementById('surfing-sub');
+
+  const elTripName      = document.getElementById('trip-name-input');
+  const elAddTripBtn    = document.getElementById('add-trip-btn');
+  const elTripsList     = document.getElementById('trips-list');
+
+  const elChartPlaceholder = document.getElementById('chart-placeholder');
+  const elTideSvg       = document.getElementById('tide-svg');
+  const elChartLegend   = document.getElementById('chart-legend');
+  const elTablePlaceholder = document.getElementById('table-placeholder');
+  const elTideTable     = document.getElementById('tide-table');
+  const elTideTbody     = document.getElementById('tide-tbody');
+
+  const elModalOverlay  = document.getElementById('modal-overlay');
+  const elEmailPreview  = document.getElementById('email-preview');
+  const elCopyEmailBtn  = document.getElementById('copy-email-btn');
+
+  /* ═══════════════════════════════════════════════════════
+     LIVE CLOCK
+  ═══════════════════════════════════════════════════════ */
+
+  function updateClock() {
+    const now = new Date();
+    const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+    document.getElementById('live-clock').textContent = now.toLocaleTimeString('en-US', opts);
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  /* ═══════════════════════════════════════════════════════
+     MOON DISPLAY
+  ═══════════════════════════════════════════════════════ */
+
+  function updateMoonDisplay(date) {
+    const phase = moonPhase(date);
+    const info  = moonPhaseName(phase);
+    elMoonIcon.textContent = info.icon;
+    elMoonName.textContent = info.name;
+    elMoonSub.textContent  = info.sub;
+    elMoonHeader.textContent = `${info.icon} ${info.name}`;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     DATE INIT
+  ═══════════════════════════════════════════════════════ */
+
+  function todayStr() {
+    const n = new Date();
+    const y = n.getFullYear();
+    const m = String(n.getMonth() + 1).padStart(2, '0');
+    const d = String(n.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  elDatePicker.value = todayStr();
+  elTodayBtn.addEventListener('click', () => {
+    elDatePicker.value = todayStr();
+    toast('Date set to today', 'info');
+  });
+
+  updateMoonDisplay(new Date());
+
+  elDatePicker.addEventListener('change', () => {
+    const parts = elDatePicker.value.split('-');
+    state.selectedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    updateMoonDisplay(state.selectedDate);
+    if (state.lat !== null) calculate();
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     LOCATION SUGGESTIONS
+  ═══════════════════════════════════════════════════════ */
+
+  elLocationInput.addEventListener('input', () => {
+    const q = elLocationInput.value.trim().toLowerCase();
+    if (q.length < 2) { elSuggestions.innerHTML = ''; return; }
+    const matches = PRESETS.filter(p => p.name.toLowerCase().includes(q)).slice(0, 6);
+    elSuggestions.innerHTML = matches.map((p, i) =>
+      `<div class="suggestion-item" tabindex="0" role="option" data-idx="${i}" data-name="${p.name}" data-lat="${p.lat}" data-lon="${p.lon}" data-amp="${p.amp}">
+        <span class="suggestion-icon">&#9741;</span>${p.name}
+      </div>`
+    ).join('');
+  });
+
+  elSuggestions.addEventListener('click', (e) => {
+    const item = e.target.closest('.suggestion-item');
+    if (!item) return;
+    selectLocation(item.dataset.name, parseFloat(item.dataset.lat), parseFloat(item.dataset.lon), parseFloat(item.dataset.amp));
+  });
+
+  elSuggestions.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const item = document.activeElement.closest('.suggestion-item');
+      if (item) selectLocation(item.dataset.name, parseFloat(item.dataset.lat), parseFloat(item.dataset.lon), parseFloat(item.dataset.amp));
+    }
+  });
+
+  elLocationInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      const first = elSuggestions.querySelector('.suggestion-item');
+      if (first) first.focus();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!elSuggestions.contains(e.target) && e.target !== elLocationInput) {
+      elSuggestions.innerHTML = '';
+    }
+  });
+
+  function selectLocation(name, lat, lon, amp) {
+    state.lat = lat;
+    state.lon = lon;
+    state.locationName = name;
+    state.baseAmplitude = amp || 3.5;
+    elLocationInput.value = name;
+    elSuggestions.innerHTML = '';
+    elLocBar.style.display = 'flex';
+    elLocName.textContent  = name;
+    elLocCoords.textContent = `${lat.toFixed(2)}° N, ${Math.abs(lon).toFixed(2)}° W`;
+    calculate();
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     GEOLOCATION DETECT
+  ═══════════════════════════════════════════════════════ */
+
+  elDetectBtn.addEventListener('click', () => {
+    if (!navigator.geolocation) { toast('Geolocation not supported', 'error'); return; }
+    elDetectBtn.innerHTML = '<span class="spinner"></span>Detecting...';
+    elDetectBtn.disabled  = true;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        // Find nearest preset
+        let nearest = PRESETS[0], minDist = Infinity;
+        PRESETS.forEach(p => {
+          const d = Math.sqrt((p.lat - lat) ** 2 + (p.lon - lon) ** 2);
+          if (d < minDist) { minDist = d; nearest = p; }
+        });
+        elDetectBtn.innerHTML = '&#x25CE; Detect my location';
+        elDetectBtn.disabled = false;
+        selectLocation(nearest.name, nearest.lat, nearest.lon, nearest.amp);
+        toast(`Location: ${nearest.name}`, 'success');
+      },
+      () => {
+        elDetectBtn.innerHTML = '&#x25CE; Detect my location';
+        elDetectBtn.disabled = false;
+        // Fallback to Miami Beach
+        selectLocation('Miami Beach, FL', 25.79, -80.13, 2.1);
+        toast('Location access denied — defaulting to Miami Beach', 'warn');
+      }
+    );
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     CALCULATE BUTTON
+  ═══════════════════════════════════════════════════════ */
+
+  elCalcBtn.addEventListener('click', () => {
+    if (state.lat === null) {
+      toast('Please select a location first', 'warn');
+      elLocationInput.focus();
+      return;
+    }
+    const parts = elDatePicker.value.split('-');
+    state.selectedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    calculate();
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     MAIN CALCULATE
+  ═══════════════════════════════════════════════════════ */
+
+  function calculate() {
+    if (state.lat === null) return;
+    elCalcBtn.innerHTML = '<span class="spinner"></span>Calculating...';
+    elCalcBtn.disabled = true;
+
+    // Small async defer so UI updates first
+    setTimeout(() => {
+      try {
+        _doCalculate();
+      } finally {
+        elCalcBtn.innerHTML = 'Calculate Tides';
+        elCalcBtn.disabled = false;
+      }
+    }, 20);
+  }
+
+  function _doCalculate() {
+    const { lat, lon, baseAmplitude, selectedDate } = state;
+
+    // Moon phase amplitude modulation
+    const phase = moonPhase(selectedDate);
+    const spFactor = springNeapFactor(phase);
+    const amp = baseAmplitude * spFactor;
+
+    // Epoch offset in hours from an arbitrary reference
+    const refDate = new Date(2000, 0, 1);
+    const daysSinceRef = (selectedDate - refDate) / 86400000;
+    const epochOffset = daysSinceRef * 24;
+
+    // Build 7-day data
+    state.weekData = [];
+    for (let d = 0; d < 7; d++) {
+      const dayDate = new Date(selectedDate);
+      dayDate.setDate(dayDate.getDate() + d);
+      const dayPhase = moonPhase(dayDate);
+      const dayFactor = springNeapFactor(dayPhase);
+      const dayAmp = baseAmplitude * dayFactor;
+      const dayEpoch = epochOffset + d * 24;
+      const samples = sampleDay(dayDate, lat, lon, dayAmp, dayEpoch);
+      const extrema = findExtrema(samples);
+      state.weekData.push({ date: dayDate, samples, extrema, dayAmp });
+    }
+
+    updateMoonDisplay(selectedDate);
+    renderStats();
+    renderSvgChart();
+    renderTable();
+    renderTrips();
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     RENDER STATS (sidebar)
+  ═══════════════════════════════════════════════════════ */
+
+  function renderStats() {
+    if (!state.weekData.length) return;
+    const today = state.weekData[0];
+    const { highs, lows } = today.extrema;
+
+    // Best high/low
+    const bestHigh = highs.reduce((a, b) => b.height > a.height ? b : a, highs[0] || { height: 0, hour: 0 });
+    const bestLow  = lows.reduce((a, b) => b.height < a.height ? b : a, lows[0] || { height: 0, hour: 12 });
+
+    elStatHigh.textContent     = bestHigh ? `${bestHigh.height.toFixed(1)} ft` : '—';
+    elStatHighTime.textContent = bestHigh ? fmtTime(bestHigh.hour) : '—';
+    elStatLow.textContent      = bestLow  ? `${bestLow.height.toFixed(1)} ft` : '—';
+    elStatLowTime.textContent  = bestLow  ? fmtTime(bestLow.hour) : '—';
+
+    const range = bestHigh && bestLow ? (bestHigh.height - bestLow.height).toFixed(1) + ' ft' : '—';
+    elStatRange.textContent = range;
+
+    // Current tide height (now or noon if not today)
+    const now = new Date();
+    const isToday = selectedIsToday();
+    const currentHour = isToday ? (now.getHours() + now.getMinutes() / 60) : 12;
+    const currentSample = today.samples.find(s => s.hour >= currentHour) || today.samples[today.samples.length - 1];
+    const prevSample = today.samples[Math.max(0, today.samples.indexOf(currentSample) - 1)];
+    const trend = currentSample.height > prevSample.height ? '&#8679; Rising' : '&#8681; Falling';
+
+    elStatCurrent.textContent  = `${currentSample.height.toFixed(1)} ft`;
+    elStatTrend.innerHTML      = trend;
+
+    // Gauge
+    const minH = Math.min(...today.samples.map(s => s.height));
+    const maxH = Math.max(...today.samples.map(s => s.height));
+    const pct  = maxH > minH ? ((currentSample.height - minH) / (maxH - minH)) * 100 : 50;
+    elGaugeFill.style.width = `${Math.max(2, pct).toFixed(1)}%`;
+    elGaugeMaxLabel.textContent = `High (${maxH.toFixed(1)} ft)`;
+    elGaugeText.textContent = `Current: ${currentSample.height.toFixed(1)} ft at ${fmtTime(currentHour)}`;
+    elGaugeFill.parentElement.setAttribute('aria-valuenow', Math.round(pct));
+
+    // Recommendation based on tide state
+    renderRecommendation(currentSample, trend, pct, today);
+  }
+
+  function selectedIsToday() {
+    const n = new Date();
+    const s = state.selectedDate;
+    return n.getFullYear() === s.getFullYear() && n.getMonth() === s.getMonth() && n.getDate() === s.getDate();
+  }
+
+  function renderRecommendation(currentSample, trend, pct, dayData) {
+    const { highs, lows } = dayData.extrema;
+    const isRising = trend.includes('Rising');
+    const isHigh   = pct > 70;
+    const isLow    = pct < 30;
+
+    // Fishing: best 2h before/after high tide (transition periods)
+    // Surfing: incoming tide 40-70%
+    let fishingRec, surfingRec;
+
+    if (isRising && !isHigh && !isLow) {
+      fishingRec = { rating: 'Excellent', class: 'rec-excellent', icon: '&#9989;' };
+      surfingRec = { rating: 'Good', class: 'rec-good', icon: '&#128054;' };
+    } else if (isHigh) {
+      fishingRec = { rating: 'Good', class: 'rec-good', icon: '&#128054;' };
+      surfingRec = { rating: 'Fair', class: 'rec-fair', icon: '&#9888;' };
+    } else if (isLow) {
+      fishingRec = { rating: 'Fair', class: 'rec-fair', icon: '&#9888;' };
+      surfingRec = { rating: 'Poor', class: 'rec-poor', icon: '&#10060;' };
+    } else {
+      fishingRec = { rating: 'Good', class: 'rec-good', icon: '&#128054;' };
+      surfingRec = { rating: 'Excellent', class: 'rec-excellent', icon: '&#9989;' };
+    }
+
+    // Pick primary chip based on fishing (charter guide focus)
+    elRecChip.className = `rec-chip ${fishingRec.class}`;
+    elRecIcon.innerHTML = fishingRec.icon;
+    elRecLabel.textContent = `Fishing: ${fishingRec.rating}`;
+    elRecDetails.textContent = `Tide is ${isRising ? 'rising' : 'falling'} at ${currentSample.height.toFixed(1)} ft. ${
+      fishingRec.rating === 'Excellent'
+        ? 'Peak transition window — deploy chum and anchor near structure.'
+        : fishingRec.rating === 'Good'
+        ? 'Solid conditions. Focus on current seams and drop-offs.'
+        : fishingRec.rating === 'Fair'
+        ? 'Slower bite expected. Try deeper water or slack-tide spots.'
+        : 'Low tide — fish are scattered. Wait for the turn.'
+    }`;
+
+    // Best windows
+    const nextHigh = highs.filter(h => h.hour > 0).sort((a, b) => a.hour - b.hour)[0];
+    const nextLow  = lows.filter(l => l.hour > 0).sort((a, b) => a.hour - b.hour)[0];
+
+    if (nextHigh) {
+      const bef = Math.max(0, nextHigh.hour - 2);
+      const aft = Math.min(23.9, nextHigh.hour + 2);
+      elFishingWin.textContent = `${fmtTime(bef)} – ${fmtTime(aft)}`;
+      elFishingSub.textContent = `2h around high tide (${fmtTime(nextHigh.hour)})`;
+    } else {
+      elFishingWin.textContent = '—';
+      elFishingSub.textContent = 'No high tide found';
+    }
+
+    if (nextLow) {
+      const beforeLow = Math.max(0, nextLow.hour - 3);
+      const afterLow  = Math.min(23.9, nextLow.hour + 1);
+      elSurfingWin.textContent = `${fmtTime(beforeLow)} – ${fmtTime(afterLow)}`;
+      elSurfingSub.textContent = `Incoming tide window`;
+    } else {
+      elSurfingWin.textContent = '—';
+      elSurfingSub.textContent = 'No low tide found';
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     SVG CHART
+  ═══════════════════════════════════════════════════════ */
+
+  function renderSvgChart() {
+    if (!state.weekData.length) return;
+
+    elChartPlaceholder.style.display = 'none';
+    elTideSvg.style.display = 'block';
+    elChartLegend.style.display = 'flex';
+
+    const svgEl = elTideSvg;
+    const W = svgEl.clientWidth || 800;
+    const H = 240;
+    const PAD = { top: 20, right: 20, bottom: 40, left: 46 };
+    const innerW = W - PAD.left - PAD.right;
+    const innerH = H - PAD.top - PAD.bottom;
+
+    // Collect all samples across 7 days
+    const allSamples = state.weekData.flatMap((day, di) =>
+      day.samples.map(s => ({ x: di * 24 + s.hour, y: s.height }))
+    );
+
+    const totalHours = 7 * 24;
+    const minY = Math.min(...allSamples.map(s => s.y));
+    const maxY = Math.max(...allSamples.map(s => s.y));
+    const rangeY = maxY - minY || 1;
+
+    function xScale(hour) { return PAD.left + (hour / totalHours) * innerW; }
+    function yScale(h)    { return PAD.top + innerH - ((h - minY) / rangeY) * innerH; }
+
+    // Build path data
+    const pts = allSamples.map(s => `${xScale(s.x).toFixed(1)},${yScale(s.y).toFixed(1)}`);
+    const linePath  = `M${pts.join('L')}`;
+    const areaPath  = `M${xScale(0)},${yScale(minY)}L${pts.join('L')}L${xScale(totalHours)},${yScale(minY)}Z`;
+
+    document.getElementById('svg-area').setAttribute('d', areaPath);
+    document.getElementById('svg-line').setAttribute('d', linePath);
+
+    // Grid lines and axes
+    const gridEl = document.getElementById('svg-grid');
+    const axesEl = document.getElementById('svg-axes');
+    gridEl.innerHTML = '';
+    axesEl.innerHTML = '';
+
+    // Y axis grid (5 lines)
+    const ySteps = 5;
+    for (let i = 0; i <= ySteps; i++) {
+      const val = minY + (rangeY * i / ySteps);
+      const yy  = yScale(val);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', PAD.left); line.setAttribute('x2', PAD.left + innerW);
+      line.setAttribute('y1', yy); line.setAttribute('y2', yy);
+      line.setAttribute('class', 'grid-line');
+      gridEl.appendChild(line);
+
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', PAD.left - 6);
+      label.setAttribute('y', yy + 4);
+      label.setAttribute('text-anchor', 'end');
+      label.setAttribute('fill', '#8892b0');
+      label.setAttribute('font-size', '10');
+      label.setAttribute('font-family', `'Segoe UI', system-ui, sans-serif`);
+      label.textContent = val.toFixed(1);
+      axesEl.appendChild(label);
+    }
+
+    // X axis: day labels
+    for (let d = 0; d < 7; d++) {
+      const xx = xScale(d * 24 + 12);
+      const dayDate = state.weekData[d].date;
+      const dayLabel = dayDate.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', xx);
+      label.setAttribute('y', H - PAD.bottom + 16);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('fill', '#8892b0');
+      label.setAttribute('font-size', '10');
+      label.setAttribute('font-family', `'Segoe UI', system-ui, sans-serif`);
+      label.textContent = dayLabel;
+      axesEl.appendChild(label);
+
+      // Day separator
+      if (d > 0) {
+        const sep = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        sep.setAttribute('x1', xScale(d * 24)); sep.setAttribute('x2', xScale(d * 24));
+        sep.setAttribute('y1', PAD.top);        sep.setAttribute('y2', PAD.top + innerH);
+        sep.setAttribute('stroke', '#2e3350');  sep.setAttribute('stroke-opacity', '0.5');
+        gridEl.appendChild(sep);
+      }
+    }
+
+    // Dots for extrema
+    const dotsEl = document.getElementById('svg-dots');
+    dotsEl.innerHTML = '';
+    state.weekData.forEach((day, di) => {
+      day.extrema.highs.forEach(h => {
+        const cx = xScale(di * 24 + h.hour);
+        const cy = yScale(h.height);
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', 4);
+        c.setAttribute('class', 'high-dot');
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', cx); t.setAttribute('y', cy - 8);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('fill', '#ff6584');
+        t.setAttribute('font-size', '9');
+        t.setAttribute('font-family', `'Segoe UI', system-ui, sans-serif`);
+        t.textContent = h.height.toFixed(1);
+        dotsEl.appendChild(c);
+        dotsEl.appendChild(t);
+      });
+      day.extrema.lows.forEach(l => {
+        const cx = xScale(di * 24 + l.hour);
+        const cy = yScale(l.height);
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', 4);
+        c.setAttribute('class', 'low-dot');
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', cx); t.setAttribute('y', cy + 16);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('fill', '#43d9ad');
+        t.setAttribute('font-size', '9');
+        t.setAttribute('font-family', `'Segoe UI', system-ui, sans-serif`);
+        t.textContent = l.height.toFixed(1);
+        dotsEl.appendChild(c);
+        dotsEl.appendChild(t);
+      });
+    });
+
+    // Now line (only for today's date)
+    const nowLine = document.getElementById('svg-now');
+    const nowLabel = document.getElementById('svg-now-label');
+    if (selectedIsToday()) {
+      const now = new Date();
+      const nowHour = now.getHours() + now.getMinutes() / 60;
+      const nx = xScale(nowHour);
+      nowLine.setAttribute('x1', nx); nowLine.setAttribute('x2', nx);
+      nowLine.setAttribute('y1', PAD.top); nowLine.setAttribute('y2', PAD.top + innerH);
+      nowLine.style.display = '';
+      nowLabel.setAttribute('x', nx + 4); nowLabel.setAttribute('y', PAD.top + 12);
+      nowLabel.style.display = '';
+    } else {
+      nowLine.style.display = 'none';
+      nowLabel.style.display = 'none';
+    }
+  }
+
+  // Re-render chart on window resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (state.weekData.length) renderSvgChart();
+    }, 150);
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     TABLE
+  ═══════════════════════════════════════════════════════ */
+
+  function activityRating(extrema, amp) {
+    const range = amp * 2;
+    if (range > 6) return { label: 'Excellent', color: 'var(--green)' };
+    if (range > 3) return { label: 'Good', color: 'var(--accent)' };
+    if (range > 1.5) return { label: 'Fair', color: 'var(--yellow)' };
+    return { label: 'Slow', color: 'var(--accent2)' };
+  }
+
+  function renderTable() {
+    if (!state.weekData.length) return;
+
+    elTablePlaceholder.style.display = 'none';
+    elTideTable.style.display = 'table';
+
+    const today = new Date();
+    elTideTbody.innerHTML = state.weekData.map((day, di) => {
+      const date = day.date;
+      const isToday = date.toDateString() === today.toDateString();
+      const dayLabel = date.toLocaleDateString('en-US', { weekday: 'short' });
+      const dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      const highPills = (day.extrema.highs || []).map(h =>
+        `<span class="hl-pill hl-high">&#8679; ${h.height.toFixed(1)}ft ${fmtTime(h.hour)}</span>`
+      ).join('');
+
+      const lowPills = (day.extrema.lows || []).map(l =>
+        `<span class="hl-pill hl-low">&#8681; ${l.height.toFixed(1)}ft ${fmtTime(l.hour)}</span>`
+      ).join('');
+
+      const minH = Math.min(...day.samples.map(s => s.height));
+      const maxH = Math.max(...day.samples.map(s => s.height));
+      const range = (maxH - minH).toFixed(1);
+
+      const act = activityRating(day.extrema, day.dayAmp);
+
+      return `<tr class="${isToday ? 'today-row' : ''}" data-dayidx="${di}" tabindex="0" role="row" aria-label="${dayLabel} ${dateLabel}">
+        <td>
+          <div class="day-label">${dayLabel}${isToday ? ' <span style="color:var(--accent);font-size:0.68rem;">TODAY</span>' : ''}</div>
+          <div class="day-sub">${dateLabel}</div>
+        </td>
+        <td>${highPills || '<span style="color:var(--muted)">—</span>'}</td>
+        <td>${lowPills || '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="color:var(--text);font-weight:600;">${range} ft</td>
+        <td>
+          <span class="activity-dot" style="background:${act.color};"></span>
+          <span style="font-size:0.78rem;color:${act.color};font-weight:600;">${act.label}</span>
+        </td>
+        <td>
+          <button class="btn-ghost btn-sm email-btn" data-dayidx="${di}" title="Generate email template">&#9993;</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // Email buttons
+    elTideTbody.querySelectorAll('.email-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEmailModal(parseInt(btn.dataset.dayidx));
+      });
+    });
+
+    // Row keyboard nav
+    elTideTbody.querySelectorAll('tr[data-dayidx]').forEach(row => {
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') openEmailModal(parseInt(row.dataset.dayidx));
+      });
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     EMAIL TEMPLATE
+  ═══════════════════════════════════════════════════════ */
+
+  function openEmailModal(dayIdx) {
+    const day = state.weekData[dayIdx];
+    if (!day) return;
+    const date = day.date;
+    const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const { highs, lows } = day.extrema;
+
+    const highLines = (highs || []).map(h => `    HIGH: ${h.height.toFixed(1)} ft at ${fmtTime(h.hour)}`).join('\n');
+    const lowLines  = (lows  || []).map(l => `    LOW:  ${l.height.toFixed(1)} ft at ${fmtTime(l.hour)}`).join('\n');
+
+    const act = activityRating(day.extrema, day.dayAmp);
+
+    const template = `Subject: Your Charter Tide Forecast — ${dateStr}
+
+Hi [Client Name],
+
+Thank you for booking with us! Here is your personalized tide forecast
+for your upcoming fishing charter on ${dateStr} at ${state.locationName}.
+
+────────────────────────────────────────
+  TIDE FORECAST — ${state.locationName.toUpperCase()}
+  ${dateStr}
+────────────────────────────────────────
+
+${highLines}
+${lowLines}
+
+  Tidal range: ${(Math.max(...(highs || [{ height: 0 }]).map(h => h.height)) - Math.min(...(lows || [{ height: 0 }]).map(l => l.height))).toFixed(1)} ft
+  Fishing outlook: ${act.label}
+
+────────────────────────────────────────
+
+PRO TIPS FOR YOUR TRIP:
+  • Arrive 30 minutes before the first tide change for best results.
+  • Peak bite windows are 2 hours before and after each high tide.
+  • Bring layers — morning temperatures drop near the water.
+
+We look forward to seeing you on the water!
+
+Tight lines,
+[Captain Name]
+[Charter Company]
+[Phone] | [Email]
+[Website]
+
+────────────────────────────────────────
+Tide predictions are approximations based on harmonic tidal models.
+Always check NOAA official forecasts at tidesandcurrents.noaa.gov
+before departure.`;
+
+    elEmailPreview.textContent = template;
+    elModalOverlay.classList.add('open');
+    document.getElementById('modal-close-btn').focus();
+  }
+
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  document.getElementById('modal-close-btn2').addEventListener('click', closeModal);
+  elModalOverlay.addEventListener('click', (e) => { if (e.target === elModalOverlay) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  function closeModal() { elModalOverlay.classList.remove('open'); }
+
+  elCopyEmailBtn.addEventListener('click', () => {
+    const text = elEmailPreview.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => toast('Email template copied!', 'success'));
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast('Email template copied!', 'success');
+    }
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     TRIP CALENDAR
+  ═══════════════════════════════════════════════════════ */
+
+  elAddTripBtn.addEventListener('click', addTrip);
+  elTripName.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTrip(); });
+
+  function addTrip() {
+    const name = elTripName.value.trim();
+    if (!name) { toast('Enter a client or trip name', 'warn'); elTripName.focus(); return; }
+    if (state.lat === null) { toast('Select a location first', 'warn'); return; }
+
+    const dateStr = elDatePicker.value;
+    const parts   = dateStr.split('-');
+    const tripDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+
+    // Get tide info for this date
+    const phase    = moonPhase(tripDate);
+    const factor   = springNeapFactor(phase);
+    const amp      = state.baseAmplitude * factor;
+    const refDate  = new Date(2000, 0, 1);
+    const daysSinceRef = (tripDate - refDate) / 86400000;
+    const epochOff = daysSinceRef * 24;
+    const samples  = sampleDay(tripDate, state.lat, state.lon, amp, epochOff);
+    const extrema  = findExtrema(samples);
+    const bestHigh = extrema.highs.reduce((a, b) => b.height > a.height ? b : a, extrema.highs[0] || { height: 0 });
+    const act      = activityRating(extrema, amp);
+
+    state.trips.push({
+      id: Date.now(),
+      name,
+      date: dateStr,
+      location: state.locationName,
+      highTide: bestHigh ? `${bestHigh.height.toFixed(1)} ft at ${fmtTime(bestHigh.hour)}` : '—',
+      activity: act.label,
+      actColor: act.color,
+    });
+    saveTrips();
+    elTripName.value = '';
+    renderTrips();
+    toast(`Trip added for ${tripDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, 'success');
+  }
+
+  function renderTrips() {
+    if (!state.trips.length) {
+      elTripsList.innerHTML = `<div class="empty-state"><div class="empty-icon">&#128197;</div>No trips scheduled yet.</div>`;
+      return;
+    }
+
+    const sorted = [...state.trips].sort((a, b) => a.date.localeCompare(b.date));
+    elTripsList.innerHTML = sorted.map(t => {
+      const d = new Date(t.date + 'T00:00:00');
+      const dl = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+      return `<div class="trip-item" data-id="${t.id}">
+        <div class="trip-info">
+          <div class="trip-name">${escHtml(t.name)}</div>
+          <div class="trip-meta">${dl} &bull; ${escHtml(t.location)} &bull; High: ${escHtml(t.highTide)}</div>
+        </div>
+        <span class="trip-tide-badge" style="background:rgba(56,189,248,0.12);color:${t.actColor};">${escHtml(t.activity)}</span>
+        <button class="trip-del" data-id="${t.id}" title="Remove trip" aria-label="Remove trip for ${escHtml(t.name)}">&#10005;</button>
+      </div>`;
+    }).join('');
+
+    elTripsList.querySelectorAll('.trip-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.trips = state.trips.filter(t => String(t.id) !== String(btn.dataset.id));
+        saveTrips();
+        renderTrips();
+        toast('Trip removed', 'info');
+      });
+    });
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     TOAST
+  ═══════════════════════════════════════════════════════ */
+
+  function toast(msg, type) {
+    const icons = { success: '&#9989;', error: '&#10060;', warn: '&#9888;', info: '&#8505;' };
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span>${escHtml(msg)}`;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     INIT — auto load default location
+  ═══════════════════════════════════════════════════════ */
+
+  // Render trips from storage on load
+  renderTrips();
+
+  // Auto-calculate with Miami Beach as default so the page is not empty
+  selectLocation('Miami Beach, FL', 25.79, -80.13, 2.1);
+
+})();
+</script>
+</body>
+</html>
