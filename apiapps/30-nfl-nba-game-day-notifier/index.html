@@ -1,1623 +1,1669 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NFL/NBA Game Day Notifier</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0a0a0a;
-      --surface: #141414;
-      --surface2: #1e1e1e;
-      --border: rgba(255,255,255,0.08);
-      --accent: #1db954;
-      --accent2: #ff6b6b;
-      --text: #ffffff;
-      --muted: #9ca3af;
-      --radius: 12px;
-      --font-display: 'Bebas Neue', Impact, sans-serif;
-      --font-body: 'Figtree', system-ui, sans-serif;
-      --font-mono: 'DM Mono', monospace;
-    }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      min-height: 100vh;
-    }
-
-    /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 18px 32px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .logo {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-
-    .header-text h1 { font-size: 20px; font-weight: 700; }
-    .header-text p  { font-size: 13px; color: var(--muted); margin-top: 2px; }
-
-    .header-actions {
-      margin-left: auto;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    /* ── Tabs ── */
-    .tabs {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 32px;
-      display: flex;
-      gap: 0;
-    }
-
-    .tab-btn {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-size: 14px;
-      font-weight: 500;
-      padding: 14px 20px;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: color .15s, border-color .15s;
-    }
-
-    .tab-btn:hover { color: var(--text); }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-    /* ── Layout ── */
-    .layout {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      min-height: calc(100vh - 125px);
-    }
-
-    /* ── Sidebar ── */
-    .sidebar {
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      padding: 24px 20px;
-      overflow-y: auto;
-    }
-
-    .sidebar-section { margin-bottom: 28px; }
-
-    .sidebar-section h3 {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      margin-bottom: 12px;
-    }
-
-    .league-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    .league-badge {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 4px;
-    }
-
-    .badge-nfl { background: #1a3a1a; color: var(--green); }
-    .badge-nba { background: #1a1a3a; color: var(--accent); }
-
-    .team-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-    }
-
-    .team-chip {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 500;
-      transition: border-color .15s, background .15s, transform .1s;
-      user-select: none;
-    }
-
-    .team-chip:hover { border-color: var(--accent); transform: translateY(-1px); }
-    .team-chip.selected { border-color: var(--accent); background: rgba(168,85,247,.15); }
-    .team-chip.selected .chip-dot { background: var(--accent); }
-
-    .chip-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--border);
-      flex-shrink: 0;
-      transition: background .15s;
-    }
-
-    .chip-emoji { font-size: 14px; }
-
-    /* ── Main content ── */
-    .main { padding: 28px 32px; overflow-y: auto; }
-
-    /* ── Panels ── */
-    .panel { display: none; }
-    .panel.active { display: block; }
-
-    /* ── Section titles ── */
-    .section-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-
-    .section-sub {
-      font-size: 14px;
-      color: var(--muted);
-      margin-bottom: 24px;
-    }
-
-    /* ── Game cards ── */
-    .games-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .game-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 24px;
-      display: grid;
-      grid-template-columns: 1fr auto 1fr auto;
-      align-items: center;
-      gap: 16px;
-      transition: border-color .2s, transform .15s, box-shadow .2s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .game-card::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 3px;
-    }
-
-    .game-card.nfl::before { background: var(--green); }
-    .game-card.nba::before { background: var(--accent); }
-
-    .game-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(168,85,247,.15);
-    }
-
-    .game-card.today { border-color: var(--yellow); }
-    .game-card.today::before { background: var(--yellow); }
-
-    .team-block {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .team-block.away { text-align: right; align-items: flex-end; }
-    .team-block.home { text-align: left; }
-
-    .team-name {
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .team-record {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .team-emoji-lg { font-size: 28px; line-height: 1; }
-
-    .vs-block {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .vs-text {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
-
-    .game-time {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-      white-space: nowrap;
-    }
-
-    .game-date-badge {
-      font-size: 11px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    .game-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: flex-end;
-    }
-
-    .countdown {
-      font-size: 12px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 20px;
-      background: var(--surface2);
-      color: var(--yellow);
-      white-space: nowrap;
-    }
-
-    .countdown.today-live {
-      background: rgba(247,201,72,.15);
-      color: var(--yellow);
-      animation: pulse-yellow 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse-yellow {
-      0%, 100% { opacity: 1; }
-      50% { opacity: .6; }
-    }
-
-    .today-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 9px;
-      border-radius: 20px;
-      background: rgba(247,201,72,.15);
-      color: var(--yellow);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .btn-sm {
-      padding: 6px 14px;
-      border: none;
-      border-radius: 7px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity .15s, transform .1s;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .btn-sm:hover { opacity: .85; transform: translateY(-1px); }
-
-    .btn-ics { background: var(--yellow); color: #0f1117; }
-    .btn-notify { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
-    .btn-notify.active { background: rgba(168,85,247,.2); border-color: var(--accent); color: var(--accent); }
-    .btn-primary { background: var(--accent); color: #fff; }
-
-    /* ── Empty state ── */
-    .empty-state {
-      text-align: center;
-      padding: 64px 32px;
-    }
-
-    .empty-icon { font-size: 56px; margin-bottom: 16px; line-height: 1; }
-    .empty-state h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-    .empty-state p { color: var(--muted); font-size: 14px; }
-
-    /* ── Standings table ── */
-    .standings-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-
-    .standings-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-
-    .standings-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .standings-header h3 { font-size: 15px; font-weight: 700; }
-
-    .standings-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .standings-table thead th {
-      padding: 10px 16px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      color: var(--muted);
-      text-align: left;
-      background: var(--surface2);
-    }
-
-    .standings-table thead th:not(:first-child) { text-align: center; }
-
-    .standings-table tbody tr {
-      border-top: 1px solid var(--border);
-      transition: background .15s;
-    }
-
-    .standings-table tbody tr:hover { background: var(--surface2); }
-
-    .standings-table td {
-      padding: 11px 16px;
-      font-size: 13px;
-    }
-
-    .standings-table td:not(:first-child) {
-      text-align: center;
-      color: var(--muted);
-    }
-
-    .team-cell {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .rank-num {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      width: 18px;
-      text-align: right;
-    }
-
-    .rank-1 .rank-num { color: var(--yellow); }
-    .rank-2 .rank-num { color: var(--text); }
-    .rank-3 .rank-num { color: var(--green); }
-
-    .followed-marker {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      flex-shrink: 0;
-    }
-
-    .win-pct { font-weight: 700; color: var(--text) !important; }
-
-    /* ── Notification banner ── */
-    .notif-banner {
-      display: none;
-      align-items: center;
-      gap: 12px;
-      background: rgba(168,85,247,.12);
-      border: 1px solid rgba(168,85,247,.3);
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 24px;
-    }
-
-    .notif-banner.visible { display: flex; }
-    .notif-banner p { font-size: 14px; flex: 1; }
-    .notif-banner .notif-icon { font-size: 22px; }
-
-    /* ── Filter bar ── */
-    .filter-bar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .filter-btn {
-      padding: 6px 14px;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      background: var(--surface2);
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all .15s;
-    }
-
-    .filter-btn:hover { border-color: var(--accent); color: var(--text); }
-    .filter-btn.active { border-color: var(--accent); background: rgba(168,85,247,.15); color: var(--accent); }
-
-    .filter-spacer { flex: 1; }
-
-    .result-count {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    /* ── Toast ── */
-    .toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 9999;
-      pointer-events: none;
-    }
-
-    .toast {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      pointer-events: auto;
-      box-shadow: 0 8px 24px rgba(0,0,0,.4);
-      animation: slide-in .25s ease;
-      max-width: 340px;
-    }
-
-    .toast.success { border-color: var(--green); }
-    .toast.error   { border-color: var(--accent2); }
-    .toast.info    { border-color: var(--accent); }
-
-    @keyframes slide-in {
-      from { opacity: 0; transform: translateX(20px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-
-    @keyframes slide-out {
-      from { opacity: 1; transform: translateX(0); }
-      to   { opacity: 0; transform: translateX(20px); }
-    }
-
-    /* ── Loading spinner ── */
-    .spinner {
-      display: inline-block;
-      width: 16px; height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .6s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Stats strip ── */
-    .stats-strip {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 28px;
-    }
-
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 20px;
-    }
-
-    .stat-label {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 500;
-      margin-bottom: 6px;
-    }
-
-    .stat-value {
-      font-size: 24px;
-      font-weight: 800;
-      line-height: 1;
-    }
-
-    .stat-value.accent  { color: var(--accent); }
-    .stat-value.green   { color: var(--green); }
-    .stat-value.yellow  { color: var(--yellow); }
-    .stat-value.accent2 { color: var(--accent2); }
-
-    /* ── Week nav ── */
-    .week-nav {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .week-label {
-      font-size: 14px;
-      font-weight: 600;
-      min-width: 180px;
-      text-align: center;
-    }
-
-    .btn-icon {
-      width: 32px; height: 32px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface2);
-      color: var(--text);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-      transition: border-color .15s;
-    }
-
-    .btn-icon:hover { border-color: var(--accent); }
-
-    /* ── Divider ── */
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 24px 0;
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 768px) {
-      .layout { grid-template-columns: 1fr; }
-      .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
-      .standings-container { grid-template-columns: 1fr; }
-      .stats-strip { grid-template-columns: 1fr 1fr; }
-      .game-card { grid-template-columns: 1fr; gap: 10px; }
-      .game-actions { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
-    }
-
-    /* ── Notification permission state ── */
-    .notif-status {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .notif-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--border);
-    }
-
-    .notif-dot.granted { background: var(--green); }
-    .notif-dot.denied  { background: var(--accent2); }
-
-    .group-label {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      padding: 4px 0;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 12px;
-      margin-top: 8px;
-    }
-
-    .group-label:first-child { margin-top: 0; }
-
-    /* === Media v2 Design System === */
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(ellipse 700px 500px at 70% -10%, rgba(29,185,84,0.08) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    body > * { position: relative; z-index: 1; }
-
-    h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
-    h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent); }
-    h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
-
-    .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
-
-    .card, .result, .item, .race, .game, .match, .quiz, .joke, .anime, .pokemon, .trivia,
-    [class*="card"], [class*="item"], [class*="result"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      transition: transform 0.2s, background 0.2s;
-      animation: mediaFade 0.4s ease both;
-    }
-    .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
-
-    input, select, textarea {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      padding: 0.75rem 1rem;
-      font-family: var(--font-body);
-      font-size: 0.95rem;
-      width: 100%;
-      transition: border-color 0.2s;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
-
-    button, .btn, input[type="submit"], input[type="button"] {
-      background: var(--accent);
-      color: #000;
-      border: none;
-      border-radius: 999px;
-      padding: 0.75rem 2rem;
-      font-family: var(--font-body);
-      font-weight: 800;
-      font-size: 0.9rem;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: transform 0.15s, filter 0.15s;
-    }
-    button:hover { transform: scale(1.03); filter: brightness(1.1); }
-    button:active { transform: scale(0.97); }
-
-    .tag, .badge, .genre, .category, .label, .type, .team, .circuit, .difficulty {
-      display: inline-block;
-      background: rgba(29,185,84,0.12);
-      border: 1px solid rgba(29,185,84,0.25);
-      color: var(--accent);
-      border-radius: 4px;
-      padding: 0.15rem 0.6rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .score, .rating, .stat, .number, .count, .position, .lap, .correct {
-      font-family: var(--font-mono);
-      font-size: 1.8rem;
-      font-weight: 500;
-      color: var(--accent);
-    }
-
-    .live, .trending, .new { color: var(--accent2); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
-
-    table { width: 100%; border-collapse: collapse; }
-    th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
-    td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
-
-    @keyframes mediaFade {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: none; }
-    }
-
-    @keyframes livePulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .live::before { content: '● '; animation: livePulse 1.5s ease infinite; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameDay — NFL/NBA Venue Notifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Sport · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep {
+  width: 1px; height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-badge {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App Shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Sport toggle */
+.sport-toggle {
+  display: flex;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+.sport-btn {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+.sport-btn.active {
+  background: var(--color-accent);
+  color: var(--color-paper);
+}
+.sport-btn:not(.active):hover { color: var(--color-ink); }
+
+/* Section labels */
+.sidebar-section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+}
+.followed-count {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  line-height: 1.6;
+}
+
+/* Team grid */
+.team-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.team-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-1);
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  text-align: center;
+  transition: border-color 0.15s var(--ease-out), background 0.15s var(--ease-out), color 0.15s var(--ease-out);
+  line-height: 1.3;
+}
+.team-chip:hover { border-color: var(--color-accent-line); color: var(--color-ink); }
+.team-chip.followed {
+  border-color: var(--color-success);
+  background: var(--color-accent-subtle);
+  color: var(--color-ink);
+}
+.team-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: var(--color-paper-2);
+}
+.team-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-paper-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+  font-family: var(--font-display);
+  flex-shrink: 0;
+}
+
+/* Venue input */
+.venue-input {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color 0.15s var(--ease-out);
+}
+.venue-input:focus { outline: none; border-color: var(--color-accent); }
+.venue-input::placeholder { color: var(--color-ink-muted); }
+
+/* Template select */
+.template-select {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out);
+}
+.template-select:focus { outline: none; border-color: var(--color-accent); }
+
+/* Sidebar footer */
+.sidebar-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.btn-ics {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  transition: opacity 0.15s var(--ease-out);
+}
+.btn-ics:hover { opacity: 0.85; }
+
+/* ── Main Panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Section headers */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+.section-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+/* ── Week View ── */
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-2);
+}
+.day-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.day-header {
+  text-align: center;
+  padding: var(--space-2) var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+}
+.day-header.today-col {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+}
+.day-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: inherit;
+}
+.day-date {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: inherit;
+  line-height: 1;
+  margin-top: 2px;
+}
+.day-header:not(.today-col) .day-name { color: var(--color-ink-muted); }
+
+.game-mini {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease-out), background 0.12s var(--ease-out);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.game-mini:hover {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+.game-mini.is-today {
+  border-color: oklch(62% 0.15 72 / 0.6);
+  background: oklch(62% 0.15 72 / 0.06);
+}
+.game-mini.selected-game {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+.game-mini-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+.game-mini.is-today .game-mini-badge { color: oklch(62% 0.15 72); }
+.game-mini-teams {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.game-mini-time {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.day-empty {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-3) 0;
+  opacity: 0.6;
+}
+
+/* Live countdown */
+.countdown-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: oklch(62% 0.15 72 / 0.08);
+  border: 1px solid oklch(62% 0.15 72 / 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.countdown-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: oklch(62% 0.15 72);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+}
+.countdown-timer {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.countdown-game {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-left: auto;
+}
+
+/* ── Next Game Cards ── */
+.next-games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+.next-game-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease-out);
+}
+.next-game-card:hover { border-color: var(--color-accent-line); }
+.next-game-card.selected-game { border-color: var(--color-accent); }
+.next-game-team {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-1);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+}
+.next-game-matchup {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+.next-game-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+}
+.next-game-badge {
+  display: inline-flex;
+  margin-top: var(--space-2);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+}
+.next-game-badge.home { border-color: var(--color-success); color: var(--color-success); }
+.next-game-badge.away { border-color: var(--color-accent-line); color: var(--color-accent); }
+.next-game-badge.today-game {
+  border-color: oklch(62% 0.15 72 / 0.5);
+  color: oklch(62% 0.15 72);
+  background: oklch(62% 0.15 72 / 0.08);
+}
+
+/* ── Notification Copy Generator ── */
+.copy-panel {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.copy-game-selector {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.copy-select {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  min-width: 180px;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out);
+}
+.copy-select:focus { outline: none; border-color: var(--color-accent); }
+.btn-generate {
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+.btn-generate:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-generate:active { transform: translateY(0); }
+
+.copy-variants {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.variant-btn {
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease-out), color 0.12s var(--ease-out);
+}
+.variant-btn:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.variant-btn.active { border-color: var(--color-accent); color: var(--color-accent); background: var(--color-accent-subtle); }
+
+.copy-textarea {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.6;
+  transition: border-color 0.15s var(--ease-out);
+}
+.copy-textarea:focus { outline: none; border-color: var(--color-accent); }
+
+.copy-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.char-count {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.char-count.over { color: var(--color-danger); }
+.btn-copy {
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease-out), background 0.12s var(--ease-out);
+}
+.btn-copy:hover { border-color: var(--color-accent-line); background: var(--color-accent-subtle); }
+
+.copy-hint {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+
+/* ── Recent Results ── */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+.result-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.result-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+.result-team {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+}
+.result-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.result-badge.win { background: oklch(46% 0.20 26 / 0.12); color: var(--color-success); }
+.result-badge.loss { background: oklch(55% 0.20 25 / 0.08); color: var(--color-danger); }
+.result-matchup {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+.result-score {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.result-date {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+}
+
+/* Empty state */
+.panel-empty {
+  padding: var(--space-16) var(--space-8);
+  text-align: center;
+}
+.panel-empty-icon { font-size: 40px; margin-bottom: var(--space-4); }
+.panel-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+.panel-empty-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  max-width: 280px;
+  margin: 0 auto;
+  line-height: 1.65;
+}
+
+/* Loading state */
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px var(--color-shadow);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  pointer-events: none;
+  max-width: 340px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--color-border); max-height: none; }
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+  .week-days { grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+  .next-games-grid { grid-template-columns: 1fr 1fr; }
+  .results-grid { grid-template-columns: 1fr; }
+  .copy-game-selector { flex-direction: column; align-items: stretch; }
+  .copy-select { min-width: unset; }
+  .nav-badge { display: none; }
+}
+@media (max-width: 414px) {
+  .week-days { grid-template-columns: repeat(2, 1fr); }
+  .next-games-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; border: 2px solid var(--color-accent); }
+  .btn-generate:hover { transform: none; }
+  .toast { transition: opacity 0.15s var(--ease-out); transform: translateY(0); }
+}
+</style>
 </head>
 <body>
 
-<!-- Header -->
-<header>
-  <div class="logo">🏟️</div>
-  <div class="header-text">
-    <h1>Game Day Notifier</h1>
-    <p>NFL &amp; NBA schedule tracker for venues — never miss a watch party</p>
-  </div>
-  <div class="header-actions">
-    <div class="notif-status" id="notif-status">
-      <div class="notif-dot" id="notif-dot"></div>
-      <span id="notif-label">Notifications off</span>
-    </div>
-    <button class="btn-sm btn-notify" id="enable-notif-btn" onclick="requestNotifPermission()">
-      🔔 Enable Alerts
-    </button>
-  </div>
-</header>
-
-<!-- Tabs -->
-<nav class="tabs" role="tablist">
-  <button class="tab-btn active" role="tab" aria-selected="true" onclick="switchTab('schedule', this)">📅 Schedule</button>
-  <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('today', this)">🔥 Today &amp; This Week</button>
-  <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('standings', this)">📊 Standings</button>
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">GAME<span>DAY</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">NFL/NBA Venue Notifier</span>
+  <span class="nav-badge" id="followed-badge" aria-live="polite">0 teams followed</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
 </nav>
 
-<!-- Layout -->
-<div class="layout">
+<div class="app-shell">
 
-  <!-- Sidebar -->
-  <aside class="sidebar" aria-label="Team selector">
-    <div class="sidebar-section">
-      <h3>Your Teams</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Select teams to follow and receive alerts for their games.</p>
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Team selector and settings">
 
-      <div class="league-header">
-        <span class="league-badge badge-nfl">NFL</span>
-        <span style="font-size:12px;color:var(--muted)">2025 Season</span>
+    <div class="sidebar-scroll">
+
+      <!-- Sport toggle -->
+      <div>
+        <div class="sport-toggle" role="group" aria-label="Select sport">
+          <button class="sport-btn active" id="btn-nfl" onclick="setSport('NFL')" aria-pressed="true">NFL</button>
+          <button class="sport-btn" id="btn-nba" onclick="setSport('NBA')" aria-pressed="false">NBA</button>
+        </div>
       </div>
-      <div class="team-grid" id="nfl-team-grid"></div>
 
-      <div style="height:16px;"></div>
-
-      <div class="league-header">
-        <span class="league-badge badge-nba">NBA</span>
-        <span style="font-size:12px;color:var(--muted)">2025-26 Season</span>
+      <!-- My Teams -->
+      <div>
+        <div class="sidebar-section-label">
+          <span>My Teams</span>
+          <span class="followed-count" id="sb-count" aria-live="polite">0</span>
+        </div>
+        <div style="height: var(--space-3);"></div>
+        <div class="team-grid" id="team-grid" role="list" aria-label="Teams to follow">
+          <!-- populated by JS -->
+        </div>
       </div>
-      <div class="team-grid" id="nba-team-grid"></div>
+
+      <!-- Venue name -->
+      <div>
+        <label class="sidebar-section-label" for="venue-name" style="display:block;margin-bottom:var(--space-2);">Your Venue Name</label>
+        <input
+          type="text"
+          class="venue-input"
+          id="venue-name"
+          placeholder="e.g. The Fieldhouse Bar"
+          autocomplete="off"
+          aria-label="Your venue name, used in notification copy"
+        >
+      </div>
+
+      <!-- Notification template -->
+      <div>
+        <label class="sidebar-section-label" for="notif-template" style="display:block;margin-bottom:var(--space-2);">Notification Template</label>
+        <select class="template-select" id="notif-template" aria-label="Select notification template">
+          <option value="gameday">Game Day Alert</option>
+          <option value="result">Result Celebration</option>
+          <option value="preview">Upcoming Game Preview</option>
+        </select>
+      </div>
+
     </div>
 
-    <div class="divider"></div>
-
-    <div class="sidebar-section">
-      <h3>Quick Select</h3>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <button class="filter-btn" style="border-radius:8px;text-align:left;" onclick="selectAll('NFL')">Select all NFL</button>
-        <button class="filter-btn" style="border-radius:8px;text-align:left;" onclick="selectAll('NBA')">Select all NBA</button>
-        <button class="filter-btn" style="border-radius:8px;text-align:left;" onclick="clearAll()">Clear all teams</button>
-      </div>
+    <!-- Sidebar footer -->
+    <div class="sidebar-footer">
+      <button class="btn-ics" id="btn-download-ics" onclick="downloadAllICS()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2 13h12M8 3v7m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        My Game Calendar (.ics)
+      </button>
     </div>
+
   </aside>
 
-  <!-- Main -->
-  <main class="main">
+  <!-- ── Main Panel ── -->
+  <main class="main" aria-label="Game day dashboard">
+    <div class="main-scroll">
 
-    <!-- ── SCHEDULE PANEL ── -->
-    <section class="panel active" id="panel-schedule">
-      <div class="stats-strip" id="stats-strip"></div>
-
-      <div class="filter-bar">
-        <button class="filter-btn active" onclick="setFilter('all', this)">All Games</button>
-        <button class="filter-btn" onclick="setFilter('nfl', this)">NFL Only</button>
-        <button class="filter-btn" onclick="setFilter('nba', this)">NBA Only</button>
-        <button class="filter-btn" onclick="setFilter('followed', this)">My Teams</button>
-        <div class="filter-spacer"></div>
-        <span class="result-count" id="result-count"></span>
+      <!-- Live countdown (today's games) -->
+      <div id="countdown-section" style="display:none;">
+        <div class="countdown-bar" role="timer" aria-label="Live countdown to next game today" aria-live="polite">
+          <span class="countdown-label">Game Day</span>
+          <span class="countdown-timer" id="countdown-timer">--:--:--</span>
+          <span class="countdown-game" id="countdown-game"></span>
+        </div>
       </div>
 
-      <div class="notif-banner" id="notif-banner">
-        <span class="notif-icon">🔔</span>
-        <p>Enable browser notifications to get 1-hour game reminders automatically set for your followed teams.</p>
-        <button class="btn-sm btn-primary" onclick="requestNotifPermission()">Enable Now</button>
-      </div>
+      <!-- This Week -->
+      <section aria-label="This week's games">
+        <div class="section-head">
+          <span class="section-title">This Week</span>
+          <span class="section-sub" id="week-range"></span>
+        </div>
+        <div class="week-days" id="week-days" role="list" aria-label="7-day game calendar">
+          <!-- populated by JS -->
+        </div>
+      </section>
 
-      <div class="games-grid" id="schedule-grid"></div>
-    </section>
+      <!-- Next Game per followed team -->
+      <section id="next-games-section" aria-label="Next game for each followed team">
+        <div class="section-head">
+          <span class="section-title">Next Game</span>
+          <span class="section-sub">Per followed team</span>
+        </div>
+        <div id="next-games-empty" class="panel-empty" style="display:none;">
+          <div class="panel-empty-icon">🏟</div>
+          <p class="panel-empty-title">No teams followed yet</p>
+          <p class="panel-empty-sub">Click teams in the sidebar to follow them and see their next game here.</p>
+        </div>
+        <div class="next-games-grid" id="next-games-grid" role="list" aria-label="Next games per team">
+          <!-- populated by JS -->
+        </div>
+      </section>
 
-    <!-- ── TODAY / THIS WEEK PANEL ── -->
-    <section class="panel" id="panel-today">
-      <h2 class="section-title">Today &amp; This Week</h2>
-      <p class="section-sub">Games for your followed teams in the next 7 days.</p>
+      <!-- Notification Copy Generator -->
+      <section aria-label="Notification copy generator">
+        <div class="section-head">
+          <span class="section-title">Notification Copy</span>
+          <span class="section-sub">Generate marketing copy for your venue</span>
+        </div>
+        <div class="copy-panel">
+          <div class="copy-game-selector">
+            <select class="copy-select" id="copy-game-select" aria-label="Select game for notification copy">
+              <option value="">— Select a game —</option>
+            </select>
+            <select class="copy-select" id="copy-template-select" aria-label="Select copy template">
+              <option value="gameday">Game Day Alert</option>
+              <option value="result">Result Celebration</option>
+              <option value="preview">Upcoming Game Preview</option>
+            </select>
+            <button class="btn-generate" onclick="generateCopy()">Generate Copy</button>
+          </div>
+          <div class="copy-variants" role="group" aria-label="Copy variant">
+            <button class="variant-btn active" data-variant="long" onclick="switchVariant('long', this)">Instagram (Long)</button>
+            <button class="variant-btn" data-variant="short" onclick="switchVariant('short', this)">Twitter/X (Short)</button>
+            <button class="variant-btn" data-variant="email" onclick="switchVariant('email', this)">Email Subject</button>
+          </div>
+          <textarea
+            class="copy-textarea"
+            id="copy-textarea"
+            aria-label="Generated notification copy, editable"
+            placeholder="Select a game and click Generate Copy to create marketing content for your venue…"
+          ></textarea>
+          <div class="copy-actions">
+            <span class="char-count" id="char-count" aria-live="polite">0 / 2200</span>
+            <button class="btn-copy" onclick="copyToClipboard()">Copy</button>
+            <p class="copy-hint" style="margin-left:auto;">Click a game card to pre-select it.</p>
+          </div>
+        </div>
+      </section>
 
-      <div class="week-nav">
-        <button class="btn-icon" onclick="shiftWeek(-1)" title="Previous week">&#8249;</button>
-        <div class="week-label" id="week-label"></div>
-        <button class="btn-icon" onclick="shiftWeek(1)" title="Next week">&#8250;</button>
-        <button class="filter-btn" onclick="resetWeek()" style="margin-left:6px;">Today</button>
-      </div>
+      <!-- Recent Results -->
+      <section id="results-section" aria-label="Recent results">
+        <div class="section-head">
+          <span class="section-title">Recent Results</span>
+          <span class="section-sub">Last game per followed team</span>
+        </div>
+        <div id="results-loading" class="loading-row" style="display:none;">
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Loading results…</span>
+        </div>
+        <div id="results-empty" class="panel-empty" style="display:none;">
+          <div class="panel-empty-icon">📋</div>
+          <p class="panel-empty-title">No followed teams</p>
+          <p class="panel-empty-sub">Follow teams to see their recent results here.</p>
+        </div>
+        <div class="results-grid" id="results-grid" role="list" aria-label="Recent game results">
+          <!-- populated by JS -->
+        </div>
+      </section>
 
-      <div class="games-grid" id="week-grid"></div>
-    </section>
-
-    <!-- ── STANDINGS PANEL ── */
-    <section class="panel" id="panel-standings">
-      <h2 class="section-title">2025 Standings</h2>
-      <p class="section-sub">Current season records — followed teams highlighted.</p>
-
-      <div class="standings-container" id="standings-container"></div>
-    </section>
-
+    </div>
   </main>
+
 </div>
 
-<!-- Toast container -->
-<div class="toast-container" id="toast-container" aria-live="polite"></div>
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
-/* ─────────────────────────────────────────────
-   DATA
-───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   TEAM DATA — TheSportsDB IDs embedded for all NFL + NBA teams
+   Fallback: searchteams endpoint if logo 404s
+───────────────────────────────────────────────────────────── */
 
+const SPORTSDB_BASE = 'https://www.thesportsdb.com/api/v1/json/3';
+
+// NFL teams — TheSportsDB team IDs
 const NFL_TEAMS = [
-  { id:'KC',  name:'Chiefs',    city:'Kansas City', emoji:'🏈', conf:'AFC', div:'West' },
-  { id:'BUF', name:'Bills',     city:'Buffalo',     emoji:'🦬', conf:'AFC', div:'East' },
-  { id:'BAL', name:'Ravens',    city:'Baltimore',   emoji:'🐦', conf:'AFC', div:'North' },
-  { id:'SF',  name:'49ers',     city:'San Francisco',emoji:'🔴',conf:'NFC', div:'West' },
-  { id:'DAL', name:'Cowboys',   city:'Dallas',      emoji:'⭐', conf:'NFC', div:'East' },
-  { id:'PHI', name:'Eagles',    city:'Philadelphia', emoji:'🦅',conf:'NFC', div:'East' },
-  { id:'MIA', name:'Dolphins',  city:'Miami',       emoji:'🐬', conf:'AFC', div:'East' },
-  { id:'DET', name:'Lions',     city:'Detroit',     emoji:'🦁', conf:'NFC', div:'North' },
-  { id:'GB',  name:'Packers',   city:'Green Bay',   emoji:'🧀', conf:'NFC', div:'North' },
-  { id:'LAR', name:'Rams',      city:'Los Angeles', emoji:'🐏', conf:'NFC', div:'West' },
-  { id:'CIN', name:'Bengals',   city:'Cincinnati',  emoji:'🐯', conf:'AFC', div:'North' },
-  { id:'DEN', name:'Broncos',   city:'Denver',      emoji:'🐴', conf:'AFC', div:'West' },
+  { id: 134920, abbr: 'NE',  name: 'Patriots',    city: 'New England',     conf: 'AFC', div: 'East' },
+  { id: 134918, abbr: 'BUF', name: 'Bills',        city: 'Buffalo',         conf: 'AFC', div: 'East' },
+  { id: 134919, abbr: 'MIA', name: 'Dolphins',     city: 'Miami',           conf: 'AFC', div: 'East' },
+  { id: 134921, abbr: 'NYJ', name: 'Jets',         city: 'New York',        conf: 'AFC', div: 'East' },
+  { id: 134922, abbr: 'BAL', name: 'Ravens',       city: 'Baltimore',       conf: 'AFC', div: 'North' },
+  { id: 134923, abbr: 'CIN', name: 'Bengals',      city: 'Cincinnati',      conf: 'AFC', div: 'North' },
+  { id: 134924, abbr: 'CLE', name: 'Browns',       city: 'Cleveland',       conf: 'AFC', div: 'North' },
+  { id: 134925, abbr: 'PIT', name: 'Steelers',     city: 'Pittsburgh',      conf: 'AFC', div: 'North' },
+  { id: 134926, abbr: 'HOU', name: 'Texans',       city: 'Houston',         conf: 'AFC', div: 'South' },
+  { id: 134927, abbr: 'IND', name: 'Colts',        city: 'Indianapolis',    conf: 'AFC', div: 'South' },
+  { id: 134928, abbr: 'JAX', name: 'Jaguars',      city: 'Jacksonville',    conf: 'AFC', div: 'South' },
+  { id: 134929, abbr: 'TEN', name: 'Titans',       city: 'Tennessee',       conf: 'AFC', div: 'South' },
+  { id: 134930, abbr: 'DEN', name: 'Broncos',      city: 'Denver',          conf: 'AFC', div: 'West' },
+  { id: 134931, abbr: 'KC',  name: 'Chiefs',       city: 'Kansas City',     conf: 'AFC', div: 'West' },
+  { id: 134932, abbr: 'LV',  name: 'Raiders',      city: 'Las Vegas',       conf: 'AFC', div: 'West' },
+  { id: 134933, abbr: 'LAC', name: 'Chargers',     city: 'Los Angeles',     conf: 'AFC', div: 'West' },
+  { id: 134934, abbr: 'DAL', name: 'Cowboys',      city: 'Dallas',          conf: 'NFC', div: 'East' },
+  { id: 134935, abbr: 'NYG', name: 'Giants',       city: 'New York',        conf: 'NFC', div: 'East' },
+  { id: 134936, abbr: 'PHI', name: 'Eagles',       city: 'Philadelphia',    conf: 'NFC', div: 'East' },
+  { id: 134937, abbr: 'WAS', name: 'Commanders',   city: 'Washington',      conf: 'NFC', div: 'East' },
+  { id: 134938, abbr: 'CHI', name: 'Bears',        city: 'Chicago',         conf: 'NFC', div: 'North' },
+  { id: 134939, abbr: 'DET', name: 'Lions',        city: 'Detroit',         conf: 'NFC', div: 'North' },
+  { id: 134940, abbr: 'GB',  name: 'Packers',      city: 'Green Bay',       conf: 'NFC', div: 'North' },
+  { id: 134941, abbr: 'MIN', name: 'Vikings',      city: 'Minnesota',       conf: 'NFC', div: 'North' },
+  { id: 134942, abbr: 'ATL', name: 'Falcons',      city: 'Atlanta',         conf: 'NFC', div: 'South' },
+  { id: 134943, abbr: 'CAR', name: 'Panthers',     city: 'Carolina',        conf: 'NFC', div: 'South' },
+  { id: 134944, abbr: 'NO',  name: 'Saints',       city: 'New Orleans',     conf: 'NFC', div: 'South' },
+  { id: 134945, abbr: 'TB',  name: 'Buccaneers',   city: 'Tampa Bay',       conf: 'NFC', div: 'South' },
+  { id: 134946, abbr: 'ARI', name: 'Cardinals',    city: 'Arizona',         conf: 'NFC', div: 'West' },
+  { id: 134947, abbr: 'LAR', name: 'Rams',         city: 'Los Angeles',     conf: 'NFC', div: 'West' },
+  { id: 134948, abbr: 'SF',  name: '49ers',        city: 'San Francisco',   conf: 'NFC', div: 'West' },
+  { id: 134949, abbr: 'SEA', name: 'Seahawks',     city: 'Seattle',         conf: 'NFC', div: 'West' },
 ];
 
+// NBA teams — TheSportsDB team IDs
 const NBA_TEAMS = [
-  { id:'GSW', name:'Warriors',  city:'Golden State', emoji:'⚡', conf:'West', div:'Pacific' },
-  { id:'LAL', name:'Lakers',    city:'Los Angeles',  emoji:'💜', conf:'West', div:'Pacific' },
-  { id:'BOS', name:'Celtics',   city:'Boston',       emoji:'☘️', conf:'East', div:'Atlantic' },
-  { id:'MIA', name:'Heat',      city:'Miami',        emoji:'🔥', conf:'East', div:'Southeast' },
-  { id:'MIL', name:'Bucks',     city:'Milwaukee',    emoji:'🦌', conf:'East', div:'Central' },
-  { id:'DEN', name:'Nuggets',   city:'Denver',       emoji:'⛰️', conf:'West', div:'Northwest' },
-  { id:'PHX', name:'Suns',      city:'Phoenix',      emoji:'☀️', conf:'West', div:'Pacific' },
-  { id:'DAL', name:'Mavericks', city:'Dallas',       emoji:'🐎', conf:'West', div:'Southwest' },
-  { id:'NYK', name:'Knicks',    city:'New York',     emoji:'🗽', conf:'East', div:'Atlantic' },
-  { id:'CLE', name:'Cavaliers', city:'Cleveland',    emoji:'⚔️', conf:'East', div:'Central' },
-  { id:'OKC', name:'Thunder',   city:'Oklahoma City',emoji:'⛈️', conf:'West', div:'Northwest' },
-  { id:'MIN', name:'Timberwolves',city:'Minnesota',  emoji:'🐺', conf:'West', div:'Northwest' },
+  { id: 134870, abbr: 'BOS', name: 'Celtics',       city: 'Boston',          conf: 'East', div: 'Atlantic' },
+  { id: 134871, abbr: 'BKN', name: 'Nets',           city: 'Brooklyn',        conf: 'East', div: 'Atlantic' },
+  { id: 134872, abbr: 'NYK', name: 'Knicks',         city: 'New York',        conf: 'East', div: 'Atlantic' },
+  { id: 134873, abbr: 'PHI', name: '76ers',          city: 'Philadelphia',    conf: 'East', div: 'Atlantic' },
+  { id: 134874, abbr: 'TOR', name: 'Raptors',        city: 'Toronto',         conf: 'East', div: 'Atlantic' },
+  { id: 134875, abbr: 'CHI', name: 'Bulls',          city: 'Chicago',         conf: 'East', div: 'Central' },
+  { id: 134876, abbr: 'CLE', name: 'Cavaliers',      city: 'Cleveland',       conf: 'East', div: 'Central' },
+  { id: 134877, abbr: 'DET', name: 'Pistons',        city: 'Detroit',         conf: 'East', div: 'Central' },
+  { id: 134878, abbr: 'IND', name: 'Pacers',         city: 'Indiana',         conf: 'East', div: 'Central' },
+  { id: 134879, abbr: 'MIL', name: 'Bucks',          city: 'Milwaukee',       conf: 'East', div: 'Central' },
+  { id: 134880, abbr: 'ATL', name: 'Hawks',          city: 'Atlanta',         conf: 'East', div: 'Southeast' },
+  { id: 134881, abbr: 'CHA', name: 'Hornets',        city: 'Charlotte',       conf: 'East', div: 'Southeast' },
+  { id: 134882, abbr: 'MIA', name: 'Heat',           city: 'Miami',           conf: 'East', div: 'Southeast' },
+  { id: 134883, abbr: 'ORL', name: 'Magic',          city: 'Orlando',         conf: 'East', div: 'Southeast' },
+  { id: 134884, abbr: 'WAS', name: 'Wizards',        city: 'Washington',      conf: 'East', div: 'Southeast' },
+  { id: 134885, abbr: 'DEN', name: 'Nuggets',        city: 'Denver',          conf: 'West', div: 'Northwest' },
+  { id: 134886, abbr: 'MIN', name: 'Timberwolves',   city: 'Minnesota',       conf: 'West', div: 'Northwest' },
+  { id: 134887, abbr: 'OKC', name: 'Thunder',        city: 'Oklahoma City',   conf: 'West', div: 'Northwest' },
+  { id: 134888, abbr: 'POR', name: 'Trail Blazers',  city: 'Portland',        conf: 'West', div: 'Northwest' },
+  { id: 134889, abbr: 'UTA', name: 'Jazz',           city: 'Utah',            conf: 'West', div: 'Northwest' },
+  { id: 134890, abbr: 'GSW', name: 'Warriors',       city: 'Golden State',    conf: 'West', div: 'Pacific' },
+  { id: 134891, abbr: 'LAC', name: 'Clippers',       city: 'Los Angeles',     conf: 'West', div: 'Pacific' },
+  { id: 134892, abbr: 'LAL', name: 'Lakers',         city: 'Los Angeles',     conf: 'West', div: 'Pacific' },
+  { id: 134893, abbr: 'PHX', name: 'Suns',           city: 'Phoenix',         conf: 'West', div: 'Pacific' },
+  { id: 134894, abbr: 'SAC', name: 'Kings',          city: 'Sacramento',      conf: 'West', div: 'Pacific' },
+  { id: 134895, abbr: 'DAL', name: 'Mavericks',      city: 'Dallas',          conf: 'West', div: 'Southwest' },
+  { id: 134896, abbr: 'HOU', name: 'Rockets',        city: 'Houston',         conf: 'West', div: 'Southwest' },
+  { id: 134897, abbr: 'MEM', name: 'Grizzlies',      city: 'Memphis',         conf: 'West', div: 'Southwest' },
+  { id: 134898, abbr: 'NOP', name: 'Pelicans',       city: 'New Orleans',     conf: 'West', div: 'Southwest' },
+  { id: 134899, abbr: 'SAS', name: 'Spurs',          city: 'San Antonio',     conf: 'West', div: 'Southwest' },
 ];
 
-// Build lookup maps
-const NFL_MAP = {};
-NFL_TEAMS.forEach(t => { NFL_MAP[t.id] = t; });
-const NBA_MAP = {};
-NBA_TEAMS.forEach(t => { NBA_MAP[t.id] = t; });
-
-// ── 2025 NFL Schedule (25+ games) ──
-// Dates relative to real 2025 NFL season (Sep–Jan)
-const NFL_GAMES = [
-  { id:'nfl-1',  league:'NFL', away:'BUF', home:'KC',  date:'2025-09-07', time:'8:20 PM ET', venue:'Arrowhead Stadium' },
-  { id:'nfl-2',  league:'NFL', away:'PHI', home:'DAL', date:'2025-09-14', time:'4:25 PM ET', venue:'AT&T Stadium' },
-  { id:'nfl-3',  league:'NFL', away:'SF',  home:'LAR', date:'2025-09-14', time:'4:05 PM ET', venue:'SoFi Stadium' },
-  { id:'nfl-4',  league:'NFL', away:'MIA', home:'BUF', date:'2025-09-21', time:'1:00 PM ET', venue:'Highmark Stadium' },
-  { id:'nfl-5',  league:'NFL', away:'DET', home:'GB',  date:'2025-09-21', time:'4:25 PM ET', venue:'Lambeau Field' },
-  { id:'nfl-6',  league:'NFL', away:'KC',  home:'BAL', date:'2025-09-28', time:'8:20 PM ET', venue:'M&T Bank Stadium' },
-  { id:'nfl-7',  league:'NFL', away:'CIN', home:'BUF', date:'2025-09-28', time:'4:25 PM ET', venue:'Highmark Stadium' },
-  { id:'nfl-8',  league:'NFL', away:'DAL', home:'PHI', date:'2025-10-05', time:'8:20 PM ET', venue:'Lincoln Financial Field' },
-  { id:'nfl-9',  league:'NFL', away:'LAR', home:'SF',  date:'2025-10-05', time:'4:05 PM ET', venue:'Levi\'s Stadium' },
-  { id:'nfl-10', league:'NFL', away:'GB',  home:'DET', date:'2025-10-12', time:'4:25 PM ET', venue:'Ford Field' },
-  { id:'nfl-11', league:'NFL', away:'BAL', home:'KC',  date:'2025-10-12', time:'8:20 PM ET', venue:'Arrowhead Stadium' },
-  { id:'nfl-12', league:'NFL', away:'DEN', home:'MIA', date:'2025-10-19', time:'1:00 PM ET', venue:'Hard Rock Stadium' },
-  { id:'nfl-13', league:'NFL', away:'BUF', home:'PHI', date:'2025-10-19', time:'4:25 PM ET', venue:'Lincoln Financial Field' },
-  { id:'nfl-14', league:'NFL', away:'CIN', home:'BAL', date:'2025-10-26', time:'8:20 PM ET', venue:'M&T Bank Stadium' },
-  { id:'nfl-15', league:'NFL', away:'KC',  home:'DAL', date:'2025-10-26', time:'4:25 PM ET', venue:'AT&T Stadium' },
-  { id:'nfl-16', league:'NFL', away:'SF',  home:'GB',  date:'2025-11-02', time:'4:25 PM ET', venue:'Lambeau Field' },
-  { id:'nfl-17', league:'NFL', away:'DET', home:'BUF', date:'2025-11-02', time:'4:25 PM ET', venue:'Highmark Stadium' },
-  { id:'nfl-18', league:'NFL', away:'MIA', home:'KC',  date:'2025-11-09', time:'4:25 PM ET', venue:'Arrowhead Stadium' },
-  { id:'nfl-19', league:'NFL', away:'LAR', home:'DAL', date:'2025-11-09', time:'8:20 PM ET', venue:'AT&T Stadium' },
-  { id:'nfl-20', league:'NFL', away:'PHI', home:'GB',  date:'2025-11-16', time:'4:25 PM ET', venue:'Lambeau Field' },
-  { id:'nfl-21', league:'NFL', away:'BAL', home:'BUF', date:'2025-11-16', time:'8:20 PM ET', venue:'Highmark Stadium' },
-  { id:'nfl-22', league:'NFL', away:'DEN', home:'KC',  date:'2025-11-23', time:'4:25 PM ET', venue:'Arrowhead Stadium' },
-  { id:'nfl-23', league:'NFL', away:'DAL', home:'CIN', date:'2025-11-27', time:'4:30 PM ET', venue:'Paycor Stadium' },
-  { id:'nfl-24', league:'NFL', away:'DET', home:'SF',  date:'2025-11-27', time:'8:20 PM ET', venue:'Levi\'s Stadium' },
-  { id:'nfl-25', league:'NFL', away:'KC',  home:'BUF', date:'2025-12-07', time:'4:25 PM ET', venue:'Highmark Stadium' },
-  { id:'nfl-26', league:'NFL', away:'GB',  home:'BAL', date:'2025-12-14', time:'4:25 PM ET', venue:'M&T Bank Stadium' },
-  { id:'nfl-27', league:'NFL', away:'PHI', home:'LAR', date:'2025-12-21', time:'4:05 PM ET', venue:'SoFi Stadium' },
-];
-
-// ── 2025-26 NBA Schedule (25+ games) ──
-const NBA_GAMES = [
-  { id:'nba-1',  league:'NBA', away:'BOS', home:'MIL', date:'2025-10-22', time:'7:30 PM ET', venue:'Fiserv Forum' },
-  { id:'nba-2',  league:'NBA', away:'GSW', home:'LAL', date:'2025-10-22', time:'10:00 PM ET',venue:'Crypto.com Arena' },
-  { id:'nba-3',  league:'NBA', away:'MIA', home:'NYK', date:'2025-10-23', time:'7:30 PM ET', venue:'Madison Square Garden' },
-  { id:'nba-4',  league:'NBA', away:'DEN', home:'OKC', date:'2025-10-23', time:'9:00 PM ET', venue:'Paycom Center' },
-  { id:'nba-5',  league:'NBA', away:'PHX', home:'MIN', date:'2025-10-24', time:'8:00 PM ET', venue:'Target Center' },
-  { id:'nba-6',  league:'NBA', away:'LAL', home:'GSW', date:'2025-10-29', time:'10:00 PM ET',venue:'Chase Center' },
-  { id:'nba-7',  league:'NBA', away:'NYK', home:'BOS', date:'2025-10-30', time:'7:30 PM ET', venue:'TD Garden' },
-  { id:'nba-8',  league:'NBA', away:'OKC', home:'DEN', date:'2025-10-31', time:'9:00 PM ET', venue:'Ball Arena' },
-  { id:'nba-9',  league:'NBA', away:'MIL', home:'MIA', date:'2025-11-02', time:'7:00 PM ET', venue:'Kaseya Center' },
-  { id:'nba-10', league:'NBA', away:'DAL', home:'GSW', date:'2025-11-04', time:'10:00 PM ET',venue:'Chase Center' },
-  { id:'nba-11', league:'NBA', away:'CLE', home:'NYK', date:'2025-11-06', time:'7:30 PM ET', venue:'Madison Square Garden' },
-  { id:'nba-12', league:'NBA', away:'LAL', home:'DEN', date:'2025-11-08', time:'9:00 PM ET', venue:'Ball Arena' },
-  { id:'nba-13', league:'NBA', away:'MIN', home:'OKC', date:'2025-11-10', time:'8:00 PM ET', venue:'Paycom Center' },
-  { id:'nba-14', league:'NBA', away:'BOS', home:'CLE', date:'2025-11-13', time:'7:30 PM ET', venue:'Rocket Mortgage FieldHouse' },
-  { id:'nba-15', league:'NBA', away:'PHX', home:'DAL', date:'2025-11-14', time:'8:30 PM ET', venue:'American Airlines Center' },
-  { id:'nba-16', league:'NBA', away:'GSW', home:'MIL', date:'2025-11-17', time:'8:00 PM ET', venue:'Fiserv Forum' },
-  { id:'nba-17', league:'NBA', away:'NYK', home:'MIA', date:'2025-11-19', time:'7:30 PM ET', venue:'Kaseya Center' },
-  { id:'nba-18', league:'NBA', away:'DEN', home:'LAL', date:'2025-11-21', time:'10:00 PM ET',venue:'Crypto.com Arena' },
-  { id:'nba-19', league:'NBA', away:'OKC', home:'BOS', date:'2025-11-24', time:'7:30 PM ET', venue:'TD Garden' },
-  { id:'nba-20', league:'NBA', away:'MIN', home:'GSW', date:'2025-11-25', time:'10:00 PM ET',venue:'Chase Center' },
-  { id:'nba-21', league:'NBA', away:'CLE', home:'MIL', date:'2025-11-28', time:'8:00 PM ET', venue:'Fiserv Forum' },
-  { id:'nba-22', league:'NBA', away:'DAL', home:'LAL', date:'2025-12-02', time:'10:00 PM ET',venue:'Crypto.com Arena' },
-  { id:'nba-23', league:'NBA', away:'MIA', home:'BOS', date:'2025-12-05', time:'7:30 PM ET', venue:'TD Garden' },
-  { id:'nba-24', league:'NBA', away:'GSW', home:'OKC', date:'2025-12-09', time:'9:00 PM ET', venue:'Paycom Center' },
-  { id:'nba-25', league:'NBA', away:'NYK', home:'DEN', date:'2025-12-12', time:'9:00 PM ET', venue:'Ball Arena' },
-  { id:'nba-26', league:'NBA', away:'LAL', home:'MIL', date:'2025-12-17', time:'8:00 PM ET', venue:'Fiserv Forum' },
-  { id:'nba-27', league:'NBA', away:'BOS', home:'DAL', date:'2025-12-20', time:'8:30 PM ET', venue:'American Airlines Center' },
-];
-
-const ALL_GAMES = [...NFL_GAMES, ...NBA_GAMES].sort((a, b) => a.date.localeCompare(b.date));
-
-// ── Mock Standings ──
-const NFL_STANDINGS = [
-  { id:'KC',  W:13, L:4, pct:.765 },
-  { id:'BUF', W:12, L:5, pct:.706 },
-  { id:'BAL', W:12, L:5, pct:.706 },
-  { id:'PHI', W:14, L:3, pct:.824 },
-  { id:'SF',  W:11, L:6, pct:.647 },
-  { id:'DET', W:13, L:4, pct:.765 },
-  { id:'GB',  W:10, L:7, pct:.588 },
-  { id:'DAL', W:8,  L:9, pct:.471 },
-  { id:'MIA', W:9,  L:8, pct:.529 },
-  { id:'LAR', W:10, L:7, pct:.588 },
-  { id:'CIN', W:9,  L:8, pct:.529 },
-  { id:'DEN', W:10, L:7, pct:.588 },
-];
-
-const NBA_STANDINGS = [
-  { id:'OKC', W:54, L:18, pct:.750 },
-  { id:'CLE', W:52, L:20, pct:.722 },
-  { id:'BOS', W:49, L:23, pct:.681 },
-  { id:'MIN', W:46, L:26, pct:.639 },
-  { id:'DEN', W:44, L:28, pct:.611 },
-  { id:'NYK', W:43, L:29, pct:.597 },
-  { id:'MIL', W:41, L:31, pct:.569 },
-  { id:'MIA', W:38, L:34, pct:.528 },
-  { id:'GSW', W:36, L:36, pct:.500 },
-  { id:'LAL', W:35, L:37, pct:.486 },
-  { id:'PHX', W:33, L:39, pct:.458 },
-  { id:'DAL', W:30, L:42, pct:.417 },
-];
-
-/* ─────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────
    STATE
-───────────────────────────────────────────── */
-let followedTeams = new Set(JSON.parse(localStorage.getItem('followed') || '["KC","BUF","BOS","LAL"]'));
-let notifPermission = 'default';
-let scheduledNotifs = new Set(JSON.parse(localStorage.getItem('notifs') || '[]'));
-let activeFilter = 'all';
-let activeTab = 'schedule';
-let weekOffset = 0;
+───────────────────────────────────────────────────────────── */
+let activeSport = 'NFL';
+let followedIds = new Set(JSON.parse(localStorage.getItem('gdn_followed') || '[]'));
+let venueName = localStorage.getItem('gdn_venue') || '';
+// Cache: teamId → { next: event, last: event }
+const eventCache = {};
+// Selected game for copy generator
+let selectedGameForCopy = null;
+let copyVariant = 'long';
+let countdownInterval = null;
 
-/* ─────────────────────────────────────────────
-   HELPERS
-───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   PERSISTENCE
+───────────────────────────────────────────────────────────── */
 function saveFollowed() {
-  localStorage.setItem('followed', JSON.stringify([...followedTeams]));
+  localStorage.setItem('gdn_followed', JSON.stringify([...followedIds]));
+}
+function saveVenue() {
+  localStorage.setItem('gdn_venue', venueName);
 }
 
-function saveNotifs() {
-  localStorage.setItem('notifs', JSON.stringify([...scheduledNotifs]));
+/* ─────────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────────── */
+function allTeams() { return activeSport === 'NFL' ? NFL_TEAMS : NBA_TEAMS; }
+function findTeam(id) {
+  return NFL_TEAMS.find(t => t.id === id) || NBA_TEAMS.find(t => t.id === id);
+}
+function teamInitials(name) {
+  return name.split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase();
+}
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function getTeam(league, id) {
-  return league === 'NFL' ? NFL_MAP[id] : NBA_MAP[id];
-}
-
-function parseLocalDate(dateStr) {
-  // Parse as local date to avoid timezone offset issues
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function isToday(dateStr) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const gameDate = parseLocalDate(dateStr);
-  return gameDate.getTime() === today.getTime();
-}
-
-function daysUntil(dateStr) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const gameDate = parseLocalDate(dateStr);
-  return Math.round((gameDate - today) / 86400000);
-}
-
-function formatDate(dateStr) {
-  const d = parseLocalDate(dateStr);
+function formatLocalDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function formatCountdown(dateStr) {
-  const days = daysUntil(dateStr);
-  if (days < 0) return 'Past';
-  if (days === 0) return 'TODAY';
-  if (days === 1) return 'Tomorrow';
-  return `In ${days} days`;
+function formatGameTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return '';
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
 }
 
-function isFollowedGame(game) {
-  return followedTeams.has(game.away) || followedTeams.has(game.home);
+function isToday(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() &&
+         d.getMonth() === now.getMonth() &&
+         d.getDate() === now.getDate();
 }
 
-/* ─────────────────────────────────────────────
-   NOTIFICATIONS
-───────────────────────────────────────────── */
-function updateNotifUI() {
-  const dot   = document.getElementById('notif-dot');
-  const label = document.getElementById('notif-label');
-  const btn   = document.getElementById('enable-notif-btn');
+function getWeekDays() {
+  const days = [];
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  for (let i = 0; i < 7; i++) {
+    days.push(new Date(start.getTime() + i * 86400000));
+  }
+  return days;
+}
 
-  notifPermission = ('Notification' in window) ? Notification.permission : 'unsupported';
+function sameDay(d1, d2) {
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
 
-  if (notifPermission === 'granted') {
-    dot.className = 'notif-dot granted';
-    label.textContent = 'Alerts enabled';
-    btn.textContent = '🔔 Alerts On';
-    btn.classList.add('active');
-  } else if (notifPermission === 'denied') {
-    dot.className = 'notif-dot denied';
-    label.textContent = 'Alerts blocked';
-    btn.textContent = '🔕 Blocked';
+function pad(n) { return String(n).padStart(2, '0'); }
+
+/* ─────────────────────────────────────────────────────────────
+   API
+───────────────────────────────────────────────────────────── */
+async function fetchNextEvents(teamId) {
+  if (eventCache[teamId]) return eventCache[teamId];
+  try {
+    const [nextRes, lastRes] = await Promise.all([
+      fetch(`${SPORTSDB_BASE}/eventsnext.php?id=${teamId}`),
+      fetch(`${SPORTSDB_BASE}/eventslast.php?id=${teamId}`),
+    ]);
+    const [nextData, lastData] = await Promise.all([nextRes.json(), lastRes.json()]);
+    const result = {
+      next: (nextData.events || [])[0] || null,
+      last: (lastData.results || [])[0] || null,
+    };
+    eventCache[teamId] = result;
+    return result;
+  } catch {
+    return { next: null, last: null };
+  }
+}
+
+async function fetchAllFollowedEvents() {
+  const ids = [...followedIds];
+  if (!ids.length) return;
+  await Promise.all(ids.map(id => fetchNextEvents(id)));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SPORT TOGGLE
+───────────────────────────────────────────────────────────── */
+function setSport(sport) {
+  activeSport = sport;
+  document.getElementById('btn-nfl').classList.toggle('active', sport === 'NFL');
+  document.getElementById('btn-nfl').setAttribute('aria-pressed', sport === 'NFL');
+  document.getElementById('btn-nba').classList.toggle('active', sport === 'NBA');
+  document.getElementById('btn-nba').setAttribute('aria-pressed', sport === 'NBA');
+  renderTeamGrid();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TEAM GRID
+───────────────────────────────────────────────────────────── */
+function renderTeamGrid() {
+  const grid = document.getElementById('team-grid');
+  const teams = allTeams();
+  grid.innerHTML = teams.map(t => {
+    const followed = followedIds.has(t.id);
+    const logoUrl = `https://www.thesportsdb.com/images/media/team/badge/${t.abbr.toLowerCase()}1.png`;
+    return `
+      <button
+        class="team-chip${followed ? ' followed' : ''}"
+        onclick="toggleTeam(${t.id})"
+        role="listitem"
+        aria-pressed="${followed}"
+        title="${esc(t.city)} ${esc(t.name)} — click to ${followed ? 'unfollow' : 'follow'}"
+      >
+        <img
+          class="team-logo"
+          src="https://www.thesportsdb.com/images/media/team/badge/${encodeURIComponent(t.abbr.toLowerCase())}1.png"
+          alt="${esc(t.name)} logo"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+          loading="lazy"
+        >
+        <div class="team-badge" style="display:none;" aria-hidden="true">${esc(teamInitials(t.name))}</div>
+        <span>${esc(t.name)}</span>
+      </button>`;
+  }).join('');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TOGGLE TEAM
+───────────────────────────────────────────────────────────── */
+function toggleTeam(teamId) {
+  if (followedIds.has(teamId)) {
+    followedIds.delete(teamId);
   } else {
-    dot.className = 'notif-dot';
-    label.textContent = 'Notifications off';
-    btn.textContent = '🔔 Enable Alerts';
-    btn.classList.remove('active');
+    followedIds.add(teamId);
+    // Eager-fetch events for newly followed team
+    fetchNextEvents(teamId).then(() => {
+      renderAll();
+    });
   }
+  saveFollowed();
+  renderTeamGrid();
+  updateFollowedBadge();
+  renderAll();
 }
 
-function requestNotifPermission() {
-  if (!('Notification' in window)) {
-    showToast('Your browser does not support notifications.', 'error');
-    return;
-  }
-  if (Notification.permission === 'granted') {
-    showToast('Notifications already enabled!', 'info');
-    return;
-  }
-  Notification.requestPermission().then(perm => {
-    notifPermission = perm;
-    updateNotifUI();
-    if (perm === 'granted') {
-      showToast('Game-day alerts enabled! You\'ll be notified 1 hour before games.', 'success');
-      document.getElementById('notif-banner').classList.remove('visible');
-      scheduleAllFollowedNotifs();
-    } else {
-      showToast('Notification permission denied. Check browser settings to enable.', 'error');
+function updateFollowedBadge() {
+  const count = followedIds.size;
+  document.getElementById('followed-badge').textContent = `${count} team${count !== 1 ? 's' : ''} followed`;
+  document.getElementById('sb-count').textContent = count;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   WEEK VIEW
+───────────────────────────────────────────────────────────── */
+function renderWeek() {
+  const days = getWeekDays();
+  const start = days[0];
+  const end = days[6];
+  const fmtRange = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  document.getElementById('week-range').textContent = `${fmtRange(start)} – ${fmtRange(end)}`;
+
+  // Gather all next events for followed teams
+  const todayGames = [];
+
+  const html = days.map(day => {
+    const todayCls = sameDay(day, new Date()) ? ' today-col' : '';
+    const dayName = day.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayNum = day.getDate();
+
+    // Find games on this day from cache
+    const games = [];
+    for (const teamId of followedIds) {
+      const cached = eventCache[teamId];
+      if (!cached || !cached.next) continue;
+      const ev = cached.next;
+      const evDate = new Date(ev.strTimestamp || ev.dateEvent);
+      if (sameDay(evDate, day)) {
+        const team = findTeam(teamId);
+        if (team && !games.find(g => g.idEvent === ev.idEvent)) {
+          games.push({ ...ev, _team: team });
+          if (sameDay(day, new Date())) todayGames.push({ ...ev, _team: team });
+        }
+      }
     }
-  });
+
+    const gameMinis = games.length
+      ? games.map(ev => {
+          const isT = sameDay(new Date(ev.strTimestamp || ev.dateEvent), new Date());
+          const gameId = ev.idEvent;
+          const away = ev.strAwayTeam || '';
+          const home = ev.strHomeTeam || '';
+          const time = ev.strTimestamp ? formatGameTime(ev.strTimestamp) : (ev.strTime || '');
+          return `
+            <div
+              class="game-mini${isT ? ' is-today' : ''}"
+              onclick="selectGame('${esc(gameId)}', '${esc(away)}', '${esc(home)}', '${esc(time)}', '${esc(ev.dateEvent)}')"
+              role="button"
+              tabindex="0"
+              aria-label="${esc(away)} vs ${esc(home)}, ${esc(time)}"
+              onkeydown="if(event.key==='Enter'||event.key===' ')this.click()"
+            >
+              ${isT ? '<div class="game-mini-badge">Game Day</div>' : ''}
+              <div class="game-mini-teams">${esc(away)} vs ${esc(home)}</div>
+              <div class="game-mini-time">${esc(time) || ev.dateEvent}</div>
+            </div>`;
+        }).join('')
+      : `<div class="day-empty">—</div>`;
+
+    return `
+      <div class="day-col" role="listitem">
+        <div class="day-header${todayCls}" aria-label="${dayName} ${dayNum}${todayCls ? ', today' : ''}">
+          <div class="day-name">${esc(dayName)}</div>
+          <div class="day-date">${dayNum}</div>
+        </div>
+        ${gameMinis}
+      </div>`;
+  }).join('');
+
+  document.getElementById('week-days').innerHTML = html;
+
+  // Countdown
+  setupCountdown(todayGames);
 }
 
-function scheduleAllFollowedNotifs() {
-  ALL_GAMES.forEach(game => {
-    if (isFollowedGame(game)) scheduleGameNotif(game);
-  });
-}
+/* ─────────────────────────────────────────────────────────────
+   COUNTDOWN
+───────────────────────────────────────────────────────────── */
+function setupCountdown(todayGames) {
+  const section = document.getElementById('countdown-section');
+  if (countdownInterval) clearInterval(countdownInterval);
 
-function scheduleGameNotif(game) {
-  if (notifPermission !== 'granted') return;
-  if (scheduledNotifs.has(game.id)) return;
+  if (!todayGames.length) {
+    section.style.display = 'none';
+    return;
+  }
 
-  const [y, m, d] = game.date.split('-').map(Number);
-  const timeMatch = game.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!timeMatch) return;
-
-  let hours = parseInt(timeMatch[1]);
-  const minutes = parseInt(timeMatch[2]);
-  const ampm = timeMatch[3].toUpperCase();
-  if (ampm === 'PM' && hours !== 12) hours += 12;
-  if (ampm === 'AM' && hours === 12) hours = 0;
-
-  const gameMs = new Date(y, m - 1, d, hours, minutes).getTime();
-  const notifMs = gameMs - 60 * 60 * 1000; // 1 hour before
+  // Pick the soonest upcoming game today
   const now = Date.now();
-  const delay = notifMs - now;
+  const upcoming = todayGames
+    .filter(ev => {
+      const t = ev.strTimestamp ? new Date(ev.strTimestamp).getTime() : 0;
+      return t > now;
+    })
+    .sort((a, b) => new Date(a.strTimestamp) - new Date(b.strTimestamp));
 
-  if (delay <= 0) return;
-
-  const away = getTeam(game.league, game.away);
-  const home = getTeam(game.league, game.home);
-  const title = `${game.league} Tip-off in 1 Hour!`;
-  const body = `${away.emoji} ${away.city} vs ${home.city} ${home.emoji} — ${game.time}`;
-
-  setTimeout(() => {
-    if (Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '🏟️' });
-    }
-  }, Math.min(delay, 2147483647));
-
-  scheduledNotifs.add(game.id);
-  saveNotifs();
-}
-
-/* ─────────────────────────────────────────────
-   ICS CALENDAR EXPORT
-───────────────────────────────────────────── */
-function downloadICS(game) {
-  const away = getTeam(game.league, game.away);
-  const home = getTeam(game.league, game.home);
-
-  const [y, m, d] = game.date.split('-').map(Number);
-  const timeMatch = game.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  let hours = 19, minutes = 0;
-
-  if (timeMatch) {
-    hours = parseInt(timeMatch[1]);
-    minutes = parseInt(timeMatch[2]);
-    const ampm = timeMatch[3].toUpperCase();
-    if (ampm === 'PM' && hours !== 12) hours += 12;
-    if (ampm === 'AM' && hours === 12) hours = 0;
+  if (!upcoming.length) {
+    section.style.display = 'none';
+    return;
   }
 
-  function pad(n) { return String(n).padStart(2, '0'); }
-  const dtstart = `${y}${pad(m)}${pad(d)}T${pad(hours)}${pad(minutes)}00`;
-  const endH = (hours + 3) % 24;
-  const dtend = `${y}${pad(m)}${pad(d)}T${pad(endH)}${pad(minutes)}00`;
+  const target = upcoming[0];
+  const targetTime = new Date(target.strTimestamp).getTime();
+  const label = `${target.strAwayTeam} vs ${target.strHomeTeam}`;
+
+  section.style.display = '';
+  document.getElementById('countdown-game').textContent = label;
+
+  function tick() {
+    const diff = targetTime - Date.now();
+    if (diff <= 0) {
+      document.getElementById('countdown-timer').textContent = 'GAME TIME!';
+      clearInterval(countdownInterval);
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    document.getElementById('countdown-timer').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+  tick();
+  countdownInterval = setInterval(tick, 1000);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   NEXT GAME CARDS
+───────────────────────────────────────────────────────────── */
+async function renderNextGames() {
+  const grid = document.getElementById('next-games-grid');
+  const emptyEl = document.getElementById('next-games-empty');
+
+  if (!followedIds.size) {
+    grid.innerHTML = '';
+    emptyEl.style.display = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const cards = [];
+  for (const teamId of followedIds) {
+    const team = findTeam(teamId);
+    if (!team) continue;
+    const cached = eventCache[teamId];
+    const ev = cached?.next;
+
+    let card;
+    if (!ev) {
+      card = `
+        <div class="next-game-card" role="listitem">
+          <div class="next-game-team">${esc(team.city)} ${esc(team.name)}</div>
+          <div class="next-game-matchup" style="color:var(--color-ink-muted);">No upcoming games found</div>
+        </div>`;
+    } else {
+      const away = ev.strAwayTeam || '';
+      const home = ev.strHomeTeam || '';
+      const dateStr = ev.dateEvent || '';
+      const time = ev.strTimestamp ? formatGameTime(ev.strTimestamp) : (ev.strTime || '');
+      const isHome = home.toLowerCase().includes(team.name.toLowerCase()) ||
+                     home.toLowerCase().includes(team.city.toLowerCase());
+      const isT = isToday(ev.strTimestamp || ev.dateEvent);
+      const badgeClass = isT ? 'today-game' : (isHome ? 'home' : 'away');
+      const badgeLabel = isT ? 'Today' : (isHome ? 'Home' : 'Away');
+
+      card = `
+        <div
+          class="next-game-card"
+          role="listitem"
+          onclick="selectGame('${esc(ev.idEvent)}', '${esc(away)}', '${esc(home)}', '${esc(time)}', '${esc(dateStr)}')"
+          style="cursor:pointer;"
+          tabindex="0"
+          onkeydown="if(event.key==='Enter'||event.key===' ')this.click()"
+          aria-label="${esc(team.name)} next game: ${esc(away)} vs ${esc(home)}"
+        >
+          <div class="next-game-team">${esc(team.city)} ${esc(team.name)}</div>
+          <div class="next-game-matchup">${esc(away)} vs ${esc(home)}</div>
+          <div class="next-game-meta">${formatLocalDate(dateStr)}${time ? ' · ' + time : ''}</div>
+          <span class="next-game-badge ${badgeClass}">${esc(badgeLabel)}</span>
+        </div>`;
+    }
+    cards.push(card);
+  }
+  grid.innerHTML = cards.join('');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   RECENT RESULTS
+───────────────────────────────────────────────────────────── */
+async function renderResults() {
+  const grid = document.getElementById('results-grid');
+  const emptyEl = document.getElementById('results-empty');
+  const loadingEl = document.getElementById('results-loading');
+
+  if (!followedIds.size) {
+    grid.innerHTML = '';
+    emptyEl.style.display = '';
+    loadingEl.style.display = 'none';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const cards = [];
+  for (const teamId of followedIds) {
+    const team = findTeam(teamId);
+    if (!team) continue;
+    const cached = eventCache[teamId];
+    const ev = cached?.last;
+
+    if (!ev) continue;
+
+    const away = ev.strAwayTeam || '';
+    const home = ev.strHomeTeam || '';
+    const awayScore = ev.intAwayScore;
+    const homeScore = ev.intHomeScore;
+    const dateStr = ev.dateEvent || '';
+
+    // Determine W/L for the followed team
+    let wl = null;
+    let score = '';
+    if (awayScore != null && homeScore != null) {
+      score = `${awayScore} – ${homeScore}`;
+      const teamIsHome = home.toLowerCase().includes(team.name.toLowerCase()) ||
+                         home.toLowerCase().includes(team.city.toLowerCase());
+      const teamScore = teamIsHome ? Number(homeScore) : Number(awayScore);
+      const oppScore  = teamIsHome ? Number(awayScore) : Number(homeScore);
+      if (!isNaN(teamScore) && !isNaN(oppScore)) {
+        wl = teamScore > oppScore ? 'win' : 'loss';
+      }
+    }
+
+    cards.push(`
+      <div class="result-card" role="listitem">
+        <div class="result-card-head">
+          <div class="result-team">${esc(team.city)} ${esc(team.name)}</div>
+          ${wl ? `<span class="result-badge ${wl}">${wl === 'win' ? 'W' : 'L'}</span>` : ''}
+        </div>
+        <div class="result-matchup">${esc(away)} vs ${esc(home)}</div>
+        ${score ? `<div class="result-score">${esc(score)}</div>` : ''}
+        <div class="result-date">${formatLocalDate(dateStr)}</div>
+      </div>`);
+  }
+
+  if (!cards.length) {
+    emptyEl.style.display = '';
+    grid.innerHTML = '';
+  } else {
+    emptyEl.style.display = 'none';
+    grid.innerHTML = cards.join('');
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   COPY GENERATOR — GAME SELECTION
+───────────────────────────────────────────────────────────── */
+function populateCopyGameSelect() {
+  const sel = document.getElementById('copy-game-select');
+  const options = [{ value: '', label: '— Select a game —' }];
+
+  for (const teamId of followedIds) {
+    const team = findTeam(teamId);
+    if (!team) continue;
+    const cached = eventCache[teamId];
+    if (cached?.next) {
+      const ev = cached.next;
+      const label = `${ev.strAwayTeam} vs ${ev.strHomeTeam} — ${formatLocalDate(ev.dateEvent)}`;
+      options.push({ value: ev.idEvent, label, ev, teamId });
+    }
+  }
+
+  sel.innerHTML = options.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
+  // Store ev data for lookup
+  sel._options = options;
+}
+
+function selectGame(gameId, away, home, time, date) {
+  selectedGameForCopy = { gameId, away, home, time, date };
+  // highlight selected
+  document.querySelectorAll('.game-mini.selected-game').forEach(el => el.classList.remove('selected-game'));
+  document.querySelectorAll('.next-game-card.selected-game').forEach(el => el.classList.remove('selected-game'));
+
+  // Try to match in copy-game-select
+  const sel = document.getElementById('copy-game-select');
+  for (const opt of sel.options) {
+    if (opt.value === gameId) { sel.value = gameId; break; }
+  }
+
+  generateCopy();
+  toast('Game selected — copy generated below', 'success');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   COPY TEMPLATES
+───────────────────────────────────────────────────────────── */
+function buildCopy(template, variant, game, venue) {
+  const { away, home, time, date } = game;
+  const venueStr = venue || '[Your Venue]';
+  const dateLabel = date ? formatLocalDate(date) : 'upcoming';
+  const timeLabel = time || 'game time';
+  const doorTime = time ? (() => {
+    try {
+      const d = new Date(`1970-01-01T${time.replace(/(\d+):(\d+)\s*(AM|PM).*/i, (_,h,m,ap) => {
+        let hh = parseInt(h);
+        if (ap.toUpperCase()==='PM' && hh!==12) hh+=12;
+        if (ap.toUpperCase()==='AM' && hh===12) hh=0;
+        return `${pad(hh)}:${m}:00`;
+      })}`);
+      d.setHours(d.getHours() - 1);
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } catch { return '1 hour before'; }
+  })() : '1 hour before kickoff';
+
+  const copies = {
+    gameday: {
+      long: `🏈 GAME DAY at ${venueStr}!\n\n${away} vs ${home} — tonight at ${timeLabel}. Catch every play LIVE on the big screens! Doors open at ${doorTime}. Great food, cold drinks, and the best sports atmosphere in town.\n\n📅 ${dateLabel}\n📍 ${venueStr}\n🎟 Book your table now: [link]\n\n#GameDay #WatchParty #Sports`,
+      short: `🏈 GAME DAY! ${away} vs ${home} tonight at ${timeLabel}. Catch it LIVE at ${venueStr} — doors open ${doorTime}. Book now: [link]`,
+      email: `Game Day Alert: ${away} vs ${home} Tonight at ${venueStr}`,
+    },
+    result: {
+      long: `🎉 WHAT A GAME at ${venueStr}!\n\nLast night's matchup ${away} vs ${home} had us on the edge of our seats. Thank you to everyone who joined us for the watch party — the energy was incredible! \n\nDon't miss the next one. Follow us for upcoming game alerts.\n\n📍 ${venueStr}\n#WatchParty #Sports #GameDay`,
+      short: `🎉 What a game! ${away} vs ${home} — the crowd at ${venueStr} was electric. Next game coming soon! Follow for alerts.`,
+      email: `Recap: ${away} vs ${home} — Join Us for the Next One at ${venueStr}`,
+    },
+    preview: {
+      long: `📅 MARK YOUR CALENDARS!\n\n${away} vs ${home} is coming up on ${dateLabel} at ${timeLabel}. Reserve your spot at ${venueStr} now — we'll have all screens dedicated to the game, plus specials all night.\n\nTag a friend you're watching with! 👇\n\n📍 ${venueStr}\n🎟 Reserve: [link]\n\n#UpcomingGame #WatchParty #Sports`,
+      short: `📅 ${away} vs ${home} — ${dateLabel} at ${timeLabel}. Watch party at ${venueStr}! Reserve: [link]`,
+      email: `Upcoming: ${away} vs ${home} on ${dateLabel} — Watch at ${venueStr}`,
+    },
+  };
+
+  return copies[template]?.[variant] || copies.gameday.long;
+}
+
+function generateCopy() {
+  const sel = document.getElementById('copy-game-select');
+  const templateSel = document.getElementById('copy-template-select');
+  const textarea = document.getElementById('copy-textarea');
+
+  let game = selectedGameForCopy;
+  // Try to get from dropdown if nothing selected via click
+  if (!game && sel.value) {
+    const opt = sel._options?.find(o => o.value === sel.value);
+    if (opt?.ev) {
+      game = {
+        gameId: opt.ev.idEvent,
+        away: opt.ev.strAwayTeam,
+        home: opt.ev.strHomeTeam,
+        time: opt.ev.strTimestamp ? formatGameTime(opt.ev.strTimestamp) : opt.ev.strTime,
+        date: opt.ev.dateEvent,
+      };
+    }
+  }
+  if (!game) {
+    toast('Select a game first', 'error');
+    return;
+  }
+
+  const copy = buildCopy(templateSel.value, copyVariant, game, venueName);
+  textarea.value = copy;
+  updateCharCount();
+}
+
+function switchVariant(variant, btn) {
+  copyVariant = variant;
+  document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (document.getElementById('copy-textarea').value) generateCopy();
+}
+
+function updateCharCount() {
+  const val = document.getElementById('copy-textarea').value;
+  const len = val.length;
+  const max = copyVariant === 'short' ? 280 : (copyVariant === 'email' ? 90 : 2200);
+  const el = document.getElementById('char-count');
+  el.textContent = `${len} / ${max}`;
+  el.classList.toggle('over', len > max);
+}
+
+document.getElementById('copy-textarea').addEventListener('input', updateCharCount);
+
+function copyToClipboard() {
+  const val = document.getElementById('copy-textarea').value;
+  if (!val) { toast('Nothing to copy', 'error'); return; }
+  navigator.clipboard.writeText(val).then(() => {
+    toast('Copied to clipboard!', 'success');
+  }).catch(() => {
+    // Fallback
+    const el = document.getElementById('copy-textarea');
+    el.select();
+    document.execCommand('copy');
+    toast('Copied!', 'success');
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ICS EXPORT — ALL FOLLOWED TEAMS' UPCOMING GAMES
+───────────────────────────────────────────────────────────── */
+function downloadAllICS() {
+  if (!followedIds.size) {
+    toast('Follow some teams first', 'error');
+    return;
+  }
+  const events = [];
+  for (const teamId of followedIds) {
+    const cached = eventCache[teamId];
+    if (!cached?.next) continue;
+    const ev = cached.next;
+    events.push(ev);
+  }
+  if (!events.length) {
+    toast('No upcoming games found yet — give it a moment to load', 'error');
+    return;
+  }
+
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//GameDayNotifier//EN'];
   const now = new Date();
   const stamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}Z`;
-  const uid = `${game.id}-${stamp}@gamednot`;
 
-  const summaryText = `${game.league}: ${away.city} ${away.name} @ ${home.city} ${home.name}`;
-  const descText = `${away.emoji} ${away.city} ${away.name} vs ${home.emoji} ${home.city} ${home.name}\\nGame Time: ${game.time}\\nVenue: ${game.venue}`;
+  for (const ev of events) {
+    let dtstart = '';
+    try {
+      const d = ev.strTimestamp ? new Date(ev.strTimestamp) : new Date(ev.dateEvent);
+      dtstart = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+      const endD = new Date(d.getTime() + 3 * 3600000);
+      const dtend = `${endD.getFullYear()}${pad(endD.getMonth()+1)}${pad(endD.getDate())}T${pad(endD.getHours())}${pad(endD.getMinutes())}00`;
 
-  const ics = [
-    `BEGIN:VCALENDAR`,
-    `VERSION:2.0`,
-    `PRODID:-//GameDayNotifier//EN`,
-    `BEGIN:VEVENT`,
-    `UID:${uid}`,
-    `DTSTAMP:${stamp}Z`,
-    `DTSTART:${dtstart}`,
-    `DTEND:${dtend}`,
-    `SUMMARY:${summaryText}`,
-    `DESCRIPTION:${descText}`,
-    `LOCATION:${game.venue}`,
-    `BEGIN:VALARM`,
-    `TRIGGER:-PT1H`,
-    `ACTION:DISPLAY`,
-    `DESCRIPTION:Game starts in 1 hour!`,
-    `END:VALARM`,
-    `END:VEVENT`,
-    `END:VCALENDAR`,
-  ].join('\r\n');
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:${ev.idEvent}-${stamp}@gamednot`,
+        `DTSTAMP:${stamp}Z`,
+        `DTSTART:${dtstart}`,
+        `DTEND:${dtend}`,
+        `SUMMARY:${(ev.strAwayTeam || '')} @ ${(ev.strHomeTeam || '')}`,
+        `DESCRIPTION:${(ev.strEvent || '').replace(/,/g,' ')}\\nLeague: ${ev.strLeague || ''}`,
+        `LOCATION:${(ev.strVenue || ev.strCountry || '').replace(/,/g,' ')}`,
+        'BEGIN:VALARM',
+        'TRIGGER:-PT1H',
+        'ACTION:DISPLAY',
+        'DESCRIPTION:Game starts in 1 hour!',
+        'END:VALARM',
+        'END:VEVENT'
+      );
+    } catch { /* skip malformed event */ }
+  }
 
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  lines.push('END:VCALENDAR');
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${game.id}-${game.date}.ics`;
+  a.download = 'my-game-calendar.ics';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast(`Calendar event added for ${away.city} vs ${home.city}!`, 'success');
+  toast(`Calendar downloaded with ${events.length} game${events.length !== 1 ? 's' : ''}`, 'success');
 }
 
-/* ─────────────────────────────────────────────
-   RENDER: GAME CARD
-───────────────────────────────────────────── */
-function renderGameCard(game) {
-  const away = getTeam(game.league, game.away);
-  const home = getTeam(game.league, game.home);
-  if (!away || !home) return '';
-
-  const isGF  = isFollowedGame(game);
-  const todayGame = isToday(game.date);
-  const days  = daysUntil(game.date);
-  const cdText = formatCountdown(game.date);
-  const past  = days < 0;
-
-  const awayRecord = game.league === 'NFL'
-    ? NFL_STANDINGS.find(s => s.id === game.away)
-    : NBA_STANDINGS.find(s => s.id === game.away);
-  const homeRecord = game.league === 'NFL'
-    ? NFL_STANDINGS.find(s => s.id === game.home)
-    : NBA_STANDINGS.find(s => s.id === game.home);
-
-  const awayRec = awayRecord ? `${awayRecord.W}-${awayRecord.L}` : '';
-  const homeRec = homeRecord ? `${homeRecord.W}-${homeRecord.L}` : '';
-
-  const notifActive = scheduledNotifs.has(game.id);
-  const leagueClass = game.league === 'NFL' ? 'nfl' : 'nba';
-
-  return `
-    <article class="game-card ${leagueClass}${todayGame ? ' today' : ''}" role="article" aria-label="${away.city} vs ${home.city}">
-      <div class="team-block away">
-        <div class="team-emoji-lg">${away.emoji}</div>
-        <div class="team-name">${away.city}</div>
-        <div class="team-record">${away.name}${awayRec ? ` · ${awayRec}` : ''}</div>
-      </div>
-
-      <div class="vs-block">
-        ${todayGame ? `<div class="today-badge">🔴 Today</div>` : ''}
-        <div class="vs-text">vs</div>
-        <div class="game-time">${game.time}</div>
-        <div class="game-date-badge">${formatDate(game.date)}</div>
-        <div class="game-date-badge" style="color:var(--muted);font-size:10px;">${game.venue}</div>
-      </div>
-
-      <div class="team-block home">
-        <div class="team-emoji-lg">${home.emoji}</div>
-        <div class="team-name">${home.city}</div>
-        <div class="team-record">${home.name}${homeRec ? ` · ${homeRec}` : ''}</div>
-      </div>
-
-      <div class="game-actions">
-        <div class="countdown ${todayGame ? 'today-live' : ''}">${cdText}</div>
-        ${isGF ? `
-          <button class="btn-sm btn-notify${notifActive ? ' active' : ''}"
-                  onclick="toggleNotif('${game.id}', this)"
-                  title="${notifActive ? 'Remove 1hr alert' : 'Set 1hr alert'}"
-                  aria-pressed="${notifActive}">
-            ${notifActive ? '🔔' : '🔕'} ${notifActive ? 'Alert set' : 'Set alert'}
-          </button>
-        ` : ''}
-        ${!past ? `
-          <button class="btn-sm btn-ics" onclick="downloadICS(${JSON.stringify(game).replace(/"/g, '&quot;')})"
-                  title="Add to calendar">
-            📅 Add to Cal
-          </button>
-        ` : ''}
-        ${!isGF ? `
-          <span style="font-size:11px;color:var(--muted);">Follow team to track</span>
-        ` : ''}
-      </div>
-    </article>
-  `;
-}
-
-/* ─────────────────────────────────────────────
-   RENDER: SCHEDULE PANEL
-───────────────────────────────────────────── */
-function renderSchedule() {
-  let games = ALL_GAMES;
-
-  if (activeFilter === 'nfl') {
-    games = games.filter(g => g.league === 'NFL');
-  } else if (activeFilter === 'nba') {
-    games = games.filter(g => g.league === 'NBA');
-  } else if (activeFilter === 'followed') {
-    games = games.filter(g => isFollowedGame(g));
-  }
-
-  const grid = document.getElementById('schedule-grid');
-  const countEl = document.getElementById('result-count');
-
-  if (games.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">🏟️</div>
-        <h3>No games found</h3>
-        <p>${activeFilter === 'followed' ? 'Follow teams in the sidebar to see their schedule.' : 'No games match your current filter.'}</p>
-      </div>`;
-    countEl.textContent = '';
-    return;
-  }
-
-  countEl.textContent = `${games.length} game${games.length !== 1 ? 's' : ''}`;
-  grid.innerHTML = games.map(renderGameCard).join('');
-
-  // Show notification banner if not granted
-  if (notifPermission !== 'granted' && notifPermission !== 'denied') {
-    document.getElementById('notif-banner').classList.add('visible');
-  }
-}
-
-/* ─────────────────────────────────────────────
-   RENDER: TODAY / THIS WEEK PANEL
-───────────────────────────────────────────── */
-function renderWeek() {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekStart = new Date(today.getTime() + weekOffset * 7 * 86400000);
-  const weekEnd   = new Date(weekStart.getTime() + 6 * 86400000);
-
-  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  document.getElementById('week-label').textContent = `${fmt(weekStart)} – ${fmt(weekEnd)}`;
-
-  const inWindow = g => {
-    const gd = parseLocalDate(g.date);
-    return gd >= weekStart && gd <= weekEnd;
-  };
-
-  const followed = ALL_GAMES.filter(g => isFollowedGame(g) && inWindow(g));
-  const other    = ALL_GAMES.filter(g => !isFollowedGame(g) && inWindow(g));
-
-  const grid = document.getElementById('week-grid');
-
-  if (followed.length === 0 && other.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <h3>No games this week</h3>
-        <p>${followedTeams.size === 0 ? 'Select teams in the sidebar to track their schedule.' : 'No games scheduled for your followed teams this week. Try another week.'}</p>
-      </div>`;
-    return;
-  }
-
-  let html = '';
-
-  if (followed.length > 0) {
-    html += `<div class="group-label">My Teams (${followed.length})</div>`;
-    html += followed.map(renderGameCard).join('');
-  }
-
-  if (other.length > 0) {
-    html += `<div class="group-label" style="margin-top:${followed.length > 0 ? '24px' : '0'};">Other Games (${other.length})</div>`;
-    html += other.map(renderGameCard).join('');
-  }
-
-  grid.innerHTML = html;
-}
-
-/* ─────────────────────────────────────────────
-   RENDER: STANDINGS PANEL
-───────────────────────────────────────────── */
-function renderStandings() {
-  const nflSorted = [...NFL_STANDINGS].sort((a, b) => b.pct - a.pct);
-  const nbaSorted = [...NBA_STANDINGS].sort((a, b) => b.pct - a.pct);
-
-  function buildTable(data, map, label, badgeClass) {
-    const rows = data.map((s, i) => {
-      const team = map[s.id];
-      if (!team) return '';
-      const followed = followedTeams.has(s.id);
-      const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
-      return `
-        <tr class="${rankClass}">
-          <td>
-            <div class="team-cell">
-              <span class="rank-num">${i + 1}</span>
-              <span>${team.emoji}</span>
-              <span>${team.city} ${team.name}</span>
-              ${followed ? `<div class="followed-marker" title="Followed team"></div>` : ''}
-            </div>
-          </td>
-          <td>${s.W}</td>
-          <td>${s.L}</td>
-          <td class="win-pct">${s.pct.toFixed(3).slice(1)}</td>
-        </tr>`;
-    }).join('');
-
-    return `
-      <div class="standings-card">
-        <div class="standings-header">
-          <span class="league-badge ${badgeClass}">${label}</span>
-          <h3>2025 Season Standings</h3>
-        </div>
-        <table class="standings-table" aria-label="${label} Standings">
-          <thead>
-            <tr>
-              <th>Team</th>
-              <th>W</th>
-              <th>L</th>
-              <th>PCT</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  }
-
-  document.getElementById('standings-container').innerHTML =
-    buildTable(nflSorted, NFL_MAP, 'NFL', 'badge-nfl') +
-    buildTable(nbaSorted, NBA_MAP, 'NBA', 'badge-nba');
-}
-
-/* ─────────────────────────────────────────────
-   RENDER: STATS STRIP
-───────────────────────────────────────────── */
-function renderStats() {
-  const today = ALL_GAMES.filter(g => isToday(g.date)).length;
-  const thisWeek = ALL_GAMES.filter(g => daysUntil(g.date) >= 0 && daysUntil(g.date) <= 6).length;
-  const myTeams = followedTeams.size;
-  const myGames = ALL_GAMES.filter(g => isFollowedGame(g) && daysUntil(g.date) >= 0).length;
-
-  document.getElementById('stats-strip').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">Games Today</div>
-      <div class="stat-value yellow">${today}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">This Week</div>
-      <div class="stat-value green">${thisWeek}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">My Teams</div>
-      <div class="stat-value accent">${myTeams}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">My Upcoming Games</div>
-      <div class="stat-value accent2">${myGames}</div>
-    </div>`;
-}
-
-/* ─────────────────────────────────────────────
-   RENDER: TEAM GRIDS
-───────────────────────────────────────────── */
-function renderTeamGrid(teams, containerId) {
-  const el = document.getElementById(containerId);
-  el.innerHTML = teams.map(t => `
-    <button
-      class="team-chip${followedTeams.has(t.id) ? ' selected' : ''}"
-      onclick="toggleTeam('${t.id}', this)"
-      aria-pressed="${followedTeams.has(t.id)}"
-      title="${t.city} ${t.name}">
-      <div class="chip-dot"></div>
-      <span class="chip-emoji">${t.emoji}</span>
-      <span>${t.name}</span>
-    </button>`).join('');
-}
-
-/* ─────────────────────────────────────────────
-   INTERACTIONS
-───────────────────────────────────────────── */
-function toggleTeam(teamId, btn) {
-  if (followedTeams.has(teamId)) {
-    followedTeams.delete(teamId);
-    btn.classList.remove('selected');
-    btn.setAttribute('aria-pressed', 'false');
-    showToast(`Unfollowed ${teamId}`, 'info');
-  } else {
-    followedTeams.add(teamId);
-    btn.classList.add('selected');
-    btn.setAttribute('aria-pressed', 'true');
-    const t = NFL_MAP[teamId] || NBA_MAP[teamId];
-    showToast(`Now following ${t ? `${t.city} ${t.name}` : teamId}`, 'success');
-    if (notifPermission === 'granted') {
-      ALL_GAMES.filter(g => g.away === teamId || g.home === teamId).forEach(scheduleGameNotif);
-    }
-  }
-  saveFollowed();
-  renderActive();
-}
-
-function toggleNotif(gameId, btn) {
-  if (notifPermission !== 'granted') {
-    showToast('Enable browser notifications first to set game alerts.', 'error');
-    requestNotifPermission();
-    return;
-  }
-  if (scheduledNotifs.has(gameId)) {
-    scheduledNotifs.delete(gameId);
-    btn.classList.remove('active');
-    btn.setAttribute('aria-pressed', 'false');
-    btn.innerHTML = `🔕 Set alert`;
-    showToast('Alert removed for this game.', 'info');
-  } else {
-    const game = ALL_GAMES.find(g => g.id === gameId);
-    if (game) scheduleGameNotif(game);
-    btn.classList.add('active');
-    btn.setAttribute('aria-pressed', 'true');
-    btn.innerHTML = `🔔 Alert set`;
-    showToast('Alert set! You\'ll be notified 1 hour before the game.', 'success');
-  }
-  saveNotifs();
-}
-
-function setFilter(filter, btn) {
-  activeFilter = filter;
-  document.querySelectorAll('.filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderSchedule();
-}
-
-function selectAll(league) {
-  const teams = league === 'NFL' ? NFL_TEAMS : NBA_TEAMS;
-  teams.forEach(t => followedTeams.add(t.id));
-  saveFollowed();
-  renderTeamGrid(NFL_TEAMS, 'nfl-team-grid');
-  renderTeamGrid(NBA_TEAMS, 'nba-team-grid');
-  showToast(`All ${league} teams followed!`, 'success');
-  renderActive();
-}
-
-function clearAll() {
-  followedTeams.clear();
-  saveFollowed();
-  renderTeamGrid(NFL_TEAMS, 'nfl-team-grid');
-  renderTeamGrid(NBA_TEAMS, 'nba-team-grid');
-  showToast('All teams unfollowed.', 'info');
-  renderActive();
-}
-
-function shiftWeek(delta) {
-  weekOffset += delta;
+/* ─────────────────────────────────────────────────────────────
+   RENDER ALL
+───────────────────────────────────────────────────────────── */
+async function renderAll() {
   renderWeek();
+  await renderNextGames();
+  await renderResults();
+  populateCopyGameSelect();
 }
 
-function resetWeek() {
-  weekOffset = 0;
-  renderWeek();
-}
-
-/* ─────────────────────────────────────────────
-   TABS
-───────────────────────────────────────────── */
-function switchTab(tab, btn) {
-  activeTab = tab;
-
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    b.classList.remove('active');
-    b.setAttribute('aria-selected', 'false');
-  });
-  btn.classList.add('active');
-  btn.setAttribute('aria-selected', 'true');
-
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById(`panel-${tab}`).classList.add('active');
-
-  renderActive();
-}
-
-function renderActive() {
-  if (activeTab === 'schedule') {
-    renderStats();
-    renderSchedule();
-  } else if (activeTab === 'today') {
-    renderWeek();
-  } else if (activeTab === 'standings') {
-    renderStandings();
-  }
-}
-
-/* ─────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────
    TOAST
-───────────────────────────────────────────── */
-function showToast(msg, type = 'info') {
-  const container = document.getElementById('toast-container');
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
-  container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.animation = 'slide-out .25s ease forwards';
-    setTimeout(() => toast.remove(), 250);
-  }, 3200);
+───────────────────────────────────────────────────────────── */
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
 }
 
-/* ─────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────
+   VENUE INPUT
+───────────────────────────────────────────────────────────── */
+const venueInput = document.getElementById('venue-name');
+venueInput.value = venueName;
+venueInput.addEventListener('input', () => {
+  venueName = venueInput.value.trim();
+  saveVenue();
+});
+
+/* ─────────────────────────────────────────────────────────────
    INIT
-───────────────────────────────────────────── */
-function init() {
-  updateNotifUI();
-  renderTeamGrid(NFL_TEAMS, 'nfl-team-grid');
-  renderTeamGrid(NBA_TEAMS, 'nba-team-grid');
-  renderStats();
-  renderSchedule();
+───────────────────────────────────────────────────────────── */
+async function init() {
+  renderTeamGrid();
+  updateFollowedBadge();
+
+  // Initial week render (may have no events yet)
   renderWeek();
 
-  // Keyboard navigation for sidebar chips
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      document.querySelectorAll('.toast').forEach(t => t.remove());
-    }
-  });
+  // Render empty states for next games + results
+  renderNextGames();
+  renderResults();
 
-  // Auto-schedule notifs if permission already granted
-  if (notifPermission === 'granted') {
-    scheduleAllFollowedNotifs();
+  if (followedIds.size) {
+    // Fetch events for all followed teams
+    await fetchAllFollowedEvents();
+    await renderAll();
   }
 }
 

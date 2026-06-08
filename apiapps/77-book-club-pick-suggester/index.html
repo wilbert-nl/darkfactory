@@ -1,1408 +1,1822 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book Club Pick Suggester — Dark Factory</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pageturner — Book Club Pick Suggester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Newsprint · nav: N9 */
 
-    :root {
-      --bg: #0a0a0a;
-      --surface: #141414;
-      --surface2: #1e1e1e;
-      --border: rgba(255,255,255,0.08);
-      --accent: #00c030;
-      --accent2: #e8a020;
-      --text: #ffffff;
-      --muted: #9ca3af;
-      --radius: 12px;
-      --font-display: 'Bebas Neue', Impact, sans-serif;
-      --font-body: 'Figtree', system-ui, sans-serif;
-      --font-mono: 'DM Mono', monospace;
-    }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;line-height:1.6;}
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── HEADER ── */
-    header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);}
-    .logo-wrap{display:flex;align-items:center;gap:12px;}
-    .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
-    header h1{font-size:1.1rem;font-weight:700;color:var(--text);}
-    header h1 small{display:block;font-size:0.7rem;color:var(--muted);font-weight:400;margin-top:1px;}
+html { height: 100%; overflow-x: clip; }
 
-    /* ── TABS ── */
-    .tab-bar{display:flex;gap:4px;flex-wrap:wrap;}
-    .tab-btn{background:none;border:1px solid transparent;color:var(--muted);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:500;transition:all .2s;}
-    .tab-btn:hover{color:var(--text);border-color:var(--border);}
-    .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
 
-    /* ── LAYOUT ── */
-    main{max-width:1100px;margin:0 auto;padding:28px 20px;}
-    .panel{display:none;}
-    .panel.active{display:block;animation:fadeIn .3s ease;}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
 
-    /* ── CARDS ── */
-    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
-    .card-title{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-    .card-title span{background:var(--accent);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:20px;}
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
 
-    /* ── FORM ELEMENTS ── */
-    label{display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px;font-weight:500;}
-    input[type=text],input[type=date],select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:0.9rem;outline:none;transition:border-color .2s;font-family:inherit;}
-    input[type=text]:focus,input[type=date]:focus,select:focus,textarea:focus{border-color:var(--accent);}
-    textarea{resize:vertical;min-height:80px;}
+/* ── N9 Edge-aligned nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
 
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-    @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
-    .form-group{margin-bottom:16px;}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
 
-    /* ── BUTTONS ── */
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:0.88rem;font-weight:600;transition:all .2s;text-decoration:none;}
-    .btn-primary{background:var(--accent);color:#fff;}
-    .btn-primary:hover{background:#9333ea;transform:translateY(-1px);box-shadow:0 4px 16px rgba(168,85,247,.35);}
-    .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
-    .btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
-    .btn-danger{background:var(--accent2);color:#fff;}
-    .btn-danger:hover{opacity:.85;}
-    .btn-sm{padding:6px 12px;font-size:0.78rem;}
-    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;}
-    .btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
 
-    /* ── GENRE CHIPS ── */
-    .chip-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
-    .chip{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:0.82rem;transition:all .2s;user-select:none;}
-    .chip:hover{border-color:var(--accent);color:var(--accent);}
-    .chip.selected{background:var(--accent);border-color:var(--accent);color:#fff;}
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
 
-    /* ── BOOK CARDS ── */
-    .books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px;}
-    .book-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .25s;cursor:pointer;position:relative;}
-    .book-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 24px rgba(168,85,247,.2);}
-    .book-card.shortlisted{border-color:var(--green);}
-    .book-cover{width:100%;height:220px;object-fit:cover;background:var(--surface);display:block;}
-    .book-cover-placeholder{width:100%;height:220px;background:linear-gradient(135deg,var(--surface2),var(--surface));display:flex;align-items:center;justify-content:center;font-size:3rem;}
-    .book-info{padding:12px;}
-    .book-title{font-size:0.85rem;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-    .book-author{font-size:0.75rem;color:var(--muted);margin-bottom:8px;}
-    .book-year{font-size:0.72rem;color:var(--accent2);font-weight:600;}
-    .book-actions{display:flex;gap:6px;margin-top:8px;}
-    .shortlist-badge{position:absolute;top:8px;right:8px;background:var(--green);color:#0f1117;font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:20px;}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+.nav-back:hover { color: var(--color-ink); }
 
-    /* ── VOTE BARS ── */
-    .vote-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;gap:16px;align-items:flex-start;}
-    .vote-cover{width:60px;height:80px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--surface);}
-    .vote-cover-placeholder{width:60px;height:80px;background:var(--surface);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;}
-    .vote-details{flex:1;}
-    .vote-title{font-size:0.9rem;font-weight:700;color:var(--text);margin-bottom:2px;}
-    .vote-author{font-size:0.78rem;color:var(--muted);margin-bottom:10px;}
-    .vote-bar-wrap{margin-bottom:6px;}
-    .vote-bar-label{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-bottom:3px;}
-    .vote-bar{height:6px;background:var(--surface);border-radius:3px;overflow:hidden;}
-    .vote-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .4s ease;}
-    .vote-btn-row{display:flex;gap:6px;margin-top:10px;}
-    .vote-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-size:0.78rem;transition:all .2s;}
-    .vote-btn:hover{border-color:var(--accent);color:var(--accent);}
-    .vote-btn.voted{background:var(--accent);border-color:var(--accent);color:#fff;}
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
 
-    /* ── HISTORY ── */
-    .history-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
-    .history-rank{width:32px;height:32px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0;}
-    .history-info{flex:1;}
-    .history-title{font-size:0.88rem;font-weight:700;color:var(--text);}
-    .history-meta{font-size:0.75rem;color:var(--muted);}
-    .history-date{font-size:0.75rem;color:var(--accent2);margin-left:auto;white-space:nowrap;}
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-    /* ── DISCUSSION ── */
-    .question-list{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:12px;}
-    .question-list li{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:0.88rem;color:var(--text);display:flex;align-items:flex-start;gap:10px;}
-    .question-list li::before{content:'Q';background:var(--accent);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:4px;margin-top:1px;flex-shrink:0;}
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
 
-    /* ── SCHEDULER ── */
-    .meeting-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
-    .meeting-date-badge{background:var(--accent);color:#fff;border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0;min-width:52px;}
-    .meeting-date-badge .day{font-size:1.2rem;font-weight:700;line-height:1;}
-    .meeting-date-badge .mon{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;}
-    .meeting-info{flex:1;}
-    .meeting-book{font-size:0.88rem;font-weight:700;color:var(--text);}
-    .meeting-notes{font-size:0.75rem;color:var(--muted);}
+.sidebar-head {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
 
-    /* ── MEMBER INPUT ── */
-    .member-bar{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:20px;}
-    .member-bar label{color:var(--muted);font-size:0.82rem;white-space:nowrap;margin:0;}
-    .member-bar input{flex:1;background:transparent;border:none;color:var(--text);font-size:0.88rem;outline:none;}
-    .member-avatar{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;}
+.sidebar-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
 
-    /* ── TOAST ── */
-    #toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:0.85rem;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.4);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;max-width:320px;}
-    #toast.show{transform:none;opacity:1;}
-    #toast.success{border-color:var(--green);}
-    #toast.error{border-color:var(--accent2);}
+.sidebar-title small {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 400;
+  margin-top: 2px;
+  letter-spacing: 0;
+}
 
-    /* ── LOADING SPINNER ── */
-    .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg);}}
-    .loading-overlay{display:flex;align-items:center;justify-content:center;gap:12px;padding:40px;color:var(--muted);font-size:0.9rem;}
+/* Field label */
+.field-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-2);
+}
 
-    /* ── EMPTY STATE ── */
-    .empty{text-align:center;padding:40px;color:var(--muted);}
-    .empty .icon{font-size:2.5rem;margin-bottom:12px;}
-    .empty p{font-size:0.88rem;}
+/* Input */
+.input-text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+.input-text:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(50% 0.16 52 / 0.10);
+}
+.input-text::placeholder { color: var(--color-ink-muted); }
 
-    /* ── PACE SLIDER ── */
-    input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
-    .range-labels{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);margin-top:4px;}
+/* ── Genre chips ── */
+.chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
 
-    /* ── TAGS ── */
-    .tag{display:inline-block;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:0.7rem;padding:2px 8px;border-radius:20px;margin:2px;}
-    .tag.genre{border-color:var(--accent);color:var(--accent);}
+.chip {
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s var(--ease-out), border-color 0.12s var(--ease-out), color 0.12s var(--ease-out);
+}
+.chip:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.chip.selected {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+}
 
-    /* ── SECTION HEADER ── */
-    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-    .section-title{font-size:1rem;font-weight:700;color:var(--text);}
-    .section-count{font-size:0.8rem;color:var(--muted);}
+/* ── Pace selector ── */
+.pace-chips { display: flex; gap: var(--space-2); }
+.pace-chip {
+  flex: 1;
+  text-align: center;
+  padding: var(--space-2) var(--space-2);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.12s var(--ease-out);
+}
+.pace-chip:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.pace-chip.selected {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-paper);
+}
 
-    /* ── MODAL ── */
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s;}
-    .modal-overlay.open{opacity:1;pointer-events:all;}
-    .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:540px;max-height:80vh;overflow-y:auto;padding:28px;position:relative;transform:scale(.95);transition:transform .25s;}
-    .modal-overlay.open .modal{transform:none;}
-    .modal-close{position:absolute;top:16px;right:16px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .2s;}
-    .modal-close:hover{color:var(--text);border-color:var(--accent);}
-    .modal-title{font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:16px;padding-right:32px;}
-    .modal-cover{width:120px;height:160px;object-fit:cover;border-radius:8px;float:right;margin:0 0 12px 16px;background:var(--surface2);}
-    .modal-cover-placeholder{width:120px;height:160px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:3rem;float:right;margin:0 0 12px 16px;}
-    .modal-meta{font-size:0.82rem;color:var(--muted);margin-bottom:6px;}
-    .modal-subjects{margin-top:12px;clear:both;}
-    .modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;}
+/* ── History list ── */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
 
-    /* ── QUIZ STEPS ── */
-    .quiz-step{display:none;}
-    .quiz-step.active{display:block;animation:fadeIn .3s ease;}
-    .quiz-progress{display:flex;gap:6px;margin-bottom:24px;}
-    .quiz-dot{width:24px;height:4px;border-radius:2px;background:var(--border);transition:background .3s;}
-    .quiz-dot.done{background:var(--accent);}
-    .step-nav{display:flex;justify-content:space-between;margin-top:20px;}
+.history-item {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  animation: item-in 0.18s var(--ease-out);
+}
 
-    /* === Film/Books v2 Design System === */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@keyframes item-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
+.history-item-info { flex: 1; min-width: 0; }
+.history-item-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+.history-item-stars {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  margin-top: 2px;
+}
 
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(ellipse 700px 500px at 50% -5%, rgba(0,192,48,0.06) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    body > * { position: relative; z-index: 1; }
+.btn-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s var(--ease-out), background 0.12s var(--ease-out);
+}
+.btn-icon:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
 
-    h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
-    h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent2); }
-    h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+/* Add to history form */
+.add-history-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+}
 
-    .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+.star-input {
+  display: flex;
+  gap: var(--space-1);
+}
+.star-btn {
+  background: none;
+  border: none;
+  font-size: var(--text-lg);
+  cursor: pointer;
+  color: var(--color-border);
+  transition: color 0.1s var(--ease-out);
+  line-height: 1;
+  padding: 0;
+}
+.star-btn.lit { color: var(--color-accent); }
 
-    .card, .result, .item, .movie, .book, .show, .comic, .series, .reading, .pick,
-    [class*="card"], [class*="item"], [class*="result"], [class*="movie"], [class*="book"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      transition: transform 0.2s, background 0.2s;
-      animation: mediaFade 0.4s ease both;
-    }
-    .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
+/* ── Sidebar footer / CTA ── */
+.sidebar-footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
 
-    input, select, textarea {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      padding: 0.75rem 1rem;
-      font-family: var(--font-body);
-      font-size: 0.95rem;
-      width: 100%;
-      transition: border-color 0.2s;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent2); }
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(50% 0.16 52 / 0.28); }
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    button, .btn, input[type="submit"], input[type="button"] {
-      background: var(--accent2);
-      color: #000;
-      border: none;
-      border-radius: 6px;
-      padding: 0.75rem 2rem;
-      font-family: var(--font-body);
-      font-weight: 800;
-      font-size: 0.9rem;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: transform 0.15s, filter 0.15s;
-    }
-    button:hover { transform: scale(1.02); filter: brightness(1.1); }
-    button:active { transform: scale(0.97); }
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
 
-    .tag, .badge, .genre, .category, .label, .format, .status {
-      display: inline-block;
-      background: rgba(232,160,32,0.12);
-      border: 1px solid rgba(232,160,32,0.25);
-      color: var(--accent2);
-      border-radius: 4px;
-      padding: 0.15rem 0.6rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
 
-    .rating, .score, .pages, .runtime {
-      font-family: var(--font-mono);
-      font-size: 1.6rem;
-      font-weight: 500;
-      color: var(--accent2);
-    }
+/* ── Section header ── */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
 
-    /* Star rating */
-    .stars, .rating-stars { color: var(--accent2); letter-spacing: 0.1em; }
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
 
-    table { width: 100%; border-collapse: collapse; }
-    th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
-    td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.section-count {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+}
 
-    @keyframes mediaFade {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: none; }
-    }
-  </style>
+/* ── Book grid ── */
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+/* ── Skeleton cards ── */
+.skeleton-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-paper-2);
+}
+
+.skeleton-cover {
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: linear-gradient(90deg, var(--color-paper-2) 25%, var(--color-border) 50%, var(--color-paper-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-body {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-paper-2) 25%, var(--color-border) 50%, var(--color-paper-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+.skeleton-line.short { width: 60%; }
+.skeleton-line.shorter { width: 40%; }
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* ── Book card ── */
+.book-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-paper-2);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+  position: relative;
+}
+.book-card:hover {
+  border-color: var(--color-accent-line);
+  box-shadow: 0 4px 16px oklch(50% 0.16 52 / 0.12);
+  transform: translateY(-2px);
+}
+.book-card.in-shortlist {
+  border-color: var(--color-accent);
+}
+
+.book-cover-wrap {
+  width: 100%;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  background: var(--color-paper);
+  position: relative;
+}
+
+.book-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.book-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-paper-2) 0%, var(--color-paper) 100%);
+}
+
+.cover-initial {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.book-body {
+  padding: var(--space-3);
+}
+
+.book-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: var(--space-1);
+}
+
+.book-author {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+
+.book-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.book-year {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  padding: 1px var(--space-2);
+}
+
+.book-pages {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  padding: 1px var(--space-2);
+}
+
+.book-rating {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-accent);
+  margin-left: auto;
+}
+
+.book-subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.subject-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 100px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+/* Shortlist badge */
+.shortlist-badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  padding: 2px 6px;
+  border-radius: 100px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  padding: var(--space-16);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-ink-muted);
+  grid-column: 1 / -1;
+}
+
+.empty-state-icon {
+  font-size: 2.5rem;
+  opacity: 0.4;
+}
+
+.empty-state-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.empty-state-sub {
+  font-size: var(--text-sm);
+  max-width: 280px;
+  line-height: 1.65;
+}
+
+/* ── Detail overlay ── */
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: oklch(18% 0.04 155 / 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease-out);
+}
+.detail-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.detail-panel {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+  position: relative;
+  transform: scale(0.96) translateY(8px);
+  transition: transform 0.2s var(--ease-out);
+  box-shadow: 0 20px 60px oklch(20% 0.012 50 / 0.20);
+}
+.detail-overlay.open .detail-panel {
+  transform: scale(1) translateY(0);
+}
+
+.detail-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  transition: color 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+}
+.detail-close:hover { color: var(--color-ink); border-color: var(--color-accent-line); }
+
+.detail-layout {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.detail-cover {
+  width: 120px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-paper-2);
+  aspect-ratio: 2/3;
+}
+
+.detail-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-cover-initial {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  opacity: 0.6;
+}
+
+.detail-info { flex: 1; min-width: 0; }
+
+.detail-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  line-height: 1.2;
+  margin-bottom: var(--space-2);
+  padding-right: var(--space-8);
+}
+
+.detail-author {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+.detail-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.detail-badge {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  padding: var(--space-1) var(--space-3);
+}
+
+.detail-desc {
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  line-height: 1.65;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.detail-subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.detail-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease-out), background 0.12s var(--ease-out);
+}
+.btn-secondary:hover { border-color: var(--color-accent-line); background: var(--color-accent-subtle); color: var(--color-accent); }
+
+.btn-shortlist-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.15s var(--ease-out);
+}
+.btn-shortlist-add:hover { opacity: 0.85; }
+.btn-shortlist-add.remove {
+  background: var(--color-paper-2);
+  color: var(--color-danger);
+  border: 1px solid oklch(55% 0.20 25 / 0.25);
+}
+.btn-shortlist-add.remove:hover { background: oklch(55% 0.20 25 / 0.06); border-color: var(--color-danger); }
+
+/* ── Shortlist horizontal row ── */
+.shortlist-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper-2);
+  padding: var(--space-4);
+}
+
+.shortlist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.shortlist-row {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.shortlist-book {
+  flex-shrink: 0;
+  width: 120px;
+  position: relative;
+}
+
+.shortlist-cover {
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-paper);
+  margin-bottom: var(--space-2);
+}
+
+.shortlist-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shortlist-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-paper-2);
+}
+
+.shortlist-initial {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  opacity: 0.6;
+}
+
+.shortlist-book-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: var(--space-1);
+}
+
+.shortlist-vote-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.vote-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  min-width: 16px;
+  text-align: center;
+}
+
+.btn-vote {
+  height: 20px;
+  padding: 0 var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.12s var(--ease-out);
+  white-space: nowrap;
+}
+.btn-vote:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+
+.btn-remove-shortlist {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  border: none;
+  color: var(--color-paper);
+  font-size: 10px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s var(--ease-out);
+}
+.shortlist-book:hover .btn-remove-shortlist { opacity: 1; }
+
+.shortlist-empty {
+  padding: var(--space-6);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  width: 100%;
+}
+
+/* ── Share button ── */
+.btn-share {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.12s var(--ease-out);
+}
+.btn-share:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+
+/* ── Reading history timeline ── */
+.past-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.past-pick {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  position: relative;
+}
+
+.past-pick::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: -12px;
+  width: 1px;
+  background: var(--color-border);
+}
+.past-pick:last-child::before { display: none; }
+
+.past-pick-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  font-weight: 700;
+  margin-top: 0;
+}
+
+.past-pick-info { flex: 1; min-width: 0; }
+.past-pick-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.past-pick-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+.past-pick-stars {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  margin-top: 2px;
+}
+.past-pick-date {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(20% 0.012 50 / 0.20);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  pointer-events: none;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 60vh;
+  }
+
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+
+  .books-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .detail-layout { flex-direction: column; }
+  .detail-cover { width: 80px; }
+}
+
+@media (max-width: 480px) {
+  .books-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .book-card { transition: border-color 0.12s var(--ease-out); }
+  .book-card:hover { transform: none; }
+  .skeleton-cover, .skeleton-line { animation: none; background: var(--color-paper-2); }
+  .detail-panel { transition: none; }
+  .btn-primary:hover { transform: none; box-shadow: none; }
+  @keyframes item-in { from { opacity: 1; } }
+}
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo-wrap">
-    <div class="logo-icon">📚</div>
-    <h1>Book Club Pick Suggester<small>Library Edition — Powered by Open Library</small></h1>
-  </div>
-  <nav class="tab-bar" role="tablist">
-    <button class="tab-btn active" data-tab="quiz" role="tab">Preferences</button>
-    <button class="tab-btn" data-tab="suggestions" role="tab">Suggestions</button>
-    <button class="tab-btn" data-tab="vote" role="tab">Vote</button>
-    <button class="tab-btn" data-tab="discussion" role="tab">Discussion</button>
-    <button class="tab-btn" data-tab="schedule" role="tab">Schedule</button>
-    <button class="tab-btn" data-tab="history" role="tab">History</button>
-  </nav>
-</header>
+<!-- N9 Edge-aligned nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Pageturner<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Book Club Pick Suggester</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
 
-<!-- MEMBER NAME BAR -->
-<div style="max-width:1100px;margin:16px auto 0;padding:0 20px;">
-  <div class="member-bar">
-    <div class="member-avatar" id="memberAvatar">?</div>
-    <label for="memberNameInput">Your name:</label>
-    <input type="text" id="memberNameInput" placeholder="Enter your name to vote and track..." maxlength="40" />
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Club preferences">
+    <div class="sidebar-head">
+      <p class="sidebar-title">
+        Club Settings
+        <small>Set preferences, then find books</small>
+      </p>
+    </div>
+
+    <div class="sidebar-scroll">
+
+      <!-- Club name -->
+      <div>
+        <label class="field-label" for="club-name">Club name</label>
+        <input
+          type="text"
+          class="input-text"
+          id="club-name"
+          placeholder="e.g. The Midnight Readers"
+          maxlength="80"
+          aria-label="Book club name"
+        >
+      </div>
+
+      <!-- Genre chips -->
+      <div>
+        <label class="field-label">Genres &amp; themes</label>
+        <div class="chips-wrap" id="genre-chips" role="group" aria-label="Genre preferences">
+          <!-- Built by JS -->
+        </div>
+      </div>
+
+      <!-- Reading pace -->
+      <div>
+        <label class="field-label">Reading pace</label>
+        <div class="pace-chips" role="group" aria-label="Reading pace preference">
+          <button class="pace-chip selected" data-pace="short" aria-pressed="true">Short&nbsp;&lt;250&nbsp;pg</button>
+          <button class="pace-chip" data-pace="medium" aria-pressed="false">Medium&nbsp;250–400</button>
+          <button class="pace-chip" data-pace="long" aria-pressed="false">Long&nbsp;400+</button>
+        </div>
+      </div>
+
+      <!-- Reading history -->
+      <div>
+        <label class="field-label">Reading history</label>
+
+        <!-- Add history entry form -->
+        <div class="add-history-form" id="add-history-form">
+          <input
+            type="text"
+            class="input-text"
+            id="hist-title-input"
+            placeholder="Book title…"
+            maxlength="120"
+            aria-label="Title for history entry"
+            style="font-size: var(--text-xs);"
+          >
+          <div style="display:flex; gap:var(--space-2); align-items:center;">
+            <div class="star-input" id="star-input" role="group" aria-label="Rating">
+              <button class="star-btn" data-star="1" aria-label="1 star">★</button>
+              <button class="star-btn" data-star="2" aria-label="2 stars">★</button>
+              <button class="star-btn" data-star="3" aria-label="3 stars">★</button>
+              <button class="star-btn" data-star="4" aria-label="4 stars">★</button>
+              <button class="star-btn" data-star="5" aria-label="5 stars">★</button>
+            </div>
+            <button
+              class="btn-primary"
+              id="btn-add-hist"
+              style="width:auto; padding:var(--space-1) var(--space-3); font-size:var(--text-xs);"
+              aria-label="Add book to history"
+            >Add</button>
+          </div>
+        </div>
+
+        <!-- History list -->
+        <div class="history-list" id="history-list" style="margin-top: var(--space-3);" aria-live="polite" aria-label="Past picks">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div><!-- /sidebar-scroll -->
+
+    <!-- CTA -->
+    <div class="sidebar-footer">
+      <button class="btn-primary" id="btn-find" aria-label="Find book suggestions">
+        Find Books
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Book suggestions">
+    <div class="main-scroll" id="main-scroll">
+
+      <!-- Shortlist section -->
+      <section aria-label="Shortlist">
+        <div class="shortlist-section">
+          <div class="shortlist-head">
+            <span class="section-title" style="font-size: var(--text-base);">Shortlist</span>
+            <div style="display:flex;gap:var(--space-2);align-items:center;">
+              <span class="section-count" id="shortlist-count">0 books</span>
+              <button class="btn-share" id="btn-share" aria-label="Share shortlist">
+                Share
+              </button>
+            </div>
+          </div>
+          <div class="shortlist-row" id="shortlist-row" aria-live="polite" aria-label="Shortlisted books">
+            <div class="shortlist-empty" id="shortlist-empty">
+              Add books to shortlist to put them up for a vote.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Suggestions section -->
+      <section aria-label="Book suggestions">
+        <div class="section-head">
+          <h2 class="section-title">Suggestions</h2>
+          <span class="section-count" id="suggest-count">0 books</span>
+        </div>
+        <div class="books-grid" id="books-grid" aria-live="polite" aria-label="Suggested books">
+          <div class="empty-state">
+            <div class="empty-state-icon" aria-hidden="true">📚</div>
+            <p class="empty-state-title">Ready to discover?</p>
+            <p class="empty-state-sub">Select genres and a reading pace, then click Find Books to get personalized suggestions.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Past picks timeline -->
+      <section aria-label="Club reading history" id="past-section" style="display:none;">
+        <div class="section-head">
+          <h2 class="section-title">Past Picks</h2>
+          <span class="section-count" id="past-count">0 books</span>
+        </div>
+        <div class="past-timeline" id="past-timeline">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+    </div><!-- /main-scroll -->
+  </main>
+
+</div><!-- /app-shell -->
+
+<!-- Book detail overlay -->
+<div class="detail-overlay" id="detail-overlay" role="dialog" aria-modal="true" aria-label="Book details">
+  <div class="detail-panel" id="detail-panel">
+    <button class="detail-close" id="detail-close" aria-label="Close details">✕</button>
+    <div id="detail-content"><!-- Populated by JS --></div>
   </div>
 </div>
 
-<main>
-
-  <!-- ── PREFERENCES / QUIZ ── -->
-  <section id="panel-quiz" class="panel active" role="tabpanel">
-    <div class="card">
-      <div class="card-title">📋 Club Preferences Quiz <span>Step <span id="stepLabel">1</span> of 4</span></div>
-      <div class="quiz-progress" id="quizProgress">
-        <div class="quiz-dot done" id="dot0"></div>
-        <div class="quiz-dot" id="dot1"></div>
-        <div class="quiz-dot" id="dot2"></div>
-        <div class="quiz-dot" id="dot3"></div>
-      </div>
-
-      <!-- Step 0: Genres -->
-      <div class="quiz-step active" id="step0">
-        <label>Which genres does your club enjoy? <em style="color:var(--muted);font-style:normal;">(pick any)</em></label>
-        <div class="chip-grid" id="genreChips"></div>
-        <div class="step-nav"><span></span><button class="btn btn-primary" onclick="nextStep()">Next →</button></div>
-      </div>
-
-      <!-- Step 1: Length -->
-      <div class="quiz-step" id="step1">
-        <div class="form-group">
-          <label>Preferred book length</label>
-          <div class="chip-grid" id="lengthChips">
-            <div class="chip" data-group="length" data-val="short">Short (&lt;200 pages)</div>
-            <div class="chip" data-group="length" data-val="medium">Medium (200–400)</div>
-            <div class="chip" data-group="length" data-val="long">Long (400+)</div>
-            <div class="chip selected" data-group="length" data-val="any">No preference</div>
-          </div>
-        </div>
-        <div class="form-group" style="margin-top:16px;">
-          <label>Reading pace — how quickly does your club read?</label>
-          <input type="range" id="paceSlider" min="1" max="3" value="2" step="1" />
-          <div class="range-labels"><span>Leisurely</span><span>Moderate</span><span>Fast</span></div>
-        </div>
-        <div class="step-nav">
-          <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
-          <button class="btn btn-primary" onclick="nextStep()">Next →</button>
-        </div>
-      </div>
-
-      <!-- Step 2: Themes -->
-      <div class="quiz-step" id="step2">
-        <label>What themes resonate with your club? <em style="color:var(--muted);font-style:normal;">(pick any)</em></label>
-        <div class="chip-grid" id="themeChips"></div>
-        <div class="step-nav">
-          <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
-          <button class="btn btn-primary" onclick="nextStep()">Next →</button>
-        </div>
-      </div>
-
-      <!-- Step 3: Extra prefs -->
-      <div class="quiz-step" id="step3">
-        <div class="form-group">
-          <label>Avoid books with these subjects (optional, comma-separated)</label>
-          <input type="text" id="avoidInput" placeholder="e.g. violence, horror, explicit content" />
-        </div>
-        <div class="form-group">
-          <label>Publication era preference</label>
-          <div class="chip-grid" id="eraChips">
-            <div class="chip selected" data-group="era" data-val="any">Any era</div>
-            <div class="chip" data-group="era" data-val="classic">Classic (pre-1970)</div>
-            <div class="chip" data-group="era" data-val="modern">Modern (1970–2010)</div>
-            <div class="chip" data-group="era" data-val="recent">Recent (2010+)</div>
-          </div>
-        </div>
-        <div class="step-nav">
-          <button class="btn btn-secondary" onclick="prevStep()">← Back</button>
-          <button class="btn btn-primary" id="findBooksBtn" onclick="fetchSuggestions()">🔍 Find Books</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent prefs summary -->
-    <div class="card" id="prefSummaryCard" style="display:none;">
-      <div class="card-title">💾 Saved Preferences</div>
-      <div id="prefSummary"></div>
-    </div>
-  </section>
-
-  <!-- ── SUGGESTIONS ── -->
-  <section id="panel-suggestions" class="panel" role="tabpanel">
-    <div class="card">
-      <div class="section-header">
-        <div class="section-title">📖 Suggested Books</div>
-        <div class="section-count" id="suggestCount">0 suggestions</div>
-      </div>
-      <div id="suggestionsContainer">
-        <div class="empty"><div class="icon">🔍</div><p>Complete the preferences quiz to get personalized book suggestions.</p></div>
-      </div>
-    </div>
-
-    <!-- Shortlist -->
-    <div class="card" id="shortlistCard">
-      <div class="section-header">
-        <div class="section-title">⭐ Shortlist</div>
-        <div class="section-count" id="shortlistCount">0 books</div>
-      </div>
-      <div id="shortlistContainer">
-        <div class="empty"><div class="icon">📌</div><p>Add books to the shortlist to put them up for a vote.</p></div>
-      </div>
-      <div class="btn-group" id="shortlistActions" style="display:none;">
-        <button class="btn btn-primary" onclick="sendToVote()">📊 Send to Vote</button>
-        <button class="btn btn-secondary" onclick="clearShortlist()">🗑 Clear Shortlist</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── VOTE ── -->
-  <section id="panel-vote" class="panel" role="tabpanel">
-    <div class="card">
-      <div class="section-header">
-        <div class="section-title">🗳 Member Voting</div>
-        <button class="btn btn-sm btn-secondary" onclick="resetVotes()">Reset votes</button>
-      </div>
-      <div id="voteContainer">
-        <div class="empty"><div class="icon">🗳</div><p>Add books to the shortlist and click "Send to Vote" to start voting.</p></div>
-      </div>
-    </div>
-    <div class="card" id="voteResultCard" style="display:none;">
-      <div class="card-title">🏆 Current Leader</div>
-      <div id="voteLeader"></div>
-      <div class="btn-group">
-        <button class="btn btn-primary" onclick="pickWinner()">✅ Pick as Next Read</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── DISCUSSION ── -->
-  <section id="panel-discussion" class="panel" role="tabpanel">
-    <div class="card">
-      <div class="card-title">💬 Discussion Question Generator</div>
-      <div class="form-group">
-        <label>Select a book to generate discussion questions</label>
-        <select id="discussionBookSelect">
-          <option value="">— Select a book —</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" onclick="generateQuestions()">✨ Generate Questions</button>
-      <div id="questionsContainer" style="margin-top:20px;"></div>
-    </div>
-  </section>
-
-  <!-- ── SCHEDULE ── -->
-  <section id="panel-schedule" class="panel" role="tabpanel">
-    <div class="card">
-      <div class="card-title">📅 Meeting Scheduler</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="meetingDate">Meeting Date</label>
-          <input type="date" id="meetingDate" />
-        </div>
-        <div class="form-group">
-          <label for="meetingBook">Book</label>
-          <select id="meetingBook">
-            <option value="">— Select book —</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="meetingNotes">Notes / Location</label>
-        <textarea id="meetingNotes" placeholder="e.g. Community Room B, 6:30 PM. Bring snacks!"></textarea>
-      </div>
-      <button class="btn btn-primary" onclick="addMeeting()">📅 Schedule Meeting</button>
-    </div>
-
-    <div class="card">
-      <div class="section-header">
-        <div class="section-title">Upcoming Meetings</div>
-        <div class="section-count" id="meetingCount">0 meetings</div>
-      </div>
-      <div id="meetingsContainer">
-        <div class="empty"><div class="icon">📅</div><p>No meetings scheduled yet.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── HISTORY ── -->
-  <section id="panel-history" class="panel" role="tabpanel">
-    <div class="card">
-      <div class="section-header">
-        <div class="section-title">📚 Reading History</div>
-        <button class="btn btn-sm btn-danger" onclick="clearHistory()">Clear All</button>
-      </div>
-      <div id="historyContainer">
-        <div class="empty"><div class="icon">📖</div><p>No reading history yet. Pick your first book!</p></div>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<!-- BOOK DETAIL MODAL -->
-<div class="modal-overlay" id="bookModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()" aria-label="Close">✕</button>
-    <div id="modalContent"></div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div id="toast" role="alert" aria-live="polite"></div>
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
-  /* ================================================================
-     STATE
-  ================================================================ */
-  const GENRES = [
-    'fiction','mystery','romance','science fiction','fantasy','historical fiction',
-    'biography','thriller','horror','literary fiction','young adult','classics',
-    'non-fiction','self-help','philosophy','psychology','travel','humor'
-  ];
+// ── Helpers ───────────────────────────────────────────────────
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escAttr = (s) => String(s ?? '').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
 
-  const THEMES = [
-    'identity','family','friendship','love','redemption','justice','power',
-    'war','survival','coming of age','grief','society','adventure','discovery',
-    'betrayal','hope','nature','science','politics','culture'
-  ];
+// ── Constants ─────────────────────────────────────────────────
+const GENRES = [
+  'Literary Fiction', 'Mystery', 'Science Fiction', 'Historical',
+  'Biography', 'Fantasy', 'Non-Fiction', 'Short Stories', 'Classics', 'Romance'
+];
 
-  const DISCUSSION_QUESTIONS = {
-    'fiction': [
-      'Which character did you relate to most and why?',
-      'How did the setting influence the story\'s outcome?',
-      'What would you have done differently if you were the protagonist?',
-      'Were you satisfied with the ending? How might you rewrite it?',
-      'What central theme resonated most with your own life?'
-    ],
-    'mystery': [
-      'Did you guess the culprit before the reveal? What clues pointed you there?',
-      'How did the author build suspense effectively?',
-      'Was the solution satisfying or did it feel contrived?',
-      'Which red herring misled you the most?',
-      'How did the detective\'s method compare to modern crime-solving?'
-    ],
-    'romance': [
-      'Were you rooting for the central relationship from the start?',
-      'What obstacles felt most authentic to overcoming?',
-      'How did the author handle communication (or lack thereof) between characters?',
-      'Would you call this a realistic portrayal of love?',
-      'What would you change about how the conflict was resolved?'
-    ],
-    'science fiction': [
-      'Which technology in the book feels closest to becoming reality?',
-      'What does the world-building say about our current society?',
-      'Is the science plausible or purely speculative?',
-      'How does the protagonist adapt to their extraordinary circumstances?',
-      'What ethical dilemmas in the story mirror real-world debates?'
-    ],
-    'fantasy': [
-      'How did the magic system affect the plot\'s believability?',
-      'Which aspect of the world-building was most inventive?',
-      'Are the characters\' motivations clear despite the fantastical setting?',
-      'What real-world issue does the fantasy setting mirror?',
-      'Would you want to live in this fictional world? Why or why not?'
-    ],
-    'historical fiction': [
-      'How accurate does the historical backdrop feel?',
-      'What did you learn about the era that surprised you?',
-      'How did the author balance historical fact with narrative invention?',
-      'How do the characters\' experiences compare to modern perspectives on the same events?',
-      'Which historical figure or event do you wish had more page time?'
-    ],
-    'biography': [
-      'What aspects of the subject\'s life most changed your view of them?',
-      'Did the author appear to have biases toward the subject?',
-      'Which period of the subject\'s life did you find most compelling?',
-      'What lessons from this person\'s life are most applicable today?',
-      'Were there gaps in the narrative you wish had been explored?'
-    ],
-    'thriller': [
-      'At what point did you feel the most tension?',
-      'Was the pacing consistent, or were there slow sections?',
-      'Did the twists feel earned or gimmicky?',
-      'How does fear serve as a narrative tool here?',
-      'What would you have done in the protagonist\'s most dangerous moment?'
-    ],
-    'default': [
-      'What was your overall impression of the writing style?',
-      'Which passage or moment stood out to you most?',
-      'How did this book change or challenge your perspective?',
-      'Would you recommend this book, and to whom?',
-      'What one word would you use to describe this book?'
-    ]
-  };
+const GENRE_SUBJECTS = {
+  'Literary Fiction': 'literary_fiction',
+  'Mystery': 'mystery_and_detective_stories',
+  'Science Fiction': 'science_fiction',
+  'Historical': 'historical_fiction',
+  'Biography': 'biography',
+  'Fantasy': 'fantasy_fiction',
+  'Non-Fiction': 'nonfiction',
+  'Short Stories': 'short_stories',
+  'Classics': 'classics',
+  'Romance': 'romance'
+};
 
-  let state = {
-    currentStep: 0,
-    prefs: {
-      genres: [],
-      length: 'any',
-      pace: 2,
-      themes: [],
-      avoid: '',
-      era: 'any'
-    },
-    suggestions: [],
-    shortlist: [],
-    votes: {},    // { memberName: { bookKey: 1 } }
-    history: [],
-    meetings: [],
-    memberName: ''
-  };
+// ── State ─────────────────────────────────────────────────────
+let state = {
+  clubName: '',
+  genres: [],
+  pace: 'short',
+  history: [],         // { title, date, rating, author? }
+  shortlist: [],       // normalized book objects
+  votes: {},           // { bookKey: count }
+  suggestions: []      // normalized book objects
+};
 
-  /* ================================================================
-     PERSISTENCE
-  ================================================================ */
-  function saveState() {
-    const toSave = {
-      prefs: state.prefs,
+// ── Storage ───────────────────────────────────────────────────
+const STORAGE_KEY = 'pageturner_v1';
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      clubName: state.clubName,
+      genres: state.genres,
+      pace: state.pace,
+      history: state.history,
       shortlist: state.shortlist,
       votes: state.votes,
-      history: state.history,
-      meetings: state.meetings,
-      memberName: state.memberName
-    };
-    localStorage.setItem('bookclub_state', JSON.stringify(toSave));
-  }
+      suggestions: state.suggestions
+    }));
+  } catch { /* quota exceeded – silent */ }
+}
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem('bookclub_state');
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      Object.assign(state, saved);
-    } catch (e) {
-      // ignore corrupt data
-    }
-  }
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    Object.assign(state, saved);
+  } catch { /* corrupt data – ignore */ }
+}
 
-  /* ================================================================
-     TOAST
-  ================================================================ */
-  let toastTimer = null;
-  function showToast(msg, type = 'info') {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = `show ${type}`;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.className = ''; }, 3000);
-  }
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
 
-  /* ================================================================
-     TABS
-  ================================================================ */
-  document.querySelectorAll('.tab-btn').forEach(btn => {
+// ── Genre chips ───────────────────────────────────────────────
+function buildGenreChips() {
+  const container = document.getElementById('genre-chips');
+  container.innerHTML = '';
+  GENRES.forEach(g => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (state.genres.includes(g) ? ' selected' : '');
+    btn.textContent = g;
+    btn.setAttribute('aria-pressed', state.genres.includes(g) ? 'true' : 'false');
+    btn.addEventListener('click', () => toggleGenre(g, btn));
+    container.appendChild(btn);
+  });
+}
+
+function toggleGenre(g, btn) {
+  const idx = state.genres.indexOf(g);
+  if (idx === -1) {
+    state.genres.push(g);
+    btn.classList.add('selected');
+    btn.setAttribute('aria-pressed', 'true');
+  } else {
+    state.genres.splice(idx, 1);
+    btn.classList.remove('selected');
+    btn.setAttribute('aria-pressed', 'false');
+  }
+  saveState();
+}
+
+// ── Pace selector ─────────────────────────────────────────────
+function initPace() {
+  document.querySelectorAll('.pace-chip').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.pace === state.pace);
+    btn.setAttribute('aria-pressed', btn.dataset.pace === state.pace ? 'true' : 'false');
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      const panelId = `panel-${btn.dataset.tab}`;
-      const panel = document.getElementById(panelId);
-      if (panel) panel.classList.add('active');
-      if (btn.dataset.tab === 'vote') renderVote();
-      if (btn.dataset.tab === 'history') renderHistory();
-      if (btn.dataset.tab === 'schedule') renderMeetings();
-      if (btn.dataset.tab === 'discussion') renderDiscussionSelect();
-    });
-  });
-
-  /* ================================================================
-     MEMBER NAME
-  ================================================================ */
-  const memberInput = document.getElementById('memberNameInput');
-  memberInput.addEventListener('input', () => {
-    state.memberName = memberInput.value.trim();
-    const avatar = document.getElementById('memberAvatar');
-    avatar.textContent = state.memberName ? state.memberName[0].toUpperCase() : '?';
-    saveState();
-  });
-
-  /* ================================================================
-     QUIZ / PREFERENCES
-  ================================================================ */
-  function buildChips(containerId, items, group) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-    items.forEach(item => {
-      const chip = document.createElement('div');
-      chip.className = 'chip';
-      chip.dataset.group = group;
-      chip.dataset.val = item;
-      chip.textContent = item.charAt(0).toUpperCase() + item.slice(1);
-      chip.addEventListener('click', () => toggleChip(chip, group));
-      container.appendChild(chip);
-    });
-  }
-
-  function toggleChip(chip, group) {
-    if (group === 'length' || group === 'era') {
-      document.querySelectorAll(`[data-group="${group}"]`).forEach(c => c.classList.remove('selected'));
-      chip.classList.add('selected');
-      if (group === 'length') state.prefs.length = chip.dataset.val;
-      if (group === 'era') state.prefs.era = chip.dataset.val;
-    } else {
-      chip.classList.toggle('selected');
-      const arr = group === 'genre' ? state.prefs.genres : state.prefs.themes;
-      const val = chip.dataset.val;
-      const idx = arr.indexOf(val);
-      if (idx === -1) arr.push(val);
-      else arr.splice(idx, 1);
-    }
-    saveState();
-  }
-
-  function nextStep() {
-    if (state.currentStep < 3) {
-      state.currentStep++;
-      showStep(state.currentStep);
-    }
-  }
-
-  function prevStep() {
-    if (state.currentStep > 0) {
-      state.currentStep--;
-      showStep(state.currentStep);
-    }
-  }
-
-  function showStep(n) {
-    document.querySelectorAll('.quiz-step').forEach((s, i) => {
-      s.classList.toggle('active', i === n);
-    });
-    document.getElementById('stepLabel').textContent = n + 1;
-    for (let i = 0; i < 4; i++) {
-      document.getElementById(`dot${i}`).classList.toggle('done', i <= n);
-    }
-  }
-
-  /* ================================================================
-     OPEN LIBRARY API
-  ================================================================ */
-  async function fetchSuggestions() {
-    const btn = document.getElementById('findBooksBtn');
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner"></span> Searching...`;
-
-    state.prefs.avoid = document.getElementById('avoidInput').value.trim();
-    state.prefs.pace = parseInt(document.getElementById('paceSlider').value);
-    saveState();
-
-    // Switch to suggestions tab
-    switchTab('suggestions');
-
-    const container = document.getElementById('suggestionsContainer');
-    container.innerHTML = `<div class="loading-overlay"><span class="spinner"></span> Fetching books from Open Library…</div>`;
-    document.getElementById('suggestCount').textContent = 'Loading...';
-
-    try {
-      const books = await loadBooks();
-      state.suggestions = books;
-      renderSuggestions();
-      showPrefSummary();
-      showToast(`Found ${books.length} book suggestions!`, 'success');
-    } catch (err) {
-      container.innerHTML = `<div class="empty"><div class="icon">⚠️</div><p>Could not load books. Check your connection and try again.<br><small style="color:var(--muted)">${err.message}</small></p></div>`;
-      showToast('Failed to fetch books', 'error');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `🔍 Find Books`;
-    }
-  }
-
-  async function loadBooks() {
-    const genres = state.prefs.genres.length ? state.prefs.genres : ['fiction'];
-    const themes = state.prefs.themes;
-
-    // Build search terms
-    const searchTerms = [...genres.slice(0, 2), ...themes.slice(0, 2)];
-    const allBooks = [];
-    const seen = new Set();
-
-    for (const term of searchTerms.slice(0, 3)) {
-      try {
-        const subject = term.replace(/\s+/g, '_').toLowerCase();
-        const url = `https://openlibrary.org/subjects/${encodeURIComponent(subject)}.json?limit=20`;
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (data.works) {
-          data.works.forEach(w => {
-            if (!seen.has(w.key)) {
-              seen.add(w.key);
-              allBooks.push(normalizeSubjectWork(w));
-            }
-          });
-        }
-      } catch (e) {
-        // skip failed subject
-      }
-    }
-
-    // If fewer than 5, also do a search query
-    if (allBooks.length < 5) {
-      const q = genres.concat(themes).slice(0, 3).join(' ');
-      try {
-        const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=10`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.docs) {
-            data.docs.forEach(doc => {
-              if (!seen.has(doc.key)) {
-                seen.add(doc.key);
-                allBooks.push(normalizeSearchDoc(doc));
-              }
-            });
-          }
-        }
-      } catch (e) { /* ignore */ }
-    }
-
-    // Filter by era
-    let filtered = applyEraFilter(allBooks);
-
-    // Filter out avoided subjects
-    if (state.prefs.avoid) {
-      const avoid = state.prefs.avoid.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-      filtered = filtered.filter(b => {
-        const combined = (b.subjects || []).join(' ').toLowerCase();
-        return !avoid.some(a => combined.includes(a));
+      state.pace = btn.dataset.pace;
+      document.querySelectorAll('.pace-chip').forEach(b => {
+        b.classList.toggle('selected', b.dataset.pace === state.pace);
+        b.setAttribute('aria-pressed', b.dataset.pace === state.pace ? 'true' : 'false');
       });
-    }
-
-    return filtered.slice(0, 15);
-  }
-
-  function normalizeSubjectWork(w) {
-    const coverId = w.cover_id || (w.covers && w.covers[0]);
-    return {
-      key: w.key,
-      title: w.title || 'Unknown Title',
-      author: w.authors && w.authors[0] ? w.authors[0].name : 'Unknown Author',
-      year: w.first_publish_year || null,
-      coverId: coverId || null,
-      subjects: w.subject ? w.subject.slice(0, 8) : [],
-      description: ''
-    };
-  }
-
-  function normalizeSearchDoc(doc) {
-    const coverId = doc.cover_i || null;
-    return {
-      key: doc.key || `/works/${doc.seed}`,
-      title: doc.title || 'Unknown Title',
-      author: doc.author_name && doc.author_name[0] ? doc.author_name[0] : 'Unknown Author',
-      year: doc.first_publish_year || null,
-      coverId: coverId,
-      subjects: doc.subject ? doc.subject.slice(0, 8) : [],
-      description: ''
-    };
-  }
-
-  function applyEraFilter(books) {
-    const era = state.prefs.era;
-    if (era === 'any') return books;
-    return books.filter(b => {
-      if (!b.year) return true; // keep unknowns
-      if (era === 'classic') return b.year < 1970;
-      if (era === 'modern') return b.year >= 1970 && b.year <= 2010;
-      if (era === 'recent') return b.year > 2010;
-      return true;
+      saveState();
     });
-  }
+  });
+}
 
-  function coverUrl(coverId, size = 'M') {
-    if (!coverId) return null;
-    return `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg`;
-  }
-
-  /* ================================================================
-     RENDER SUGGESTIONS
-  ================================================================ */
-  function renderSuggestions() {
-    const container = document.getElementById('suggestionsContainer');
-    const count = state.suggestions.length;
-    document.getElementById('suggestCount').textContent = `${count} suggestion${count !== 1 ? 's' : ''}`;
-
-    if (!count) {
-      container.innerHTML = `<div class="empty"><div class="icon">📭</div><p>No books found for your preferences. Try broadening your genre selection.</p></div>`;
-      return;
-    }
-
-    const grid = document.createElement('div');
-    grid.className = 'books-grid';
-
-    state.suggestions.forEach(book => {
-      grid.appendChild(buildBookCard(book, 'suggestion'));
+// ── Star rating input ─────────────────────────────────────────
+let selectedRating = 0;
+function initStars() {
+  document.querySelectorAll('#star-input .star-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.dataset.star);
+      selectedRating = selectedRating === val ? 0 : val;
+      updateStarDisplay();
     });
+    btn.addEventListener('mouseover', () => {
+      const val = parseInt(btn.dataset.star);
+      document.querySelectorAll('#star-input .star-btn').forEach((b, i) => {
+        b.style.color = i < val ? 'var(--color-accent)' : '';
+      });
+    });
+    btn.addEventListener('mouseout', updateStarDisplay);
+  });
+}
 
+function updateStarDisplay() {
+  document.querySelectorAll('#star-input .star-btn').forEach((b, i) => {
+    b.classList.toggle('lit', i < selectedRating);
+    b.style.color = '';
+  });
+}
+
+// ── Reading history ───────────────────────────────────────────
+function renderHistoryList() {
+  const container = document.getElementById('history-list');
+  if (!state.history.length) {
     container.innerHTML = '';
-    container.appendChild(grid);
-    renderShortlist();
+    return;
+  }
+  container.innerHTML = '';
+  state.history.forEach((entry, idx) => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const stars = entry.rating ? '★'.repeat(entry.rating) + '☆'.repeat(5 - entry.rating) : '—';
+    item.innerHTML = `
+      <div class="history-item-info">
+        <div class="history-item-title">${esc(entry.title)}</div>
+        <div class="history-item-meta">${esc(entry.date || '')}</div>
+        <div class="history-item-stars" aria-label="${entry.rating || 0} stars">${stars}</div>
+      </div>
+      <button class="btn-icon" aria-label="Remove ${esc(entry.title)} from history" data-idx="${idx}">×</button>
+    `;
+    item.querySelector('.btn-icon').addEventListener('click', () => removeHistoryItem(idx));
+    container.appendChild(item);
+  });
+
+  renderPastTimeline();
+}
+
+function addHistoryItem() {
+  const titleInput = document.getElementById('hist-title-input');
+  const title = titleInput.value.trim();
+  if (!title) { toast('Enter a book title first', 'error'); return; }
+  const entry = {
+    title,
+    date: new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }),
+    rating: selectedRating
+  };
+  state.history.unshift(entry);
+  saveState();
+  titleInput.value = '';
+  selectedRating = 0;
+  updateStarDisplay();
+  renderHistoryList();
+  toast(`"${title}" added to history`, 'success');
+}
+
+function removeHistoryItem(idx) {
+  state.history.splice(idx, 1);
+  saveState();
+  renderHistoryList();
+}
+
+// ── Past picks timeline in main ───────────────────────────────
+function renderPastTimeline() {
+  const section = document.getElementById('past-section');
+  const timeline = document.getElementById('past-timeline');
+  const countEl = document.getElementById('past-count');
+
+  if (!state.history.length) {
+    section.style.display = 'none';
+    return;
   }
 
-  function buildBookCard(book, context) {
-    const card = document.createElement('div');
-    card.className = 'book-card';
-    const isShortlisted = state.shortlist.some(b => b.key === book.key);
-    if (isShortlisted) card.classList.add('shortlisted');
+  section.style.display = 'block';
+  countEl.textContent = `${state.history.length} book${state.history.length !== 1 ? 's' : ''}`;
+  timeline.innerHTML = '';
 
-    const imgUrl = coverUrl(book.coverId);
-    const imgHtml = imgUrl
-      ? `<img class="book-cover" src="${imgUrl}" alt="Cover of ${escHtml(book.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="book-cover-placeholder" style="display:none;">📖</div>`
-      : `<div class="book-cover-placeholder">📖</div>`;
+  state.history.forEach((entry, i) => {
+    const stars = entry.rating ? '★'.repeat(entry.rating) : '—';
+    const item = document.createElement('div');
+    item.className = 'past-pick';
+    item.innerHTML = `
+      <div class="past-pick-dot" aria-hidden="true">${i + 1}</div>
+      <div class="past-pick-info">
+        <div class="past-pick-title">${esc(entry.title)}</div>
+        ${entry.author ? `<div class="past-pick-meta">by ${esc(entry.author)}</div>` : ''}
+        <div class="past-pick-stars" aria-label="${entry.rating || 0} stars">${stars}</div>
+      </div>
+      <div class="past-pick-date">${esc(entry.date || '')}</div>
+    `;
+    timeline.appendChild(item);
+  });
+}
 
-    card.innerHTML = `
-      ${isShortlisted ? `<div class="shortlist-badge">⭐ Shortlisted</div>` : ''}
-      ${imgHtml}
-      <div class="book-info">
-        <div class="book-title">${escHtml(book.title)}</div>
-        <div class="book-author">${escHtml(book.author)}</div>
-        ${book.year ? `<div class="book-year">${book.year}</div>` : ''}
-        <div class="book-actions">
-          <button class="btn btn-sm btn-secondary" onclick="openModal('${escAttr(book.key)}')">Details</button>
-          ${context === 'suggestion' ? `<button class="btn btn-sm btn-primary" onclick="toggleShortlist('${escAttr(book.key)}')" id="sl-${escAttr(book.key)}">${isShortlisted ? 'Remove' : '+ Shortlist'}</button>` : ''}
-        </div>
-      </div>`;
-
-    return card;
-  }
-
-  /* ================================================================
-     SHORTLIST
-  ================================================================ */
-  function toggleShortlist(key) {
-    const book = state.suggestions.find(b => b.key === key);
-    if (!book) return;
-    const idx = state.shortlist.findIndex(b => b.key === key);
-    if (idx === -1) {
-      state.shortlist.push(book);
-      showToast(`"${book.title}" added to shortlist`, 'success');
-    } else {
-      state.shortlist.splice(idx, 1);
-      showToast(`"${book.title}" removed from shortlist`);
-    }
+// ── Club name ─────────────────────────────────────────────────
+function initClubName() {
+  const input = document.getElementById('club-name');
+  input.value = state.clubName;
+  input.addEventListener('input', () => {
+    state.clubName = input.value;
     saveState();
-    renderSuggestions();
-    renderShortlist();
-    updateDiscussionSelect();
-    updateMeetingSelect();
-  }
+  });
+}
 
-  function renderShortlist() {
-    const container = document.getElementById('shortlistContainer');
-    const actions = document.getElementById('shortlistActions');
-    const count = state.shortlist.length;
-    document.getElementById('shortlistCount').textContent = `${count} book${count !== 1 ? 's' : ''}`;
+// ── Normalize book object ─────────────────────────────────────
+function normalizeDoc(doc) {
+  return {
+    key: doc.key,
+    title: doc.title || 'Unknown Title',
+    author: (doc.author_name && doc.author_name[0]) ? doc.author_name[0] : 'Unknown Author',
+    year: doc.first_publish_year || null,
+    coverId: doc.cover_i || null,
+    subjects: (doc.subject || []).slice(0, 12),
+    pages: doc.number_of_pages_median || null,
+    rating: doc.ratings_average ? Math.round(doc.ratings_average * 10) / 10 : null
+  };
+}
 
-    if (!count) {
-      container.innerHTML = `<div class="empty"><div class="icon">📌</div><p>Add books to the shortlist to put them up for a vote.</p></div>`;
-      actions.style.display = 'none';
-      return;
-    }
+// ── Fetch from Open Library ───────────────────────────────────
+async function fetchBooks() {
+  const genres = state.genres.length ? state.genres : ['Literary Fiction'];
 
-    const grid = document.createElement('div');
-    grid.className = 'books-grid';
-    state.shortlist.forEach(book => grid.appendChild(buildBookCard(book, 'shortlist')));
-    container.innerHTML = '';
-    container.appendChild(grid);
-    actions.style.display = 'flex';
-  }
+  // Pick up to 2 genres to query
+  const subjects = genres.slice(0, 2).map(g => GENRE_SUBJECTS[g] || g.replace(/\s+/g, '_').toLowerCase());
 
-  function clearShortlist() {
-    if (!state.shortlist.length) return;
-    state.shortlist = [];
-    saveState();
-    renderShortlist();
-    renderSuggestions();
-    showToast('Shortlist cleared');
-  }
+  const seen = new Set();
+  let results = [];
 
-  function sendToVote() {
-    if (!state.shortlist.length) { showToast('Add books to shortlist first', 'error'); return; }
-    saveState();
-    switchTab('vote');
-    renderVote();
-    showToast('Books sent to vote!', 'success');
-  }
-
-  /* ================================================================
-     VOTING
-  ================================================================ */
-  function renderVote() {
-    const container = document.getElementById('voteContainer');
-    const resultCard = document.getElementById('voteResultCard');
-
-    if (!state.shortlist.length) {
-      container.innerHTML = `<div class="empty"><div class="icon">🗳</div><p>Add books to the shortlist and click "Send to Vote" to start voting.</p></div>`;
-      resultCard.style.display = 'none';
-      return;
-    }
-
-    container.innerHTML = '';
-    const name = state.memberName;
-
-    state.shortlist.forEach(book => {
-      const totalVotes = getTotalVotes(book.key);
-      const totalPossible = Object.keys(state.votes).length || 1;
-      const pct = Math.round((totalVotes / totalPossible) * 100);
-
-      const myVote = name && state.votes[name] && state.votes[name][book.key];
-      const imgUrl = coverUrl(book.coverId);
-
-      const item = document.createElement('div');
-      item.className = 'vote-item';
-      const imgHtml = imgUrl
-        ? `<img class="vote-cover" src="${imgUrl}" alt="${escHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="vote-cover-placeholder" style="display:none;">📖</div>`
-        : `<div class="vote-cover-placeholder">📖</div>`;
-
-      item.innerHTML = `
-        ${imgHtml}
-        <div class="vote-details">
-          <div class="vote-title">${escHtml(book.title)}</div>
-          <div class="vote-author">${escHtml(book.author)}</div>
-          <div class="vote-bar-wrap">
-            <div class="vote-bar-label"><span>${totalVotes} vote${totalVotes !== 1 ? 's' : ''}</span><span>${pct}%</span></div>
-            <div class="vote-bar"><div class="vote-bar-fill" style="width:${pct}%"></div></div>
-          </div>
-          <div class="vote-btn-row">
-            <button class="vote-btn ${myVote ? 'voted' : ''}" onclick="castVote('${escAttr(book.key)}')">
-              ${myVote ? '✓ Voted' : '👍 Vote'}
-            </button>
-            <button class="vote-btn" onclick="openModal('${escAttr(book.key)}')">Details</button>
-          </div>
-        </div>`;
-      container.appendChild(item);
-    });
-
-    // Show leader
-    const leader = getLeader();
-    if (leader) {
-      resultCard.style.display = 'block';
-      document.getElementById('voteLeader').innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;">
-          ${coverUrl(leader.coverId) ? `<img src="${coverUrl(leader.coverId, 'S')}" style="width:50px;height:66px;object-fit:cover;border-radius:6px;" alt="" />` : ''}
-          <div>
-            <div style="font-weight:700;font-size:0.95rem;">${escHtml(leader.title)}</div>
-            <div style="color:var(--muted);font-size:0.8rem;">${escHtml(leader.author)}</div>
-            <div style="color:var(--green);font-size:0.82rem;margin-top:4px;">${getTotalVotes(leader.key)} vote${getTotalVotes(leader.key) !== 1 ? 's' : ''}</div>
-          </div>
-        </div>`;
-    } else {
-      resultCard.style.display = 'none';
-    }
-  }
-
-  function getTotalVotes(key) {
-    let count = 0;
-    Object.values(state.votes).forEach(memberVotes => {
-      if (memberVotes[key]) count++;
-    });
-    return count;
-  }
-
-  function getLeader() {
-    if (!state.shortlist.length) return null;
-    let best = null;
-    let bestCount = 0;
-    state.shortlist.forEach(book => {
-      const c = getTotalVotes(book.key);
-      if (c > bestCount) { bestCount = c; best = book; }
-    });
-    return best;
-  }
-
-  function castVote(key) {
-    const name = state.memberName;
-    if (!name) { showToast('Enter your name to vote', 'error'); return; }
-    if (!state.votes[name]) state.votes[name] = {};
-    if (state.votes[name][key]) {
-      delete state.votes[name][key];
-      showToast('Vote removed');
-    } else {
-      state.votes[name][key] = 1;
-      showToast('Vote cast!', 'success');
-    }
-    saveState();
-    renderVote();
-  }
-
-  function resetVotes() {
-    state.votes = {};
-    saveState();
-    renderVote();
-    showToast('Votes reset');
-  }
-
-  function pickWinner() {
-    const leader = getLeader();
-    if (!leader) { showToast('No votes yet', 'error'); return; }
-    addToHistory(leader);
-    showToast(`"${leader.title}" added to reading history!`, 'success');
-  }
-
-  /* ================================================================
-     HISTORY
-  ================================================================ */
-  function addToHistory(book) {
-    const exists = state.history.find(h => h.key === book.key);
-    if (exists) { showToast('Already in history'); return; }
-    state.history.unshift({ ...book, pickedAt: new Date().toLocaleDateString() });
-    saveState();
-    renderHistory();
-    switchTab('history');
-  }
-
-  function renderHistory() {
-    const container = document.getElementById('historyContainer');
-    if (!state.history.length) {
-      container.innerHTML = `<div class="empty"><div class="icon">📖</div><p>No reading history yet. Pick your first book!</p></div>`;
-      return;
-    }
-    container.innerHTML = state.history.map((book, i) => `
-      <div class="history-item">
-        <div class="history-rank">${i + 1}</div>
-        <div class="history-info">
-          <div class="history-title">${escHtml(book.title)}</div>
-          <div class="history-meta">by ${escHtml(book.author)}${book.year ? ` · ${book.year}` : ''}</div>
-        </div>
-        <div class="history-date">📅 ${book.pickedAt}</div>
-      </div>`).join('');
-  }
-
-  function clearHistory() {
-    state.history = [];
-    saveState();
-    renderHistory();
-    showToast('History cleared');
-  }
-
-  /* ================================================================
-     DISCUSSION QUESTIONS
-  ================================================================ */
-  function renderDiscussionSelect() {
-    const sel = document.getElementById('discussionBookSelect');
-    const books = [...state.shortlist, ...state.history];
-    sel.innerHTML = `<option value="">— Select a book —</option>`;
-    books.forEach(b => {
-      const opt = document.createElement('option');
-      opt.value = b.key;
-      opt.textContent = b.title;
-      sel.appendChild(opt);
-    });
-  }
-
-  function updateDiscussionSelect() {
-    const panel = document.getElementById('panel-discussion');
-    if (panel.classList.contains('active')) renderDiscussionSelect();
-  }
-
-  function generateQuestions() {
-    const key = document.getElementById('discussionBookSelect').value;
-    const books = [...state.shortlist, ...state.history, ...state.suggestions];
-    const book = books.find(b => b.key === key);
-    const container = document.getElementById('questionsContainer');
-
-    if (!key || !book) {
-      showToast('Select a book first', 'error');
-      return;
-    }
-
-    // Determine genre from subjects or prefs
-    let genre = 'default';
-    const subjects = (book.subjects || []).map(s => s.toLowerCase());
-    const knownGenres = Object.keys(DISCUSSION_QUESTIONS).filter(g => g !== 'default');
-    for (const g of knownGenres) {
-      if (subjects.some(s => s.includes(g)) || state.prefs.genres.includes(g)) {
-        genre = g;
-        break;
+  for (const subject of subjects) {
+    const url = `https://openlibrary.org/search.json?subject=${encodeURIComponent(subject)}&limit=20&fields=key,title,author_name,first_publish_year,cover_i,subject,number_of_pages_median,ratings_average`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) continue;
+    const data = await res.json();
+    (data.docs || []).forEach(doc => {
+      if (!seen.has(doc.key)) {
+        seen.add(doc.key);
+        results.push(normalizeDoc(doc));
       }
-    }
-
-    const questions = DISCUSSION_QUESTIONS[genre] || DISCUSSION_QUESTIONS['default'];
-
-    container.innerHTML = `
-      <div style="margin-bottom:12px;font-size:0.82rem;color:var(--muted);">
-        Discussion questions for <strong style="color:var(--text)">${escHtml(book.title)}</strong>
-        <span class="tag genre">${genre}</span>
-      </div>
-      <ul class="question-list">
-        ${questions.map(q => `<li>${escHtml(q)}</li>`).join('')}
-      </ul>
-      <div class="btn-group">
-        <button class="btn btn-secondary btn-sm" onclick="copyQuestions()">📋 Copy Questions</button>
-      </div>`;
-  }
-
-  function copyQuestions() {
-    const items = document.querySelectorAll('.question-list li');
-    const text = Array.from(items).map((li, i) => `${i + 1}. ${li.textContent}`).join('\n');
-    navigator.clipboard.writeText(text).then(() => showToast('Questions copied!', 'success')).catch(() => showToast('Copy failed'));
-  }
-
-  /* ================================================================
-     MEETING SCHEDULER
-  ================================================================ */
-  function updateMeetingSelect() {
-    const sel = document.getElementById('meetingBook');
-    const books = [...state.shortlist, ...state.history];
-    const current = sel.value;
-    sel.innerHTML = `<option value="">— Select book —</option>`;
-    books.forEach(b => {
-      const opt = document.createElement('option');
-      opt.value = b.key;
-      opt.textContent = b.title;
-      if (opt.value === current) opt.selected = true;
-      sel.appendChild(opt);
     });
   }
 
-  function addMeeting() {
-    const date = document.getElementById('meetingDate').value;
-    const bookKey = document.getElementById('meetingBook').value;
-    const notes = document.getElementById('meetingNotes').value.trim();
+  // Filter by pace
+  results = results.filter(book => {
+    if (!book.pages) return true;
+    if (state.pace === 'short') return book.pages < 250;
+    if (state.pace === 'medium') return book.pages >= 250 && book.pages <= 400;
+    if (state.pace === 'long') return book.pages > 400;
+    return true;
+  });
 
-    if (!date) { showToast('Select a meeting date', 'error'); return; }
+  return results.slice(0, 18);
+}
 
-    const books = [...state.shortlist, ...state.history];
-    const book = books.find(b => b.key === bookKey);
-    const bookTitle = book ? book.title : 'General Meeting';
+// ── Find Books ────────────────────────────────────────────────
+async function findBooks() {
+  const btn = document.getElementById('btn-find');
+  btn.disabled = true;
+  btn.textContent = 'Searching…';
 
-    state.meetings.push({ date, bookTitle, notes, id: Date.now() });
-    state.meetings.sort((a, b) => a.date.localeCompare(b.date));
-    saveState();
-    renderMeetings();
-    document.getElementById('meetingDate').value = '';
-    document.getElementById('meetingNotes').value = '';
-    showToast('Meeting scheduled!', 'success');
+  const grid = document.getElementById('books-grid');
+  const countEl = document.getElementById('suggest-count');
+
+  // Show skeletons
+  grid.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const sk = document.createElement('div');
+    sk.className = 'skeleton-card';
+    sk.innerHTML = `<div class="skeleton-cover"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div>`;
+    grid.appendChild(sk);
   }
 
-  function renderMeetings() {
-    const container = document.getElementById('meetingsContainer');
-    const count = state.meetings.length;
-    document.getElementById('meetingCount').textContent = `${count} meeting${count !== 1 ? 's' : ''}`;
+  countEl.textContent = 'Loading…';
 
-    if (!count) {
-      container.innerHTML = `<div class="empty"><div class="icon">📅</div><p>No meetings scheduled yet.</p></div>`;
+  try {
+    const books = await fetchBooks();
+    state.suggestions = books;
+    saveState();
+    renderSuggestions();
+    toast(`Found ${books.length} book${books.length !== 1 ? 's' : ''}`, 'success');
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon" aria-hidden="true">⚠</div><p class="empty-state-title">Couldn't load books</p><p class="empty-state-sub">Check your connection and try again.</p></div>`;
+    countEl.textContent = 'Error';
+    toast('Network error — try again', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Find Books';
+  }
+}
+
+// ── Render suggestions grid ───────────────────────────────────
+function renderSuggestions() {
+  const grid = document.getElementById('books-grid');
+  const countEl = document.getElementById('suggest-count');
+  grid.innerHTML = '';
+
+  if (!state.suggestions.length) {
+    countEl.textContent = '0 books';
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon" aria-hidden="true">📭</div><p class="empty-state-title">No results</p><p class="empty-state-sub">Try different genres or reading pace.</p></div>`;
+    return;
+  }
+
+  countEl.textContent = `${state.suggestions.length} book${state.suggestions.length !== 1 ? 's' : ''}`;
+
+  state.suggestions.forEach(book => {
+    grid.appendChild(buildBookCard(book));
+  });
+}
+
+// ── Build book card ───────────────────────────────────────────
+function buildBookCard(book) {
+  const card = document.createElement('div');
+  const inShortlist = state.shortlist.some(b => b.key === book.key);
+  card.className = 'book-card' + (inShortlist ? ' in-shortlist' : '');
+  card.setAttribute('role', 'article');
+  card.setAttribute('aria-label', book.title);
+  card.setAttribute('tabindex', '0');
+
+  const coverUrl = book.coverId ? `https://covers.openlibrary.org/b/id/${book.coverId}-M.jpg` : null;
+  const initial = (book.title || '?')[0].toUpperCase();
+  const subjects = (book.subjects || []).slice(0, 3);
+
+  card.innerHTML = `
+    ${inShortlist ? '<div class="shortlist-badge" aria-hidden="true">Shortlisted</div>' : ''}
+    <div class="book-cover-wrap">
+      ${coverUrl
+        ? `<img class="book-cover-img" src="${esc(coverUrl)}" alt="Cover of ${esc(book.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">\n        <div class="book-cover-placeholder" style="display:none;"><span class="cover-initial" aria-hidden="true">${esc(initial)}</span></div>`
+        : `<div class="book-cover-placeholder"><span class="cover-initial" aria-hidden="true">${esc(initial)}</span></div>`
+      }
+    </div>
+    <div class="book-body">
+      <div class="book-title">${esc(book.title)}</div>
+      <div class="book-author">${esc(book.author)}</div>
+      <div class="book-meta-row">
+        ${book.year ? `<span class="book-year">${book.year}</span>` : ''}
+        ${book.pages ? `<span class="book-pages">${book.pages}&nbsp;pg</span>` : ''}
+        ${book.rating ? `<span class="book-rating">★ ${book.rating}</span>` : ''}
+      </div>
+      ${subjects.length ? `<div class="book-subjects">${subjects.map(s => `<span class="subject-tag">${esc(s)}</span>`).join('')}</div>` : ''}
+    </div>
+  `;
+
+  card.addEventListener('click', () => openDetail(book));
+  card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(book); } });
+
+  return card;
+}
+
+// ── Book detail overlay ───────────────────────────────────────
+let currentDetailBook = null;
+
+async function openDetail(book) {
+  currentDetailBook = book;
+  const overlay = document.getElementById('detail-overlay');
+  const content = document.getElementById('detail-content');
+  const inShortlist = state.shortlist.some(b => b.key === book.key);
+
+  const coverUrl = book.coverId ? `https://covers.openlibrary.org/b/id/${book.coverId}-L.jpg` : null;
+  const initial = (book.title || '?')[0].toUpperCase();
+  const subjects = book.subjects || [];
+
+  content.innerHTML = `
+    <div class="detail-layout">
+      <div class="detail-cover">
+        ${coverUrl
+          ? `<img src="${esc(coverUrl)}" alt="Cover of ${esc(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">\n          <div class="detail-cover-placeholder" style="display:none;"><span class="detail-cover-initial">${esc(initial)}</span></div>`
+          : `<div class="detail-cover-placeholder"><span class="detail-cover-initial">${esc(initial)}</span></div>`
+        }
+      </div>
+      <div class="detail-info">
+        <h2 class="detail-title">${esc(book.title)}</h2>
+        <p class="detail-author">by ${esc(book.author)}</p>
+        <div class="detail-meta-row">
+          ${book.year ? `<span class="detail-badge">${book.year}</span>` : ''}
+          ${book.pages ? `<span class="detail-badge">${book.pages} pages</span>` : ''}
+          ${book.rating ? `<span class="detail-badge">★ ${book.rating}</span>` : ''}
+        </div>
+        ${subjects.length ? `<div class="detail-subjects">${subjects.map(s => `<span class="subject-tag">${esc(s)}</span>`).join('')}</div>` : ''}
+        <div class="detail-actions">
+          <button
+            class="btn-shortlist-add ${inShortlist ? 'remove' : ''}"
+            id="detail-sl-btn"
+            onclick="toggleShortlist(currentDetailBook)"
+          >${inShortlist ? 'Remove from Shortlist' : '+ Add to Shortlist'}</button>
+          <a class="btn-secondary" href="https://openlibrary.org${escAttr(book.key)}" target="_blank" rel="noopener noreferrer">Open Library ↗</a>
+        </div>
+      </div>
+    </div>
+    <div class="detail-desc" id="detail-desc">Loading description…</div>
+  `;
+
+  overlay.classList.add('open');
+  document.getElementById('detail-close').focus();
+
+  // Fetch description async
+  fetchDescription(book.key);
+}
+
+async function fetchDescription(key) {
+  const descEl = document.getElementById('detail-desc');
+  if (!descEl) return;
+  try {
+    const res = await fetch(`https://openlibrary.org${key}.json`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) { descEl.textContent = 'No description available.'; return; }
+    const data = await res.json();
+    let desc = '';
+    if (typeof data.description === 'string') desc = data.description;
+    else if (data.description && typeof data.description.value === 'string') desc = data.description.value;
+    // Trim markdown links
+    desc = desc.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/----------+[\s\S]*/g, '').trim();
+    if (!desc) desc = 'No description available.';
+    descEl.textContent = desc.length > 800 ? desc.slice(0, 800) + '…' : desc;
+  } catch {
+    if (descEl) descEl.textContent = 'No description available.';
+  }
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+  currentDetailBook = null;
+}
+
+document.getElementById('detail-close').addEventListener('click', closeDetail);
+document.getElementById('detail-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('detail-overlay')) closeDetail();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+
+// ── Shortlist ─────────────────────────────────────────────────
+function toggleShortlist(book) {
+  if (!book) return;
+  const idx = state.shortlist.findIndex(b => b.key === book.key);
+  if (idx === -1) {
+    if (state.shortlist.length >= 6) {
+      toast('Shortlist is full (max 6 books)', 'error');
       return;
     }
+    state.shortlist.push(book);
+    if (!state.votes[book.key]) state.votes[book.key] = 0;
+    toast(`"${book.title}" added to shortlist`, 'success');
+  } else {
+    state.shortlist.splice(idx, 1);
+    toast(`"${book.title}" removed from shortlist`);
+  }
+  saveState();
+  renderShortlist();
+  renderSuggestions();
 
-    container.innerHTML = state.meetings.map(m => {
-      const d = new Date(m.date + 'T12:00:00');
-      const day = d.getDate();
-      const mon = d.toLocaleString('default', { month: 'short' });
-      return `
-        <div class="meeting-item">
-          <div class="meeting-date-badge"><div class="day">${day}</div><div class="mon">${mon}</div></div>
-          <div class="meeting-info">
-            <div class="meeting-book">📖 ${escHtml(m.bookTitle)}</div>
-            ${m.notes ? `<div class="meeting-notes">${escHtml(m.notes)}</div>` : ''}
-          </div>
-          <button class="btn btn-sm btn-secondary" onclick="deleteMeeting(${m.id})" aria-label="Delete meeting">✕</button>
-        </div>`;
-    }).join('');
+  // Update detail panel button if open
+  const slBtn = document.getElementById('detail-sl-btn');
+  if (slBtn && currentDetailBook && currentDetailBook.key === book.key) {
+    const nowIn = state.shortlist.some(b => b.key === book.key);
+    slBtn.textContent = nowIn ? 'Remove from Shortlist' : '+ Add to Shortlist';
+    slBtn.className = 'btn-shortlist-add' + (nowIn ? ' remove' : '');
+  }
+}
 
-    updateMeetingSelect();
+function renderShortlist() {
+  const row = document.getElementById('shortlist-row');
+  const countEl = document.getElementById('shortlist-count');
+  const emptyEl = document.getElementById('shortlist-empty');
+  countEl.textContent = `${state.shortlist.length} book${state.shortlist.length !== 1 ? 's' : ''}`;
+
+  if (!state.shortlist.length) {
+    row.innerHTML = '';
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'shortlist-empty';
+    emptyDiv.id = 'shortlist-empty';
+    emptyDiv.textContent = 'Add books to shortlist to put them up for a vote.';
+    row.appendChild(emptyDiv);
+    return;
   }
 
-  function deleteMeeting(id) {
-    state.meetings = state.meetings.filter(m => m.id !== id);
-    saveState();
-    renderMeetings();
-    showToast('Meeting removed');
-  }
+  row.innerHTML = '';
 
-  /* ================================================================
-     BOOK DETAIL MODAL
-  ================================================================ */
-  function openModal(key) {
-    const books = [...state.suggestions, ...state.shortlist, ...state.history];
-    const book = books.find(b => b.key === key);
-    if (!book) return;
+  state.shortlist.forEach(book => {
+    const coverUrl = book.coverId ? `https://covers.openlibrary.org/b/id/${book.coverId}-S.jpg` : null;
+    const initial = (book.title || '?')[0].toUpperCase();
+    const votes = state.votes[book.key] || 0;
 
-    const imgUrl = coverUrl(book.coverId, 'L');
-    const isShortlisted = state.shortlist.some(b => b.key === key);
-
-    document.getElementById('modalContent').innerHTML = `
-      <h2 class="modal-title" id="modalTitle">${escHtml(book.title)}</h2>
-      ${imgUrl ? `<img class="modal-cover" src="${imgUrl}" alt="Cover of ${escHtml(book.title)}" onerror="this.style.display='none';" />` : `<div class="modal-cover-placeholder">📖</div>`}
-      <div class="modal-meta">✍️ ${escHtml(book.author)}</div>
-      ${book.year ? `<div class="modal-meta">📅 First published ${book.year}</div>` : ''}
-      <div class="modal-subjects">
-        ${book.subjects.length ? `<div style="margin-bottom:6px;font-size:0.8rem;color:var(--muted);">Subjects:</div>${book.subjects.map(s => `<span class="tag">${escHtml(s)}</span>`).join('')}` : ''}
+    const item = document.createElement('div');
+    item.className = 'shortlist-book';
+    item.innerHTML = `
+      <button class="btn-remove-shortlist" aria-label="Remove ${esc(book.title)} from shortlist" data-key="${escAttr(book.key)}">×</button>
+      <div class="shortlist-cover">
+        ${coverUrl
+          ? `<img src="${esc(coverUrl)}" alt="${esc(book.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">\n          <div class="shortlist-placeholder" style="display:none;"><span class="shortlist-initial">${esc(initial)}</span></div>`
+          : `<div class="shortlist-placeholder"><span class="shortlist-initial">${esc(initial)}</span></div>`
+        }
       </div>
-      <div class="modal-actions">
-        ${state.suggestions.find(b => b.key === key) ? `<button class="btn btn-primary" onclick="toggleShortlist('${escAttr(key)}');closeModal();">${isShortlisted ? '✕ Remove from Shortlist' : '⭐ Add to Shortlist'}</button>` : ''}
-        <a class="btn btn-secondary" href="https://openlibrary.org${escAttr(key)}" target="_blank" rel="noopener noreferrer">🔗 Open Library Page</a>
-      </div>`;
+      <div class="shortlist-book-title" title="${esc(book.title)}">${esc(book.title)}</div>
+      <div class="shortlist-vote-row">
+        <button class="btn-vote" aria-label="Vote for ${esc(book.title)}" data-key="${escAttr(book.key)}">+1</button>
+        <span class="vote-count" aria-label="${votes} votes">${votes}</span>
+      </div>
+    `;
 
-    document.getElementById('bookModal').classList.add('open');
-  }
+    item.querySelector('.btn-remove-shortlist').addEventListener('click', e => {
+      e.stopPropagation();
+      toggleShortlist(book);
+    });
 
-  function closeModal() {
-    document.getElementById('bookModal').classList.remove('open');
-  }
+    item.querySelector('.btn-vote').addEventListener('click', e => {
+      e.stopPropagation();
+      state.votes[book.key] = (state.votes[book.key] || 0) + 1;
+      saveState();
+      renderShortlist();
+      toast(`Vote for "${book.title}"!`, 'success');
+    });
 
-  document.getElementById('bookModal').addEventListener('click', e => {
-    if (e.target === document.getElementById('bookModal')) closeModal();
+    row.appendChild(item);
   });
+}
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
-  });
-
-  /* ================================================================
-     PREFERENCES SUMMARY
-  ================================================================ */
-  function showPrefSummary() {
-    const card = document.getElementById('prefSummaryCard');
-    const div = document.getElementById('prefSummary');
-    const p = state.prefs;
-    div.innerHTML = `
-      <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.82rem;">
-        <div><strong>Genres:</strong> ${p.genres.length ? p.genres.map(g => `<span class="tag genre">${g}</span>`).join('') : '<span class="tag">any</span>'}</div>
-        <div><strong>Themes:</strong> ${p.themes.length ? p.themes.map(t => `<span class="tag">${t}</span>`).join('') : '<span class="tag">any</span>'}</div>
-        <div><strong>Length:</strong> <span class="tag">${p.length}</span></div>
-        <div><strong>Era:</strong> <span class="tag">${p.era}</span></div>
-        ${p.avoid ? `<div><strong>Avoid:</strong> <span class="tag">${escHtml(p.avoid)}</span></div>` : ''}
-      </div>`;
-    card.style.display = 'block';
+// ── Share shortlist ───────────────────────────────────────────
+document.getElementById('btn-share').addEventListener('click', () => {
+  if (!state.shortlist.length) {
+    toast('Add books to shortlist first', 'error');
+    return;
   }
-
-  /* ================================================================
-     UTILITY
-  ================================================================ */
-  function escHtml(str) {
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  function escAttr(str) {
-    return String(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-  }
-
-  function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
-    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tabName}`));
-  }
-
-  /* ================================================================
-     INIT
-  ================================================================ */
-  function init() {
-    loadState();
-
-    // Restore member name
-    if (state.memberName) {
-      memberInput.value = state.memberName;
-      document.getElementById('memberAvatar').textContent = state.memberName[0].toUpperCase();
-    }
-
-    // Build genre / theme chips
-    buildChips('genreChips', GENRES, 'genre');
-    buildChips('themeChips', THEMES, 'theme');
-
-    // Restore chip selections
-    state.prefs.genres.forEach(g => {
-      const chip = document.querySelector(`#genreChips [data-val="${CSS.escape(g)}"]`);
-      if (chip) chip.classList.add('selected');
+  const club = state.clubName ? `${state.clubName} — ` : '';
+  const lines = state.shortlist.map((b, i) => `${i + 1}. ${b.title} by ${b.author}${state.votes[b.key] ? ` (${state.votes[b.key]} votes)` : ''}`);
+  const text = `${club}Book Club Shortlist:\n\n${lines.join('\n')}`;
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Shortlist copied to clipboard!', 'success'))
+    .catch(() => {
+      // Fallback: open share URL
+      const encoded = encodeURIComponent(text);
+      window.open(`mailto:?subject=${encodeURIComponent(club + 'Book Club Shortlist')}&body=${encoded}`);
     });
-    state.prefs.themes.forEach(t => {
-      const chip = document.querySelector(`#themeChips [data-val="${CSS.escape(t)}"]`);
-      if (chip) chip.classList.add('selected');
-    });
+});
 
-    // Restore length / era
-    document.querySelectorAll('[data-group="length"]').forEach(c => {
-      c.classList.toggle('selected', c.dataset.val === state.prefs.length);
-    });
-    document.querySelectorAll('[data-group="era"]').forEach(c => {
-      c.classList.toggle('selected', c.dataset.val === state.prefs.era);
-    });
+// ── Event wiring ──────────────────────────────────────────────
+document.getElementById('btn-find').addEventListener('click', findBooks);
+document.getElementById('btn-add-hist').addEventListener('click', addHistoryItem);
 
-    // Restore pace slider
-    document.getElementById('paceSlider').value = state.prefs.pace;
+document.getElementById('hist-title-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addHistoryItem();
+});
 
-    // Restore avoid input
-    if (state.prefs.avoid) document.getElementById('avoidInput').value = state.prefs.avoid;
+// ── Init ──────────────────────────────────────────────────────
+function init() {
+  loadState();
+  initClubName();
+  buildGenreChips();
+  initPace();
+  initStars();
+  renderHistoryList();
+  renderShortlist();
 
-    // Set default meeting date to today
-    document.getElementById('meetingDate').valueAsDate = new Date();
-
-    // Render persisted data
-    if (state.suggestions.length) renderSuggestions();
-    renderShortlist();
-    renderHistory();
-    renderMeetings();
-    renderDiscussionSelect();
-    updateMeetingSelect();
-    if (state.prefs.genres.length || state.prefs.themes.length) showPrefSummary();
+  if (state.suggestions.length) {
+    renderSuggestions();
   }
+}
 
-  init();
+init();
 </script>
 </body>
 </html>

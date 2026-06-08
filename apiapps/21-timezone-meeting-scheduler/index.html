@@ -1,1509 +1,1539 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Timezone Meeting Scheduler</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-
-    :root {
-  --bg: #0a0a0a;
-  --surface: #111111;
-  --surface2: #1a1a1a;
-  --border: rgba(255,255,255,0.08);
-  --accent: #ffffff;
-  --accent2: #3b82f6;
-  --text: #ededed;
-  --muted: #6b7280;
-  --green: #22c55e;
-  --red: #ef4444;
-  --yellow: #f59e0b;
-  --radius: 6px;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-body: 'Inter', system-ui, sans-serif;
-}
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--surface); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 18px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .logo-icon {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-
-    header h1 {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    header p {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-
-    .header-actions {
-      margin-left: auto;
-      display: flex;
-      gap: 8px;
-    }
-
-    /* ── Layout ── */
-    .app {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 24px 16px;
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 20px;
-    }
-
-    @media (max-width: 768px) {
-      .app { grid-template-columns: 1fr; }
-    }
-
-    /* ── Panel ── */
-    .panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-    }
-
-    .panel-title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .panel-title .badge {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 1px 8px;
-      font-size: 0.7rem;
-      color: var(--accent);
-    }
-
-    /* ── Buttons ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: none;
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s ease;
-      white-space: nowrap;
-    }
-
-    .btn:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
-    .btn-primary:hover { background: #7b73ff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,229,255,0.35); }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover { color: var(--text); border-color: var(--muted); background: var(--surface2); }
-
-    .btn-danger {
-      background: transparent;
-      color: var(--accent2);
-      border: 1px solid transparent;
-      padding: 4px 8px;
-      font-size: 0.8rem;
-    }
-    .btn-danger:hover { background: rgba(124,58,237,0.1); border-color: var(--accent2); }
-
-    .btn-green {
-      background: var(--green);
-      color: #0f1117;
-    }
-    .btn-green:hover { background: #52e8bb; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(67,217,173,0.35); }
-
-    .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-
-    /* ── Form fields ── */
-    label {
-      display: block;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 5px;
-    }
-
-    input[type="text"], input[type="date"], input[type="time"], select {
-      width: 100%;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      padding: 9px 12px;
-      font-size: 0.85rem;
-      transition: border-color 0.15s;
-      appearance: none;
-    }
-
-    input[type="text"]:focus,
-    input[type="date"]:focus,
-    input[type="time"]:focus,
-    select:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0,229,255,0.15);
-    }
-
-    input::placeholder { color: var(--muted); }
-
-    .field { margin-bottom: 14px; }
-
-    /* ── Participant card ── */
-    .participants-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 16px;
-      max-height: 380px;
-      overflow-y: auto;
-    }
-
-    .participant-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      animation: slideIn 0.22s ease;
-      transition: border-color 0.15s;
-    }
-
-    .participant-card:hover { border-color: var(--accent); }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .participant-avatar {
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.8rem;
-      font-weight: 700;
-      flex-shrink: 0;
-      color: #fff;
-    }
-
-    .participant-info { flex: 1; min-width: 0; }
-    .participant-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .participant-tz { font-size: 0.72rem; color: var(--muted); }
-    .participant-time { font-size: 0.8rem; font-weight: 600; color: var(--green); font-variant-numeric: tabular-nums; }
-
-    /* ── Add form ── */
-    .add-form {
-      background: var(--surface2);
-      border: 1px dashed var(--border);
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 14px;
-    }
-
-    .add-form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    /* ── Timezone search ── */
-    .tz-search-wrap { position: relative; }
-
-    .tz-dropdown {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0; right: 0;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      max-height: 200px;
-      overflow-y: auto;
-      z-index: 200;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      display: none;
-    }
-
-    .tz-dropdown.open { display: block; animation: fadeDown 0.15s ease; }
-
-    @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-4px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .tz-option {
-      padding: 8px 12px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: background 0.1s;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .tz-option:hover, .tz-option.focused { background: var(--surface2); }
-    .tz-option .tz-name { color: var(--text); }
-    .tz-option .tz-offset { color: var(--muted); font-size: 0.72rem; }
-
-    /* ── Timeline ── */
-    .timeline-wrap {
-      overflow-x: auto;
-      border-radius: 10px;
-    }
-
-    .timeline-header {
-      display: grid;
-      grid-template-columns: 120px repeat(24, minmax(36px, 1fr));
-      gap: 0;
-      font-size: 0.7rem;
-      color: var(--muted);
-      margin-bottom: 4px;
-      padding: 0 0 6px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .timeline-row {
-      display: grid;
-      grid-template-columns: 120px repeat(24, minmax(36px, 1fr));
-      gap: 0;
-      margin-bottom: 4px;
-      align-items: center;
-    }
-
-    .timeline-label {
-      font-size: 0.75rem;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      padding-right: 8px;
-    }
-
-    .timeline-cell {
-      height: 32px;
-      border-radius: 4px;
-      margin: 0 1px;
-      transition: all 0.15s;
-      position: relative;
-      cursor: default;
-    }
-
-    .cell-sleep   { background: rgba(46,51,80,0.4); }
-    .cell-work    { background: rgba(67,217,173,0.15); }
-    .cell-overlap { background: rgba(67,217,173,0.55); }
-    .cell-selected { outline: 2px solid var(--yellow); outline-offset: -2px; }
-
-    .timeline-cell:hover .cell-tooltip {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(-2px);
-    }
-
-    .cell-tooltip {
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%) translateY(0);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 9px;
-      font-size: 0.7rem;
-      white-space: nowrap;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.12s, transform 0.12s;
-      z-index: 50;
-      color: var(--text);
-    }
-
-    /* ── Overlap highlight row ── */
-    .overlap-row .timeline-cell { height: 24px; }
-
-    /* ── Best slots ── */
-    .slots-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .slot-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      cursor: pointer;
-      transition: all 0.18s;
-      position: relative;
-    }
-
-    .slot-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,229,255,0.2); }
-    .slot-card.selected { border-color: var(--green); background: rgba(67,217,173,0.07); }
-
-    .slot-time { font-size: 1rem; font-weight: 700; color: var(--green); }
-    .slot-utc  { font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; }
-    .slot-score { display: flex; gap: 3px; margin-top: 6px; }
-    .score-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
-    .score-dot.on { background: var(--green); }
-
-    /* ── Meeting config ── */
-    .meeting-config {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    /* ── Actions bar ── */
-    .actions-bar {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 16px;
-    }
-
-    /* ── Toast ── */
-    #toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 0.84rem;
-      color: var(--text);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-      z-index: 999;
-      max-width: 320px;
-      transition: opacity 0.25s, transform 0.25s;
-      opacity: 0;
-      transform: translateY(12px);
-      pointer-events: none;
-    }
-
-    #toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    #toast.success { border-left: 3px solid var(--green); }
-    #toast.error   { border-left: 3px solid var(--accent2); }
-    #toast.info    { border-left: 3px solid var(--accent); }
-
-    /* ── Empty state ── */
-    .empty-state {
-      text-align: center;
-      padding: 32px 16px;
-      color: var(--muted);
-    }
-
-    .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
-    .empty-state p { font-size: 0.85rem; line-height: 1.7; }
-
-    /* ── Legend ── */
-    .legend {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-bottom: 12px;
-    }
-
-    .legend-item { display: flex; align-items: center; gap: 5px; }
-    .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
-
-    /* ── Divider ── */
-    .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-
-    /* ── Highlight ── */
-    .highlight { color: var(--accent); }
-
-    /* ── UTC clock ── */
-    .utc-clock {
-      font-size: 0.72rem;
-      color: var(--muted);
-      font-variant-numeric: tabular-nums;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 3px 8px;
-    }
-
-    /* ── Section label ── */
-    .section-label {
-      font-size: 0.72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-
-    /* ── Spinner ── */
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner {
-      width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.2);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: inline-block;
-    }
-
-    /* ── Right column layout ── */
-    .right-col { display: flex; flex-direction: column; gap: 20px; }
-
-    /* ── Pulse dot ── */
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .live-dot {
-      width: 6px; height: 6px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-      display: inline-block;
-    }
-
-/* === Dev Tools v2 Design System === */
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overlap — Timezone Meeting Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Cobalt · nav: N9 */
+
+/* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+html { height: 100%; overflow-x: clip; }
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  min-height: 100vh;
-  line-height: 1.6;
-  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
+  height: 100%;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: 'Plus Jakarta Sans', 'DM Sans', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid oklch(52% 0.20 256); outline-offset: 2px; }
+
+/* ── Design tokens ── */
+:root {
+  --paper:         oklch(9% 0.025 250);
+  --paper-2:       oklch(13% 0.022 250);
+  --ink:           oklch(93% 0.008 250);
+  --ink-muted:     oklch(58% 0.012 250);
+  --accent:        oklch(52% 0.20 256);
+  --accent-subtle: oklch(18% 0.04 254);
+  --accent-line:   oklch(34% 0.10 254);
+  --border:        oklch(26% 0.018 250);
+  --success:       oklch(52% 0.18 155);
+  --warn:          oklch(60% 0.16 72);
+  --danger:        oklch(56% 0.20 25);
+  --radius-sm:     4px;
+  --radius-md:     8px;
+  --radius-lg:     12px;
+  --font-display:  'Fraunces', serif;
+  --font-body:     'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
-h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
-h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
-h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
-h3 { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-family: var(--font-body); }
-
-.card, .result, .output, .box, .info,
-[class*="card"], [class*="result"] {
-  background: var(--surface);
+/* ── N9 Edge-aligned nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  gap: 1rem;
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--accent); }
+.nav-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+.nav-page-label {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-utc {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  background: var(--paper-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  animation: toolsFade 0.25s ease both;
+  border-radius: var(--radius-md);
+  padding: 0.2rem 0.6rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+.nav-back:hover { color: var(--ink); }
+
+/* ── Layout ── */
+.app-shell {
+  margin-top: 52px;
+  min-height: calc(100vh - 52px);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  gap: 1.5rem;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.code, .value, .data, pre, code, .mono, .number, .ip, .hash, .url, .phone, .email {
-  font-family: var(--font-mono);
-  font-size: 0.88rem;
-  background: var(--surface2);
+/* ── Section wrapper ── */
+.section {
+  background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  color: var(--text);
-  word-break: break-all;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
-
-pre, .output-block, .terminal {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+.section-head {
   padding: 1rem 1.25rem;
-  overflow-x: auto;
-  color: var(--green);
-  line-height: 1.7;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--paper-2);
 }
-
-input, select, textarea {
-  background: var(--surface);
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-left: 2px solid var(--accent);
+  padding-left: 0.5rem;
+  color: var(--ink-muted);
+}
+.section-badge {
+  background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  padding: 0.65rem 1rem;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
+  border-radius: 20px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.section-body { padding: 1.25rem; }
+
+/* ── Team builder (top section) ── */
+.team-area {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 0;
+}
+.team-sidebar {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+.team-sidebar .section-head { border-bottom: 1px solid var(--border); }
+
+/* Add form */
+.add-form {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.field-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-left: 2px solid var(--accent);
+  padding-left: 0.5rem;
+  color: var(--ink-muted);
+  margin-bottom: 0.3rem;
+}
+.input-text {
   width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 0.75rem;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-input:focus, select:focus, textarea:focus {
+.input-text:focus {
   outline: none;
-  border-color: rgba(255,255,255,0.3);
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.20 256 / 0.10);
 }
+.input-text::placeholder { color: var(--ink-muted); }
 
-button, .btn, input[type="submit"], input[type="button"] {
-  background: var(--text);
-  color: var(--bg);
-  border: none;
-  border-radius: var(--radius);
-  padding: 0.65rem 1.5rem;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 0.88rem;
+/* Timezone autocomplete */
+.tz-wrap { position: relative; }
+.tz-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 300;
+  box-shadow: 0 8px 24px oklch(24% 0.020 258 / 0.12);
+  display: none;
+}
+.tz-dropdown.open { display: block; animation: fadeDown 0.14s var(--ease-out); }
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tz-opt {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
   cursor: pointer;
-  transition: transform 0.1s, opacity 0.1s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.1s;
 }
-button:hover { opacity: 0.9; }
-button:active { transform: scale(0.97); }
+.tz-opt:hover, .tz-opt.focused { background: var(--accent-subtle); }
+.tz-opt-name { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tz-opt-offset { color: var(--ink-muted); font-size: 0.7rem; flex-shrink: 0; }
 
-button.secondary, .btn-secondary {
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.tag, .badge, .status, .label {
-  display: inline-block;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  border-radius: 4px;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.72rem;
+/* Add button */
+.btn-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: var(--accent);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-family: var(--font-mono);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
 }
+.btn-add:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.20 256 / 0.28); }
+.btn-add:active { transform: translateY(0); box-shadow: none; }
 
-.valid, .success, .ok, .pass, .active { color: var(--green); }
-.invalid, .error, .fail, .danger { color: var(--red); }
-.warning, .pending { color: var(--yellow); }
-.info, .note { color: var(--accent2); }
+/* Member list */
+.member-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 120px;
+}
+.member-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  gap: 0.5rem;
+}
+.member-empty-icon { font-size: 2rem; opacity: 0.5; }
 
-.status-dot {
-  width: 8px; height: 8px;
+.member-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s;
+  animation: slideIn 0.2s var(--ease-out);
+}
+.member-card:hover { border-color: var(--accent-line); }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.member-avatar {
+  width: 32px; height: 32px;
   border-radius: 50%;
-  display: inline-block;
-  background: var(--green);
-  margin-right: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: oklch(100% 0 0);
 }
-.status-dot.red { background: var(--red); }
-.status-dot.yellow { background: var(--yellow); }
+.member-info { flex: 1; min-width: 0; }
+.member-name { font-size: 0.85rem; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member-tz { font-size: 0.7rem; color: var(--ink-muted); }
+.member-time {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.btn-remove {
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem;
+  border-radius: var(--radius-sm);
+  transition: color 0.12s, background 0.12s;
+  flex-shrink: 0;
+}
+.btn-remove:hover { color: var(--danger); background: oklch(55% 0.20 25 / 0.08); }
 
-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
-th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-weight: 600; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
-td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
-tr:hover td { background: var(--surface); }
+/* Right side: the overlap grid */
+.team-grid-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.grid-head { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--paper-2); display: flex; align-items: center; gap: 0.75rem; }
+.legend { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--ink-muted); }
+.legend-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 
-@keyframes toolsFade {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
+/* Grid container */
+.grid-scroll { overflow-x: auto; padding: 1rem 1.25rem; }
+.overlap-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 700px;
+}
+.grid-header-row {
+  display: grid;
+  grid-template-columns: 130px repeat(24, 1fr);
+  gap: 1px;
+  margin-bottom: 4px;
+}
+.grid-hour-label {
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  padding-bottom: 4px;
+}
+.grid-row {
+  display: grid;
+  grid-template-columns: 130px repeat(24, 1fr);
+  gap: 1px;
+  margin-bottom: 2px;
+}
+.grid-row-label {
+  font-size: 0.75rem;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-right: 0.5rem;
+  overflow: hidden;
+}
+.grid-row-label-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grid-cell {
+  height: 28px;
+  border-radius: 3px;
+  position: relative;
+  cursor: default;
+  transition: filter 0.1s;
+}
+.grid-cell:hover { filter: brightness(0.9); }
+.cell-work    { background: oklch(55% 0.14 155 / 0.20); }
+.cell-early   { background: oklch(62% 0.15 72 / 0.20); }
+.cell-off     { background: var(--paper-2); border: 1px solid var(--border); }
+.cell-now     { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* Tooltip */
+.grid-cell:hover .cell-tip {
+  opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(-2px);
+}
+.cell-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s, transform 0.12s;
+  z-index: 100;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+/* Overlap summary row */
+.grid-row.overlap-row .grid-cell { height: 10px; border-radius: 2px; }
+
+/* Empty grid state */
+.grid-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  gap: 0.5rem;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+.grid-empty-icon { font-size: 2rem; opacity: 0.4; }
+
+/* ── Suggestions section ── */
+.suggestions-section { margin-top: 0; }
+
+.suggestions-list {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.cursor::after { content: '▋'; animation: blink 1s step-end infinite; color: var(--green); }
-  </style>
+.suggestion-card {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+.suggestion-card:hover { border-color: var(--accent-line); box-shadow: 0 2px 12px oklch(52% 0.20 256 / 0.10); }
+.suggestion-card.selected { border-color: var(--accent); }
+
+.suggestion-rank {
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-2);
+  border-right: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+.suggestion-card.selected .suggestion-rank { background: var(--accent-subtle); color: var(--accent); }
+
+.suggestion-body { flex: 1; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.suggestion-time {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.suggestion-date { font-size: 0.75rem; color: var(--ink-muted); }
+.suggestion-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+.member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.1rem 0.5rem 0.1rem 0.3rem;
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+}
+.member-chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.member-chip strong { color: var(--ink); font-weight: 600; }
+
+.suggestion-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  flex-direction: column;
+  justify-content: center;
+  border-left: 1px solid var(--border);
+  background: var(--paper-2);
+}
+.btn-propose {
+  padding: 0.45rem 0.75rem;
+  background: var(--accent);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.btn-propose:hover { opacity: 0.85; }
+
+/* ── Meeting proposal card ── */
+.proposal-section { display: none; }
+.proposal-section.visible { display: block; }
+
+.proposal-card {
+  padding: 1.25rem;
+}
+.proposal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.proposal-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.proposal-utc { font-size: 0.875rem; color: var(--ink-muted); margin-top: 0.25rem; }
+.proposal-actions-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--paper-2);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btn-action:hover { border-color: var(--accent-line); background: var(--accent-subtle); color: var(--accent); }
+.btn-action.primary { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+.btn-action.primary:hover { opacity: 0.85; background: var(--accent); color: var(--paper); }
+
+.proposal-members {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+.proposal-member {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.proposal-member-info { flex: 1; min-width: 0; }
+.proposal-member-name { font-size: 0.85rem; font-weight: 600; color: var(--ink); }
+.proposal-member-tz { font-size: 0.7rem; color: var(--ink-muted); margin-top: 1px; }
+.proposal-member-time {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ── Empty suggestions state ── */
+.suggestions-empty {
+  padding: 2rem 1.25rem;
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.suggestions-empty-icon { font-size: 2rem; opacity: 0.4; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 600;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(24% 0.020 258 / 0.20);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  pointer-events: none;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+
+/* ── Live pulse dot ── */
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.live-dot {
+  width: 6px; height: 6px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .app-shell { padding: 0.75rem; gap: 0.75rem; }
+
+  .team-area { grid-template-columns: 1fr; }
+  .team-sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+  .form-row { grid-template-columns: 1fr; }
+
+  .proposal-header { flex-direction: column; }
+  .proposal-members { grid-template-columns: 1fr; }
+
+  .grid-scroll { padding: 0.75rem; }
+
+  .nav-page-label { display: none; }
+  .nav-sep { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .member-card { animation: none; }
+  .btn-add:hover { transform: none; box-shadow: none; }
+  .toast { transition: opacity 0.15s var(--ease-out); }
+  .live-dot { animation: none; }
+}
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo-icon" aria-hidden="true">🕐</div>
-  <div>
-    <h1>Timezone Meeting Scheduler</h1>
-    <p>Find the perfect overlap window for your global team</p>
-  </div>
-  <div class="header-actions">
-    <span class="utc-clock" id="utcClock" aria-live="polite" aria-label="Current UTC time">UTC —</span>
-    <a href="app.html" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#22c55e;color:#0f1117;border-radius:8px;font-size:0.82rem;font-weight:600;text-decoration:none;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" aria-label="Open new Overlap app">
-      Try new design →
-    </a>
-  </div>
-</header>
+<!-- N9 nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Overlap<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Meeting Scheduler</span>
+  <span class="nav-utc" id="navUtcClock" aria-live="polite" aria-label="Current UTC time">UTC --:--:--</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
 
-<main class="app">
-  <!-- LEFT PANEL: participants -->
-  <aside>
-    <div class="panel">
-      <div class="panel-title">
-        👥 Team Members
-        <span class="badge" id="participantCount">0 / 8</span>
-      </div>
+<div class="app-shell" style="margin-top: 52px;">
 
-      <div class="participants-list" id="participantsList" aria-label="Participant list">
-        <div class="empty-state" id="emptyParticipants">
-          <div class="icon">🌍</div>
-          <p>Add your team members below.<br>Find the perfect meeting window instantly.</p>
+  <!-- ── Team builder + overlap grid ── -->
+  <div class="section" style="overflow:visible;">
+    <div class="team-area">
+
+      <!-- Sidebar: add member + list -->
+      <div class="team-sidebar">
+        <div class="section-head">
+          <span class="section-title">Team Members</span>
+          <span class="section-badge" id="memberCount">0 members</span>
+          <span class="live-dot" style="margin-left:auto;" aria-label="Live clocks"></span>
+        </div>
+
+        <div class="add-form" role="form" aria-label="Add team member">
+          <div class="form-row">
+            <div>
+              <label class="field-label" for="nameInput">Name</label>
+              <input
+                type="text"
+                class="input-text"
+                id="nameInput"
+                placeholder="e.g. Alice"
+                maxlength="30"
+                autocomplete="off"
+                aria-label="Team member name"
+              >
+            </div>
+            <div>
+              <label class="field-label" for="tzSearch">Timezone / City</label>
+              <div class="tz-wrap">
+                <input
+                  type="text"
+                  class="input-text"
+                  id="tzSearch"
+                  placeholder="e.g. Tokyo, London…"
+                  autocomplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-controls="tzDropdown"
+                  aria-expanded="false"
+                  aria-label="Search timezone or city"
+                >
+                <div class="tz-dropdown" id="tzDropdown" role="listbox" aria-label="Timezone options"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-add" id="addBtn" aria-label="Add team member">
+            + Add Member
+          </button>
+        </div>
+
+        <div class="member-list" id="memberList" role="list" aria-label="Team members">
+          <div class="member-empty" id="memberEmpty">
+            <span class="member-empty-icon">🌍</span>
+            <span>Add team members to see live clocks and overlap windows.</span>
+          </div>
         </div>
       </div>
 
-      <!-- Add form -->
-      <div class="add-form" id="addForm" role="form" aria-label="Add participant">
-        <div class="add-form-row">
-          <div class="field">
-            <label for="nameInput">Name</label>
-            <input type="text" id="nameInput" placeholder="e.g. Alice" maxlength="30" autocomplete="off" />
-          </div>
-          <div class="field">
-            <label for="tzSearch">Timezone</label>
-            <div class="tz-search-wrap">
-              <input type="text" id="tzSearch" placeholder="Search…" autocomplete="off" aria-autocomplete="list" aria-controls="tzDropdown" role="combobox" aria-expanded="false" />
-              <div class="tz-dropdown" id="tzDropdown" role="listbox" aria-label="Timezone options"></div>
+      <!-- Right: 24h overlap grid -->
+      <div class="team-grid-area">
+        <div class="grid-head">
+          <span class="section-title">24h Overlap Grid</span>
+          <span class="section-badge">UTC baseline</span>
+          <div class="legend" style="margin-left: auto;">
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: oklch(55% 0.14 155 / 0.20);"></div>
+              <span>Working hours (9–18)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: oklch(62% 0.15 72 / 0.20);"></div>
+              <span>Early / late (7–9, 18–20)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: var(--paper-2); border: 1px solid var(--border);"></div>
+              <span>Off hours</span>
             </div>
           </div>
         </div>
-        <button class="btn btn-primary" id="addBtn" style="width:100%">
-          <span>+ Add Participant</span>
-        </button>
-      </div>
 
-      <hr class="divider" />
-
-      <!-- Meeting date/time window -->
-      <div class="panel-title">📅 Meeting Config</div>
-      <div class="meeting-config">
-        <div class="field">
-          <label for="meetingDate">Date</label>
-          <input type="date" id="meetingDate" />
-        </div>
-        <div class="field">
-          <label for="meetingDuration">Duration</label>
-          <select id="meetingDuration">
-            <option value="30">30 min</option>
-            <option value="60" selected>1 hour</option>
-            <option value="90">1.5 hours</option>
-            <option value="120">2 hours</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="workStart">Work hours</label>
-        <div style="display:flex; gap:8px; align-items:center">
-          <input type="time" id="workStart" value="09:00" style="flex:1" />
-          <span style="color:var(--muted); font-size:0.8rem;">to</span>
-          <input type="time" id="workEnd" value="18:00" style="flex:1" />
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- RIGHT COLUMN -->
-  <div class="right-col">
-    <!-- Timeline panel -->
-    <div class="panel" id="timelinePanel">
-      <div class="panel-title">
-        📊 24h Timeline
-        <span class="live-dot" aria-label="Live"></span>
-        <span style="margin-left:auto; font-size:0.78rem; color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0;">
-          UTC baseline
-        </span>
-      </div>
-
-      <div class="legend">
-        <div class="legend-item">
-          <div class="legend-swatch" style="background:rgba(67,217,173,0.55)"></div>
-          <span>Overlap</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-swatch" style="background:rgba(67,217,173,0.15)"></div>
-          <span>Working hours</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-swatch" style="background:rgba(46,51,80,0.4)"></div>
-          <span>Sleep / off</span>
-        </div>
-      </div>
-
-      <div class="timeline-wrap">
-        <div id="timelineContainer" aria-label="Timezone timeline">
-          <div class="empty-state">
-            <div class="icon">⏱️</div>
-            <p>Add participants to see the overlap timeline.</p>
+        <div class="grid-scroll">
+          <div id="gridContainer">
+            <div class="grid-empty" id="gridEmpty">
+              <span class="grid-empty-icon">⏱</span>
+              <span>Add team members to see the 24h overlap grid.</span>
+            </div>
           </div>
         </div>
       </div>
+
     </div>
+  </div>
 
-    <!-- Best slots panel -->
-    <div class="panel" id="slotsPanel">
-      <div class="panel-title">
-        ✨ Best Meeting Windows
-        <span class="badge" id="slotsCount">0 found</span>
-      </div>
-
-      <div id="slotsContainer">
-        <div class="empty-state">
-          <div class="icon">🔍</div>
-          <p>Best meeting windows will appear here once you add participants.</p>
-        </div>
-      </div>
-
-      <div class="actions-bar" id="actionsBar" style="display:none">
-        <button class="btn btn-green" id="exportIcsBtn" aria-label="Export meeting as .ics calendar invite">
-          📅 Export .ics
-        </button>
-        <button class="btn btn-ghost" id="copyLinkBtn" aria-label="Copy shareable link">
-          🔗 Copy Link
-        </button>
-        <button class="btn btn-ghost" id="clearBtn" aria-label="Clear all participants">
-          🗑 Clear All
-        </button>
+  <!-- ── Best meeting suggestions ── -->
+  <div class="section suggestions-section">
+    <div class="section-head">
+      <span class="section-title">Best Meeting Windows</span>
+      <span class="section-badge" id="suggestionsCount">—</span>
+      <span style="margin-left: auto; font-size: 0.75rem; color: var(--ink-muted);">Next 5 weekdays · top 3 slots</span>
+    </div>
+    <div id="suggestionsContainer">
+      <div class="suggestions-empty" id="suggestionsEmpty">
+        <span class="suggestions-empty-icon">🔍</span>
+        <span>Best meeting windows appear here once you add team members.</span>
       </div>
     </div>
   </div>
-</main>
 
-<!-- Toast notification -->
-<div id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <!-- ── Meeting proposal ── -->
+  <div class="section proposal-section" id="proposalSection">
+    <div class="section-head">
+      <span class="section-title">Meeting Proposal</span>
+      <span class="section-badge" id="proposalBadge">—</span>
+    </div>
+    <div class="proposal-card" id="proposalCard"></div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
 (function () {
-  'use strict';
+'use strict';
 
-  /* ─── Timezone database ─── */
-  const TIMEZONES = [
-    { id: 'Pacific/Honolulu',       label: 'Hawaii (HST)' },
-    { id: 'America/Anchorage',      label: 'Alaska (AKST)' },
-    { id: 'America/Los_Angeles',    label: 'Los Angeles / PST' },
-    { id: 'America/Denver',         label: 'Denver / MST' },
-    { id: 'America/Phoenix',        label: 'Phoenix (no DST)' },
-    { id: 'America/Chicago',        label: 'Chicago / CST' },
-    { id: 'America/New_York',       label: 'New York / EST' },
-    { id: 'America/Halifax',        label: 'Halifax (AST)' },
-    { id: 'America/Sao_Paulo',      label: 'São Paulo (BRT)' },
-    { id: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires (ART)' },
-    { id: 'America/Bogota',         label: 'Bogotá (COT)' },
-    { id: 'America/Lima',           label: 'Lima (PET)' },
-    { id: 'America/Caracas',        label: 'Caracas (VET)' },
-    { id: 'America/Santiago',       label: 'Santiago (CLT)' },
-    { id: 'America/Mexico_City',    label: 'Mexico City (CST)' },
-    { id: 'America/Toronto',        label: 'Toronto (EST)' },
-    { id: 'America/Vancouver',      label: 'Vancouver (PST)' },
-    { id: 'Europe/London',          label: 'London (GMT/BST)' },
-    { id: 'Europe/Dublin',          label: 'Dublin (IST)' },
-    { id: 'Europe/Lisbon',          label: 'Lisbon (WET)' },
-    { id: 'Europe/Paris',           label: 'Paris / CET' },
-    { id: 'Europe/Berlin',          label: 'Berlin (CET)' },
-    { id: 'Europe/Amsterdam',       label: 'Amsterdam (CET)' },
-    { id: 'Europe/Madrid',          label: 'Madrid (CET)' },
-    { id: 'Europe/Rome',            label: 'Rome (CET)' },
-    { id: 'Europe/Vienna',          label: 'Vienna (CET)' },
-    { id: 'Europe/Warsaw',          label: 'Warsaw (CET)' },
-    { id: 'Europe/Stockholm',       label: 'Stockholm (CET)' },
-    { id: 'Europe/Oslo',            label: 'Oslo (CET)' },
-    { id: 'Europe/Copenhagen',      label: 'Copenhagen (CET)' },
-    { id: 'Europe/Helsinki',        label: 'Helsinki (EET)' },
-    { id: 'Europe/Athens',          label: 'Athens (EET)' },
-    { id: 'Europe/Bucharest',       label: 'Bucharest (EET)' },
-    { id: 'Europe/Kiev',            label: 'Kyiv (EET)' },
-    { id: 'Europe/Moscow',          label: 'Moscow (MSK)' },
-    { id: 'Europe/Istanbul',        label: 'Istanbul (TRT)' },
-    { id: 'Africa/Cairo',           label: 'Cairo (EET)' },
-    { id: 'Africa/Lagos',           label: 'Lagos (WAT)' },
-    { id: 'Africa/Nairobi',         label: 'Nairobi (EAT)' },
-    { id: 'Africa/Johannesburg',    label: 'Johannesburg (SAST)' },
-    { id: 'Asia/Dubai',             label: 'Dubai (GST)' },
-    { id: 'Asia/Riyadh',            label: 'Riyadh (AST)' },
-    { id: 'Asia/Tehran',            label: 'Tehran (IRST)' },
-    { id: 'Asia/Karachi',           label: 'Karachi (PKT)' },
-    { id: 'Asia/Kolkata',           label: 'Kolkata / IST' },
-    { id: 'Asia/Dhaka',             label: 'Dhaka (BST)' },
-    { id: 'Asia/Bangkok',           label: 'Bangkok (ICT)' },
-    { id: 'Asia/Jakarta',           label: 'Jakarta (WIB)' },
-    { id: 'Asia/Singapore',         label: 'Singapore (SGT)' },
-    { id: 'Asia/Kuala_Lumpur',      label: 'Kuala Lumpur (MYT)' },
-    { id: 'Asia/Hong_Kong',         label: 'Hong Kong (HKT)' },
-    { id: 'Asia/Shanghai',          label: 'Shanghai (CST)' },
-    { id: 'Asia/Taipei',            label: 'Taipei (CST)' },
-    { id: 'Asia/Manila',            label: 'Manila (PHT)' },
-    { id: 'Asia/Seoul',             label: 'Seoul (KST)' },
-    { id: 'Asia/Tokyo',             label: 'Tokyo (JST)' },
-    { id: 'Asia/Vladivostok',       label: 'Vladivostok (VLAT)' },
-    { id: 'Australia/Perth',        label: 'Perth (AWST)' },
-    { id: 'Australia/Adelaide',     label: 'Adelaide (ACST)' },
-    { id: 'Australia/Sydney',       label: 'Sydney (AEST)' },
-    { id: 'Australia/Melbourne',    label: 'Melbourne (AEST)' },
-    { id: 'Australia/Brisbane',     label: 'Brisbane (AEST)' },
-    { id: 'Pacific/Auckland',       label: 'Auckland (NZST)' },
-    { id: 'Pacific/Fiji',           label: 'Fiji (FJT)' },
-    { id: 'UTC',                    label: 'UTC (Universal)' },
-  ];
+/* ── Timezone database ── */
+const TIMEZONES = [
+  { id: 'America/New_York',    label: 'New York',        city: 'New York' },
+  { id: 'America/Chicago',     label: 'Chicago',         city: 'Chicago' },
+  { id: 'America/Denver',      label: 'Denver',          city: 'Denver' },
+  { id: 'America/Los_Angeles', label: 'Los Angeles',     city: 'Los Angeles' },
+  { id: 'America/Toronto',     label: 'Toronto',         city: 'Toronto' },
+  { id: 'America/Vancouver',   label: 'Vancouver',       city: 'Vancouver' },
+  { id: 'America/Sao_Paulo',   label: 'São Paulo',       city: 'Sao Paulo' },
+  { id: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires', city: 'Buenos Aires' },
+  { id: 'America/Mexico_City', label: 'Mexico City',     city: 'Mexico City' },
+  { id: 'America/Bogota',      label: 'Bogotá',          city: 'Bogota' },
+  { id: 'Europe/London',       label: 'London',          city: 'London' },
+  { id: 'Europe/Paris',        label: 'Paris',           city: 'Paris' },
+  { id: 'Europe/Berlin',       label: 'Berlin',          city: 'Berlin' },
+  { id: 'Europe/Amsterdam',    label: 'Amsterdam',       city: 'Amsterdam' },
+  { id: 'Europe/Madrid',       label: 'Madrid',          city: 'Madrid' },
+  { id: 'Europe/Rome',         label: 'Rome',            city: 'Rome' },
+  { id: 'Europe/Stockholm',    label: 'Stockholm',       city: 'Stockholm' },
+  { id: 'Europe/Warsaw',       label: 'Warsaw',          city: 'Warsaw' },
+  { id: 'Europe/Athens',       label: 'Athens',          city: 'Athens' },
+  { id: 'Europe/Istanbul',     label: 'Istanbul',        city: 'Istanbul' },
+  { id: 'Europe/Moscow',       label: 'Moscow',          city: 'Moscow' },
+  { id: 'Asia/Dubai',          label: 'Dubai',           city: 'Dubai' },
+  { id: 'Asia/Karachi',        label: 'Karachi',         city: 'Karachi' },
+  { id: 'Asia/Kolkata',        label: 'Kolkata / Mumbai', city: 'Kolkata' },
+  { id: 'Asia/Dhaka',          label: 'Dhaka',           city: 'Dhaka' },
+  { id: 'Asia/Bangkok',        label: 'Bangkok',         city: 'Bangkok' },
+  { id: 'Asia/Singapore',      label: 'Singapore',       city: 'Singapore' },
+  { id: 'Asia/Shanghai',       label: 'Shanghai',        city: 'Shanghai' },
+  { id: 'Asia/Tokyo',          label: 'Tokyo',           city: 'Tokyo' },
+  { id: 'Asia/Seoul',          label: 'Seoul',           city: 'Seoul' },
+  { id: 'Asia/Hong_Kong',      label: 'Hong Kong',       city: 'Hong Kong' },
+  { id: 'Asia/Taipei',         label: 'Taipei',          city: 'Taipei' },
+  { id: 'Australia/Sydney',    label: 'Sydney',          city: 'Sydney' },
+  { id: 'Australia/Melbourne', label: 'Melbourne',       city: 'Melbourne' },
+  { id: 'Australia/Perth',     label: 'Perth',           city: 'Perth' },
+  { id: 'Pacific/Auckland',    label: 'Auckland',        city: 'Auckland' },
+  { id: 'Pacific/Honolulu',    label: 'Honolulu',        city: 'Honolulu' },
+  { id: 'Africa/Cairo',        label: 'Cairo',           city: 'Cairo' },
+  { id: 'Africa/Lagos',        label: 'Lagos',           city: 'Lagos' },
+  { id: 'Africa/Nairobi',      label: 'Nairobi',         city: 'Nairobi' },
+  { id: 'Africa/Johannesburg', label: 'Johannesburg',    city: 'Johannesburg' },
+];
 
-  const AVATAR_COLORS = [
-    '#6c63ff','#ff6584','#43d9ad','#f7c948',
-    '#60a5fa','#f97316','#a78bfa','#34d399'
-  ];
+/* City aliases — allow searching by common names */
+const ALIASES = {
+  'new york': 'America/New_York',
+  'nyc': 'America/New_York',
+  'chicago': 'America/Chicago',
+  'denver': 'America/Denver',
+  'la': 'America/Los_Angeles',
+  'los angeles': 'America/Los_Angeles',
+  'toronto': 'America/Toronto',
+  'vancouver': 'America/Vancouver',
+  'sao paulo': 'America/Sao_Paulo',
+  'buenos aires': 'America/Argentina/Buenos_Aires',
+  'mexico city': 'America/Mexico_City',
+  'bogota': 'America/Bogota',
+  'london': 'Europe/London',
+  'paris': 'Europe/Paris',
+  'berlin': 'Europe/Berlin',
+  'amsterdam': 'Europe/Amsterdam',
+  'madrid': 'Europe/Madrid',
+  'rome': 'Europe/Rome',
+  'stockholm': 'Europe/Stockholm',
+  'warsaw': 'Europe/Warsaw',
+  'athens': 'Europe/Athens',
+  'istanbul': 'Europe/Istanbul',
+  'moscow': 'Europe/Moscow',
+  'dubai': 'Asia/Dubai',
+  'karachi': 'Asia/Karachi',
+  'kolkata': 'Asia/Kolkata',
+  'mumbai': 'Asia/Kolkata',
+  'india': 'Asia/Kolkata',
+  'dhaka': 'Asia/Dhaka',
+  'bangkok': 'Asia/Bangkok',
+  'singapore': 'Asia/Singapore',
+  'shanghai': 'Asia/Shanghai',
+  'beijing': 'Asia/Shanghai',
+  'tokyo': 'Asia/Tokyo',
+  'japan': 'Asia/Tokyo',
+  'seoul': 'Asia/Seoul',
+  'korea': 'Asia/Seoul',
+  'hong kong': 'Asia/Hong_Kong',
+  'taipei': 'Asia/Taipei',
+  'taiwan': 'Asia/Taipei',
+  'sydney': 'Australia/Sydney',
+  'melbourne': 'Australia/Melbourne',
+  'perth': 'Australia/Perth',
+  'auckland': 'Pacific/Auckland',
+  'honolulu': 'Pacific/Honolulu',
+  'hawaii': 'Pacific/Honolulu',
+  'cairo': 'Africa/Cairo',
+  'lagos': 'Africa/Lagos',
+  'nairobi': 'Africa/Nairobi',
+  'johannesburg': 'Africa/Johannesburg',
+};
 
-  /* ─── State ─── */
-  let participants = [];
-  let selectedSlotIndex = null;
-  let selectedTzId = '';
-  let dropdownFocusIdx = -1;
+const AVATAR_COLORS = [
+  '#4a7c59','#c97b4b','#5b7fa6','#8c5c9e',
+  '#b34d4d','#4d8080','#7a6b3d','#3d6b6b',
+];
 
-  /* ─── DOM refs ─── */
-  const participantsList   = document.getElementById('participantsList');
-  const emptyParticipants  = document.getElementById('emptyParticipants');
-  const participantCount   = document.getElementById('participantCount');
-  const nameInput          = document.getElementById('nameInput');
-  const tzSearch           = document.getElementById('tzSearch');
-  const tzDropdown         = document.getElementById('tzDropdown');
-  const addBtn             = document.getElementById('addBtn');
-  const meetingDate        = document.getElementById('meetingDate');
-  const meetingDuration    = document.getElementById('meetingDuration');
-  const workStart          = document.getElementById('workStart');
-  const workEnd            = document.getElementById('workEnd');
-  const timelineContainer  = document.getElementById('timelineContainer');
-  const slotsContainer     = document.getElementById('slotsContainer');
-  const slotsCount         = document.getElementById('slotsCount');
-  const actionsBar         = document.getElementById('actionsBar');
-  const exportIcsBtn       = document.getElementById('exportIcsBtn');
-  const copyLinkBtn        = document.getElementById('copyLinkBtn');
-  const clearBtn           = document.getElementById('clearBtn');
-  const utcClock           = document.getElementById('utcClock');
-  const toast              = document.getElementById('toast');
+/* ── State ── */
+let members = loadMembers();
+let selectedProposal = null;
+let filteredTzs = [];
+let selectedTzId = '';
+let ddFocusIdx = -1;
 
-  /* ─── Toast ─── */
-  let toastTimer = null;
-  function showToast(msg, type = 'info', duration = 3000) {
-    clearTimeout(toastTimer);
-    toast.textContent = msg;
-    toast.className = `show ${type}`;
-    toastTimer = setTimeout(() => { toast.className = ''; }, duration);
-  }
+/* ── DOM ── */
+const nameInput      = document.getElementById('nameInput');
+const tzSearch       = document.getElementById('tzSearch');
+const tzDropdown     = document.getElementById('tzDropdown');
+const addBtn         = document.getElementById('addBtn');
+const memberList     = document.getElementById('memberList');
+const memberEmpty    = document.getElementById('memberEmpty');
+const memberCountEl  = document.getElementById('memberCount');
+const gridContainer  = document.getElementById('gridContainer');
+const gridEmpty      = document.getElementById('gridEmpty');
+const suggestionsContainer = document.getElementById('suggestionsContainer');
+const suggestionsCount     = document.getElementById('suggestionsCount');
+const suggestionsEmpty     = document.getElementById('suggestionsEmpty');
+const proposalSection      = document.getElementById('proposalSection');
+const proposalCard         = document.getElementById('proposalCard');
+const proposalBadge        = document.getElementById('proposalBadge');
+const navUtcClock          = document.getElementById('navUtcClock');
+const toastEl              = document.getElementById('toast');
 
-  /* ─── UTC Clock ─── */
-  function updateClock() {
+/* ── localStorage ── */
+function loadMembers() {
+  try { return JSON.parse(localStorage.getItem('overlap_members') || '[]'); } catch { return []; }
+}
+function saveMembers() {
+  localStorage.setItem('overlap_members', JSON.stringify(members));
+}
+
+/* ── Toast ── */
+let toastTimer;
+function showToast(msg, type = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 3200);
+}
+
+/* ── UTC nav clock ── */
+function tickNavClock() {
+  const now = new Date();
+  const hh = String(now.getUTCHours()).padStart(2, '0');
+  const mm = String(now.getUTCMinutes()).padStart(2, '0');
+  const ss = String(now.getUTCSeconds()).padStart(2, '0');
+  navUtcClock.textContent = `UTC ${hh}:${mm}:${ss}`;
+}
+tickNavClock();
+setInterval(tickNavClock, 1000);
+
+/* ── Timezone helpers ── */
+function getOffsetMinutes(tzId) {
+  try {
     const now = new Date();
-    const hh = String(now.getUTCHours()).padStart(2, '0');
-    const mm = String(now.getUTCMinutes()).padStart(2, '0');
-    const ss = String(now.getUTCSeconds()).padStart(2, '0');
-    utcClock.textContent = `UTC ${hh}:${mm}:${ss}`;
-  }
-  updateClock();
-  setInterval(updateClock, 1000);
+    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate  = new Date(now.toLocaleString('en-US', { timeZone: tzId }));
+    return Math.round((tzDate - utcDate) / 60000);
+  } catch { return 0; }
+}
 
-  /* ─── Timezone helpers ─── */
-  function getOffsetMinutes(tzId, date) {
-    try {
-      const ref = date ? new Date(date) : new Date();
-      // Compare local wall time in tz vs UTC
-      const utcDate = new Date(ref.toLocaleString('en-US', { timeZone: 'UTC' }));
-      const tzDate  = new Date(ref.toLocaleString('en-US', { timeZone: tzId }));
-      return Math.round((tzDate - utcDate) / 60000);
-    } catch (e) {
-      return 0;
+function formatOffset(mins) {
+  const sign = mins >= 0 ? '+' : '-';
+  const abs = Math.abs(mins);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return `UTC${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+function getLocalTimeStr(tzId) {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tzId, hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(new Date());
+  } catch { return '--:--'; }
+}
+
+function getLocalHour(tzId, utcHour) {
+  // Given UTC hour 0-23, what local hour does it correspond to?
+  const offsetMins = getOffsetMinutes(tzId);
+  return ((utcHour * 60 + offsetMins) % 1440 + 1440) % 1440;
+}
+
+function localHourMinStr(localMins) {
+  const h = Math.floor(localMins / 60);
+  const m = localMins % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+/* Cell type: 'work' | 'early' | 'off' */
+function cellType(localMins) {
+  const h = Math.floor(localMins / 60);
+  if (h >= 9 && h < 18) return 'work';
+  if ((h >= 7 && h < 9) || (h >= 18 && h < 20)) return 'early';
+  return 'off';
+}
+
+/* ── Timezone search ── */
+function renderDropdown(query) {
+  const q = query.toLowerCase().trim();
+
+  // Check aliases first
+  const aliasId = ALIASES[q];
+
+  if (q === '') {
+    filteredTzs = TIMEZONES;
+  } else {
+    filteredTzs = TIMEZONES.filter(t =>
+      t.label.toLowerCase().includes(q) ||
+      t.city.toLowerCase().includes(q) ||
+      t.id.toLowerCase().includes(q) ||
+      (aliasId && t.id === aliasId)
+    );
+    // Put alias match first
+    if (aliasId) {
+      const aliasIdx = filteredTzs.findIndex(t => t.id === aliasId);
+      if (aliasIdx > 0) {
+        const [item] = filteredTzs.splice(aliasIdx, 1);
+        filteredTzs.unshift(item);
+      }
     }
   }
 
-  function formatOffset(mins) {
-    const sign = mins >= 0 ? '+' : '-';
-    const abs = Math.abs(mins);
-    const h = Math.floor(abs / 60);
-    const m = abs % 60;
-    return `UTC${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-  }
-
-  function getLocalTimeStr(tzId) {
-    try {
-      return new Intl.DateTimeFormat('en-US', {
-        timeZone: tzId,
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      }).format(new Date());
-    } catch (e) {
-      return '--:--';
-    }
-  }
-
-  function tzLabel(tzId) {
-    const found = TIMEZONES.find(t => t.id === tzId);
-    return found ? found.label : tzId;
-  }
-
-  /* ─── Timezone search ─── */
-  let filteredTzs = [];
-
-  function renderDropdown(query) {
-    const q = query.toLowerCase().trim();
-    filteredTzs = q
-      ? TIMEZONES.filter(t =>
-          t.label.toLowerCase().includes(q) ||
-          t.id.toLowerCase().includes(q))
-      : TIMEZONES;
-
-    const ref = new Date();
-    tzDropdown.innerHTML = '';
-    filteredTzs.slice(0, 12).forEach((tz, i) => {
-      const offset = getOffsetMinutes(tz.id, ref);
+  tzDropdown.innerHTML = '';
+  const shown = filteredTzs.slice(0, 10);
+  if (shown.length === 0) {
+    tzDropdown.innerHTML = `<div class="tz-opt" style="color:var(--ink-muted)">No matches</div>`;
+  } else {
+    shown.forEach((tz) => {
+      const offset = getOffsetMinutes(tz.id);
       const div = document.createElement('div');
-      div.className = 'tz-option';
+      div.className = 'tz-opt';
       div.setAttribute('role', 'option');
-      div.setAttribute('aria-selected', selectedTzId === tz.id ? 'true' : 'false');
-      div.innerHTML = `<span class="tz-name">${tz.label}</span><span class="tz-offset">${formatOffset(offset)}</span>`;
-      div.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        selectTz(tz);
-      });
+      div.innerHTML = `<span class="tz-opt-name">${tz.label}</span><span class="tz-opt-offset">${formatOffset(offset)}</span>`;
+      div.addEventListener('mousedown', (e) => { e.preventDefault(); selectTz(tz); });
       tzDropdown.appendChild(div);
     });
-
-    if (filteredTzs.length === 0) {
-      tzDropdown.innerHTML = `<div class="tz-option" style="color:var(--muted)">No match found</div>`;
-    }
-
-    dropdownFocusIdx = -1;
   }
+  ddFocusIdx = -1;
+}
 
-  function selectTz(tz) {
-    selectedTzId = tz.id;
-    tzSearch.value = tz.label;
-    closeDropdown();
-  }
+function selectTz(tz) {
+  selectedTzId = tz.id;
+  tzSearch.value = tz.label;
+  closeDd();
+}
 
-  function openDropdown() {
-    renderDropdown(tzSearch.value);
-    tzDropdown.classList.add('open');
-    tzSearch.setAttribute('aria-expanded', 'true');
-  }
+function openDd() {
+  renderDropdown(tzSearch.value);
+  tzDropdown.classList.add('open');
+  tzSearch.setAttribute('aria-expanded', 'true');
+}
+function closeDd() {
+  tzDropdown.classList.remove('open');
+  tzSearch.setAttribute('aria-expanded', 'false');
+  ddFocusIdx = -1;
+}
 
-  function closeDropdown() {
-    tzDropdown.classList.remove('open');
-    tzSearch.setAttribute('aria-expanded', 'false');
-    dropdownFocusIdx = -1;
-  }
+tzSearch.addEventListener('focus', openDd);
+tzSearch.addEventListener('input', () => {
+  selectedTzId = '';
+  renderDropdown(tzSearch.value);
+  tzDropdown.classList.add('open');
+});
+tzSearch.addEventListener('blur', () => setTimeout(closeDd, 160));
+tzSearch.addEventListener('keydown', (e) => {
+  const opts = tzDropdown.querySelectorAll('.tz-opt');
+  if (!opts.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); ddFocusIdx = Math.min(ddFocusIdx + 1, opts.length - 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); ddFocusIdx = Math.max(ddFocusIdx - 1, 0); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const idx = ddFocusIdx >= 0 ? ddFocusIdx : 0;
+    if (filteredTzs[idx]) selectTz(filteredTzs[idx]);
+  } else if (e.key === 'Escape') { closeDd(); return; }
+  else return;
+  opts.forEach((o, i) => o.classList.toggle('focused', i === ddFocusIdx));
+  if (ddFocusIdx >= 0) opts[ddFocusIdx].scrollIntoView({ block: 'nearest' });
+});
 
-  tzSearch.addEventListener('focus', openDropdown);
-  tzSearch.addEventListener('input', () => {
-    selectedTzId = '';
-    renderDropdown(tzSearch.value);
-    if (!tzDropdown.classList.contains('open')) tzDropdown.classList.add('open');
-  });
-  tzSearch.addEventListener('blur', () => setTimeout(closeDropdown, 150));
+/* ── Add member ── */
+function addMember() {
+  const name = nameInput.value.trim();
+  if (!name) { showToast('Please enter a name.', 'error'); nameInput.focus(); return; }
 
-  tzSearch.addEventListener('keydown', (e) => {
-    const opts = tzDropdown.querySelectorAll('.tz-option');
-    if (!opts.length) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      dropdownFocusIdx = Math.min(dropdownFocusIdx + 1, opts.length - 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      dropdownFocusIdx = Math.max(dropdownFocusIdx - 1, 0);
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      const idx = dropdownFocusIdx >= 0 ? dropdownFocusIdx : 0;
-      const tz = filteredTzs[idx];
-      if (tz) selectTz(tz);
-    } else if (e.key === 'Escape') {
-      closeDropdown();
+  // Try alias lookup if no direct selection
+  if (!selectedTzId) {
+    const q = tzSearch.value.toLowerCase().trim();
+    const aliasId = ALIASES[q];
+    if (aliasId) {
+      selectedTzId = aliasId;
     } else {
+      showToast('Please select a timezone from the dropdown.', 'error');
+      tzSearch.focus();
       return;
     }
+  }
 
-    opts.forEach((o, i) => o.classList.toggle('focused', i === dropdownFocusIdx));
-    if (dropdownFocusIdx >= 0) opts[dropdownFocusIdx].scrollIntoView({ block: 'nearest' });
+  if (members.length >= 10) { showToast('Maximum 10 members reached.', 'error'); return; }
+  if (members.some(m => m.name.toLowerCase() === name.toLowerCase() && m.tzId === selectedTzId)) {
+    showToast('This member already exists.', 'error'); return;
+  }
+
+  const tz = TIMEZONES.find(t => t.id === selectedTzId);
+  members.push({
+    id: Date.now(),
+    name,
+    tzId: selectedTzId,
+    tzLabel: tz ? tz.label : selectedTzId,
+    color: AVATAR_COLORS[members.length % AVATAR_COLORS.length],
   });
-
-  /* ─── Add participant ─── */
-  function addParticipant() {
-    const name = nameInput.value.trim();
-    if (!name) { showToast('Please enter a name.', 'error'); nameInput.focus(); return; }
-    if (!selectedTzId) { showToast('Please select a timezone.', 'error'); tzSearch.focus(); return; }
-    if (participants.length >= 8) { showToast('Maximum 8 participants reached.', 'error'); return; }
-    if (participants.some(p => p.name.toLowerCase() === name.toLowerCase() && p.tzId === selectedTzId)) {
-      showToast('This participant already exists.', 'error'); return;
-    }
-
-    const colorIdx = participants.length % AVATAR_COLORS.length;
-    participants.push({
-      id: Date.now(),
-      name,
-      tzId: selectedTzId,
-      tzLabel: tzLabel(selectedTzId),
-      color: AVATAR_COLORS[colorIdx]
-    });
-
-    nameInput.value = '';
-    tzSearch.value = '';
-    selectedTzId = '';
-    nameInput.focus();
-
-    showToast(`${name} added!`, 'success');
-    render();
-  }
-
-  addBtn.addEventListener('click', addParticipant);
-  nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addParticipant(); });
-
-  /* ─── Remove participant ─── */
-  function removeParticipant(id) {
-    const p = participants.find(x => x.id === id);
-    participants = participants.filter(x => x.id !== id);
-    if (p) showToast(`${p.name} removed.`, 'info');
-    if (selectedSlotIndex !== null) selectedSlotIndex = null;
-    render();
-  }
-
-  /* ─── Render participants list ─── */
-  function renderParticipants() {
-    participantCount.textContent = `${participants.length} / 8`;
-
-    // Remove old cards (keep emptyState)
-    const cards = participantsList.querySelectorAll('.participant-card');
-    cards.forEach(c => c.remove());
-
-    if (participants.length === 0) {
-      emptyParticipants.style.display = '';
-      return;
-    }
-    emptyParticipants.style.display = 'none';
-
-    participants.forEach(p => {
-      const card = document.createElement('div');
-      card.className = 'participant-card';
-      card.setAttribute('role', 'listitem');
-      const initials = p.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-      const localTime = getLocalTimeStr(p.tzId);
-      const offset = getOffsetMinutes(p.tzId, new Date());
-
-      card.innerHTML = `
-        <div class="participant-avatar" style="background:${p.color}" aria-hidden="true">${initials}</div>
-        <div class="participant-info">
-          <div class="participant-name" title="${p.name}">${p.name}</div>
-          <div class="participant-tz">${p.tzLabel} &bull; ${formatOffset(offset)}</div>
-        </div>
-        <span class="participant-time">${localTime}</span>
-        <button class="btn btn-danger" data-id="${p.id}" aria-label="Remove ${p.name}">✕</button>
-      `;
-      card.querySelector('button').addEventListener('click', () => removeParticipant(p.id));
-      participantsList.appendChild(card);
-    });
-  }
-
-  /* ─── Build timeline data ─── */
-  function getWorkHours() {
-    const [sh, sm] = workStart.value.split(':').map(Number);
-    const [eh, em] = workEnd.value.split(':').map(Number);
-    return { startMin: sh * 60 + sm, endMin: eh * 60 + em };
-  }
-
-  function buildTimeline() {
-    const date = meetingDate.value ? new Date(`${meetingDate.value}T12:00:00Z`) : new Date();
-    const { startMin, endMin } = getWorkHours();
-
-    return participants.map(p => {
-      const offsetMins = getOffsetMinutes(p.tzId, date);
-      // cells[h] = type of hour h in UTC (0..23)
-      const cells = Array.from({ length: 24 }, (_, h) => {
-        const localMin = ((h * 60 + offsetMins) % 1440 + 1440) % 1440;
-        return (localMin >= startMin && localMin < endMin) ? 'work' : 'sleep';
-      });
-      return { participant: p, cells, offsetMins };
-    });
-  }
-
-  function computeOverlap(rows) {
-    return Array.from({ length: 24 }, (_, h) =>
-      rows.length > 0 && rows.every(r => r.cells[h] === 'work')
-    );
-  }
-
-  /* ─── Best slots ─── */
-  function findBestSlots(rows) {
-    const duration = parseInt(meetingDuration.value) / 60; // in hours (may be fractional)
-    const overlapHours = Array.from({ length: 24 }, (_, h) =>
-      rows.length > 0 && rows.every(r => r.cells[h] === 'work')
-    );
-
-    const slots = [];
-    const durHours = Math.ceil(parseInt(meetingDuration.value) / 60);
-
-    for (let h = 0; h <= 24 - durHours; h++) {
-      let fits = true;
-      for (let d = 0; d < durHours; d++) {
-        if (!overlapHours[(h + d) % 24]) { fits = false; break; }
-      }
-      if (fits) {
-        // Score: penalize early morning / very late
-        const score = h >= 8 && h <= 19 ? 5 : h >= 6 && h <= 21 ? 3 : 1;
-        slots.push({ utcHour: h, score });
-      }
-    }
-
-    // Deduplicate & sort by score desc
-    return slots.sort((a, b) => b.score - a.score).slice(0, 6);
-  }
-
-  /* ─── Render timeline ─── */
-  function renderTimeline() {
-    if (participants.length === 0) {
-      timelineContainer.innerHTML = `
-        <div class="empty-state">
-          <div class="icon">⏱️</div>
-          <p>Add participants to see the overlap timeline.</p>
-        </div>`;
-      return;
-    }
-
-    const rows = buildTimeline();
-    const overlap = computeOverlap(rows);
-    const date = meetingDate.value ? new Date(`${meetingDate.value}T12:00:00Z`) : new Date();
-
-    let html = '';
-
-    // Header row
-    html += `<div class="timeline-header">`;
-    html += `<div></div>`;
-    for (let h = 0; h < 24; h++) {
-      html += `<div style="text-align:center">${String(h).padStart(2,'0')}</div>`;
-    }
-    html += `</div>`;
-
-    // Participant rows
-    rows.forEach(({ participant: p, cells }) => {
-      const initials = p.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-      html += `<div class="timeline-row">`;
-      html += `<div class="timeline-label" title="${p.name}">${initials} ${p.name.split(' ')[0]}</div>`;
-      cells.forEach((type, h) => {
-        const isOverlap = overlap[h] && type === 'work';
-        const cellClass = isOverlap ? 'cell-overlap' : (type === 'work' ? 'cell-work' : 'cell-sleep');
-        const localHour = (((h * 60 + getOffsetMinutes(p.tzId, date)) % 1440) + 1440) % 1440;
-        const lh = Math.floor(localHour / 60);
-        const lm = localHour % 60;
-        const localStr = `${String(lh).padStart(2,'0')}:${String(lm).padStart(2,'0')}`;
-        html += `<div class="timeline-cell ${cellClass}" role="gridcell" aria-label="UTC ${String(h).padStart(2,'0')}:00 = ${p.name} ${localStr}">
-          <div class="cell-tooltip">UTC ${String(h).padStart(2,'0')}:00 → ${localStr} local</div>
-        </div>`;
-      });
-      html += `</div>`;
-    });
-
-    // Overlap summary row
-    html += `<div class="timeline-row overlap-row" aria-label="Overlap row">`;
-    html += `<div class="timeline-label" style="color:var(--green);font-size:0.7rem">Overlap</div>`;
-    overlap.forEach((isOverlap, h) => {
-      const cls = isOverlap ? 'cell-overlap' : 'cell-sleep';
-      html += `<div class="timeline-cell ${cls}" aria-label="${isOverlap ? `Hour ${h} overlaps` : `Hour ${h} no overlap`}"></div>`;
-    });
-    html += `</div>`;
-
-    timelineContainer.innerHTML = html;
-  }
-
-  /* ─── Render best slots ─── */
-  function renderSlots() {
-    if (participants.length === 0) {
-      slotsContainer.innerHTML = `
-        <div class="empty-state">
-          <div class="icon">🔍</div>
-          <p>Best meeting windows will appear here once you add participants.</p>
-        </div>`;
-      slotsCount.textContent = '0 found';
-      actionsBar.style.display = 'none';
-      return;
-    }
-
-    const rows = buildTimeline();
-    const slots = findBestSlots(rows);
-    const date = meetingDate.value ? new Date(`${meetingDate.value}T12:00:00Z`) : new Date();
-    const dur = parseInt(meetingDuration.value);
-
-    slotsCount.textContent = `${slots.length} found`;
-
-    if (slots.length === 0) {
-      slotsContainer.innerHTML = `
-        <div class="empty-state">
-          <div class="icon">😔</div>
-          <p>No overlap found with current work hours.<br>Try adjusting the work hours window.</p>
-        </div>`;
-      actionsBar.style.display = 'flex';
-      return;
-    }
-
-    const grid = document.createElement('div');
-    grid.className = 'slots-grid';
-
-    slots.forEach((slot, i) => {
-      const card = document.createElement('div');
-      card.className = `slot-card${selectedSlotIndex === i ? ' selected' : ''}`;
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('role', 'button');
-      card.setAttribute('aria-pressed', selectedSlotIndex === i ? 'true' : 'false');
-      card.setAttribute('aria-label', `Select meeting slot at UTC ${String(slot.utcHour).padStart(2,'0')}:00`);
-
-      const endHour = (slot.utcHour + Math.ceil(dur / 60)) % 24;
-
-      // Build per-participant local times
-      let localList = participants.map(p => {
-        const localMin = ((slot.utcHour * 60 + getOffsetMinutes(p.tzId, date)) % 1440 + 1440) % 1440;
-        const lh = Math.floor(localMin / 60);
-        const lm = localMin % 60;
-        return `<div style="font-size:0.7rem;color:var(--muted)">${p.name.split(' ')[0]}: <strong style="color:var(--text)">${String(lh).padStart(2,'0')}:${String(lm).padStart(2,'0')}</strong></div>`;
-      }).join('');
-
-      card.innerHTML = `
-        <div class="slot-time">UTC ${String(slot.utcHour).padStart(2,'0')}:00 – ${String(endHour).padStart(2,'0')}:00</div>
-        <div class="slot-utc">${dur} min meeting</div>
-        ${localList}
-        <div class="slot-score">
-          ${[1,2,3,4,5].map(d => `<div class="score-dot${d <= slot.score ? ' on' : ''}"></div>`).join('')}
-        </div>
-      `;
-
-      card.addEventListener('click', () => {
-        selectedSlotIndex = selectedSlotIndex === i ? null : i;
-        renderSlots();
-        renderTimeline();
-        markSelectedHour(slot.utcHour);
-      });
-      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } });
-
-      grid.appendChild(card);
-    });
-
-    slotsContainer.innerHTML = '';
-    slotsContainer.appendChild(grid);
-    actionsBar.style.display = 'flex';
-  }
-
-  function markSelectedHour(utcHour) {
-    document.querySelectorAll('.timeline-cell').forEach(c => c.classList.remove('cell-selected'));
-    if (selectedSlotIndex === null) return;
-
-    const dur = Math.ceil(parseInt(meetingDuration.value) / 60);
-    const rows = timelineContainer.querySelectorAll('.timeline-row:not(.overlap-row)');
-    rows.forEach(row => {
-      const cells = row.querySelectorAll('.timeline-cell');
-      for (let d = 0; d < dur; d++) {
-        const h = (utcHour + d) % 24;
-        if (cells[h]) cells[h].classList.add('cell-selected');
-      }
-    });
-  }
-
-  /* ─── Export ICS ─── */
-  function exportIcs() {
-    const slots = findBestSlots(buildTimeline());
-    if (selectedSlotIndex === null && slots.length === 0) {
-      showToast('No meeting slot selected.', 'error'); return;
-    }
-
-    const slot = slots[selectedSlotIndex ?? 0];
-    if (!slot) { showToast('Please select a slot first.', 'error'); return; }
-
-    const dateStr = meetingDate.value || new Date().toISOString().slice(0, 10);
-    const [yyyy, mm, dd] = dateStr.split('-');
-    const dur = parseInt(meetingDuration.value);
-    const hh = String(slot.utcHour).padStart(2, '0');
-    const endHour = slot.utcHour + Math.floor(dur / 60);
-    const endMin  = dur % 60;
-
-    const dtStart = `${yyyy}${mm}${dd}T${hh}0000Z`;
-    const dtEnd   = `${yyyy}${mm}${dd}T${String(endHour).padStart(2,'0')}${String(endMin).padStart(2,'0')}00Z`;
-
-    const attendees = participants.map(p =>
-      `ATTENDEE;CN="${p.name}":mailto:unknown@example.com`
-    ).join('\r\n');
-
-    const participantList = participants.map(p => {
-      const localMin = ((slot.utcHour * 60 + getOffsetMinutes(p.tzId)) % 1440 + 1440) % 1440;
-      const lh = Math.floor(localMin / 60);
-      const lm = localMin % 60;
-      return `${p.name} (${String(lh).padStart(2,'0')}:${String(lm).padStart(2,'0')} ${p.tzLabel})`;
-    }).join(', ');
-
-    const ics = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Timezone Meeting Scheduler//EN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:REQUEST',
-      'BEGIN:VEVENT',
-      `DTSTART:${dtStart}`,
-      `DTEND:${dtEnd}`,
-      `SUMMARY:Team Meeting`,
-      `DESCRIPTION:Meeting for ${participantList}`,
-      `UID:${Date.now()}@tzmeetscheduler`,
-      attendees,
-      'STATUS:TENTATIVE',
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\r\n');
-
-    const blob = new Blob([ics], { type: 'text/calendar' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = 'meeting.ics';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Calendar invite downloaded!', 'success');
-  }
-
-  exportIcsBtn.addEventListener('click', exportIcs);
-
-  /* ─── Copy shareable link ─── */
-  function copyLink() {
-    const state = {
-      p: participants.map(p => ({ n: p.name, z: p.tzId })),
-      d: meetingDate.value,
-      dur: meetingDuration.value,
-      ws: workStart.value,
-      we: workEnd.value
-    };
-    const encoded = btoa(encodeURIComponent(JSON.stringify(state)));
-    const url = `${location.origin}${location.pathname}#s=${encoded}`;
-
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => showToast('Link copied to clipboard!', 'success'))
-        .catch(() => fallbackCopy(url));
-    } else {
-      fallbackCopy(url);
-    }
-  }
-
-  function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('Link copied!', 'success');
-  }
-
-  copyLinkBtn.addEventListener('click', copyLink);
-
-  /* ─── Clear all ─── */
-  clearBtn.addEventListener('click', () => {
-    if (participants.length === 0) return;
-    participants = [];
-    selectedSlotIndex = null;
-    showToast('All participants cleared.', 'info');
-    render();
-  });
-
-  /* ─── Load from URL hash ─── */
-  function loadFromHash() {
-    const hash = location.hash;
-    if (!hash.startsWith('#s=')) return;
-    try {
-      const encoded = hash.slice(3);
-      const state = JSON.parse(decodeURIComponent(atob(encoded)));
-      if (state.p && Array.isArray(state.p)) {
-        participants = state.p.map((p, i) => ({
-          id: Date.now() + i,
-          name: p.n,
-          tzId: p.z,
-          tzLabel: tzLabel(p.z),
-          color: AVATAR_COLORS[i % AVATAR_COLORS.length]
-        }));
-      }
-      if (state.d) meetingDate.value = state.d;
-      if (state.dur) meetingDuration.value = state.dur;
-      if (state.ws) workStart.value = state.ws;
-      if (state.we) workEnd.value = state.we;
-      showToast('Shared schedule loaded!', 'success');
-    } catch (e) {
-      // ignore invalid hash
-    }
-  }
-
-  /* ─── Master render ─── */
-  function render() {
-    renderParticipants();
-    renderTimeline();
-    renderSlots();
-    updateLiveParticipantTimes();
-  }
-
-  /* ─── Live time update ─── */
-  function updateLiveParticipantTimes() {
-    const timeEls = participantsList.querySelectorAll('.participant-time');
-    timeEls.forEach((el, i) => {
-      if (participants[i]) {
-        el.textContent = getLocalTimeStr(participants[i].tzId);
-      }
-    });
-  }
-
-  // Refresh participant times every 30 seconds
-  setInterval(updateLiveParticipantTimes, 30000);
-
-  /* ─── Config change listeners ─── */
-  [meetingDate, meetingDuration, workStart, workEnd].forEach(el => {
-    el.addEventListener('change', () => { selectedSlotIndex = null; render(); });
-  });
-
-  /* ─── Set default date to today ─── */
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mo = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-  meetingDate.value = `${yyyy}-${mo}-${dd}`;
-
-  /* ─── Initial load ─── */
-  loadFromHash();
+  saveMembers();
+  nameInput.value = '';
+  tzSearch.value = '';
+  selectedTzId = '';
+  nameInput.focus();
+  showToast(`${name} added!`, 'success');
   render();
+}
+
+addBtn.addEventListener('click', addMember);
+nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMember(); } });
+
+/* ── Remove member ── */
+function removeMember(id) {
+  const m = members.find(x => x.id === id);
+  members = members.filter(x => x.id !== id);
+  saveMembers();
+  if (m) showToast(`${m.name} removed.`);
+  selectedProposal = null;
+  render();
+}
+
+/* ── Render member list ── */
+function renderMembers() {
+  memberCountEl.textContent = members.length === 1 ? '1 member' : `${members.length} members`;
+  const cards = memberList.querySelectorAll('.member-card');
+  cards.forEach(c => c.remove());
+
+  if (members.length === 0) {
+    memberEmpty.style.display = '';
+    return;
+  }
+  memberEmpty.style.display = 'none';
+
+  members.forEach(m => {
+    const initials = m.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const localTime = getLocalTimeStr(m.tzId);
+    const offset = getOffsetMinutes(m.tzId);
+
+    const card = document.createElement('div');
+    card.className = 'member-card';
+    card.setAttribute('role', 'listitem');
+    card.dataset.id = m.id;
+    card.innerHTML = `
+      <div class="member-avatar" style="background:${m.color}" aria-hidden="true">${initials}</div>
+      <div class="member-info">
+        <div class="member-name">${esc(m.name)}</div>
+        <div class="member-tz">${esc(m.tzLabel)} · ${formatOffset(offset)}</div>
+      </div>
+      <span class="member-time" data-tzid="${esc(m.tzId)}">${localTime}</span>
+      <button class="btn-remove" data-id="${m.id}" aria-label="Remove ${esc(m.name)}">×</button>
+    `;
+    card.querySelector('.btn-remove').addEventListener('click', () => removeMember(m.id));
+    memberList.appendChild(card);
+  });
+}
+
+/* ── Live clock update ── */
+function tickMemberClocks() {
+  document.querySelectorAll('.member-time[data-tzid]').forEach(el => {
+    el.textContent = getLocalTimeStr(el.dataset.tzid);
+  });
+}
+setInterval(tickMemberClocks, 1000);
+
+/* ── Render 24h grid ── */
+function renderGrid() {
+  if (members.length === 0) {
+    gridContainer.innerHTML = '';
+    gridContainer.appendChild(gridEmpty);
+    gridEmpty.style.display = '';
+    return;
+  }
+  gridEmpty.style.display = 'none';
+
+  const nowUtcHour = new Date().getUTCHours();
+
+  let html = `<div class="overlap-grid">`;
+
+  // Header: hour labels
+  html += `<div class="grid-header-row"><div></div>`;
+  for (let h = 0; h < 24; h++) {
+    html += `<div class="grid-hour-label">${String(h).padStart(2,'0')}</div>`;
+  }
+  html += `</div>`;
+
+  // Member rows
+  members.forEach(m => {
+    const initials = m.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    html += `<div class="grid-row">`;
+    html += `<div class="grid-row-label">
+      <span style="width:20px;height:20px;border-radius:50%;background:${m.color};display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:700;color:oklch(100% 0 0);flex-shrink:0;">${initials}</span>
+      <span class="grid-row-label-name">${esc(m.name.split(' ')[0])}</span>
+    </div>`;
+    for (let h = 0; h < 24; h++) {
+      const localMins = getLocalHour(m.tzId, h);
+      const type = cellType(localMins);
+      const localStr = localHourMinStr(localMins);
+      const isNow = h === nowUtcHour;
+      const cls = `grid-cell cell-${type}${isNow ? ' cell-now' : ''}`;
+      html += `<div class="${cls}" aria-label="UTC ${String(h).padStart(2,'0')}:00 = ${esc(m.name)} ${localStr}">
+        <div class="cell-tip">${localStr} local</div>
+      </div>`;
+    }
+    html += `</div>`;
+  });
+
+  // Overlap summary row (all members in working hours)
+  html += `<div class="grid-row overlap-row" style="margin-top:4px;">`;
+  html += `<div class="grid-row-label" style="font-size:0.65rem;color:var(--ink-muted);">Overlap</div>`;
+  for (let h = 0; h < 24; h++) {
+    const allWork = members.every(m => {
+      const lm = getLocalHour(m.tzId, h);
+      return cellType(lm) === 'work';
+    });
+    const cls = `grid-cell ${allWork ? 'cell-work' : 'cell-off'}`;
+    html += `<div class="${cls}" style="opacity:${allWork ? 1 : 0.3}"></div>`;
+  }
+  html += `</div>`;
+
+  html += `</div>`;
+  gridContainer.innerHTML = html;
+}
+
+/* ── Find best suggestions ── */
+function getNextWeekdays(count) {
+  const days = [];
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  let d = new Date(today);
+  d.setUTCDate(d.getUTCDate() + 1); // start tomorrow
+  while (days.length < count) {
+    const dow = d.getUTCDay();
+    if (dow !== 0 && dow !== 6) days.push(new Date(d));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return days;
+}
+
+function scoreSlot(utcHour) {
+  // Prefer mid-morning/early afternoon UTC
+  if (utcHour >= 8 && utcHour <= 12) return 5;
+  if (utcHour >= 13 && utcHour <= 16) return 4;
+  if (utcHour >= 7 && utcHour < 8)   return 3;
+  if (utcHour >= 17 && utcHour <= 19) return 2;
+  return 1;
+}
+
+function findBestSlots() {
+  if (members.length === 0) return [];
+
+  const weekdays = getNextWeekdays(5);
+  const slots = [];
+
+  weekdays.forEach(day => {
+    for (let h = 0; h < 24; h++) {
+      // Count how many members are in working hours (9-18) for this UTC hour
+      const workCount = members.filter(m => {
+        const lm = getLocalHour(m.tzId, h);
+        return cellType(lm) === 'work';
+      }).length;
+
+      if (workCount > 0) {
+        slots.push({
+          day,
+          utcHour: h,
+          workCount,
+          totalMembers: members.length,
+          score: workCount * 10 + scoreSlot(h),
+        });
+      }
+    }
+  });
+
+  // Sort by score desc, then deduplicate — prefer 1 slot per day spread
+  slots.sort((a, b) => b.score - a.score);
+
+  // Pick top 3 unique slots (diverse days when possible)
+  const used = new Set();
+  const top = [];
+  for (const s of slots) {
+    if (top.length >= 3) break;
+    const key = `${s.day.toISOString().slice(0,10)}-${s.utcHour}`;
+    if (!used.has(key)) {
+      used.add(key);
+      top.push(s);
+    }
+  }
+  return top;
+}
+
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatSlotDate(day, utcHour) {
+  const dow = DAY_NAMES[day.getUTCDay()];
+  const mon = MONTH_NAMES[day.getUTCMonth()];
+  const d   = day.getUTCDate();
+  const hh  = String(utcHour).padStart(2, '0');
+  return `${dow}, ${mon} ${d} · ${hh}:00 UTC`;
+}
+
+function formatSlotShort(day, utcHour) {
+  const dow = DAY_NAMES[day.getUTCDay()];
+  const hh  = String(utcHour).padStart(2, '0');
+  return `${dow} ${hh}:00 UTC`;
+}
+
+/* ── Render suggestions ── */
+function renderSuggestions() {
+  if (members.length === 0) {
+    suggestionsCount.textContent = '—';
+    suggestionsContainer.innerHTML = '';
+    suggestionsContainer.appendChild(suggestionsEmpty);
+    suggestionsEmpty.style.display = '';
+    return;
+  }
+  suggestionsEmpty.style.display = 'none';
+
+  const slots = findBestSlots();
+  suggestionsCount.textContent = `${slots.length} windows`;
+
+  if (slots.length === 0) {
+    suggestionsContainer.innerHTML = `
+      <div class="suggestions-empty">
+        <span class="suggestions-empty-icon">😔</span>
+        <span>No overlap found across all team members.<br>Check individual time zones for partial overlap.</span>
+      </div>`;
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'suggestions-list';
+
+  slots.forEach((slot, i) => {
+    const card = document.createElement('div');
+    card.className = `suggestion-card${selectedProposal === i ? ' selected' : ''}`;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-pressed', selectedProposal === i ? 'true' : 'false');
+
+    const memberChips = members.map(m => {
+      const lm = getLocalHour(m.tzId, slot.utcHour);
+      const localStr = localHourMinStr(lm);
+      const type = cellType(lm);
+      const chipColor = type === 'work' ? 'var(--success)' : type === 'early' ? 'var(--warn)' : 'var(--ink-muted)';
+      return `<span class="member-chip">
+        <span class="member-chip-dot" style="background:${chipColor}"></span>
+        <strong>${esc(m.name.split(' ')[0])}</strong>&nbsp;${localStr}
+      </span>`;
+    }).join('');
+
+    const availCount = members.filter(m => {
+      const lm = getLocalHour(m.tzId, slot.utcHour);
+      return cellType(lm) === 'work';
+    }).length;
+
+    card.innerHTML = `
+      <div class="suggestion-rank">${i + 1}</div>
+      <div class="suggestion-body">
+        <div class="suggestion-time">${DAY_NAMES[slot.day.getUTCDay()]} ${String(slot.utcHour).padStart(2,'00')}:00 UTC</div>
+        <div class="suggestion-date">${MONTH_NAMES[slot.day.getUTCMonth()]} ${slot.day.getUTCDate()} · ${availCount} of ${members.length} member${members.length !== 1 ? 's' : ''} in working hours</div>
+        <div class="suggestion-members">${memberChips}</div>
+      </div>
+      <div class="suggestion-actions">
+        <button class="btn-propose" data-slot="${i}" aria-label="Propose this meeting time">Propose</button>
+      </div>
+    `;
+
+    card.querySelector('.btn-propose').addEventListener('click', (e) => {
+      e.stopPropagation();
+      proposeSlot(slot, i);
+    });
+    card.addEventListener('click', () => {
+      selectedProposal = selectedProposal === i ? null : i;
+      renderSuggestions();
+    });
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } });
+
+    list.appendChild(card);
+  });
+
+  suggestionsContainer.innerHTML = '';
+  suggestionsContainer.appendChild(list);
+}
+
+/* ── Render meeting proposal ── */
+function proposeSlot(slot, idx) {
+  selectedProposal = idx;
+  renderSuggestions();
+
+  const dateLabel = formatSlotDate(slot.day, slot.utcHour);
+  proposalBadge.textContent = formatSlotShort(slot.day, slot.utcHour);
+
+  const memberRows = members.map(m => {
+    const lm = getLocalHour(m.tzId, slot.utcHour);
+    const localStr = localHourMinStr(lm);
+    const initials = m.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    return `
+      <div class="proposal-member">
+        <div class="member-avatar" style="background:${m.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:oklch(100% 0 0);flex-shrink:0;" aria-hidden="true">${initials}</div>
+        <div class="proposal-member-info">
+          <div class="proposal-member-name">${esc(m.name)}</div>
+          <div class="proposal-member-tz">${esc(m.tzLabel)} · ${formatOffset(getOffsetMinutes(m.tzId))}</div>
+        </div>
+        <div class="proposal-member-time">${localStr}</div>
+      </div>
+    `;
+  }).join('');
+
+  proposalCard.innerHTML = `
+    <div class="proposal-header">
+      <div>
+        <div class="proposal-title">${dateLabel}</div>
+        <div class="proposal-utc">Team meeting · ${members.length} member${members.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="proposal-actions-bar">
+        <button class="btn-action" id="btnCopy" aria-label="Copy meeting summary to clipboard">Copy</button>
+        <button class="btn-action" id="btnIcs" aria-label="Download .ics calendar file">Download .ics</button>
+      </div>
+    </div>
+    <div class="proposal-members">${memberRows}</div>
+  `;
+
+  proposalSection.classList.add('visible');
+  proposalSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // Wire buttons
+  document.getElementById('btnCopy').addEventListener('click', () => copyProposal(slot));
+  document.getElementById('btnIcs').addEventListener('click', () => downloadIcs(slot));
+}
+
+/* ── Copy to clipboard ── */
+function copyProposal(slot) {
+  const dateLabel = formatSlotDate(slot.day, slot.utcHour);
+  const lines = [`Team Meeting — ${dateLabel}`, ''];
+  members.forEach(m => {
+    const lm = getLocalHour(m.tzId, slot.utcHour);
+    lines.push(`${m.name}: ${localHourMinStr(lm)} (${m.tzLabel})`);
+  });
+  const text = lines.join('\n');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Copied to clipboard!', 'success'))
+      .catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  showToast('Copied!', 'success');
+}
+
+/* ── Download .ics ── */
+function downloadIcs(slot) {
+  const d = slot.day;
+  const yyyy = String(d.getUTCFullYear());
+  const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getUTCDate()).padStart(2, '0');
+  const hh   = String(slot.utcHour).padStart(2, '0');
+  const endH = String((slot.utcHour + 1) % 24).padStart(2, '0');
+
+  const dtStart = `${yyyy}${mm}${dd}T${hh}0000Z`;
+  const dtEnd   = `${yyyy}${mm}${dd}T${endH}0000Z`;
+
+  const memberLines = members.map(m => {
+    const lm = getLocalHour(m.tzId, slot.utcHour);
+    return `${m.name}: ${localHourMinStr(lm)} (${m.tzLabel})`;
+  }).join(', ');
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Overlap//Timezone Meeting Scheduler//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    `SUMMARY:Team Meeting`,
+    `DESCRIPTION:${memberLines}`,
+    `UID:${Date.now()}@overlap-scheduler`,
+    'STATUS:TENTATIVE',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'team-meeting.ics';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Calendar file downloaded!', 'success');
+}
+
+/* ── Helpers ── */
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Master render ── */
+function render() {
+  renderMembers();
+  renderGrid();
+  renderSuggestions();
+  if (members.length === 0) {
+    proposalSection.classList.remove('visible');
+    selectedProposal = null;
+  }
+}
+
+/* ── Init ── */
+render();
 
 })();
 </script>

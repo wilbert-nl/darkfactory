@@ -1,1463 +1,1806 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Carbon Intensity Monitor — Dark Factory</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #080c10;
-      --surface: #0e1318;
-      --surface2: #141a21;
-      --border: rgba(255,255,255,0.08);
-      --accent: #00d4aa;
-      --accent2: #f59e0b;
-      --text: #e6edf3;
-      --muted: #6b7280;
-      --green: #26a69a;
-      --yellow: #f59e0b;
-      --radius: 6px;
-    }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 18px 32px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(12px);
-    }
-
-    .logo {
-      width: 38px; height: 38px;
-      background: linear-gradient(135deg, var(--accent), var(--green));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-      box-shadow: 0 0 16px rgba(0,212,170,0.4);
-    }
-
-    header h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
-    header .subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-    .header-right {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .live-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(67,217,173,0.12);
-      border: 1px solid rgba(67,217,173,0.3);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--green);
-    }
-
-    .live-dot {
-      width: 7px; height: 7px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.7); }
-    }
-
-    .last-updated {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    /* ── Layout ── */
-    main {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 28px 24px;
-      display: grid;
-      gap: 24px;
-    }
-
-    .top-row {
-      display: grid;
-      grid-template-columns: 340px 1fr 1fr;
-      gap: 24px;
-      align-items: start;
-    }
-
-    .bottom-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-
-    /* ── Card ── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      transition: border-color 0.2s;
-    }
-
-    .card:hover { border-color: var(--accent); }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .card-icon {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-
-    .card-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .card-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 1px;
-    }
-
-    /* ── Gauge ── */
-    .gauge-card {
-      text-align: center;
-    }
-
-    .gauge-wrap {
-      position: relative;
-      width: 200px;
-      height: 110px;
-      margin: 0 auto 16px;
-    }
-
-    .gauge-svg {
-      width: 200px;
-      height: 110px;
-      overflow: visible;
-    }
-
-    .gauge-track {
-      fill: none;
-      stroke: var(--surface2);
-      stroke-width: 18;
-      stroke-linecap: round;
-    }
-
-    .gauge-fill {
-      fill: none;
-      stroke-width: 18;
-      stroke-linecap: round;
-      transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1), stroke 0.6s;
-    }
-
-    .gauge-value {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 38px;
-      font-weight: 800;
-      letter-spacing: -2px;
-      line-height: 1;
-      transition: color 0.6s;
-    }
-
-    .gauge-unit {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 400;
-    }
-
-    .intensity-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      margin-top: 10px;
-      transition: background 0.6s, color 0.6s;
-    }
-
-    .intensity-index {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 8px;
-    }
-
-    /* ── Intensity colours ── */
-    .color-very-low  { color: #43d9ad; }
-    .color-low       { color: #43d9ad; }
-    .color-moderate  { color: #f7c948; }
-    .color-high      { color: #ff6584; }
-    .color-very-high { color: #ff3860; }
-
-    .bg-very-low  { background: rgba(67,217,173,0.15); color: #43d9ad; }
-    .bg-low       { background: rgba(67,217,173,0.15); color: #43d9ad; }
-    .bg-moderate  { background: rgba(247,201,72,0.15); color: #f7c948; }
-    .bg-high      { background: rgba(245,158,11,0.15); color: #ff6584; }
-    .bg-very-high { background: rgba(255,56,96,0.15); color: #ff3860; }
-
-    .stroke-very-low  { stroke: #43d9ad; }
-    .stroke-low       { stroke: #43d9ad; }
-    .stroke-moderate  { stroke: #f7c948; }
-    .stroke-high      { stroke: #ff6584; }
-    .stroke-very-high { stroke: #ff3860; }
-
-    /* ── Generation Mix ── */
-    .donut-wrap {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .donut-svg {
-      width: 140px;
-      height: 140px;
-      flex-shrink: 0;
-    }
-
-    .donut-legend {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      cursor: default;
-      border-radius: 6px;
-      padding: 3px 5px;
-      transition: background 0.15s;
-    }
-
-    .legend-item:hover { background: var(--surface2); }
-
-    .legend-dot {
-      width: 10px; height: 10px;
-      border-radius: 3px;
-      flex-shrink: 0;
-    }
-
-    .legend-name { color: var(--text); flex: 1; }
-    .legend-pct  { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
-
-    /* ── Forecast ── */
-    .forecast-grid {
-      display: grid;
-      grid-template-columns: repeat(24, 1fr);
-      gap: 3px;
-      margin-top: 12px;
-    }
-
-    .forecast-bar-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .forecast-bar-bg {
-      width: 100%;
-      height: 64px;
-      background: var(--surface2);
-      border-radius: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .forecast-bar-fill {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      border-radius: 4px;
-      transition: height 0.8s cubic-bezier(0.4,0,0.2,1);
-    }
-
-    .forecast-bar-wrap.best .forecast-bar-bg {
-      box-shadow: 0 0 0 1px var(--green);
-    }
-
-    .forecast-hour {
-      font-size: 9px;
-      color: var(--muted);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .forecast-tooltip {
-      position: absolute;
-      bottom: calc(100% + 8px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 11px;
-      white-space: nowrap;
-      pointer-events: none;
-      z-index: 50;
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
-
-    .forecast-bar-wrap:hover .forecast-tooltip { opacity: 1; }
-
-    .forecast-best-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--green);
-      margin-top: 10px;
-      font-weight: 600;
-    }
-
-    /* ── Best Windows ── */
-    .window-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .window-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 14px 16px;
-      background: var(--surface2);
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      transition: border-color 0.2s, transform 0.15s;
-      cursor: default;
-    }
-
-    .window-item:hover {
-      border-color: var(--green);
-      transform: translateX(2px);
-    }
-
-    .window-rank {
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    .rank-1 { background: rgba(67,217,173,0.2); color: var(--green); }
-    .rank-2 { background: rgba(0,212,170,0.2); color: var(--accent); }
-    .rank-3 { background: rgba(247,201,72,0.2); color: var(--yellow); }
-
-    .window-time {
-      flex: 1;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .window-val {
-      font-size: 13px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .window-bar {
-      width: 60px;
-      height: 4px;
-      background: var(--surface);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .window-bar-fill {
-      height: 100%;
-      border-radius: 2px;
-      background: var(--green);
-    }
-
-    /* ── Country Table ── */
-    .country-controls {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .search-input {
-      flex: 1;
-      min-width: 160px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 14px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: var(--font);
-      transition: border-color 0.2s;
-      outline: none;
-    }
-
-    .search-input::placeholder { color: var(--muted); }
-    .search-input:focus { border-color: var(--accent); }
-
-    .sort-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 14px;
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-      font-family: var(--font);
-    }
-
-    .sort-btn:hover, .sort-btn.active {
-      border-color: var(--accent);
-      background: rgba(0,212,170,0.1);
-      color: var(--accent);
-    }
-
-    .country-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    .country-table th {
-      text-align: left;
-      padding: 8px 12px;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .country-table td {
-      padding: 9px 12px;
-      border-bottom: 1px solid rgba(46,51,80,0.5);
-      vertical-align: middle;
-    }
-
-    .country-table tr:hover td { background: var(--surface2); }
-    .country-table tr:last-child td { border-bottom: none; }
-
-    .country-bar-cell {
-      width: 100px;
-    }
-
-    .country-bar-bg {
-      height: 6px;
-      background: var(--surface2);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .country-bar-fill {
-      height: 100%;
-      border-radius: 3px;
-      transition: width 0.5s;
-    }
-
-    .flag { font-size: 18px; }
-
-    /* ── Tips ── */
-    .tips-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .tip-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 14px 16px;
-      background: var(--surface2);
-      border-radius: 10px;
-      border-left: 3px solid transparent;
-      transition: border-color 0.2s;
-    }
-
-    .tip-item:hover { border-left-color: var(--accent); }
-
-    .tip-icon {
-      font-size: 20px;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .tip-body {}
-    .tip-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
-    .tip-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
-
-    /* ── Skeleton / loading ── */
-    .skeleton {
-      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 6px;
-    }
-
-    @keyframes shimmer {
-      0%   { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    /* ── Error / notice ── */
-    .notice {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      border-radius: 10px;
-      font-size: 13px;
-    }
-
-    .notice-warn {
-      background: rgba(247,201,72,0.1);
-      border: 1px solid rgba(247,201,72,0.25);
-      color: var(--yellow);
-    }
-
-    .notice-err {
-      background: rgba(255,101,132,0.1);
-      border: 1px solid rgba(255,101,132,0.25);
-      color: var(--accent2);
-    }
-
-    /* ── Tabs (forecast / table) ── */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 18px;
-      background: var(--surface2);
-      border-radius: 10px;
-      padding: 4px;
-    }
-
-    .tab-btn {
-      flex: 1;
-      background: transparent;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 12px;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
-      font-family: var(--font);
-    }
-
-    .tab-btn.active {
-      background: var(--surface);
-      color: var(--text);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    }
-
-    .tab-btn:hover:not(.active) { color: var(--text); }
-
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-
-    /* ── Refresh btn ── */
-    .refresh-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 7px 14px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: border-color 0.2s, color 0.2s;
-      font-family: var(--font);
-    }
-
-    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .spin { animation: spin 1s linear infinite; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-    /* ── Full-width card ── */
-    .full-row { grid-column: 1 / -1; }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-    /* ── Responsive ── */
-    @media (max-width: 1024px) {
-      .top-row { grid-template-columns: 1fr 1fr; }
-      .gauge-card { grid-column: 1 / -1; }
-      .bottom-row { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 640px) {
-      .top-row { grid-template-columns: 1fr; }
-      main { padding: 16px; }
-      header { padding: 14px 16px; }
-      .forecast-grid { grid-template-columns: repeat(12, 1fr); }
-    }
-
-    /* ── Country table overflow ── */
-    .table-wrap {
-      max-height: 320px;
-      overflow-y: auto;
-    }
-
-    /* ── Threshold slider ── */
-    .threshold-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .threshold-label {
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    input[type=range] {
-      flex: 1;
-      min-width: 100px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .threshold-val {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--accent);
-      white-space: nowrap;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* ── Finance design system v2 ── */
-    body { font-family: 'Inter', system-ui, sans-serif; }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: radial-gradient(circle, rgba(0,212,170,.065) 1px, transparent 1px);
-      background-size: 24px 24px;
-      pointer-events: none;
-      z-index: 0;
-    }
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,.9) 100%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    h1, h2 {
-      font-family: 'Inter', system-ui, sans-serif;
-      font-weight: 700;
-      letter-spacing: -.03em;
-      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    [class*="price"],[class*="value"],[class*="amount"],[class*="rate"],
-    [class*="stat"],[class*="metric"],[class*="kpi"],td,code,.number {
-      font-family: 'IBM Plex Mono', ui-monospace, monospace;
-      font-variant-numeric: tabular-nums slashed-zero;
-      font-feature-settings: 'tnum' 1, 'zero' 1;
-    }
-    .card,[class*="card"],[class*="metric-card"],[class*="stat-card"] {
-      border-left: 3px solid var(--accent) !important;
-      box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
-    }
-    table { border-collapse: collapse; width: 100%; }
-    thead th {
-      font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-      color: var(--muted); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
-      text-align: right; white-space: nowrap; position: sticky; top: 0; background: var(--bg);
-    }
-    thead th:first-child { text-align: left; }
-    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background 120ms; }
-    tbody tr:hover { background: rgba(255,255,255,.04); }
-    td { padding: 6px 12px; text-align: right; vertical-align: middle; white-space: nowrap; font-size: 13px; }
-    td:first-child { text-align: left; color: var(--text); }
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
-    @keyframes slideUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
-    @keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.5);} 50%{box-shadow:0 0 0 6px rgba(0,212,170,0);} }
-    .card,[class*="card"],[class*="result"],[class*="item"] { animation: slideUp .35s ease both; }
-    .card:nth-child(2),[class*="item"]:nth-child(2){animation-delay:.05s}
-    .card:nth-child(3),[class*="item"]:nth-child(3){animation-delay:.1s}
-    .card:nth-child(4){animation-delay:.15s}
-    tbody tr { animation: slideUp .2s ease both; }
-    tbody tr:nth-child(2){animation-delay:.03s} tbody tr:nth-child(3){animation-delay:.06s}
-    tbody tr:nth-child(4){animation-delay:.09s}
-    button,[class*="btn"] { transition: all .15s; }
-    button:hover,[class*="btn"]:hover {
-      border-color: var(--accent) !important;
-      box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0,212,170,.15) !important;
-    }
-    input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 2px rgba(0,212,170,.2); }
-    [class*="live"],[class*="dot"],[class*="indicator"] { animation: livePulse 2s ease-in-out infinite; }
-    [class*="positive"],[class*="gain"],[class*="up"] { color:var(--green)!important; }
-    [class*="negative"],[class*="loss"],[class*="down"] { color:#ef5350!important; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voltwatch — Carbon Intensity Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; overflow-x: clip; }
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── N9 Edge-aligned nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-success);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--color-success);
+  border-radius: 50%;
+  animation: livePulse 2.2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.45; transform: scale(0.72); }
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Sidebar section */
+.sb-section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.sb-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+}
+
+/* Region selector */
+.input-sm {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+  appearance: none;
+  cursor: pointer;
+}
+.input-sm:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.input-sm[type="number"] { font-variant-numeric: tabular-nums; }
+
+/* Intensity badge */
+.intensity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  border: 1px solid transparent;
+  transition: background 0.4s, color 0.4s, border-color 0.4s;
+}
+.badge-very-low  { background: oklch(93% 0.035 155); color: oklch(35% 0.14 155); border-color: oklch(82% 0.06 155); }
+.badge-low       { background: oklch(93% 0.025 155); color: oklch(40% 0.12 155); border-color: oklch(82% 0.05 155); }
+.badge-moderate  { background: oklch(93% 0.04 85);   color: oklch(40% 0.16 72);  border-color: oklch(82% 0.08 72); }
+.badge-high      { background: oklch(94% 0.04 45);   color: oklch(45% 0.18 35);  border-color: oklch(82% 0.09 35); }
+.badge-very-high { background: oklch(94% 0.05 25);   color: oklch(40% 0.20 25);  border-color: oklch(80% 0.10 25); }
+
+/* Alert slider */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+input[type="range"] {
+  flex: 1;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+  height: 4px;
+}
+
+.slider-val {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 52px;
+  text-align: right;
+}
+
+/* Workload scheduler */
+.scheduler-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.field-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28); }
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+}
+.btn-ghost:hover { color: var(--color-ink); border-color: var(--color-ink-muted); }
+
+/* Carbon budget */
+.budget-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.budget-stat {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.budget-val {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.budget-val.warn  { color: var(--color-warn); }
+.budget-val.ok    { color: var(--color-success); }
+
+.budget-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Current intensity card ── */
+.intensity-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.intensity-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.intensity-num {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.5s var(--ease-out);
+}
+.intensity-num.very-low  { color: oklch(40% 0.14 155); }
+.intensity-num.low       { color: oklch(44% 0.12 155); }
+.intensity-num.moderate  { color: oklch(44% 0.16 72); }
+.intensity-num.high      { color: oklch(44% 0.18 35); }
+.intensity-num.very-high { color: oklch(40% 0.20 25); }
+
+.intensity-unit {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 400;
+}
+
+.intensity-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.intensity-region {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.intensity-delta {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.delta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.delta-chip.above { background: oklch(94% 0.05 25); color: oklch(40% 0.20 25); }
+.delta-chip.below { background: oklch(93% 0.035 155); color: oklch(35% 0.14 155); }
+
+.intensity-updated {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* ── Section heading ── */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.section-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+}
+
+/* ── Two-column grid ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+/* ── Card ── */
+.card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.card-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: var(--space-4);
+}
+
+/* ── Donut chart ── */
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.donut-svg {
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+}
+
+.donut-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background 0.12s var(--ease-out);
+}
+.legend-item:hover { background: oklch(91% 0.012 95); }
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.legend-name { color: var(--color-ink); flex: 1; }
+.legend-pct  { color: var(--color-ink-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Forecast chart (SVG area) ── */
+.forecast-wrap {
+  position: relative;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.forecast-svg-wrap {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
+.forecast-svg {
+  width: 100%;
+  height: 140px;
+  overflow: visible;
+  display: block;
+}
+
+.forecast-hover-line {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  background: var(--color-ink-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+}
+
+.forecast-tooltip-box {
+  position: absolute;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px oklch(18% 0.04 155 / 0.12);
+  opacity: 0;
+  transition: opacity 0.1s;
+  z-index: 10;
+}
+
+.forecast-x-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+  padding: 0 4px;
+}
+.forecast-x-label {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  flex: 1;
+}
+
+/* ── Best windows ── */
+.windows-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.window-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.12s var(--ease-out), transform 0.12s var(--ease-out);
+}
+.window-item:hover { border-color: var(--color-accent-line); transform: translateX(2px); }
+
+.window-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.rank-1 { background: oklch(90% 0.04 155); color: oklch(38% 0.14 155); }
+.rank-2 { background: oklch(93% 0.025 155); color: oklch(44% 0.12 155); }
+.rank-3 { background: oklch(93% 0.04 85); color: oklch(44% 0.16 72); }
+
+.window-time {
+  flex: 1;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.window-val {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+.window-savings {
+  font-size: var(--text-xs);
+  color: var(--color-success);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.window-bar-bg {
+  width: 48px;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.window-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-success);
+  transition: width 0.4s var(--ease-out);
+}
+
+/* ── Carbon calc panel ── */
+.calc-panel {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.calc-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.calc-results {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.calc-stat { display: flex; flex-direction: column; gap: 3px; }
+
+.calc-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+}
+
+.calc-val {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.calc-val.savings { color: var(--color-success); }
+
+.calc-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.calc-btn-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ── Schedule log ── */
+.schedule-log {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.log-table-wrap {
+  overflow-x: auto;
+}
+
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.log-table th {
+  text-align: left;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.log-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.log-table tr:last-child td { border-bottom: none; }
+.log-table tr:hover td { background: oklch(95% 0.010 95); }
+
+.log-empty {
+  padding: var(--space-8);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+
+.savings-cell { color: var(--color-success); font-weight: 600; }
+
+.btn-remove-log {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1;
+  transition: color 0.12s var(--ease-out), background 0.12s var(--ease-out);
+}
+.btn-remove-log:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.warn { background: var(--color-warn); color: var(--color-ink); }
+
+/* ── Loading / skeleton ── */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-paper-2) 25%, var(--color-border) 50%, var(--color-paper-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Now marker ── */
+.now-label {
+  font-size: 9px;
+  font-family: var(--font-body);
+  fill: var(--color-ink-muted);
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+  }
+
+  .sidebar-scroll { overflow: visible; }
+
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+
+  .intensity-card {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .two-col { grid-template-columns: 1fr; }
+
+  .calc-inputs { grid-template-columns: 1fr 1fr; }
+  .calc-results { grid-template-columns: 1fr 1fr; }
+
+  .scheduler-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 440px) {
+  .calc-results { grid-template-columns: 1fr; }
+  .intensity-num { font-size: var(--text-3xl); }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
+  .skeleton { animation: none; }
+  .btn-primary:hover { transform: none; box-shadow: none; }
+  .toast { transition: opacity 0.15s var(--ease-out); transform: translateY(0); }
+}
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo" aria-hidden="true">⚡</div>
-  <div>
-    <h1>Carbon Intensity Monitor</h1>
-    <div class="subtitle">Real-time UK grid data + global country comparison</div>
-  </div>
-  <div class="header-right">
-    <div class="live-badge" role="status" aria-live="polite">
-      <div class="live-dot"></div>
-      LIVE UK
-    </div>
-    <span class="last-updated" id="lastUpdated">Fetching…</span>
-    <button class="refresh-btn" id="refreshBtn" aria-label="Refresh data">
-      <span id="refreshIcon">↻</span> Refresh
-    </button>
-  </div>
-</header>
+<!-- N9 Edge-aligned nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Volt<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Carbon Intensity Monitor</span>
+  <span class="nav-live" aria-live="polite"><span class="live-dot" aria-hidden="true"></span>LIVE UK</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
 
-<main>
-  <!-- TOP ROW -->
-  <section class="top-row" aria-label="Overview">
+<div class="app-shell">
 
-    <!-- Gauge -->
-    <div class="card gauge-card" aria-label="Current UK carbon intensity">
-      <div class="card-header">
-        <div class="card-icon" style="background:rgba(108,99,255,0.15)">📊</div>
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Controls">
+    <div class="sidebar-scroll">
+
+      <!-- Region selector -->
+      <div class="sb-section">
+        <span class="sb-label">Region</span>
+        <select class="input-sm" id="regionSelect" aria-label="Select region">
+          <optgroup label="UK Live (API)">
+            <option value="uk-national" selected>UK — National</option>
+            <option value="uk-1">South West England</option>
+            <option value="uk-2">South England</option>
+            <option value="uk-3">London</option>
+            <option value="uk-4">South East England</option>
+            <option value="uk-5">East England</option>
+            <option value="uk-6">East Midlands</option>
+            <option value="uk-7">West Midlands</option>
+            <option value="uk-8">North West England</option>
+            <option value="uk-9">Yorkshire</option>
+            <option value="uk-10">North East England</option>
+            <option value="uk-11">Scotland South</option>
+            <option value="uk-12">Scotland North</option>
+            <option value="uk-13">Wales</option>
+            <option value="uk-14">East Wales</option>
+          </optgroup>
+          <optgroup label="Europe (2023 benchmarks)">
+            <option value="static-Germany">Germany — 350 g</option>
+            <option value="static-France">France — 60 g</option>
+            <option value="static-Norway">Norway — 25 g</option>
+            <option value="static-Poland">Poland — 740 g</option>
+            <option value="static-Spain">Spain — 190 g</option>
+            <option value="static-Sweden">Sweden — 45 g</option>
+            <option value="static-Netherlands">Netherlands — 300 g</option>
+            <option value="static-Belgium">Belgium — 175 g</option>
+          </optgroup>
+          <optgroup label="North America">
+            <option value="static-US-CA">US — California — 200 g</option>
+            <option value="static-US-TX">US — Texas — 440 g</option>
+            <option value="static-US-NE">US — Northeast — 270 g</option>
+            <option value="static-US-SE">US — Southeast — 420 g</option>
+            <option value="static-Canada">Canada — 160 g</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="static-Australia-NSW">Australia (NSW) — 650 g</option>
+            <option value="static-Australia-QLD">Australia (QLD) — 750 g</option>
+            <option value="static-Japan">Japan — 490 g</option>
+            <option value="static-Brazil">Brazil — 115 g</option>
+          </optgroup>
+        </select>
+
+        <!-- Intensity index badge -->
+        <div id="intensityBadge" class="intensity-badge badge-moderate" role="status" aria-live="polite">
+          <span id="badgeText">Moderate</span>
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- Alert threshold -->
+      <div class="sb-section">
+        <span class="sb-label">Alert Threshold</span>
+        <p style="font-size:var(--text-xs);color:var(--color-ink-muted)">Notify when intensity drops below this level.</p>
+        <div class="slider-row">
+          <input type="range" id="thresholdSlider" min="25" max="500" value="150" step="5" aria-label="Carbon intensity threshold in gCO2/kWh">
+          <span class="slider-val"><span id="thresholdVal">150</span> g</span>
+        </div>
+        <div id="thresholdStatus" style="font-size:var(--text-xs);color:var(--color-ink-muted)">Waiting for data…</div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- Workload Scheduler -->
+      <div class="sb-section">
+        <span class="sb-label">Workload Scheduler</span>
+        <p style="font-size:var(--text-xs);color:var(--color-ink-muted)">Find the optimal 24 h window for your compute job.</p>
+        <div class="scheduler-grid">
+          <div>
+            <label class="field-label" for="schedDuration">Duration (h)</label>
+            <input type="number" class="input-sm" id="schedDuration" min="0.5" max="24" step="0.5" value="2" aria-label="Job duration in hours">
+          </div>
+          <div>
+            <label class="field-label" for="schedServers">Servers</label>
+            <input type="number" class="input-sm" id="schedServers" min="1" max="10000" value="10" aria-label="Number of servers">
+          </div>
+          <div style="grid-column:1/-1">
+            <label class="field-label" for="schedWatts">Watts / server</label>
+            <input type="number" class="input-sm" id="schedWatts" min="10" max="5000" step="10" value="300" aria-label="Power draw per server in watts">
+          </div>
+        </div>
+        <button class="btn-primary" id="btnFindWindow" style="margin-top:var(--space-1)">Find best window</button>
+        <div id="schedResult" style="font-size:var(--text-xs);color:var(--color-ink-muted);line-height:1.6;display:none"></div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- Carbon budget -->
+      <div class="sb-section">
+        <span class="sb-label">Carbon Budget</span>
         <div>
-          <div class="card-title">UK Live Intensity</div>
-          <div class="card-sub">National Grid carbon gCO₂eq/kWh</div>
+          <label class="field-label" for="monthlyKwh">Monthly kWh target</label>
+          <input type="number" class="input-sm" id="monthlyKwh" min="100" max="1000000" step="100" value="10000" aria-label="Monthly energy consumption target in kWh">
         </div>
-      </div>
-
-      <div class="gauge-wrap" role="img" aria-label="Carbon intensity gauge">
-        <svg class="gauge-svg" viewBox="0 0 200 110" aria-hidden="true">
-          <!-- semicircle track: radius 80, centre 100,105 -->
-          <path class="gauge-track" d="M 20 105 A 80 80 0 0 1 180 105" />
-          <path class="gauge-fill" id="gaugeFill"
-            d="M 20 105 A 80 80 0 0 1 180 105"
-            stroke-dasharray="251.2"
-            stroke-dashoffset="251.2" />
-        </svg>
-        <div class="gauge-value" id="gaugeValue" style="color:var(--muted)">
-          <span id="gaugeNum">—</span>
-          <span class="gauge-unit">g</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)">
+          <div class="budget-stat">
+            <span class="budget-val" id="budgetCo2">—</span>
+            <span class="budget-sub">kg CO₂ / mo</span>
+          </div>
+          <div class="budget-stat">
+            <span class="budget-val" id="budgetOptimal">—</span>
+            <span class="budget-sub">optimal kg CO₂</span>
+          </div>
         </div>
+        <div style="font-size:var(--text-xs);color:var(--color-ink-muted)" id="budgetNote">Enter monthly kWh usage above.</div>
       </div>
 
-      <div id="intensityLabel" class="intensity-label" style="background:var(--surface2);color:var(--muted)">
-        Loading…
-      </div>
-      <div class="intensity-index" id="intensityIndex"></div>
-
-      <div style="margin-top:18px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
-        <span>0</span>
-        <span>Very Low</span>
-        <span>Low</span>
-        <span>Mod</span>
-        <span>High</span>
-        <span>Very High</span>
-      </div>
     </div>
+  </aside>
 
-    <!-- Generation Mix -->
-    <div class="card" aria-label="UK generation mix">
-      <div class="card-header">
-        <div class="card-icon" style="background:rgba(67,217,173,0.15)">🌱</div>
-        <div>
-          <div class="card-title">Generation Mix</div>
-          <div class="card-sub">UK grid sources right now</div>
+  <!-- ── Main panel ── -->
+  <main class="main" aria-label="Carbon intensity dashboard">
+    <div class="main-scroll">
+
+      <!-- Current intensity card -->
+      <div class="intensity-card" role="region" aria-label="Current intensity" aria-live="polite">
+        <div class="intensity-display">
+          <div class="intensity-num" id="currentNum" aria-label="Carbon intensity value">—</div>
+          <div class="intensity-unit">gCO₂eq / kWh</div>
+          <div id="intensityBadgeMain" class="intensity-badge badge-moderate" style="margin-top:var(--space-1)">Loading…</div>
+        </div>
+        <div class="intensity-meta">
+          <div class="intensity-region" id="regionLabel">UK — National</div>
+          <div class="intensity-delta" id="deltaRow" aria-live="polite"></div>
+          <div class="intensity-updated" id="updatedAt">Fetching live data…</div>
         </div>
       </div>
-      <div class="donut-wrap">
-        <svg class="donut-svg" viewBox="0 0 140 140" aria-hidden="true" id="donutSvg">
-          <circle cx="70" cy="70" r="50" fill="none" stroke="var(--surface2)" stroke-width="22"/>
-          <!-- segments rendered by JS -->
-          <text x="70" y="68" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Inter,sans-serif">Loading</text>
-          <text x="70" y="82" text-anchor="middle" fill="var(--muted)" font-size="10" font-family="Inter,sans-serif">mix…</text>
-        </svg>
-        <div class="donut-legend" id="donutLegend">
-          <div class="skeleton" style="height:14px;margin-bottom:6px;"></div>
-          <div class="skeleton" style="height:14px;margin-bottom:6px;"></div>
-          <div class="skeleton" style="height:14px;margin-bottom:6px;"></div>
+
+      <!-- Mix + 24h forecast -->
+      <div class="two-col">
+
+        <!-- Generation mix donut -->
+        <div class="card" role="region" aria-label="Generation mix">
+          <div class="section-head">
+            <span class="section-title">Generation Mix</span>
+          </div>
+          <div class="donut-wrap">
+            <svg class="donut-svg" viewBox="0 0 130 130" aria-hidden="true" id="donutSvg">
+              <circle cx="65" cy="65" r="48" fill="none" stroke="var(--color-border)" stroke-width="20"/>
+              <text x="65" y="62" text-anchor="middle" fill="var(--color-ink-muted)" font-size="10" font-family="Plus Jakarta Sans,sans-serif">Loading</text>
+              <text x="65" y="76" text-anchor="middle" fill="var(--color-ink-muted)" font-size="10" font-family="Plus Jakarta Sans,sans-serif">mix…</text>
+            </svg>
+            <div class="donut-legend" id="donutLegend">
+              <div class="skeleton" style="height:13px;width:100%;margin-bottom:6px"></div>
+              <div class="skeleton" style="height:13px;width:85%;margin-bottom:6px"></div>
+              <div class="skeleton" style="height:13px;width:70%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Best compute windows -->
+        <div class="card" role="region" aria-label="Best compute windows">
+          <div class="section-head">
+            <span class="section-title">Top 3 Clean Windows</span>
+          </div>
+          <div class="windows-list" id="windowsList">
+            <div style="font-size:var(--text-sm);color:var(--color-ink-muted);padding:var(--space-4) 0">Loading forecast…</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 24h Forecast chart -->
+      <div class="forecast-wrap" role="region" aria-label="24-hour forecast">
+        <div class="section-head">
+          <span class="section-title">24-Hour Forecast</span>
+          <span style="font-size:var(--text-xs);color:var(--color-ink-muted)" id="forecastNote">Hover bars for detail</span>
+        </div>
+        <div class="forecast-svg-wrap" id="forecastWrap">
+          <svg class="forecast-svg" id="forecastSvg" viewBox="0 0 800 140" preserveAspectRatio="none" aria-label="24 hour carbon intensity area chart">
+            <!-- Rendered by JS -->
+          </svg>
+          <div class="forecast-tooltip-box" id="forecastTooltip"></div>
+        </div>
+        <div class="forecast-x-labels" id="forecastXLabels" aria-hidden="true"></div>
+      </div>
+
+      <!-- Carbon calculation panel -->
+      <div class="calc-panel" role="region" aria-label="Carbon calculator">
+        <div class="section-head">
+          <span class="section-title">Carbon Calculator</span>
+          <span style="font-size:var(--text-xs);color:var(--color-ink-muted)">Estimate savings vs optimal window</span>
+        </div>
+        <div class="calc-inputs">
+          <div>
+            <label class="field-label" for="calcServers">Servers</label>
+            <input type="number" class="input-sm" id="calcServers" min="1" max="100000" value="10" aria-label="Number of servers">
+          </div>
+          <div>
+            <label class="field-label" for="calcWatts">Watts / server</label>
+            <input type="number" class="input-sm" id="calcWatts" min="10" max="5000" step="10" value="300" aria-label="Power per server in watts">
+          </div>
+          <div>
+            <label class="field-label" for="calcHours">Duration (h)</label>
+            <input type="number" class="input-sm" id="calcHours" min="0.5" max="24" step="0.5" value="2" aria-label="Duration in hours">
+          </div>
+        </div>
+        <div class="calc-results" aria-live="polite">
+          <div class="calc-stat">
+            <span class="calc-label">Energy</span>
+            <span class="calc-val" id="calcKwh">—</span>
+            <span class="calc-sub">kWh</span>
+          </div>
+          <div class="calc-stat">
+            <span class="calc-label">CO₂ now</span>
+            <span class="calc-val" id="calcCo2Now">—</span>
+            <span class="calc-sub">kg CO₂</span>
+          </div>
+          <div class="calc-stat">
+            <span class="calc-label">CO₂ optimal</span>
+            <span class="calc-val" id="calcCo2Opt">—</span>
+            <span class="calc-sub">kg CO₂</span>
+          </div>
+          <div class="calc-stat">
+            <span class="calc-label">Saved</span>
+            <span class="calc-val savings" id="calcSaved">—</span>
+            <span class="calc-sub">kg CO₂ / tonnes</span>
+          </div>
+        </div>
+        <div class="calc-btn-row">
+          <button class="btn-primary" id="btnBookWindow" style="width:auto;padding:var(--space-3) var(--space-6)">Book optimal window</button>
+          <button class="btn-ghost" id="btnCalcRefresh">Recalculate</button>
         </div>
       </div>
+
+      <!-- Schedule log -->
+      <div class="schedule-log" role="region" aria-label="Schedule log">
+        <div class="log-header">
+          <span class="section-title">Schedule Log</span>
+          <button class="btn-ghost" id="btnClearLog" style="font-size:var(--text-xs);padding:var(--space-1) var(--space-3)">Clear all</button>
+        </div>
+        <div class="log-table-wrap">
+          <table class="log-table" aria-label="Booked compute jobs">
+            <thead>
+              <tr>
+                <th scope="col">Booked at</th>
+                <th scope="col">Region</th>
+                <th scope="col">Window</th>
+                <th scope="col">kWh</th>
+                <th scope="col">CO₂ saved (kg)</th>
+                <th scope="col" style="width:32px"></th>
+              </tr>
+            </thead>
+            <tbody id="logBody">
+              <tr><td colspan="6" class="log-empty">No jobs booked yet. Use the calculator above.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
+  </main>
 
-    <!-- Tips -->
-    <div class="card" aria-label="Usage tips">
-      <div class="card-header">
-        <div class="card-icon" style="background:rgba(247,201,72,0.15)">💡</div>
-        <div>
-          <div class="card-title">Green Compute Tips</div>
-          <div class="card-sub">Reduce your carbon footprint</div>
-        </div>
-      </div>
-      <div class="tips-list" id="tipsList">
-        <!-- filled by JS based on intensity -->
-      </div>
-    </div>
-  </section>
+</div>
 
-  <!-- BOTTOM ROW -->
-  <section class="bottom-row" aria-label="Forecast and comparison">
-
-    <!-- Forecast + Best Windows combined card -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon" style="background:rgba(108,99,255,0.15)">🕐</div>
-        <div>
-          <div class="card-title">Today's Forecast</div>
-          <div class="card-sub">Best windows to run batch jobs</div>
-        </div>
-      </div>
-
-      <div class="threshold-row">
-        <span class="threshold-label">Threshold:</span>
-        <input type="range" id="thresholdSlider" min="50" max="350" value="150" step="10" aria-label="Carbon intensity threshold in gCO2/kWh" />
-        <span class="threshold-val"><span id="thresholdVal">150</span> g</span>
-      </div>
-
-      <div class="forecast-grid" id="forecastGrid" role="list" aria-label="Hourly forecast bars">
-        <!-- 24 bars rendered by JS -->
-      </div>
-
-      <div class="forecast-best-label" id="bestWindowLabel" aria-live="polite">
-        ⏳ Loading forecast…
-      </div>
-
-      <div style="margin-top:20px">
-        <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;">Top 3 Clean Windows</div>
-        <div class="window-list" id="windowList"></div>
-      </div>
-    </div>
-
-    <!-- Country Comparison -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon" style="background:rgba(255,101,132,0.15)">🌍</div>
-        <div>
-          <div class="card-title">Global Comparison</div>
-          <div class="card-sub">Avg carbon intensity by country (gCO₂eq/kWh)</div>
-        </div>
-      </div>
-
-      <div class="country-controls">
-        <input
-          type="search"
-          class="search-input"
-          id="countrySearch"
-          placeholder="Search country…"
-          aria-label="Search countries"
-        />
-        <button class="sort-btn active" id="sortAsc" aria-pressed="true">↑ Low first</button>
-        <button class="sort-btn" id="sortDesc" aria-pressed="false">↓ High first</button>
-      </div>
-
-      <div class="table-wrap" role="region" aria-label="Country carbon intensity table">
-        <table class="country-table" aria-label="Carbon intensity by country">
-          <thead>
-            <tr>
-              <th scope="col">Country</th>
-              <th scope="col">g CO₂/kWh</th>
-              <th scope="col" class="country-bar-cell">Relative</th>
-              <th scope="col">Level</th>
-            </tr>
-          </thead>
-          <tbody id="countryTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-  </section>
-</main>
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
 (function () {
-  'use strict';
+'use strict';
 
-  // ── Country data (static, ~40 countries, gCO2eq/kWh avg) ──
-  const COUNTRIES = [
-    { name: 'Paraguay',      flag: '🇵🇾', intensity: 25  },
-    { name: 'Iceland',       flag: '🇮🇸', intensity: 28  },
-    { name: 'Norway',        flag: '🇳🇴', intensity: 29  },
-    { name: 'Albania',       flag: '🇦🇱', intensity: 35  },
-    { name: 'New Zealand',   flag: '🇳🇿', intensity: 120 },
-    { name: 'Switzerland',   flag: '🇨🇭', intensity: 45  },
-    { name: 'Sweden',        flag: '🇸🇪', intensity: 54  },
-    { name: 'France',        flag: '🇫🇷', intensity: 58  },
-    { name: 'Canada',        flag: '🇨🇦', intensity: 140 },
-    { name: 'Finland',       flag: '🇫🇮', intensity: 132 },
-    { name: 'Austria',       flag: '🇦🇹', intensity: 150 },
-    { name: 'Denmark',       flag: '🇩🇰', intensity: 155 },
-    { name: 'Portugal',      flag: '🇵🇹', intensity: 160 },
-    { name: 'Latvia',        flag: '🇱🇻', intensity: 165 },
-    { name: 'Spain',         flag: '🇪🇸', intensity: 175 },
-    { name: 'Lithuania',     flag: '🇱🇹', intensity: 180 },
-    { name: 'United Kingdom',flag: '🇬🇧', intensity: 185 },
-    { name: 'Belgium',       flag: '🇧🇪', intensity: 190 },
-    { name: 'Netherlands',   flag: '🇳🇱', intensity: 280 },
-    { name: 'Germany',       flag: '🇩🇪', intensity: 311 },
-    { name: 'Italy',         flag: '🇮🇹', intensity: 233 },
-    { name: 'Ireland',       flag: '🇮🇪', intensity: 330 },
-    { name: 'United States', flag: '🇺🇸', intensity: 388 },
-    { name: 'Japan',         flag: '🇯🇵', intensity: 474 },
-    { name: 'South Korea',   flag: '🇰🇷', intensity: 500 },
-    { name: 'China',         flag: '🇨🇳', intensity: 555 },
-    { name: 'Turkey',        flag: '🇹🇷', intensity: 438 },
-    { name: 'India',         flag: '🇮🇳', intensity: 632 },
-    { name: 'Mexico',        flag: '🇲🇽', intensity: 350 },
-    { name: 'Brazil',        flag: '🇧🇷', intensity: 103 },
-    { name: 'Argentina',     flag: '🇦🇷', intensity: 280 },
-    { name: 'Colombia',      flag: '🇨🇴', intensity: 176 },
-    { name: 'Chile',         flag: '🇨🇱', intensity: 268 },
-    { name: 'Egypt',         flag: '🇪🇬', intensity: 480 },
-    { name: 'South Africa',  flag: '🇿🇦', intensity: 825 },
-    { name: 'Nigeria',       flag: '🇳🇬', intensity: 430 },
-    { name: 'Saudi Arabia',  flag: '🇸🇦', intensity: 620 },
-    { name: 'Iran',          flag: '🇮🇷', intensity: 560 },
-    { name: 'UAE',           flag: '🇦🇪', intensity: 540 },
-    { name: 'Pakistan',      flag: '🇵🇰', intensity: 390 },
-    { name: 'Bangladesh',    flag: '🇧🇩', intensity: 510 },
-    { name: 'Indonesia',     flag: '🇮🇩', intensity: 700 },
-    { name: 'Vietnam',       flag: '🇻🇳', intensity: 480 },
-    { name: 'Thailand',      flag: '🇹🇭', intensity: 500 },
-    { name: 'Poland',        flag: '🇵🇱', intensity: 699 },
-    { name: 'Czech Republic',flag: '🇨🇿', intensity: 440 },
-    { name: 'Romania',       flag: '🇷🇴', intensity: 280 },
-    { name: 'Ukraine',       flag: '🇺🇦', intensity: 220 },
-    { name: 'Russia',        flag: '🇷🇺', intensity: 380 },
-    { name: 'Australia',     flag: '🇦🇺', intensity: 560 },
-  ];
+// ── Static benchmark data ──────────────────────────────────────
+const STATIC_DATA = {
+  'Germany':        { intensity: 350, mix: { wind:28, solar:12, nuclear:6, gas:30, coal:15, hydro:3, biomass:6 } },
+  'France':         { intensity: 60,  mix: { nuclear:71, hydro:11, wind:8, solar:4, gas:5, biomass:1 } },
+  'Norway':         { intensity: 25,  mix: { hydro:91, wind:7, gas:1, biomass:1 } },
+  'Poland':         { intensity: 740, mix: { coal:68, gas:9, wind:12, solar:5, biomass:4, hydro:2 } },
+  'Spain':          { intensity: 190, mix: { wind:25, nuclear:21, hydro:14, solar:12, gas:20, coal:2, biomass:6 } },
+  'Sweden':         { intensity: 45,  mix: { nuclear:30, hydro:43, wind:20, solar:2, gas:2, biomass:3 } },
+  'Netherlands':    { intensity: 300, mix: { gas:48, wind:22, solar:11, coal:8, nuclear:3, biomass:5, hydro:1, imports:2 } },
+  'Belgium':        { intensity: 175, mix: { nuclear:47, gas:22, wind:14, solar:7, hydro:1, biomass:5, imports:4 } },
+  'US-CA':          { intensity: 200, mix: { solar:27, wind:15, nuclear:9, hydro:15, gas:30, biomass:3, coal:1 } },
+  'US-TX':          { intensity: 440, mix: { wind:23, gas:45, coal:18, nuclear:8, solar:4, hydro:1, biomass:1 } },
+  'US-NE':          { intensity: 270, mix: { nuclear:28, gas:35, hydro:12, wind:10, coal:7, solar:4, biomass:4 } },
+  'US-SE':          { intensity: 420, mix: { nuclear:30, gas:35, coal:22, hydro:7, wind:3, solar:2, biomass:1 } },
+  'Canada':         { intensity: 160, mix: { hydro:60, nuclear:15, wind:8, gas:11, coal:3, solar:1, biomass:2 } },
+  'Australia-NSW':  { intensity: 650, mix: { coal:52, gas:20, wind:15, solar:10, hydro:3 } },
+  'Australia-QLD':  { intensity: 750, mix: { coal:60, gas:19, wind:10, solar:9, hydro:2 } },
+  'Japan':          { intensity: 490, mix: { gas:35, coal:30, nuclear:9, hydro:8, solar:10, wind:4, biomass:4 } },
+  'Brazil':         { intensity: 115, mix: { hydro:63, wind:11, biomass:9, gas:9, nuclear:3, solar:3, coal:2 } },
+};
 
-  const MAX_INTENSITY = 900;
-  const GAUGE_CIRCUMFERENCE = 251.2; // semicircle π*80
+// Approximate static forecast curves (relative shape) — will scale to static intensity
+const STATIC_FORECAST_SHAPE = [
+  1.15,1.2,1.18,1.12,1.08,1.05,1.0,0.95,0.90,0.88,0.85,0.87,
+  0.90,0.92,0.95,0.98,1.02,1.08,1.12,1.15,1.18,1.2,1.18,1.15
+];
 
-  // ── State ──
-  let forecastData = [];
-  let threshold = 150;
-  let sortAscending = true;
-  let countryQuery = '';
+// Gen colors (Garden palette)
+const GEN_COLORS = {
+  wind:    'oklch(52% 0.14 155)',
+  solar:   'oklch(62% 0.15 72)',
+  nuclear: 'oklch(46% 0.14 270)',
+  gas:     'oklch(62% 0.15 55)',
+  coal:    'oklch(35% 0.04 270)',
+  hydro:   'oklch(52% 0.12 220)',
+  biomass: 'oklch(44% 0.12 130)',
+  imports: 'oklch(55% 0.12 315)',
+  oil:     'oklch(48% 0.15 30)',
+  other:   'oklch(50% 0.05 200)',
+};
 
-  // ── Helpers ──
-  function intensityClass(val) {
-    if (val <= 100) return 'very-low';
-    if (val <= 199) return 'low';
-    if (val <= 300) return 'moderate';
-    if (val <= 450) return 'high';
-    return 'very-high';
+const GEN_LABELS = {
+  wind: 'Wind', solar: 'Solar', nuclear: 'Nuclear', gas: 'Gas',
+  coal: 'Coal', hydro: 'Hydro', biomass: 'Biomass', imports: 'Imports',
+  oil: 'Oil', other: 'Other',
+};
+
+// ── State ─────────────────────────────────────────────────────
+let currentIntensity = null;
+let optimalIntensity = null;
+let optimalWindowStr = '—';
+let forecastSlots = [];
+let threshold = 150;
+let region = 'uk-national';
+let scheduleLog = [];
+try { scheduleLog = JSON.parse(localStorage.getItem('voltwatch_log') || '[]'); } catch {}
+
+// ── Helpers ───────────────────────────────────────────────────
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function intensityBand(val) {
+  if (val <= 50)  return 'very-low';
+  if (val <= 100) return 'low';
+  if (val <= 200) return 'moderate';
+  if (val <= 300) return 'high';
+  return 'very-high';
+}
+
+function intensityLabel(val) {
+  const b = intensityBand(val);
+  return { 'very-low':'Very Low', low:'Low', moderate:'Moderate', high:'High', 'very-high':'Very High' }[b];
+}
+
+function bandColor(band) {
+  return {
+    'very-low':  'oklch(40% 0.14 155)',
+    'low':       'oklch(44% 0.12 155)',
+    'moderate':  'oklch(44% 0.16 72)',
+    'high':      'oklch(44% 0.18 35)',
+    'very-high': 'oklch(40% 0.20 25)',
+  }[band] || 'var(--color-ink-muted)';
+}
+
+function fmt(n, decimals = 0) {
+  if (n == null || isNaN(n)) return '—';
+  return Number(n).toFixed(decimals);
+}
+
+function clamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+// ── Intensity badge update (both sidebar + main) ──────────────
+function updateBadges(val) {
+  const band  = intensityBand(val);
+  const label = intensityLabel(val);
+  const badgeClass = 'intensity-badge badge-' + band;
+
+  const sb = document.getElementById('intensityBadge');
+  sb.className = badgeClass;
+  document.getElementById('badgeText').textContent = label;
+
+  const main = document.getElementById('intensityBadgeMain');
+  main.className = badgeClass;
+  main.textContent = label;
+
+  const num = document.getElementById('currentNum');
+  num.className = 'intensity-num ' + band;
+  num.textContent = val;
+}
+
+// ── Donut chart ───────────────────────────────────────────────
+function renderDonut(mixObj) {
+  const items = Object.entries(mixObj)
+    .map(([fuel, perc]) => ({ fuel, perc: Number(perc) }))
+    .filter(g => g.perc > 0.5)
+    .sort((a, b) => b.perc - a.perc);
+
+  const total = items.reduce((s, g) => s + g.perc, 0);
+  const cx = 65, cy = 65, r = 48;
+  const circumference = 2 * Math.PI * r;
+
+  let svgContent = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--color-border)" stroke-width="20"/>`;
+
+  let cumulativePct = 0;
+  items.forEach((g) => {
+    const fraction = g.perc / total;
+    const pct = fraction * circumference;
+    const offset = -cumulativePct * circumference + circumference * 0.25;
+    const color = GEN_COLORS[g.fuel] || GEN_COLORS.other;
+    svgContent += `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+        stroke="${color}" stroke-width="20"
+        stroke-dasharray="${pct} ${circumference}"
+        stroke-dashoffset="${-cumulativePct * circumference + circumference * 0.25}"
+        transform="rotate(-90 ${cx} ${cy})"
+        style="transform-origin:${cx}px ${cy}px">
+        <title>${GEN_LABELS[g.fuel] || g.fuel}: ${g.perc.toFixed(1)}%</title>
+      </circle>`;
+    cumulativePct += fraction;
+  });
+
+  // Centre label
+  const top = items[0];
+  if (top) {
+    const color = GEN_COLORS[top.fuel] || GEN_COLORS.other;
+    svgContent += `
+      <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="13" font-weight="600" font-family="Plus Jakarta Sans,sans-serif" fill="${color}">${top.perc.toFixed(0)}%</text>
+      <text x="${cx}" y="${cy + 9}" text-anchor="middle" font-size="9"  font-family="Plus Jakarta Sans,sans-serif" fill="var(--color-ink-muted)">${GEN_LABELS[top.fuel] || top.fuel}</text>`;
   }
 
-  function intensityLabel(val) {
-    if (val <= 100) return 'Very Low';
-    if (val <= 199) return 'Low';
-    if (val <= 300) return 'Moderate';
-    if (val <= 450) return 'High';
-    return 'Very High';
+  document.getElementById('donutSvg').innerHTML = svgContent;
+
+  document.getElementById('donutLegend').innerHTML = items.slice(0, 6).map(g => {
+    const color = GEN_COLORS[g.fuel] || GEN_COLORS.other;
+    return `<div class="legend-item">
+      <div class="legend-dot" style="background:${color}"></div>
+      <span class="legend-name">${GEN_LABELS[g.fuel] || g.fuel}</span>
+      <span class="legend-pct">${g.perc.toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Forecast area chart (SVG) ─────────────────────────────────
+function renderForecast(slots) {
+  forecastSlots = slots;
+  if (!slots.length) return;
+
+  const svg = document.getElementById('forecastSvg');
+  const tooltip = document.getElementById('forecastTooltip');
+
+  const W = 800, H = 140, PAD_TOP = 12, PAD_BOT = 20;
+  const chartH = H - PAD_TOP - PAD_BOT;
+
+  const vals = slots.map(s => s.val);
+  const minV = Math.min(...vals);
+  const maxV = Math.max(...vals);
+  const range = maxV - minV || 1;
+
+  const xStep = W / (slots.length - 1);
+
+  function yFor(v) {
+    return PAD_TOP + chartH - ((v - minV) / range) * chartH;
   }
 
-  function intensityColor(cls) {
-    const map = {
-      'very-low': '#43d9ad',
-      'low': '#43d9ad',
-      'moderate': '#f7c948',
-      'high': '#ff6584',
-      'very-high': '#ff3860',
-    };
-    return map[cls] || '#8892b0';
+  // Build area path
+  const linePoints = slots.map((s, i) => `${i * xStep},${yFor(s.val)}`).join(' ');
+  const areaPoints = `0,${H - PAD_BOT} ` + linePoints + ` ${W},${H - PAD_BOT}`;
+
+  // Best window (lowest consecutive block based on threshold or just lowest val)
+  const bestIdx = vals.indexOf(minV);
+  const nowIdx  = slots.findIndex(s => s.isNow) ?? -1;
+
+  // Green / amber / red band background
+  function bandFill(v) {
+    const b = intensityBand(v);
+    const alpha = 0.08;
+    if (b === 'very-low' || b === 'low')     return `oklch(52% 0.14 155 / ${alpha})`;
+    if (b === 'moderate')                     return `oklch(62% 0.15 72 / ${alpha})`;
+    return `oklch(55% 0.20 25 / ${alpha})`;
   }
 
-  function clamp(val, min, max) {
-    return Math.min(Math.max(val, min), max);
+  // SVG content
+  let content = '';
+
+  // Band shading strips (full width, per row colour)
+  // Horizontal reference lines
+  const refLevels = [100, 200, 300];
+  refLevels.forEach(lv => {
+    if (lv >= minV - 20 && lv <= maxV + 20) {
+      const y = yFor(lv);
+      const band = intensityBand(lv);
+      content += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="${bandColor(band)}" stroke-width="1" stroke-dasharray="4 4" opacity="0.3"/>
+        <text x="4" y="${y - 3}" font-size="9" fill="${bandColor(band)}" font-family="Plus Jakarta Sans,sans-serif" opacity="0.6">${lv}</text>`;
+    }
+  });
+
+  // Threshold line
+  if (threshold >= minV && threshold <= maxV) {
+    const ty = yFor(threshold);
+    content += `<line x1="0" y1="${ty}" x2="${W}" y2="${ty}" stroke="var(--color-accent)" stroke-width="1.5" stroke-dasharray="6 3" opacity="0.7"/>
+      <text x="${W - 4}" y="${ty - 3}" font-size="9" fill="var(--color-accent)" text-anchor="end" font-family="Plus Jakarta Sans,sans-serif">threshold</text>`;
   }
 
-  function formatTime(isoString) {
-    const d = new Date(isoString);
-    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  // Best window highlight
+  const bestSlot = slots[bestIdx];
+  if (bestSlot) {
+    const bx = bestIdx * xStep;
+    const bw = xStep;
+    content += `<rect x="${bx - bw/2}" y="${PAD_TOP}" width="${bw}" height="${chartH}" fill="oklch(52% 0.14 155 / 0.10)" rx="2"/>`;
   }
 
-  function formatHour(isoString) {
-    const d = new Date(isoString);
-    return d.getHours().toString().padStart(2, '0');
+  // Area fill
+  content += `<polygon points="${areaPoints}" fill="oklch(52% 0.14 155 / 0.07)"/>`;
+
+  // Line — coloured segments
+  for (let i = 1; i < slots.length; i++) {
+    const x1 = (i-1) * xStep, y1 = yFor(slots[i-1].val);
+    const x2 = i * xStep,     y2 = yFor(slots[i].val);
+    const color = bandColor(intensityBand(slots[i].val));
+    content += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
   }
 
-  // ── Generation source colours ──
-  const GEN_COLORS = {
-    gas:        '#f7c948',
-    coal:       '#8892b0',
-    nuclear:    '#6c63ff',
-    wind:       '#43d9ad',
-    solar:      '#ff9f43',
-    hydro:      '#54a0ff',
-    imports:    '#ff6584',
-    biomass:    '#5f27cd',
-    other:      '#576574',
-    gas_cc:     '#f7c948',
-    oil:        '#ee5a24',
-    geothermal: '#1dd1a1',
+  // Dots
+  slots.forEach((s, i) => {
+    const x = i * xStep, y = yFor(s.val);
+    const color = bandColor(intensityBand(s.val));
+    const r = s.isNow ? 5 : (i === bestIdx ? 5 : 3);
+    const fill = (s.isNow || i === bestIdx) ? color : 'var(--color-paper)';
+    content += `<circle cx="${x}" cy="${y}" r="${r}" stroke="${color}" stroke-width="2" fill="${fill}"/>`;
+    if (s.isNow) {
+      content += `<text x="${x}" y="${y - 9}" text-anchor="middle" font-size="9" fill="var(--color-ink-muted)" font-family="Plus Jakarta Sans,sans-serif">Now</text>`;
+    }
+  });
+
+  svg.innerHTML = content;
+
+  // Interactive hover
+  const wrap = document.getElementById('forecastWrap');
+  wrap.addEventListener('mousemove', (e) => {
+    const rect = wrap.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const svgW = rect.width;
+    const idx = clamp(Math.round((px / svgW) * (slots.length - 1)), 0, slots.length - 1);
+    const slot = slots[idx];
+    if (!slot) return;
+    const band = intensityBand(slot.val);
+    tooltip.style.left = Math.min(px + 10, svgW - 180) + 'px';
+    tooltip.style.top  = '4px';
+    tooltip.style.opacity = '1';
+    tooltip.innerHTML = `<strong style="font-variant-numeric:tabular-nums">${slot.label}</strong> — <span style="color:${bandColor(band)};font-weight:700">${slot.val} g</span><br><span style="color:var(--color-ink-muted)">${intensityLabel(slot.val)}</span>`;
+  });
+  wrap.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+
+  // X-axis labels (every 4 hours)
+  const labelEl = document.getElementById('forecastXLabels');
+  labelEl.innerHTML = slots.map((s, i) => {
+    const show = i % 4 === 0 || i === slots.length - 1;
+    return `<span class="forecast-x-label" style="opacity:${show ? 1 : 0}">${s.label.split(':')[0]}</span>`;
+  }).join('');
+}
+
+// ── Best windows ──────────────────────────────────────────────
+function renderBestWindows(slots) {
+  if (!slots.length) return;
+  const sorted = [...slots].sort((a, b) => a.val - b.val);
+  const worst  = Math.max(...slots.map(s => s.val));
+  const best3  = sorted.slice(0, 3);
+  optimalIntensity = best3[0]?.val ?? null;
+  optimalWindowStr = best3[0]?.label ?? '—';
+
+  const ranks = ['rank-1', 'rank-2', 'rank-3'];
+  document.getElementById('windowsList').innerHTML = best3.map((s, i) => {
+    const savings = worst - s.val;
+    const barW = clamp(100 - (s.val / worst) * 100, 5, 100);
+    return `<div class="window-item">
+      <div class="window-rank ${ranks[i]}">${i + 1}</div>
+      <span class="window-time">${s.label}</span>
+      <span class="window-val" style="color:${bandColor(intensityBand(s.val))}">${s.val}<small style="font-size:10px;color:var(--color-ink-muted)"> g</small></span>
+      <div class="window-bar-bg"><div class="window-bar-fill" style="width:${barW}%"></div></div>
+      <span class="window-savings">−${savings} g vs worst</span>
+    </div>`;
+  }).join('');
+
+  recalcCarbon();
+}
+
+// ── Threshold status ──────────────────────────────────────────
+function updateThresholdStatus(slots) {
+  if (!slots.length || currentIntensity == null) return;
+  const el = document.getElementById('thresholdStatus');
+  const below = slots.filter(s => s.val <= threshold);
+  if (currentIntensity <= threshold) {
+    el.textContent = `Current intensity (${currentIntensity} g) is below threshold.`;
+    el.style.color = 'var(--color-success)';
+  } else if (below.length) {
+    const first = below[0].label;
+    el.textContent = `${below.length} slots below ${threshold} g — first at ${first}.`;
+    el.style.color = 'var(--color-warn)';
+  } else {
+    el.textContent = `No slots below ${threshold} g in the 24h window.`;
+    el.style.color = 'var(--color-ink-muted)';
+  }
+}
+
+// ── Carbon calculator ─────────────────────────────────────────
+function recalcCarbon() {
+  const servers = parseFloat(document.getElementById('calcServers').value) || 0;
+  const watts   = parseFloat(document.getElementById('calcWatts').value) || 0;
+  const hours   = parseFloat(document.getElementById('calcHours').value) || 0;
+
+  const kwh = servers * watts * hours / 1000;
+  document.getElementById('calcKwh').textContent = fmt(kwh, 1);
+
+  if (currentIntensity != null) {
+    const co2Now = kwh * currentIntensity / 1000; // kg
+    document.getElementById('calcCo2Now').textContent = fmt(co2Now, 2);
+  } else {
+    document.getElementById('calcCo2Now').textContent = '—';
+  }
+
+  if (optimalIntensity != null) {
+    const kwh2 = servers * watts * hours / 1000;
+    const co2Opt = kwh2 * optimalIntensity / 1000;
+    document.getElementById('calcCo2Opt').textContent = fmt(co2Opt, 2);
+
+    if (currentIntensity != null) {
+      const co2Now  = kwh * currentIntensity / 1000;
+      const saved   = co2Now - co2Opt;
+      const tonnes  = saved / 1000;
+      document.getElementById('calcSaved').textContent = fmt(saved, 2) + (tonnes > 0.01 ? ` / ${fmt(tonnes, 4)} t` : '');
+    }
+  } else {
+    document.getElementById('calcCo2Opt').textContent = '—';
+    document.getElementById('calcSaved').textContent = '—';
+  }
+}
+
+// ── Budget tracker ────────────────────────────────────────────
+function updateBudget() {
+  const kwh = parseFloat(document.getElementById('monthlyKwh').value) || 0;
+  if (!kwh) return;
+
+  const co2El  = document.getElementById('budgetCo2');
+  const optEl  = document.getElementById('budgetOptimal');
+  const noteEl = document.getElementById('budgetNote');
+
+  if (currentIntensity != null) {
+    const co2 = kwh * currentIntensity / 1000; // kg
+    co2El.textContent = fmt(co2, 0) + ' kg';
+    co2El.className = 'budget-val ' + (currentIntensity > 200 ? 'warn' : 'ok');
+  }
+  if (optimalIntensity != null) {
+    const opt = kwh * optimalIntensity / 1000;
+    optEl.textContent = fmt(opt, 0) + ' kg';
+    optEl.className = 'budget-val ok';
+    if (currentIntensity != null) {
+      const saved = (kwh * currentIntensity / 1000) - opt;
+      noteEl.textContent = `Shifting to the optimal window could save ~${fmt(saved, 0)} kg CO₂ / month.`;
+    }
+  } else {
+    optEl.textContent = '—';
+  }
+}
+
+// ── Workload scheduler ────────────────────────────────────────
+function findBestScheduleWindow() {
+  const duration = parseFloat(document.getElementById('schedDuration').value) || 1;
+  const servers  = parseFloat(document.getElementById('schedServers').value) || 1;
+  const watts    = parseFloat(document.getElementById('schedWatts').value) || 300;
+  const result   = document.getElementById('schedResult');
+
+  if (!forecastSlots.length) {
+    result.style.display = 'block';
+    result.textContent = 'Load a forecast first by selecting a UK region.';
+    return;
+  }
+
+  const slotsNeeded = Math.max(1, Math.round(duration * 2)); // 30-min slots
+  let bestStart = 0, bestAvg = Infinity;
+
+  for (let i = 0; i <= forecastSlots.length - slotsNeeded; i++) {
+    const window = forecastSlots.slice(i, i + slotsNeeded);
+    const avg = window.reduce((s, w) => s + w.val, 0) / window.length;
+    if (avg < bestAvg) { bestAvg = avg; bestStart = i; }
+  }
+
+  const window  = forecastSlots.slice(bestStart, bestStart + slotsNeeded);
+  const startLbl = window[0].label;
+  const endLbl   = window[window.length - 1].label;
+  const kwh      = servers * watts * duration / 1000;
+  const co2      = kwh * bestAvg / 1000;
+
+  result.style.display = 'block';
+  result.innerHTML = `Best start: <strong>${startLbl}</strong> → <strong>${endLbl}</strong><br>
+    Avg intensity: <strong>${fmt(bestAvg, 0)} g</strong><br>
+    Energy: ${fmt(kwh, 1)} kWh · CO₂: ~${fmt(co2, 2)} kg`;
+  toast('Best window found — see sidebar result', 'success');
+}
+
+// ── Schedule log ──────────────────────────────────────────────
+function renderLog() {
+  const body = document.getElementById('logBody');
+  if (!scheduleLog.length) {
+    body.innerHTML = `<tr><td colspan="6" class="log-empty">No jobs booked yet. Use the calculator above.</td></tr>`;
+    return;
+  }
+  body.innerHTML = scheduleLog.map((entry, i) => `
+    <tr>
+      <td>${esc(entry.bookedAt)}</td>
+      <td>${esc(entry.region)}</td>
+      <td style="font-weight:600">${esc(entry.window)}</td>
+      <td>${esc(entry.kwh)}</td>
+      <td class="savings-cell">${esc(entry.saved)}</td>
+      <td><button class="btn-remove-log" data-idx="${i}" aria-label="Remove entry">×</button></td>
+    </tr>`).join('');
+}
+
+function bookWindow() {
+  const servers = parseFloat(document.getElementById('calcServers').value) || 0;
+  const watts   = parseFloat(document.getElementById('calcWatts').value) || 0;
+  const hours   = parseFloat(document.getElementById('calcHours').value) || 0;
+  const kwh     = servers * watts * hours / 1000;
+
+  if (!kwh || optimalIntensity == null || currentIntensity == null) {
+    toast('Fill in the calculator and wait for data to load.', '');
+    return;
+  }
+
+  const co2Now  = kwh * currentIntensity / 1000;
+  const co2Opt  = kwh * optimalIntensity / 1000;
+  const saved   = co2Now - co2Opt;
+
+  const regionLabel = document.getElementById('regionSelect');
+  const entry = {
+    bookedAt: new Date().toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }),
+    region:   regionLabel.options[regionLabel.selectedIndex].text,
+    window:   optimalWindowStr,
+    kwh:      fmt(kwh, 1),
+    saved:    fmt(saved, 2) + ' kg',
   };
 
-  const GEN_LABELS = {
-    gas:     'Gas',
-    coal:    'Coal',
-    nuclear: 'Nuclear',
-    wind:    'Wind',
-    solar:   'Solar',
-    hydro:   'Hydro',
-    imports: 'Imports',
-    biomass: 'Biomass',
-    other:   'Other',
-    oil:     'Oil',
-    geothermal: 'Geothermal',
-  };
+  scheduleLog.unshift(entry);
+  try { localStorage.setItem('voltwatch_log', JSON.stringify(scheduleLog.slice(0, 50))); } catch {}
+  renderLog();
+  toast('Job booked — CO₂ savings logged', 'success');
+}
 
-  // ── DOM refs ──
-  const gaugeNum       = document.getElementById('gaugeNum');
-  const gaugeValue     = document.getElementById('gaugeValue');
-  const gaugeFill      = document.getElementById('gaugeFill');
-  const intensLbl      = document.getElementById('intensityLabel');
-  const intensIdx      = document.getElementById('intensityIndex');
-  const lastUpdated    = document.getElementById('lastUpdated');
-  const refreshBtn     = document.getElementById('refreshBtn');
-  const refreshIcon    = document.getElementById('refreshIcon');
-  const donutSvg       = document.getElementById('donutSvg');
-  const donutLegend    = document.getElementById('donutLegend');
-  const forecastGrid   = document.getElementById('forecastGrid');
-  const bestWindowLbl  = document.getElementById('bestWindowLabel');
-  const windowList     = document.getElementById('windowList');
-  const tipsList       = document.getElementById('tipsList');
-  const countryBody    = document.getElementById('countryTableBody');
-  const countrySearch  = document.getElementById('countrySearch');
-  const sortAscBtn     = document.getElementById('sortAsc');
-  const sortDescBtn    = document.getElementById('sortDesc');
-  const thresholdSlider = document.getElementById('thresholdSlider');
-  const thresholdVal   = document.getElementById('thresholdVal');
+// ── Delta vs UK daily average ─────────────────────────────────
+const UK_DAILY_AVG = 180;
 
-  // ── Gauge render ──
-  function renderGauge(val, index) {
-    const cls   = intensityClass(val);
-    const color = intensityColor(cls);
-    const pct   = clamp(val / 500, 0, 1); // cap at 500 for gauge fill
-    const offset = GAUGE_CIRCUMFERENCE * (1 - pct);
+function updateDelta(val) {
+  const row = document.getElementById('deltaRow');
+  const pct = Math.round(Math.abs(val - UK_DAILY_AVG) / UK_DAILY_AVG * 100);
+  const dir = val > UK_DAILY_AVG ? 'above' : 'below';
+  row.innerHTML = `<span class="delta-chip ${dir}">${dir === 'above' ? '+' : '−'}${pct}%</span> vs UK daily average (${UK_DAILY_AVG} g)`;
+}
 
-    gaugeNum.textContent = val;
-    gaugeValue.style.color = color;
-    gaugeFill.style.strokeDashoffset = offset;
-    gaugeFill.setAttribute('class', `gauge-fill stroke-${cls}`);
+// ── UK API fetch ──────────────────────────────────────────────
+async function fetchUKNational() {
+  const [intRes, genRes, fcRes] = await Promise.all([
+    fetch('https://api.carbonintensity.org.uk/intensity'),
+    fetch('https://api.carbonintensity.org.uk/generation'),
+    fetch(`https://api.carbonintensity.org.uk/intensity/date/${new Date().toISOString().slice(0,10)}`),
+  ]);
 
-    intensLbl.textContent = intensityLabel(val);
-    intensLbl.className = `intensity-label bg-${cls}`;
+  const intJson = await intRes.json();
+  const genJson = genRes.ok ? await genRes.json() : null;
+  const fcJson  = fcRes.ok  ? await fcRes.json()  : null;
 
-    if (index) {
-      intensIdx.textContent = `Index: ${index}`;
-    }
-  }
+  return { intJson, genJson, fcJson };
+}
 
-  // ── Tips render ──
-  function renderTips(val) {
-    const cls = intensityClass(val);
-    const allTips = {
-      'very-low': [
-        { icon: '🚀', title: 'Perfect time to run batch jobs', desc: 'Grid is at its greenest. Schedule heavy compute, ML training, and data pipeline runs now.' },
-        { icon: '🔋', title: 'Charge electric vehicles', desc: 'Charging EVs right now produces minimal carbon — ideal if you can schedule charging.' },
-        { icon: '📦', title: 'Run backup and sync operations', desc: 'Trigger cloud backups, database snapshots, and large file syncs for best carbon efficiency.' },
-        { icon: '🌬️', title: 'High renewable output', desc: 'Wind and solar are likely driving intensity down. Share this moment with your sustainability report.' },
-      ],
-      low: [
-        { icon: '✅', title: 'Good window for intensive tasks', desc: 'Carbon intensity is low — a great time to run non-urgent workloads and avoid peak hours.' },
-        { icon: '🔌', title: 'Schedule discretionary loads', desc: 'Dishwashers, washing machines, and EV chargers will use relatively clean energy now.' },
-        { icon: '📊', title: 'Batch reporting is efficient', desc: 'Generate large reports and analytics jobs while the grid is green.' },
-      ],
-      moderate: [
-        { icon: '⚖️', title: 'Mix of renewables and fossil fuels', desc: 'Consider deferring non-urgent heavy workloads by a few hours if a greener window follows.' },
-        { icon: '📉', title: 'Reduce idle server load', desc: 'Turn off unused compute instances and scale down non-critical services to lower consumption.' },
-        { icon: '🕐', title: 'Check the forecast', desc: 'A lower-intensity window may be coming — use the 24h forecast to plan your next batch job.' },
-      ],
-      high: [
-        { icon: '⚠️', title: 'Grid is relatively dirty right now', desc: 'Avoid scheduling new heavy jobs. Defer batch workloads to a cleaner window.' },
-        { icon: '🛑', title: 'Pause non-critical processes', desc: 'Now is a good time to pause discretionary compute like analytics pipelines and data exports.' },
-        { icon: '💡', title: 'Reduce lighting and idle load', desc: 'Switch off unused monitors and equipment — every watt saved matters during peak dirty hours.' },
-        { icon: '📧', title: 'Notify your team', desc: 'Alert engineers to hold off on deployments or heavy CI runs until intensity drops.' },
-      ],
-      'very-high': [
-        { icon: '🔴', title: 'Highest carbon period — act now', desc: 'Grid carbon intensity is very high. Immediately defer all non-essential workloads.' },
-        { icon: '🛑', title: 'Suspend batch processing', desc: 'Stop or pause all background jobs, ML training, and data ingestion until intensity falls.' },
-        { icon: '📴', title: 'Reduce server footprint', desc: 'Scale down to minimum required capacity. Shut down staging environments and dev clusters.' },
-        { icon: '🌐', title: 'Shift load to greener regions', desc: 'If multi-region, route compute to data centers in countries with lower current intensity.' },
-      ],
+async function fetchUKRegional(regionId) {
+  const res = await fetch('https://api.carbonintensity.org.uk/regional');
+  if (!res.ok) throw new Error('Regional API unavailable');
+  const json = await res.json();
+  const regions = json.data?.[0]?.regions ?? [];
+  return regions.find(r => String(r.regionid) === String(regionId)) ?? null;
+}
+
+// ── Build forecast slots from API data ───────────────────────
+function buildFcSlots(data) {
+  const now = new Date();
+  return data.map(d => {
+    const dt = new Date(d.from);
+    const isNow = Math.abs(dt - now) < 30 * 60 * 1000;
+    return {
+      label: dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      val:   d.intensity?.forecast ?? d.intensity?.actual ?? 0,
+      isNow,
     };
+  });
+}
 
-    const tips = allTips[cls] || allTips.moderate;
-    tipsList.innerHTML = tips.map(t => `
-      <div class="tip-item">
-        <div class="tip-icon" aria-hidden="true">${t.icon}</div>
-        <div class="tip-body">
-          <div class="tip-title">${t.title}</div>
-          <div class="tip-desc">${t.desc}</div>
-        </div>
-      </div>
-    `).join('');
+function buildStaticFcSlots(baseIntensity) {
+  const now = new Date();
+  const startH = now.getHours();
+  return STATIC_FORECAST_SHAPE.map((mult, i) => {
+    const h = (startH + i) % 24;
+    const val = Math.round(baseIntensity * mult);
+    return {
+      label: String(h).padStart(2,'0') + ':00',
+      val,
+      isNow: i === 0,
+    };
+  });
+}
+
+// ── Load region data ──────────────────────────────────────────
+async function loadRegion() {
+  const regionEl = document.getElementById('regionSelect');
+  region = regionEl.value;
+  const regionName = regionEl.options[regionEl.selectedIndex].text.split(' — ')[0];
+  document.getElementById('regionLabel').textContent = regionName;
+
+  const updEl = document.getElementById('updatedAt');
+  updEl.textContent = 'Loading…';
+
+  // Static regions
+  if (region.startsWith('static-')) {
+    const key = region.replace('static-', '');
+    const data = STATIC_DATA[key];
+    if (!data) { updEl.textContent = 'No data for this region.'; return; }
+
+    currentIntensity = data.intensity;
+    optimalIntensity = Math.min(...buildStaticFcSlots(data.intensity).map(s => s.val));
+
+    updateBadges(data.intensity);
+    updateDelta(data.intensity);
+    renderDonut(data.mix);
+
+    const slots = buildStaticFcSlots(data.intensity);
+    renderForecast(slots);
+    renderBestWindows(slots);
+    updateThresholdStatus(slots);
+    updateBudget();
+    recalcCarbon();
+
+    updEl.textContent = '2023 benchmark data (static) · auto-shapes curve';
+    document.getElementById('forecastNote').textContent = 'Approximate daily shape — static data';
+    return;
   }
 
-  // ── Donut chart ──
-  function renderDonut(genData) {
-    // Filter and sort by percentage
-    const items = genData
-      .filter(g => g.perc > 0.5)
-      .sort((a, b) => b.perc - a.perc);
+  // UK national
+  try {
+    let intensity, genData = null, fcData = null;
 
-    const total = items.reduce((s, g) => s + g.perc, 0);
-    const cx = 70, cy = 70, r = 50;
-    const circumference = 2 * Math.PI * r;
-
-    let currentAngle = -Math.PI / 2; // start top
-    const segments = [];
-
-    items.forEach(g => {
-      const fraction = g.perc / total;
-      const angle = fraction * 2 * Math.PI;
-      const large = angle > Math.PI ? 1 : 0;
-      const x1 = cx + r * Math.cos(currentAngle);
-      const y1 = cy + r * Math.sin(currentAngle);
-      const x2 = cx + r * Math.cos(currentAngle + angle);
-      const y2 = cy + r * Math.sin(currentAngle + angle);
-      const color = GEN_COLORS[g.fuel] || GEN_COLORS.other;
-      segments.push({ x1, y1, x2, y2, large, color, g, fraction, endAngle: currentAngle + angle });
-      currentAngle += angle;
-    });
-
-    // Build SVG paths (stroke-based segments)
-    let svgContent = `<circle cx="70" cy="70" r="50" fill="none" stroke="var(--surface2)" stroke-width="22"/>`;
-
-    // Use stroke-dasharray technique on separate paths
-    items.forEach((g, i) => {
-      const seg = segments[i];
-      const pct = seg.fraction * circumference;
-      const color = GEN_COLORS[g.fuel] || GEN_COLORS.other;
-      const priorPct = segments.slice(0, i).reduce((s, x) => s + x.fraction * circumference, 0);
-      svgContent += `
-        <circle cx="70" cy="70" r="50" fill="none"
-          stroke="${color}"
-          stroke-width="22"
-          stroke-dasharray="${pct} ${circumference}"
-          stroke-dashoffset="${-priorPct + circumference * 0.25}"
-          transform="rotate(-90 70 70)"
-          style="transform-origin:70px 70px;transition:stroke-dasharray 0.8s">
-          <title>${GEN_LABELS[g.fuel] || g.fuel}: ${g.perc.toFixed(1)}%</title>
-        </circle>`;
-    });
-
-    // Centre text
-    const topFuel = items[0];
-    if (topFuel) {
-      svgContent += `
-        <text x="70" y="66" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700" font-family="Inter,sans-serif">
-          ${topFuel.perc.toFixed(0)}%
-        </text>
-        <text x="70" y="80" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="Inter,sans-serif">
-          ${GEN_LABELS[topFuel.fuel] || topFuel.fuel}
-        </text>`;
-    }
-
-    donutSvg.innerHTML = svgContent;
-
-    // Legend
-    donutLegend.innerHTML = items.slice(0, 7).map(g => {
-      const color = GEN_COLORS[g.fuel] || GEN_COLORS.other;
-      return `
-        <div class="legend-item">
-          <div class="legend-dot" style="background:${color}"></div>
-          <span class="legend-name">${GEN_LABELS[g.fuel] || g.fuel}</span>
-          <span class="legend-pct">${g.perc.toFixed(1)}%</span>
-        </div>`;
-    }).join('');
-  }
-
-  // ── Forecast bars ──
-  function renderForecast(data) {
-    forecastData = data;
-    const vals = data.map(d => d.intensity.forecast);
-    const minVal = Math.min(...vals);
-    const maxVal = Math.max(...vals);
-
-    // Find hours below threshold
-    const belowThreshold = data.filter(d => d.intensity.forecast <= threshold);
-    const bestHours = data
-      .slice()
-      .sort((a, b) => a.intensity.forecast - b.intensity.forecast)
-      .slice(0, 3);
-
-    const bestSet = new Set(bestHours.map(d => d.from));
-
-    forecastGrid.innerHTML = data.map(d => {
-      const val = d.intensity.forecast;
-      const cls = intensityClass(val);
-      const color = intensityColor(cls);
-      const heightPct = clamp((val - 0) / (maxVal - 0), 0.05, 1) * 100;
-      const hour = formatHour(d.from);
-      const isBest = bestSet.has(d.from);
-      const isBelow = val <= threshold;
-
-      return `
-        <div class="forecast-bar-wrap${isBest ? ' best' : ''}" role="listitem"
-             aria-label="${hour}:00 — ${val} gCO2/kWh — ${intensityLabel(val)}">
-          <div class="forecast-bar-bg">
-            <div class="forecast-bar-fill" style="height:${heightPct}%;background:${color};opacity:${isBelow ? '1' : '0.5'}"></div>
-            <div class="forecast-tooltip">
-              <strong>${hour}:00</strong> — ${val} g<br>
-              <span style="color:${color}">${intensityLabel(val)}</span>
-            </div>
-          </div>
-          <div class="forecast-hour">${hour}</div>
-        </div>`;
-    }).join('');
-
-    // Best window label
-    if (belowThreshold.length > 0) {
-      const startHr = formatHour(belowThreshold[0].from);
-      bestWindowLbl.innerHTML = `✅ <strong>${belowThreshold.length} hours</strong> below ${threshold}g threshold today — starting at <strong>${startHr}:00</strong>`;
-      bestWindowLbl.style.color = 'var(--green)';
+    if (region === 'uk-national') {
+      const { intJson, genJson, fcJson } = await fetchUKNational();
+      const slot = intJson.data?.[0];
+      intensity = slot?.intensity?.actual ?? slot?.intensity?.forecast ?? null;
+      genData   = genJson?.data?.generationmix ?? null;
+      fcData    = fcJson?.data ?? null;
     } else {
-      bestWindowLbl.innerHTML = `⚡ No hours below ${threshold}g today — try raising the threshold`;
-      bestWindowLbl.style.color = 'var(--yellow)';
+      // UK sub-region
+      const regId = region.replace('uk-', '');
+      const regData = await fetchUKRegional(regId);
+      intensity = regData?.intensity?.forecast ?? null;
+      genData = regData?.generationmix ? Object.fromEntries(regData.generationmix.map(g => [g.fuel, g.perc])) : null;
+
+      // Still fetch national forecast for timing
+      try {
+        const fcRes = await fetch(`https://api.carbonintensity.org.uk/intensity/date/${new Date().toISOString().slice(0,10)}`);
+        if (fcRes.ok) { const j = await fcRes.json(); fcData = j.data; }
+      } catch {}
     }
 
-    // Top windows
-    renderBestWindows(bestHours, maxVal);
-  }
+    if (intensity == null) throw new Error('Intensity data missing');
 
-  function renderBestWindows(bestHours, maxVal) {
-    const ranks = ['rank-1', 'rank-2', 'rank-3'];
-    windowList.innerHTML = bestHours.map((d, i) => {
-      const val = d.intensity.forecast;
-      const cls = intensityClass(val);
-      const color = intensityColor(cls);
-      const barW = clamp(100 - (val / maxVal) * 100, 10, 100);
-      const hour = formatHour(d.from);
-      return `
-        <div class="window-item">
-          <div class="window-rank ${ranks[i]}">${i + 1}</div>
-          <div class="window-time">${hour}:00 – ${(parseInt(hour) + 1).toString().padStart(2,'0')}:00</div>
-          <div class="window-val" style="color:${color}">${val}<span style="font-size:10px;color:var(--muted)"> g</span></div>
-          <div class="window-bar">
-            <div class="window-bar-fill" style="width:${barW}%;background:${color}"></div>
-          </div>
-        </div>`;
-    }).join('');
-  }
+    currentIntensity = intensity;
+    updateBadges(intensity);
+    updateDelta(intensity);
 
-  // ── Country table ──
-  function renderCountryTable() {
-    const query = countryQuery.toLowerCase();
-    let data = COUNTRIES.filter(c => c.name.toLowerCase().includes(query));
-    data = data.slice().sort((a, b) => sortAscending ? a.intensity - b.intensity : b.intensity - a.intensity);
-    const maxI = Math.max(...data.map(c => c.intensity));
-
-    countryBody.innerHTML = data.map(c => {
-      const cls = intensityClass(c.intensity);
-      const color = intensityColor(cls);
-      const barW = clamp((c.intensity / maxI) * 100, 2, 100);
-      return `
-        <tr>
-          <td>
-            <span class="flag" aria-hidden="true">${c.flag}</span>
-            <span style="margin-left:8px">${c.name}</span>
-          </td>
-          <td style="font-variant-numeric:tabular-nums;font-weight:700;color:${color}">${c.intensity}</td>
-          <td class="country-bar-cell">
-            <div class="country-bar-bg">
-              <div class="country-bar-fill" style="width:${barW}%;background:${color}"></div>
-            </div>
-          </td>
-          <td style="color:${color};font-size:12px;font-weight:600">${intensityLabel(c.intensity)}</td>
-        </tr>`;
-    }).join('');
-
-    if (!data.length) {
-      countryBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No countries match your search</td></tr>`;
-    }
-  }
-
-  // ── Fetch UK live intensity ──
-  async function fetchIntensity() {
-    const res = await fetch('https://api.carbonintensity.org.uk/intensity');
-    if (!res.ok) throw new Error(`Intensity API ${res.status}`);
-    const json = await res.json();
-    return json.data[0];
-  }
-
-  // ── Fetch generation mix ──
-  async function fetchGeneration() {
-    const res = await fetch('https://api.carbonintensity.org.uk/generation');
-    if (!res.ok) throw new Error(`Generation API ${res.status}`);
-    const json = await res.json();
-    return json.data.generationmix;
-  }
-
-  // ── Fetch today forecast ──
-  async function fetchForecast() {
-    const today = new Date().toISOString().slice(0, 10);
-    const res = await fetch(`https://api.carbonintensity.org.uk/intensity/date/${today}`);
-    if (!res.ok) throw new Error(`Forecast API ${res.status}`);
-    const json = await res.json();
-    return json.data;
-  }
-
-  // ── Show notice ──
-  function showNotice(container, type, msg) {
-    container.innerHTML = `<div class="notice notice-${type}" role="alert">⚠️ ${msg}</div>`;
-  }
-
-  // ── Main load ──
-  async function loadAll() {
-    refreshBtn.disabled = true;
-    refreshIcon.className = 'spin';
-    lastUpdated.textContent = 'Updating…';
-
-    // Intensity
-    try {
-      const d = await fetchIntensity();
-      const val = d.intensity.actual ?? d.intensity.forecast;
-      renderGauge(val, d.intensity.index);
-      renderTips(val);
-    } catch (e) {
-      intensLbl.textContent = 'API unavailable';
-      intensLbl.className = 'intensity-label notice-err';
-      gaugeNum.textContent = '?';
-      showNotice(tipsList, 'err', `Could not load UK intensity: ${e.message}`);
-    }
-
-    // Generation mix
-    try {
-      const gen = await fetchGeneration();
-      renderDonut(gen);
-    } catch (e) {
-      donutLegend.innerHTML = `<div class="notice notice-warn">Generation data unavailable</div>`;
-    }
-
-    // Forecast
-    try {
-      const fc = await fetchForecast();
-      if (fc && fc.length) {
-        renderForecast(fc);
+    if (genData) {
+      // genData may be array (national) or already processed above
+      if (Array.isArray(genData)) {
+        const mixObj = Object.fromEntries(genData.map(g => [g.fuel, g.perc]));
+        renderDonut(mixObj);
       } else {
-        bestWindowLbl.textContent = 'No forecast data available for today.';
+        renderDonut(genData);
       }
-    } catch (e) {
-      bestWindowLbl.innerHTML = `<span style="color:var(--accent2)">Forecast unavailable: ${e.message}</span>`;
     }
 
-    lastUpdated.textContent = `Updated ${new Date().toLocaleTimeString('en-GB')}`;
-    refreshBtn.disabled = false;
-    refreshIcon.className = '';
+    if (fcData && fcData.length) {
+      const slots = buildFcSlots(fcData);
+      renderForecast(slots);
+      renderBestWindows(slots);
+      updateThresholdStatus(slots);
+    } else {
+      // Fallback to shaped static curve
+      const slots = buildStaticFcSlots(intensity);
+      renderForecast(slots);
+      renderBestWindows(slots);
+      updateThresholdStatus(slots);
+      document.getElementById('forecastNote').textContent = 'Estimated shape (live API unavailable)';
+    }
+
+    updateBudget();
+    recalcCarbon();
+    updEl.textContent = `Updated ${new Date().toLocaleTimeString('en-GB')} · UK Carbon Intensity API`;
+
+  } catch (err) {
+    document.getElementById('updatedAt').textContent = `Error: ${err.message}`;
+    toast('Could not load data — check your connection.', '');
   }
+}
 
-  // ── Events ──
-  refreshBtn.addEventListener('click', loadAll);
+// ── Event wiring ──────────────────────────────────────────────
+document.getElementById('regionSelect').addEventListener('change', loadRegion);
 
-  thresholdSlider.addEventListener('input', () => {
-    threshold = parseInt(thresholdSlider.value);
-    thresholdVal.textContent = threshold;
-    if (forecastData.length) renderForecast(forecastData);
-  });
+document.getElementById('thresholdSlider').addEventListener('input', () => {
+  threshold = parseInt(document.getElementById('thresholdSlider').value);
+  document.getElementById('thresholdVal').textContent = threshold;
+  if (forecastSlots.length) {
+    renderForecast(forecastSlots);
+    updateThresholdStatus(forecastSlots);
+  }
+});
 
-  countrySearch.addEventListener('input', () => {
-    countryQuery = countrySearch.value;
-    renderCountryTable();
-  });
+['calcServers','calcWatts','calcHours'].forEach(id => {
+  document.getElementById(id).addEventListener('input', recalcCarbon);
+});
 
-  sortAscBtn.addEventListener('click', () => {
-    sortAscending = true;
-    sortAscBtn.classList.add('active');
-    sortAscBtn.setAttribute('aria-pressed', 'true');
-    sortDescBtn.classList.remove('active');
-    sortDescBtn.setAttribute('aria-pressed', 'false');
-    renderCountryTable();
-  });
+document.getElementById('btnCalcRefresh').addEventListener('click', recalcCarbon);
 
-  sortDescBtn.addEventListener('click', () => {
-    sortAscending = false;
-    sortDescBtn.classList.add('active');
-    sortDescBtn.setAttribute('aria-pressed', 'true');
-    sortAscBtn.classList.remove('active');
-    sortAscBtn.setAttribute('aria-pressed', 'false');
-    renderCountryTable();
-  });
+document.getElementById('monthlyKwh').addEventListener('input', updateBudget);
 
-  // ── Init ──
-  renderCountryTable();
-  loadAll();
+document.getElementById('btnFindWindow').addEventListener('click', findBestScheduleWindow);
 
-  // Auto-refresh every 5 minutes
-  setInterval(loadAll, 5 * 60 * 1000);
+document.getElementById('btnBookWindow').addEventListener('click', bookWindow);
+
+document.getElementById('btnClearLog').addEventListener('click', () => {
+  if (!scheduleLog.length) return;
+  if (!confirm('Clear all schedule log entries?')) return;
+  scheduleLog = [];
+  try { localStorage.removeItem('voltwatch_log'); } catch {}
+  renderLog();
+  toast('Log cleared');
+});
+
+document.getElementById('logBody').addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-remove-log');
+  if (!btn) return;
+  const idx = parseInt(btn.dataset.idx);
+  scheduleLog.splice(idx, 1);
+  try { localStorage.setItem('voltwatch_log', JSON.stringify(scheduleLog)); } catch {}
+  renderLog();
+});
+
+// ── Init ──────────────────────────────────────────────────────
+renderLog();
+loadRegion();
+
+// Auto-refresh every 5 min
+setInterval(loadRegion, 5 * 60 * 1000);
 
 })();
 </script>

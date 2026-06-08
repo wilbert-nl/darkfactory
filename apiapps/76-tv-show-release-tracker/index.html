@@ -1,2101 +1,1465 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TV Show Release Tracker</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
-
-    :root {
-      --bg: #0a0a0a;
-      --surface: #141414;
-      --surface2: #1e1e1e;
-      --border: rgba(255,255,255,0.08);
-      --accent: #00c030;
-      --accent2: #e8a020;
-      --text: #ffffff;
-      --muted: #9ca3af;
-      --radius: 12px;
-      --font-display: 'Bebas Neue', Impact, sans-serif;
-      --font-body: 'Figtree', system-ui, sans-serif;
-      --font-mono: 'DM Mono', monospace;
-    }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(12px);
-    }
-
-    .header-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      height: 64px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      flex-shrink: 0;
-    }
-
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-    }
-
-    .logo-text {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
-    }
-
-    .logo-text span { color: var(--accent); }
-
-    /* ── Search bar in header ── */
-    .search-wrapper {
-      flex: 1;
-      max-width: 480px;
-      position: relative;
-    }
-
-    .search-input {
-      width: 100%;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 16px 10px 42px;
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .search-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(168,85,247,.18);
-    }
-
-    .search-input::placeholder { color: var(--muted); }
-
-    .search-icon {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      pointer-events: none;
-      font-size: 16px;
-    }
-
-    .search-spinner {
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: none;
-    }
-
-    .search-spinner.active { display: block; }
-
-    /* ── Nav tabs ── */
-    .nav-tabs {
-      display: flex;
-      gap: 4px;
-      margin-left: auto;
-    }
-
-    .nav-tab {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 6px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
-      white-space: nowrap;
-    }
-
-    .nav-tab:hover { background: var(--surface2); color: var(--text); }
-    .nav-tab.active { background: var(--accent); color: #fff; }
-
-    /* ── Layout ── */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 28px 24px;
-    }
-
-    /* ── Search results dropdown ── */
-    .search-results {
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      z-index: 200;
-      display: none;
-      max-height: 420px;
-      overflow-y: auto;
-    }
-
-    .search-results.open { display: block; animation: fadeDown 0.18s ease; }
-
-    @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .result-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      cursor: pointer;
-      transition: background 0.15s;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .result-item:last-child { border-bottom: none; }
-    .result-item:hover { background: var(--surface2); }
-
-    .result-poster {
-      width: 40px;
-      height: 56px;
-      object-fit: cover;
-      border-radius: 6px;
-      background: var(--surface2);
-      flex-shrink: 0;
-    }
-
-    .result-poster-placeholder {
-      width: 40px;
-      height: 56px;
-      background: var(--surface2);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-
-    .result-info { flex: 1; min-width: 0; }
-
-    .result-name {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .result-meta {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .result-add-btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 5px 12px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s, background 0.2s;
-      flex-shrink: 0;
-    }
-
-    .result-add-btn:hover { opacity: 0.85; }
-    .result-add-btn.added { background: var(--green); cursor: default; }
-
-    /* ── Section headings ── */
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    .section-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .section-title .badge {
-      background: var(--accent);
-      color: #fff;
-      font-size: 12px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 20px;
-    }
-
-    .section-subtitle {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    /* ── Empty state ── */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-    }
-
-    .empty-state .empty-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.6;
-    }
-
-    .empty-state h3 {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-
-    .empty-state p { font-size: 14px; line-height: 1.6; }
-
-    /* ── Watchlist grid ── */
-    .shows-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 20px;
-    }
-
-    /* ── Show card ── */
-    .show-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .show-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
-      border-color: var(--accent);
-    }
-
-    .show-card:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-
-    .card-poster {
-      width: 100%;
-      aspect-ratio: 2/3;
-      object-fit: cover;
-      display: block;
-      background: var(--surface2);
-    }
-
-    .card-poster-placeholder {
-      width: 100%;
-      aspect-ratio: 2/3;
-      background: var(--surface2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 48px;
-    }
-
-    .card-body { padding: 14px 16px 16px; }
-
-    .card-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 6px;
-      line-height: 1.3;
-    }
-
-    .card-genres {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-bottom: 10px;
-    }
-
-    .genre-chip {
-      background: var(--surface2);
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 20px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .card-rating {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 13px;
-      color: var(--yellow);
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-
-    .card-rating .rating-bar {
-      flex: 1;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .card-rating .rating-fill {
-      height: 100%;
-      background: var(--yellow);
-      border-radius: 2px;
-      transition: width 0.4s ease;
-    }
-
-    .countdown-box {
-      background: var(--surface2);
-      border-radius: 8px;
-      padding: 10px 12px;
-      margin-bottom: 10px;
-    }
-
-    .countdown-label {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .countdown-value {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--green);
-    }
-
-    .countdown-value.soon { color: var(--accent2); }
-    .countdown-value.today { color: var(--yellow); animation: pulse 1.5s ease infinite; }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
-    }
-
-    .card-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn {
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: none;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s, background 0.2s, transform 0.1s;
-    }
-
-    .btn:active { transform: scale(0.97); }
-
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { opacity: 0.85; }
-
-    .btn-danger { background: rgba(244,63,94, 0.15); color: var(--accent2); border: 1px solid rgba(244,63,94,0.3); }
-    .btn-danger:hover { background: rgba(244,63,94, 0.25); }
-
-    .btn-ghost { background: var(--surface2); color: var(--muted); }
-    .btn-ghost:hover { background: var(--border); color: var(--text); }
-
-    /* ── Status indicator ── */
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .status-dot.running { background: var(--green); animation: blink 2s ease infinite; }
-    .status-dot.ended { background: var(--muted); }
-    .status-dot.upcoming { background: var(--yellow); }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    /* ── Schedule / digest view ── */
-    .schedule-day {
-      margin-bottom: 32px;
-    }
-
-    .day-header {
-      font-size: 13px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 14px;
-    }
-
-    .day-header span { color: var(--accent); }
-
-    .episode-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 12px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 8px;
-      transition: border-color 0.2s, transform 0.15s;
-    }
-
-    .episode-row:hover { border-color: var(--accent); transform: translateX(2px); }
-
-    .ep-poster {
-      width: 38px;
-      height: 54px;
-      object-fit: cover;
-      border-radius: 6px;
-      background: var(--surface2);
-      flex-shrink: 0;
-    }
-
-    .ep-poster-ph {
-      width: 38px;
-      height: 54px;
-      background: var(--surface2);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    .ep-info { flex: 1; min-width: 0; }
-
-    .ep-show-name {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .ep-title {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .ep-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 5px;
-    }
-
-    .ep-badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .ep-badge.premiere { background: rgba(168,85,247,0.2); color: var(--accent); }
-    .ep-badge.finale { background: rgba(244,63,94,0.2); color: var(--accent2); }
-    .ep-badge.regular { background: rgba(67,217,173,0.15); color: var(--green); }
-    .ep-badge.new { background: rgba(247,201,72,0.15); color: var(--yellow); }
-
-    .ep-time {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 500;
-    }
-
-    .ep-network {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    /* ── Detail modal ── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      backdrop-filter: blur(4px);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s;
-    }
-
-    .modal-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      max-width: 680px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      transform: scale(0.96) translateY(10px);
-      transition: transform 0.25s;
-    }
-
-    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
-
-    .modal-hero {
-      position: relative;
-      height: 200px;
-      overflow: hidden;
-      border-radius: 16px 16px 0 0;
-    }
-
-    .modal-hero img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: brightness(0.45);
-    }
-
-    .modal-hero-ph {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, var(--surface2), var(--border));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 60px;
-    }
-
-    .modal-hero-content {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 20px 24px;
-    }
-
-    .modal-title {
-      font-size: 24px;
-      font-weight: 800;
-      color: #fff;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
-      margin-bottom: 6px;
-    }
-
-    .modal-meta-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .modal-meta-item {
-      font-size: 12px;
-      color: rgba(255,255,255,0.8);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .modal-body { padding: 24px; }
-
-    .modal-close {
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      background: rgba(0,0,0,0.5);
-      border: none;
-      color: #fff;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-      z-index: 10;
-    }
-
-    .modal-close:hover { background: rgba(255,101,132,0.7); }
-
-    .modal-section {
-      margin-bottom: 20px;
-    }
-
-    .modal-section-title {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-
-    .modal-summary {
-      font-size: 14px;
-      line-height: 1.65;
-      color: var(--muted);
-    }
-
-    .episode-info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .ep-info-box {
-      background: var(--surface2);
-      border-radius: 10px;
-      padding: 14px;
-    }
-
-    .ep-info-box-label {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .ep-info-box-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .ep-info-box-value.highlight { color: var(--green); }
-    .ep-info-box-value.warn { color: var(--accent2); }
-
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .modal-actions .btn { flex: 1; padding: 12px; font-size: 14px; }
-
-    /* ── Digest tab ── */
-    .digest-container {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      margin-bottom: 24px;
-    }
-
-    .digest-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      gap: 12px;
-    }
-
-    .digest-title-area h2 {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-
-    .digest-title-area p {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .digest-textarea {
-      width: 100%;
-      min-height: 300px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.7;
-      padding: 16px;
-      resize: vertical;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .digest-textarea:focus { border-color: var(--accent); }
-
-    .digest-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-      flex-wrap: wrap;
-    }
-
-    .digest-actions .btn { padding: 10px 20px; font-size: 13px; flex: none; }
-
-    /* ── Toast ── */
-    .toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-    }
-
-    .toast {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-      animation: toastIn 0.3s ease;
-      pointer-events: all;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      max-width: 320px;
-    }
-
-    .toast.success { border-color: var(--green); }
-    .toast.error { border-color: var(--accent2); }
-    .toast.info { border-color: var(--accent); }
-
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-
-    @keyframes toastOut {
-      from { opacity: 1; transform: translateX(0); }
-      to   { opacity: 0; transform: translateX(20px); }
-    }
-
-    /* ── Loading skeleton ── */
-    .skeleton {
-      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 6px;
-    }
-
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    .skeleton-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-
-    /* ── Calendar ── */
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 8px;
-      margin-bottom: 24px;
-    }
-
-    .cal-day-header {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--muted);
-      text-align: center;
-      padding: 6px 0;
-    }
-
-    .cal-day {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      min-height: 80px;
-      padding: 8px;
-      transition: border-color 0.2s;
-    }
-
-    .cal-day.today { border-color: var(--accent); }
-    .cal-day.has-shows { border-color: rgba(168,85,247,0.4); }
-
-    .cal-day-num {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .cal-day.today .cal-day-num { color: var(--accent); }
-
-    .cal-show-dot {
-      font-size: 10px;
-      color: var(--text);
-      background: var(--surface2);
-      border-radius: 4px;
-      padding: 2px 4px;
-      margin-bottom: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .cal-show-dot:hover { background: var(--accent); }
-
-    /* ── Spinner ── */
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 40px auto;
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 768px) {
-      .header-inner { gap: 10px; }
-      .logo-text { display: none; }
-      .nav-tabs { gap: 2px; }
-      .nav-tab { padding: 6px 10px; font-size: 12px; }
-      .shows-grid { grid-template-columns: 1fr 1fr; }
-      .calendar-grid { grid-template-columns: repeat(7, 1fr); gap: 4px; }
-      .cal-day { min-height: 60px; padding: 5px; }
-      .episode-info-grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 480px) {
-      .shows-grid { grid-template-columns: 1fr; }
-      .modal { border-radius: 12px; }
-    }
-
-    /* ── Status bar ── */
-    .status-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--muted);
-      padding: 10px 0 0;
-    }
-
-    /* ── Progress tracker ── */
-    .progress-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-
-    .progress-label { font-size: 12px; color: var(--muted); flex: 1; }
-
-    .progress-bar-wrap {
-      flex: 2;
-      height: 6px;
-      background: var(--border);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--green));
-      border-radius: 3px;
-      transition: width 0.5s ease;
-    }
-
-    .progress-pct {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text);
-      min-width: 36px;
-      text-align: right;
-    }
-
-    /* ── View pane visibility ── */
-    .view-pane { display: none; }
-    .view-pane.active { display: block; }
-
-    /* === Film/Books v2 Design System === */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(ellipse 700px 500px at 50% -5%, rgba(0,192,48,0.06) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    body > * { position: relative; z-index: 1; }
-
-    h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); letter-spacing: 0.02em; color: var(--text); line-height: 1; }
-    h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--accent2); }
-    h3 { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
-
-    .container, main, .wrapper, .app { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
-
-    .card, .result, .item, .movie, .book, .show, .comic, .series, .reading, .pick,
-    [class*="card"], [class*="item"], [class*="result"], [class*="movie"], [class*="book"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      transition: transform 0.2s, background 0.2s;
-      animation: mediaFade 0.4s ease both;
-    }
-    .card:hover, .item:hover, [class*="card"]:hover { transform: translateY(-2px); background: var(--surface2); }
-
-    input, select, textarea {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      padding: 0.75rem 1rem;
-      font-family: var(--font-body);
-      font-size: 0.95rem;
-      width: 100%;
-      transition: border-color 0.2s;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent2); }
-
-    button, .btn, input[type="submit"], input[type="button"] {
-      background: var(--accent2);
-      color: #000;
-      border: none;
-      border-radius: 6px;
-      padding: 0.75rem 2rem;
-      font-family: var(--font-body);
-      font-weight: 800;
-      font-size: 0.9rem;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: transform 0.15s, filter 0.15s;
-    }
-    button:hover { transform: scale(1.02); filter: brightness(1.1); }
-    button:active { transform: scale(0.97); }
-
-    .tag, .badge, .genre, .category, .label, .format, .status {
-      display: inline-block;
-      background: rgba(232,160,32,0.12);
-      border: 1px solid rgba(232,160,32,0.25);
-      color: var(--accent2);
-      border-radius: 4px;
-      padding: 0.15rem 0.6rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .rating, .score, .pages, .runtime {
-      font-family: var(--font-mono);
-      font-size: 1.6rem;
-      font-weight: 500;
-      color: var(--accent2);
-    }
-
-    /* Star rating */
-    .stars, .rating-stars { color: var(--accent2); letter-spacing: 0.1em; }
-
-    table { width: 100%; border-collapse: collapse; }
-    th { padding: 0.5rem 1rem; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; border-bottom: 1px solid var(--border); }
-    td { padding: 0.6rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
-
-    @keyframes mediaFade {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: none; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV Show Release Tracker — App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Studio · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep {
+  width: 1px; height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Search section */
+.sidebar-search {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  position: relative;
+}
+.search-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.07em;
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+.search-wrap { position: relative; }
+.search-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(46% 0.20 155 / 0.10);
+}
+.search-input::placeholder { color: var(--color-ink-muted); }
+.search-spinner {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+.search-spinner.active { display: block; }
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+/* Autocomplete dropdown */
+.search-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px oklch(18% 0.020 155 / 0.14);
+  z-index: 400;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.search-dropdown.open { display: block; animation: fadeDown 0.15s var(--ease-out); }
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ac-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s;
+}
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover, .ac-item:focus { background: var(--color-accent-subtle); outline: none; }
+.ac-poster {
+  width: 32px; height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--color-paper-2);
+  flex-shrink: 0;
+}
+.ac-poster-ph {
+  width: 32px; height: 44px;
+  background: var(--color-paper-2);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.ac-info { flex: 1; min-width: 0; }
+.ac-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ac-meta { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 1px; }
+.ac-add {
+  padding: var(--space-1) var(--space-2);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.ac-add:hover { opacity: 0.85; }
+.ac-add.added { background: var(--color-success); cursor: default; }
+.ac-msg { padding: var(--space-3); font-size: var(--text-sm); color: var(--color-ink-muted); text-align: center; }
+
+/* Today's schedule link */
+.sidebar-schedule-link {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.btn-schedule-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.btn-schedule-link:hover, .btn-schedule-link.active {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-color: var(--color-accent-line);
+}
+
+/* Watchlist section */
+.sidebar-wl-head {
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.sidebar-wl-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.07em;
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.wl-count-badge {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-family: var(--font-body);
+}
+.watchlist-rows {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-1) 0 var(--space-2);
+}
+.wl-empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+}
+.wl-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.wl-row:hover { background: oklch(89% 0.014 138); }
+.wl-row.active {
+  background: oklch(89% 0.014 138);
+  border-left-color: var(--color-accent);
+}
+.wl-poster {
+  width: 32px; height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--color-paper-2);
+  flex-shrink: 0;
+}
+.wl-poster-ph {
+  width: 32px; height: 44px;
+  background: var(--color-paper-2);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.wl-info { flex: 1; min-width: 0; }
+.wl-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wl-countdown {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 1px;
+}
+.wl-countdown.soon { color: var(--color-warn); }
+.wl-countdown.today { color: var(--color-success); font-weight: 600; }
+.wl-remove {
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+  opacity: 0;
+}
+.wl-row:hover .wl-remove { opacity: 1; }
+.wl-remove:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* Main views */
+.view { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.view.active { display: flex; }
+
+/* Empty / default */
+.main-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-16);
+  text-align: center;
+}
+.main-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.main-empty-sub {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  max-width: 320px;
+  line-height: 1.65;
+}
+
+/* ── Schedule view ── */
+.schedule-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.schedule-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-4);
+}
+.schedule-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.schedule-date {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.time-group { margin-bottom: var(--space-4); }
+.time-group-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.1em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+.ep-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s;
+}
+.ep-row:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-line);
+  transform: translateX(2px);
+}
+.ep-thumb {
+  width: 36px; height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--color-paper-2);
+  flex-shrink: 0;
+}
+.ep-thumb-ph {
+  width: 36px; height: 50px;
+  background: var(--color-paper-2);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.ep-info { flex: 1; min-width: 0; }
+.ep-show { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.ep-title-line {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ep-network { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 2px; }
+
+/* ── Show detail view ── */
+.detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Show header */
+.show-header {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+.show-poster {
+  width: 140px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 20px oklch(18% 0.04 155 / 0.15);
+}
+.show-poster-ph {
+  width: 140px;
+  height: 196px;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; flex-shrink: 0;
+}
+.show-meta { flex: 1; min-width: 0; }
+.show-name {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: var(--space-3);
+}
+.show-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.genre-chip {
+  display: inline-block;
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  color: var(--color-accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.08em;
+}
+.status-chip {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.08em;
+}
+.status-chip.running {
+  background: oklch(38% 0.16 155 / 0.12);
+  border: 1px solid oklch(38% 0.16 155 / 0.25);
+  color: var(--color-success);
+}
+.status-chip.ended {
+  background: oklch(46% 0.03 155 / 0.08);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+}
+.status-chip.upcoming {
+  background: oklch(62% 0.15 72 / 0.12);
+  border: 1px solid oklch(62% 0.15 72 / 0.25);
+  color: var(--color-warn);
+}
+.show-attrs {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.show-attr { display: flex; align-items: center; gap: 4px; }
+.show-track-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+}
+.show-track-btn.untracked {
+  background: var(--color-accent);
+  color: var(--color-paper);
+}
+.show-track-btn.untracked:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(46% 0.20 155 / 0.28);
+}
+.show-track-btn.tracked {
+  background: oklch(55% 0.20 25 / 0.08);
+  color: var(--color-danger);
+  border: 1px solid oklch(55% 0.20 25 / 0.2);
+}
+.show-track-btn.tracked:hover { background: oklch(55% 0.20 25 / 0.14); }
+
+/* Next episode card */
+.next-ep-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4) var(--space-6);
+  align-items: center;
+}
+.next-ep-countdown {
+  text-align: center;
+  flex-shrink: 0;
+}
+.countdown-num {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 300;
+  color: var(--color-accent);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.countdown-unit {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.1em;
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+.next-ep-info {}
+.next-ep-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.08em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-1);
+}
+.next-ep-name {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: var(--space-1);
+}
+.next-ep-meta {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.next-ep-time {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+}
+
+/* Show summary */
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.1em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+.show-summary {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  line-height: 1.7;
+}
+
+/* Season navigator */
+.season-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.season-select {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.season-select:focus { outline: none; border-color: var(--color-accent); }
+.season-label { font-size: var(--text-sm); color: var(--color-ink-muted); }
+
+/* Episodes table */
+.ep-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.ep-table th {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  letter-spacing: 0.07em;
+  color: var(--color-ink-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.ep-table td {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  border-bottom: 1px solid oklch(87% 0.016 95 / 0.6);
+  vertical-align: middle;
+}
+.ep-table tr:last-child td { border-bottom: none; }
+.ep-table tr:hover td { background: var(--color-accent-subtle); }
+.ep-num { color: var(--color-ink-muted); font-variant-numeric: tabular-nums; font-size: var(--text-xs); }
+.ep-watched-cb { width: 16px; height: 16px; cursor: pointer; accent-color: var(--color-accent); }
+.ep-watched-row td { color: var(--color-ink-muted); }
+.ep-watched-row .ep-title-td { text-decoration: line-through; }
+
+/* Loading spinner */
+.spinner {
+  width: 32px; height: 32px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: var(--space-12) auto;
+}
+@keyframes spin2 { to { transform: rotate(360deg); } }
+
+/* Empty state */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12);
+  text-align: center;
+  color: var(--color-ink-muted);
+}
+.empty-icon { font-size: 40px; opacity: 0.5; }
+.empty-title { font-size: var(--text-base); font-weight: 600; color: var(--color-ink); }
+.empty-sub { font-size: var(--text-sm); line-height: 1.6; max-width: 280px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.020 155 / 0.20);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 45vh;
+  }
+  .main { overflow: visible; }
+  .view.active { overflow: visible; }
+  .detail-scroll, .schedule-scroll { overflow: visible; padding: var(--space-4); }
+  .show-header { flex-direction: column; }
+  .show-poster, .show-poster-ph { width: 100px; }
+  .next-ep-card { grid-template-columns: 1fr; }
+  .nav-page-label { display: none; }
+}
+</style>
 </head>
 <body>
 
-<header>
-  <div class="header-inner">
-    <a class="logo" href="app.html" aria-label="TV Show Release Tracker">
-      <div class="logo-icon">📺</div>
-      <span class="logo-text">TV<span>Tracker</span></span>
-    </a>
+<!-- N9 nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">TV<span>Track</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Show Release Tracker</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
 
-    <div class="search-wrapper" role="search">
-      <span class="search-icon" aria-hidden="true">🔍</span>
-      <input
-        id="searchInput"
-        class="search-input"
-        type="search"
-        placeholder="Search and add shows…"
-        aria-label="Search for TV shows"
-        aria-autocomplete="list"
-        aria-controls="searchResults"
-        autocomplete="off"
-      />
-      <div class="search-spinner" id="searchSpinner" role="status" aria-label="Searching"></div>
-      <div class="search-results" id="searchResults" role="listbox" aria-label="Search results"></div>
+<div class="app-shell">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Search and watchlist">
+
+    <!-- Search -->
+    <div class="sidebar-search">
+      <label class="search-label" for="searchInput">Search shows</label>
+      <div class="search-wrap">
+        <input
+          type="search"
+          class="search-input"
+          id="searchInput"
+          placeholder="Breaking Bad, Succession…"
+          autocomplete="off"
+          aria-label="Search for TV shows"
+          aria-autocomplete="list"
+          aria-controls="searchDropdown"
+        />
+        <div class="search-spinner" id="searchSpinner" aria-hidden="true"></div>
+        <div class="search-dropdown" id="searchDropdown" role="listbox" aria-label="Search results"></div>
+      </div>
     </div>
 
-    <nav class="nav-tabs" role="tablist">
-      <button class="nav-tab active" role="tab" aria-selected="true" data-tab="watchlist">Watchlist</button>
-      <button class="nav-tab" role="tab" aria-selected="false" data-tab="schedule">This Week</button>
-      <button class="nav-tab" role="tab" aria-selected="false" data-tab="digest">Digest</button>
-      <button class="nav-tab" role="tab" aria-selected="false" data-tab="calendar">Calendar</button>
-    </nav>
-  </div>
-</header>
-
-<main class="container">
-
-  <!-- ── WATCHLIST TAB ── -->
-  <div class="view-pane active" id="pane-watchlist" role="tabpanel">
-    <div class="section-header">
-      <h1 class="section-title">
-        My Watchlist
-        <span class="badge" id="watchlistCount">0</span>
-      </h1>
-      <span class="section-subtitle" id="lastUpdated"></span>
+    <!-- Today's schedule shortcut -->
+    <div class="sidebar-schedule-link">
+      <button class="btn-schedule-link active" id="scheduleLink" aria-pressed="true">
+        📅 Today's Schedule
+      </button>
     </div>
 
-    <div id="watchlistGrid" class="shows-grid"></div>
-    <div id="watchlistEmpty" class="empty-state" style="display:none;">
-      <div class="empty-icon">📺</div>
-      <h3>Your watchlist is empty</h3>
-      <p>Search for TV shows above to start tracking premieres,<br>episode countdowns, and weekly release digests.</p>
+    <!-- Watchlist -->
+    <div class="sidebar-wl-head">
+      <span class="sidebar-wl-title">
+        Watchlist
+        <span class="wl-count-badge" id="wlCount">0</span>
+      </span>
     </div>
-  </div>
+    <div class="watchlist-rows" id="watchlistRows" role="list" aria-label="Tracked shows"></div>
 
-  <!-- ── SCHEDULE TAB ── -->
-  <div class="view-pane" id="pane-schedule" role="tabpanel">
-    <div class="section-header">
-      <h1 class="section-title">This Week on TV</h1>
-      <span class="section-subtitle" id="scheduleRange"></span>
-    </div>
-    <div id="scheduleContent"><div class="spinner"></div></div>
-  </div>
+  </aside>
 
-  <!-- ── DIGEST TAB ── -->
-  <div class="view-pane" id="pane-digest" role="tabpanel">
-    <div class="section-header">
-      <h1 class="section-title">Weekly Digest</h1>
-    </div>
+  <!-- ── Main panel ── -->
+  <main class="main" aria-label="Main content">
 
-    <div class="digest-container">
-      <div class="digest-header">
-        <div class="digest-title-area">
-          <h2 id="digestHeading">New This Week</h2>
-          <p id="digestSubtitle">Auto-generated from your watchlist. Edit before sending.</p>
+    <!-- Schedule view (default) -->
+    <div class="view active" id="view-schedule">
+      <div class="schedule-scroll" id="scheduleScroll">
+        <div class="schedule-head">
+          <span class="schedule-title">Today's Schedule</span>
+          <span class="schedule-date" id="scheduleDate"></span>
         </div>
-        <button class="btn btn-ghost" id="regenerateDigestBtn" style="flex:none;padding:8px 14px;font-size:13px;">↻ Regenerate</button>
-      </div>
-
-      <textarea
-        id="digestTextarea"
-        class="digest-textarea"
-        aria-label="Weekly digest content"
-        placeholder="Add shows to your watchlist to auto-generate a weekly digest…"
-      ></textarea>
-
-      <div class="digest-actions">
-        <button class="btn btn-primary" id="copyDigestBtn">📋 Copy to Clipboard</button>
-        <button class="btn btn-ghost" id="downloadDigestBtn">⬇ Download .txt</button>
+        <div id="scheduleContent">
+          <div class="spinner" role="status" aria-label="Loading schedule"></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ── CALENDAR TAB ── -->
-  <div class="view-pane" id="pane-calendar" role="tabpanel">
-    <div class="section-header">
-      <h1 class="section-title">Release Calendar</h1>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost" id="calPrevBtn" style="flex:none;padding:6px 14px;font-size:13px;">‹ Prev</button>
-        <button class="btn btn-ghost" id="calNextBtn" style="flex:none;padding:6px 14px;font-size:13px;">Next ›</button>
+    <!-- Show detail view -->
+    <div class="view" id="view-detail">
+      <div class="detail-scroll" id="detailScroll" aria-live="polite">
+        <!-- populated by JS -->
       </div>
     </div>
-    <div id="calendarMonthLabel" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px;"></div>
-    <div class="calendar-grid" id="calendarDayHeaders"></div>
-    <div class="calendar-grid" id="calendarGrid"></div>
-    <div id="calendarScheduleList" style="margin-top:24px;"></div>
-  </div>
 
-</main>
-
-<!-- ── DETAIL MODAL ── -->
-<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div class="modal" id="modal">
-    <div class="modal-hero" id="modalHero">
-      <div class="modal-hero-ph" id="modalHeroPh">📺</div>
-      <button class="modal-close" id="modalClose" aria-label="Close dialog">✕</button>
-      <div class="modal-hero-content">
-        <div class="modal-title" id="modalTitle">Show Title</div>
-        <div class="modal-meta-row" id="modalMetaRow"></div>
-      </div>
-    </div>
-    <div class="modal-body">
-      <div class="modal-section">
-        <div class="modal-section-title">Synopsis</div>
-        <div class="modal-summary" id="modalSummary">Loading…</div>
-      </div>
-      <div class="modal-section" id="modalEpisodesSection">
-        <div class="modal-section-title">Episode Info</div>
-        <div class="episode-info-grid" id="modalEpisodeGrid"></div>
-      </div>
-      <div class="modal-section" id="modalProgressSection" style="display:none;">
-        <div class="modal-section-title">Season Progress</div>
-        <div id="modalProgressContent"></div>
-      </div>
-      <div class="modal-actions" id="modalActions"></div>
-    </div>
-  </div>
+  </main>
 </div>
 
-<!-- ── TOAST CONTAINER ── -->
-<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
-(function () {
-  'use strict';
+'use strict';
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  const STORAGE_KEY = 'tvtracker_watchlist_v2';
-  let watchlist = [];
-  let currentTab = 'watchlist';
-  let modalShow = null;
-  let searchTimeout = null;
-  let calendarOffset = 0; // months from today
+/* ── Constants ──────────────────────────────────────────────── */
+const BASE = 'https://api.tvmaze.com';
+const STORAGE_WL  = 'tvtrack_watchlist_v1';
+const STORAGE_EPS = 'tvtrack_watched_v1';
 
-  // ── Storage ───────────────────────────────────────────────────────────────
-  function loadWatchlist() {
+/* ── State ──────────────────────────────────────────────────── */
+let watchlist = [];         // array of show objects
+let watchedEps = {};        // { showId: { 'S1E2': true, ... } }
+let activeShowId = null;
+let allShowEpisodes = [];   // cached episodes for current detail show
+let searchTimer = null;
+
+/* ── Storage ────────────────────────────────────────────────── */
+function loadState() {
+  try { watchlist = JSON.parse(localStorage.getItem(STORAGE_WL) || '[]'); } catch { watchlist = []; }
+  try { watchedEps = JSON.parse(localStorage.getItem(STORAGE_EPS) || '{}'); } catch { watchedEps = {}; }
+}
+function saveWatchlist() { localStorage.setItem(STORAGE_WL, JSON.stringify(watchlist)); }
+function saveWatched() { localStorage.setItem(STORAGE_EPS, JSON.stringify(watchedEps)); }
+
+function isTracked(id) { return watchlist.some(s => s.id === id); }
+
+function addToWatchlist(show) {
+  if (isTracked(show.id)) return;
+  watchlist.unshift(show);
+  saveWatchlist();
+  renderWatchlist();
+  toast(`"${show.name}" added to watchlist`, 'success');
+}
+
+function removeFromWatchlist(id) {
+  const s = watchlist.find(x => x.id === id);
+  watchlist = watchlist.filter(x => x.id !== id);
+  saveWatchlist();
+  renderWatchlist();
+  if (s) toast(`"${s.name}" removed`, '');
+  if (activeShowId === id) renderDetailView(id); // refresh track button
+}
+
+/* ── API ────────────────────────────────────────────────────── */
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+const searchShows  = q  => fetchJSON(`${BASE}/search/shows?q=${encodeURIComponent(q)}`).then(r => r.map(x => x.show));
+const fetchShow    = id => fetchJSON(`${BASE}/shows/${id}?embed[]=nextepisode&embed[]=previousepisode`);
+const fetchEpisodes= id => fetchJSON(`${BASE}/shows/${id}/episodes`);
+const fetchSchedule= d  => fetchJSON(`${BASE}/schedule?country=US&date=${d}`);
+
+/* ── Helpers ────────────────────────────────────────────────── */
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function stripHtml(html) {
+  if (!html) return '';
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return d.textContent || d.innerText || '';
+}
+
+function isoToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return 'TBA';
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function formatDateShort(dateStr) {
+  if (!dateStr) return 'TBA';
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr + 'T00:00:00'); target.setHours(0,0,0,0);
+  return Math.round((target - today) / 86400000);
+}
+
+function countdownInfo(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return null;
+  if (d === 0)  return { num: 'Tonight!', unit: '', cls: 'today', text: 'Tonight!' };
+  if (d === 1)  return { num: '1',  unit: 'day', cls: 'soon', text: 'Tomorrow' };
+  if (d < 0)   return { num: String(Math.abs(d)), unit: 'days ago', cls: '', text: `${Math.abs(d)} days ago` };
+  const h = Math.floor(((new Date(dateStr+'T00:00:00') - new Date()) / 3600000));
+  return { num: String(d), unit: d === 1 ? 'day' : 'days', cls: d <= 7 ? 'soon' : '', text: `In ${d} day${d !== 1 ? 's' : ''}` };
+}
+
+function statusCls(status) {
+  const m = { 'Running': 'running', 'Ended': 'ended', 'In Development': 'upcoming', 'To Be Determined': 'upcoming' };
+  return m[status] || 'ended';
+}
+
+function epKey(season, number) { return `S${season}E${number}`; }
+
+/* ── Toast ──────────────────────────────────────────────────── */
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+/* ── Sidebar: Watchlist ─────────────────────────────────────── */
+function renderWatchlist() {
+  const rows = document.getElementById('watchlistRows');
+  const badge = document.getElementById('wlCount');
+  badge.textContent = watchlist.length;
+
+  if (!watchlist.length) {
+    rows.innerHTML = '<div class="wl-empty">Add shows via search above to track them here.</div>';
+    return;
+  }
+
+  rows.innerHTML = watchlist.map(show => {
+    const next = show._embedded && show._embedded.nextepisode;
+    const cd = next ? countdownInfo(next.airdate) : null;
+    const posterSrc = show.image && (show.image.medium || show.image.original);
+    const imgHtml = posterSrc
+      ? `<img src="${esc(posterSrc)}" class="wl-poster" alt="" loading="lazy" />`
+      : `<div class="wl-poster-ph">📺</div>`;
+    const cdHtml = cd
+      ? `<div class="wl-countdown ${cd.cls}">${esc(cd.text)}</div>`
+      : (show.status === 'Ended' ? '<div class="wl-countdown">Ended</div>' : '');
+
+    return `<div class="wl-row${activeShowId === show.id ? ' active' : ''}" role="listitem" tabindex="0" data-id="${show.id}" aria-label="${esc(show.name)}">
+      ${imgHtml}
+      <div class="wl-info">
+        <div class="wl-name">${esc(show.name)}</div>
+        ${cdHtml}
+      </div>
+      <button class="wl-remove" data-id="${show.id}" aria-label="Remove ${esc(show.name)}" title="Remove">×</button>
+    </div>`;
+  }).join('');
+
+  rows.querySelectorAll('.wl-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.classList.contains('wl-remove')) return;
+      showDetail(parseInt(row.dataset.id, 10));
+    });
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); }
+    });
+  });
+
+  rows.querySelectorAll('.wl-remove').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      removeFromWatchlist(parseInt(btn.dataset.id, 10));
+    });
+  });
+}
+
+/* ── Search ─────────────────────────────────────────────────── */
+function initSearch() {
+  const input = document.getElementById('searchInput');
+  const dropdown = document.getElementById('searchDropdown');
+  const spinner = document.getElementById('searchSpinner');
+
+  input.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = input.value.trim();
+    if (q.length < 2) { closeDropdown(); return; }
+    spinner.classList.add('active');
+    searchTimer = setTimeout(() => doSearch(q), 400);
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeDropdown(); input.blur(); }
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.sidebar-search')) closeDropdown();
+  });
+
+  async function doSearch(q) {
     try {
-      watchlist = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    } catch (e) {
-      watchlist = [];
-    }
-  }
-
-  function saveWatchlist() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist));
-  }
-
-  function isTracked(id) {
-    return watchlist.some(s => s.id === id);
-  }
-
-  function addShow(show) {
-    if (!isTracked(show.id)) {
-      watchlist.push(show);
-      saveWatchlist();
-      toast(`Added "${show.name}" to watchlist`, 'success');
-    }
-  }
-
-  function removeShow(id) {
-    const show = watchlist.find(s => s.id === id);
-    watchlist = watchlist.filter(s => s.id !== id);
-    saveWatchlist();
-    if (show) toast(`Removed "${show.name}"`, 'info');
-  }
-
-  // ── API ───────────────────────────────────────────────────────────────────
-  const BASE = 'https://api.tvmaze.com';
-
-  async function fetchJSON(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-  }
-
-  async function searchShows(q) {
-    const data = await fetchJSON(`${BASE}/search/shows?q=${encodeURIComponent(q)}`);
-    return data.map(r => r.show);
-  }
-
-  async function fetchShowDetail(id) {
-    return fetchJSON(`${BASE}/shows/${id}?embed[]=nextepisode&embed[]=previousepisode`);
-  }
-
-  async function fetchSchedule(dateStr) {
-    return fetchJSON(`${BASE}/schedule?country=US&date=${dateStr}`);
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function stripHtml(html) {
-    if (!html) return '';
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
-  }
-
-  function formatDate(dateStr) {
-    if (!dateStr) return 'TBA';
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  function formatDateShort(dateStr) {
-    if (!dateStr) return 'TBA';
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  function daysUntil(dateStr) {
-    if (!dateStr) return null;
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const target = new Date(dateStr + 'T00:00:00');
-    target.setHours(0,0,0,0);
-    return Math.round((target - today) / 86400000);
-  }
-
-  function countdownText(dateStr) {
-    if (!dateStr) return null;
-    const d = daysUntil(dateStr);
-    if (d === 0) return { text: 'TONIGHT!', cls: 'today' };
-    if (d === 1) return { text: 'Tomorrow', cls: 'soon' };
-    if (d < 0) return { text: `${Math.abs(d)} days ago`, cls: '' };
-    if (d <= 7) return { text: `In ${d} days`, cls: 'soon' };
-    return { text: `In ${d} days`, cls: '' };
-  }
-
-  function posterImg(show, cls, wh) {
-    const src = show.image && (show.image.medium || show.image.original);
-    if (src) {
-      return `<img src="${src}" alt="${escHtml(show.name)} poster" class="${cls}" loading="lazy" />`;
-    }
-    return `<div class="${cls}-placeholder"${wh ? ` style="width:${wh[0]}px;height:${wh[1]}px"` : ''}>📺</div>`;
-  }
-
-  function escHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function isoToday() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  }
-
-  function addDays(isoDate, n) {
-    const d = new Date(isoDate + 'T12:00:00');
-    d.setDate(d.getDate() + n);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  }
-
-  function statusLabel(status) {
-    const map = { 'Running': 'running', 'Ended': 'ended', 'In Development': 'upcoming', 'To Be Determined': 'upcoming' };
-    return map[status] || 'ended';
-  }
-
-  // ── Toast ─────────────────────────────────────────────────────────────────
-  function toast(msg, type = 'info') {
-    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-    const el = document.createElement('div');
-    el.className = `toast ${type}`;
-    el.innerHTML = `<span>${icons[type]}</span><span>${escHtml(msg)}</span>`;
-    document.getElementById('toastContainer').appendChild(el);
-    setTimeout(() => {
-      el.style.animation = 'toastOut 0.3s ease forwards';
-      setTimeout(() => el.remove(), 320);
-    }, 3200);
-  }
-
-  // ── Search ────────────────────────────────────────────────────────────────
-  function initSearch() {
-    const input = document.getElementById('searchInput');
-    const results = document.getElementById('searchResults');
-    const spinner = document.getElementById('searchSpinner');
-
-    input.addEventListener('input', () => {
-      clearTimeout(searchTimeout);
-      const q = input.value.trim();
-      if (q.length < 2) { closeResults(); return; }
-      spinner.classList.add('active');
-      searchTimeout = setTimeout(() => doSearch(q), 350);
-    });
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { closeResults(); input.blur(); }
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.search-wrapper')) closeResults();
-    });
-
-    async function doSearch(q) {
-      try {
-        const shows = await searchShows(q);
-        spinner.classList.remove('active');
-        renderResults(shows.slice(0, 8));
-      } catch {
-        spinner.classList.remove('active');
-        toast('Search failed. Check your connection.', 'error');
-      }
-    }
-
-    function renderResults(shows) {
-      if (!shows.length) {
-        results.innerHTML = `<div class="result-item" style="color:var(--muted);justify-content:center;">No shows found</div>`;
-        results.classList.add('open');
-        return;
-      }
-      results.innerHTML = shows.map(s => {
-        const tracked = isTracked(s.id);
-        const img = s.image && s.image.medium
-          ? `<img src="${s.image.medium}" class="result-poster" alt="" />`
-          : `<div class="result-poster-placeholder">📺</div>`;
-        const genres = (s.genres || []).slice(0,2).join(', ') || 'TV Show';
-        const year = s.premiered ? s.premiered.slice(0,4) : '';
-        return `<div class="result-item" role="option" data-id="${s.id}" tabindex="0">
-          ${img}
-          <div class="result-info">
-            <div class="result-name">${escHtml(s.name)}</div>
-            <div class="result-meta">${escHtml(genres)}${year ? ` · ${year}` : ''}</div>
-          </div>
-          <button class="result-add-btn${tracked ? ' added' : ''}" data-id="${s.id}" aria-label="${tracked ? 'Already tracking' : `Add ${escHtml(s.name)}`}">
-            ${tracked ? '✓ Added' : '+ Add'}
-          </button>
-        </div>`;
-      }).join('');
-
-      results.querySelectorAll('.result-add-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const id = parseInt(btn.dataset.id, 10);
-          if (btn.classList.contains('added')) return;
-          const show = shows.find(s => s.id === id);
-          if (show) {
-            addShow(show);
-            btn.classList.add('added');
-            btn.textContent = '✓ Added';
-            renderWatchlist();
-          }
-        });
-      });
-
-      results.querySelectorAll('.result-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-          if (e.target.classList.contains('result-add-btn')) return;
-          const id = parseInt(item.dataset.id, 10);
-          if (id) {
-            closeResults();
-            openModal(id);
-          }
-        });
-        item.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') item.click();
-        });
-      });
-
-      results.classList.add('open');
-    }
-
-    function closeResults() {
-      results.classList.remove('open');
-      results.innerHTML = '';
+      const shows = await searchShows(q);
       spinner.classList.remove('active');
+      renderDropdown(shows.slice(0, 8));
+    } catch {
+      spinner.classList.remove('active');
+      toast('Search failed — check connection.', 'error');
     }
   }
 
-  // ── Watchlist ─────────────────────────────────────────────────────────────
-  function renderWatchlist() {
-    const grid = document.getElementById('watchlistGrid');
-    const empty = document.getElementById('watchlistEmpty');
-    const count = document.getElementById('watchlistCount');
-
-    count.textContent = watchlist.length;
-
-    if (!watchlist.length) {
-      grid.style.display = 'none';
-      empty.style.display = 'block';
+  function renderDropdown(shows) {
+    if (!shows.length) {
+      dropdown.innerHTML = '<div class="ac-msg">No results found.</div>';
+      dropdown.classList.add('open');
       return;
     }
 
-    grid.style.display = 'grid';
-    empty.style.display = 'none';
-
-    grid.innerHTML = watchlist.map(show => {
-      const rating = show.rating && show.rating.average ? show.rating.average : null;
-      const genres = (show.genres || []).slice(0,3);
-      const status = show.status || 'Unknown';
-      const dotCls = statusLabel(status);
-
-      const nextEp = show._embedded && show._embedded.nextepisode;
-      const prevEp = show._embedded && show._embedded.previousepisode;
-      const nextDate = nextEp ? nextEp.airdate : null;
-      const cd = nextDate ? countdownText(nextDate) : null;
-
-      const posterHtml = (() => {
-        const src = show.image && (show.image.medium || show.image.original);
-        if (src) return `<img src="${src}" class="card-poster" alt="${escHtml(show.name)} poster" loading="lazy" />`;
-        return `<div class="card-poster-placeholder">📺</div>`;
-      })();
-
-      const countdownHtml = cd ? `
-        <div class="countdown-box">
-          <div class="countdown-label">Next Episode</div>
-          <div class="countdown-value ${cd.cls}">${cd.text} · ${formatDateShort(nextDate)}</div>
-        </div>` : (prevEp ? `
-        <div class="countdown-box">
-          <div class="countdown-label">Last Episode</div>
-          <div class="countdown-value">${formatDateShort(prevEp.airdate)}</div>
-        </div>` : '');
-
-      return `<article class="show-card" tabindex="0" data-id="${show.id}" role="button" aria-label="View details for ${escHtml(show.name)}">
-        ${posterHtml}
-        <div class="card-body">
-          <div class="card-title">${escHtml(show.name)}</div>
-          <div class="card-genres">
-            ${genres.map(g => `<span class="genre-chip">${escHtml(g)}</span>`).join('')}
-            <span class="status-dot ${dotCls}" title="${escHtml(status)}"></span>
-          </div>
-          ${rating ? `<div class="card-rating">
-            ★ ${rating}
-            <div class="rating-bar"><div class="rating-fill" style="width:${(rating/10)*100}%"></div></div>
-          </div>` : ''}
-          ${countdownHtml}
-          <div class="card-actions">
-            <button class="btn btn-primary card-detail-btn" data-id="${show.id}" aria-label="View details">Details</button>
-            <button class="btn btn-danger card-remove-btn" data-id="${show.id}" aria-label="Remove from watchlist">Remove</button>
-          </div>
+    dropdown.innerHTML = shows.map(s => {
+      const tracked = isTracked(s.id);
+      const posterSrc = s.image && s.image.medium;
+      const imgHtml = posterSrc
+        ? `<img src="${esc(posterSrc)}" class="ac-poster" alt="" loading="lazy" />`
+        : `<div class="ac-poster-ph">📺</div>`;
+      const genres = (s.genres || []).slice(0, 2).join(', ') || 'TV Show';
+      const year = s.premiered ? s.premiered.slice(0, 4) : '';
+      return `<div class="ac-item" role="option" tabindex="0" data-id="${s.id}">
+        ${imgHtml}
+        <div class="ac-info">
+          <div class="ac-name">${esc(s.name)}</div>
+          <div class="ac-meta">${esc(genres)}${year ? ` · ${year}` : ''} · ${esc(s.status || 'Unknown')}</div>
         </div>
-      </article>`;
+        <button class="ac-add${tracked ? ' added' : ''}" data-id="${s.id}" aria-label="${tracked ? 'Already tracked' : 'Add ' + esc(s.name)}">
+          ${tracked ? '✓' : '+ Track'}
+        </button>
+      </div>`;
     }).join('');
 
-    grid.querySelectorAll('.card-detail-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // Wire add buttons
+    dropdown.querySelectorAll('.ac-add').forEach(btn => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
-        openModal(parseInt(btn.dataset.id, 10));
+        if (btn.classList.contains('added')) return;
+        const id = parseInt(btn.dataset.id, 10);
+        const show = shows.find(s => s.id === id);
+        if (!show) return;
+        // Fetch enriched data so we have nextepisode
+        fetchShow(id).catch(() => show).then(enriched => {
+          addToWatchlist(enriched || show);
+          btn.classList.add('added');
+          btn.textContent = '✓';
+        });
       });
     });
 
-    grid.querySelectorAll('.card-remove-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        removeShow(parseInt(btn.dataset.id, 10));
-        renderWatchlist();
-        if (currentTab === 'digest') generateDigest();
+    // Wire row clicks → show detail
+    dropdown.querySelectorAll('.ac-item').forEach(item => {
+      item.addEventListener('click', e => {
+        if (e.target.classList.contains('ac-add')) return;
+        closeDropdown();
+        showDetail(parseInt(item.dataset.id, 10));
+      });
+      item.addEventListener('keydown', e => {
+        if (e.key === 'Enter') item.click();
       });
     });
 
-    grid.querySelectorAll('.show-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn')) return;
-        openModal(parseInt(card.dataset.id, 10));
-      });
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
-      });
-    });
-
-    document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    dropdown.classList.add('open');
   }
 
-  // ── Schedule ──────────────────────────────────────────────────────────────
-  async function renderSchedule() {
-    const content = document.getElementById('scheduleContent');
-    const rangeEl = document.getElementById('scheduleRange');
-    content.innerHTML = '<div class="spinner"></div>';
+  function closeDropdown() {
+    dropdown.classList.remove('open');
+    dropdown.innerHTML = '';
+    spinner.classList.remove('active');
+  }
+}
 
-    const today = isoToday();
-    const dates = Array.from({length: 7}, (_, i) => addDays(today, i));
+/* ── Schedule view ──────────────────────────────────────────── */
+async function loadSchedule() {
+  setView('schedule');
+  document.getElementById('scheduleLink').classList.add('active');
+  document.getElementById('scheduleLink').setAttribute('aria-pressed', 'true');
 
-    rangeEl.textContent = `${formatDateShort(dates[0])} – ${formatDateShort(dates[6])}`;
+  const dateStr = isoToday();
+  document.getElementById('scheduleDate').textContent = formatDate(dateStr);
+  document.getElementById('scheduleContent').innerHTML = '<div class="spinner" role="status" aria-label="Loading"></div>';
 
-    try {
-      const allSchedules = await Promise.all(dates.map(d => fetchSchedule(d).catch(() => [])));
-      const watchlistIds = new Set(watchlist.map(s => s.id));
+  try {
+    const schedule = await fetchSchedule(dateStr);
+    renderSchedule(schedule, dateStr);
+  } catch (err) {
+    document.getElementById('scheduleContent').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load schedule</div><div class="empty-sub">${esc(err.message)}</div></div>`;
+  }
+}
 
-      let html = '';
-      let anyEps = false;
+function renderSchedule(schedule, dateStr) {
+  const content = document.getElementById('scheduleContent');
 
-      dates.forEach((date, i) => {
-        const eps = (allSchedules[i] || []).filter(ep => {
-          const showId = ep.show && ep.show.id;
-          return watchlist.length === 0 || watchlistIds.has(showId);
-        });
-
-        if (!eps.length) return;
-        anyEps = true;
-
-        const dayLabel = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-        html += `<div class="schedule-day">
-          <div class="day-header">${dayLabel} <span>· ${formatDate(date)}</span></div>`;
-
-        eps.sort((a,b) => (a.airtime || '').localeCompare(b.airtime || '')).forEach(ep => {
-          const show = ep.show || {};
-          const isP = ep.number === 1 && ep.season >= 1;
-          const isF = show.status !== 'Running' && ep.number === ep._links?.self;
-          const badgeCls = ep.season === 1 && ep.number === 1 ? 'premiere' : 'regular';
-          const episodeNum = ep.season && ep.number ? `S${String(ep.season).padStart(2,'0')}E${String(ep.number).padStart(2,'0')}` : '';
-          const posterSrc = show.image && show.image.medium;
-
-          html += `<div class="episode-row">
-            ${posterSrc
-              ? `<img src="${posterSrc}" class="ep-poster" alt="" loading="lazy" />`
-              : `<div class="ep-poster-ph">📺</div>`}
-            <div class="ep-info">
-              <div class="ep-show-name">${escHtml(show.name || 'Unknown Show')}</div>
-              <div class="ep-title">${episodeNum ? `${episodeNum} · ` : ''}${escHtml(ep.name || '')}</div>
-              <div class="ep-meta">
-                <span class="ep-badge ${badgeCls}">${episodeNum ? 'New' : 'Premiere'}</span>
-                ${ep.airtime ? `<span class="ep-time">${ep.airtime}</span>` : ''}
-                ${show.network && show.network.name ? `<span class="ep-network">${escHtml(show.network.name)}</span>` : ''}
-              </div>
-            </div>
-          </div>`;
-        });
-
-        html += '</div>';
-      });
-
-      if (!anyEps) {
-        if (watchlist.length === 0) {
-          html = `<div class="empty-state"><div class="empty-icon">📅</div><h3>No shows tracked yet</h3><p>Add shows to your watchlist to see this week's schedule.</p></div>`;
-        } else {
-          html = `<div class="empty-state"><div class="empty-icon">🎉</div><h3>Nothing this week</h3><p>None of your tracked shows are airing this week. Check back soon!</p></div>`;
-        }
-      }
-
-      content.innerHTML = html;
-    } catch (err) {
-      content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><h3>Failed to load schedule</h3><p>${escHtml(err.message)}</p></div>`;
-    }
+  if (!schedule.length) {
+    content.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">Nothing airing today</div><div class="empty-sub">No US schedule data available for today.</div></div>';
+    return;
   }
 
-  // ── Digest ────────────────────────────────────────────────────────────────
-  async function generateDigest() {
-    const textarea = document.getElementById('digestTextarea');
-    const heading = document.getElementById('digestHeading');
+  // Group by time slot
+  const groups = {};
+  schedule.forEach(ep => {
+    const time = ep.airtime || 'TBA';
+    if (!groups[time]) groups[time] = [];
+    groups[time].push(ep);
+  });
 
-    const today = new Date();
-    const weekStr = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    heading.textContent = `New This Week — ${weekStr}`;
+  const sortedTimes = Object.keys(groups).sort();
+  let html = '';
 
-    if (!watchlist.length) {
-      textarea.value = 'No shows in your watchlist yet. Add shows to generate your weekly digest.';
-      return;
-    }
-
-    textarea.value = 'Generating digest…';
-
-    const todayIso = isoToday();
-    const dates = Array.from({length: 7}, (_, i) => addDays(todayIso, i));
-
-    try {
-      const allSchedules = await Promise.all(dates.map(d => fetchSchedule(d).catch(() => [])));
-      const watchlistIds = new Set(watchlist.map(s => s.id));
-
-      const releasing = [];
-      dates.forEach((date, i) => {
-        (allSchedules[i] || []).forEach(ep => {
-          if (watchlistIds.has(ep.show && ep.show.id)) {
-            releasing.push({ ep, date });
-          }
-        });
-      });
-
-      const lines = [];
-      const dayName = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-
-      lines.push(`📺 WEEKLY TV DIGEST`);
-      lines.push(`Week of ${weekStr}`);
-      lines.push(`${'─'.repeat(50)}`);
-      lines.push('');
-
-      if (!releasing.length) {
-        lines.push('No new episodes from your watchlist this week.');
-        lines.push('');
-        lines.push('Your tracked shows:');
-        watchlist.forEach(s => lines.push(`  • ${s.name} (${s.status || 'Unknown status'})`));
-      } else {
-        lines.push('🎬 NEW EPISODES THIS WEEK');
-        lines.push('');
-        releasing.forEach(({ ep, date }) => {
-          const show = ep.show || {};
-          const episodeNum = ep.season && ep.number ? `S${String(ep.season).padStart(2,'0')}E${String(ep.number).padStart(2,'0')}` : '';
-          lines.push(`▸ ${show.name || 'Unknown'}`);
-          lines.push(`  ${episodeNum ? `${episodeNum} · ` : ''}${ep.name || 'New Episode'}`);
-          lines.push(`  Airs: ${dayName(date)}${ep.airtime ? ` at ${ep.airtime}` : ''}`);
-          if (show.network && show.network.name) lines.push(`  Network: ${show.network.name}`);
-          lines.push('');
-        });
-
-        lines.push(`${'─'.repeat(50)}`);
-        lines.push(`📋 YOUR FULL WATCHLIST (${watchlist.length} shows)`);
-        lines.push('');
-        watchlist.forEach(s => {
-          const nextEp = s._embedded && s._embedded.nextepisode;
-          const next = nextEp ? ` — Next: ${formatDateShort(nextEp.airdate)}` : '';
-          lines.push(`  • ${s.name}${next}`);
-        });
-      }
-
-      lines.push('');
-      lines.push(`${'─'.repeat(50)}`);
-      lines.push(`Generated by TVTracker · ${new Date().toLocaleString()}`);
-
-      textarea.value = lines.join('\n');
-    } catch {
-      textarea.value = 'Failed to load schedule data. Please try again.';
-    }
-  }
-
-  // ── Calendar ──────────────────────────────────────────────────────────────
-  async function renderCalendar() {
-    const now = new Date();
-    const targetDate = new Date(now.getFullYear(), now.getMonth() + calendarOffset, 1);
-    const year = targetDate.getFullYear();
-    const month = targetDate.getMonth();
-
-    document.getElementById('calendarMonthLabel').textContent =
-      targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-    // Day headers
-    const dayHeaders = document.getElementById('calendarDayHeaders');
-    dayHeaders.innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-      .map(d => `<div class="cal-day-header">${d}</div>`).join('');
-
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDow = new Date(year, month, 1).getDay();
-    const todayIso = isoToday();
-
-    // Fetch schedule for the whole month (sample first week + current week)
-    const sampleDate = `${year}-${String(month+1).padStart(2,'0')}-01`;
-    let monthEps = [];
-    try {
-      const sched = await fetchSchedule(sampleDate);
-      monthEps = sched;
-      // Also get current week if different
-      if (calendarOffset === 0) {
-        const thisSched = await fetchSchedule(todayIso).catch(() => []);
-        monthEps = [...monthEps, ...thisSched];
-      }
-    } catch {}
-
-    // Build map: dateStr → shows
-    const epsByDate = {};
-    monthEps.forEach(ep => {
-      if (ep.airdate) {
-        epsByDate[ep.airdate] = epsByDate[ep.airdate] || [];
-        epsByDate[ep.airdate].push(ep);
-      }
-    });
-
-    const calGrid = document.getElementById('calendarGrid');
-    calGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-
-    let html = '';
-    // leading empty cells
-    for (let i = 0; i < firstDow; i++) html += '<div></div>';
-
-    const watchlistIds = new Set(watchlist.map(s => s.id));
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const isToday = iso === todayIso;
-      const eps = (epsByDate[iso] || []).filter(ep => watchlist.length === 0 || watchlistIds.has(ep.show && ep.show.id));
-      const hasShows = eps.length > 0;
-
-      html += `<div class="cal-day${isToday ? ' today' : ''}${hasShows ? ' has-shows' : ''}">
-        <div class="cal-day-num">${d}</div>
-        ${eps.slice(0,3).map(ep => `<div class="cal-show-dot" title="${escHtml(ep.show && ep.show.name || '')}">${escHtml((ep.show && ep.show.name || '').slice(0,12))}</div>`).join('')}
-        ${eps.length > 3 ? `<div class="cal-show-dot" style="color:var(--muted);">+${eps.length - 3} more</div>` : ''}
-      </div>`;
-    }
-
-    calGrid.innerHTML = html;
-
-    // Detailed list below
-    const listEl = document.getElementById('calendarScheduleList');
-    const dayCount = Object.keys(epsByDate).filter(d => d.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).length;
-    if (dayCount === 0) {
-      listEl.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><h3>No data for this month</h3><p>Schedule data is available for the current week.</p></div>`;
-    } else {
-      listEl.innerHTML = '';
-    }
-  }
-
-  // ── Modal ─────────────────────────────────────────────────────────────────
-  async function openModal(showId) {
-    const overlay = document.getElementById('modalOverlay');
-    const titleEl = document.getElementById('modalTitle');
-    const metaRow = document.getElementById('modalMetaRow');
-    const summaryEl = document.getElementById('modalSummary');
-    const epGrid = document.getElementById('modalEpisodeGrid');
-    const actions = document.getElementById('modalActions');
-    const heroPh = document.getElementById('modalHeroPh');
-    const progressSection = document.getElementById('modalProgressSection');
-    const progressContent = document.getElementById('modalProgressContent');
-
-    // Reset
-    titleEl.textContent = 'Loading…';
-    metaRow.innerHTML = '';
-    summaryEl.textContent = 'Loading…';
-    epGrid.innerHTML = '';
-    actions.innerHTML = '';
-    heroPh.style.display = 'flex';
-    progressSection.style.display = 'none';
-
-    overlay.classList.add('open');
-    document.body.style.overflow = 'hidden';
-
-    // Trap focus
-    document.getElementById('modalClose').focus();
-
-    try {
-      const show = await fetchShowDetail(showId);
-      modalShow = show;
-
-      titleEl.textContent = show.name;
-      summaryEl.textContent = stripHtml(show.summary) || 'No synopsis available.';
-
-      // Hero image
-      const heroImg = show.image && (show.image.original || show.image.medium);
-      if (heroImg) {
-        heroPh.style.display = 'none';
-        const existingImg = document.querySelector('.modal-hero img:not(.modal-close)');
-        if (existingImg) existingImg.remove();
-        const img = document.createElement('img');
-        img.src = heroImg;
-        img.alt = `${show.name} poster`;
-        img.style.cssText = 'width:100%;height:100%;object-fit:cover;filter:brightness(0.45);';
-        document.getElementById('modalHero').insertBefore(img, document.getElementById('modalClose'));
-      }
-
-      // Meta
-      const rating = show.rating && show.rating.average ? `★ ${show.rating.average}` : '';
-      const year = show.premiered ? show.premiered.slice(0,4) : '';
-      const status = show.status || '';
+  sortedTimes.forEach(time => {
+    html += `<div class="time-group">
+      <div class="time-group-label">${esc(time || 'Time TBA')}</div>`;
+    groups[time].forEach(ep => {
+      const show = ep.show || {};
+      const posterSrc = show.image && show.image.medium;
+      const imgHtml = posterSrc
+        ? `<img src="${esc(posterSrc)}" class="ep-thumb" alt="" loading="lazy" />`
+        : `<div class="ep-thumb-ph">📺</div>`;
+      const epNum = ep.season && ep.number
+        ? `S${String(ep.season).padStart(2,'0')}E${String(ep.number).padStart(2,'0')}`
+        : '';
       const network = show.network && show.network.name ? show.network.name : (show.webChannel && show.webChannel.name ? show.webChannel.name : '');
-      const genres = (show.genres || []).slice(0,3).join(', ');
+      html += `<div class="ep-row" tabindex="0" role="button" data-show-id="${show.id}" aria-label="View ${esc(show.name || 'show')} details">
+        ${imgHtml}
+        <div class="ep-info">
+          <div class="ep-show">${esc(show.name || 'Unknown')}</div>
+          <div class="ep-title-line">${epNum ? `${epNum} · ` : ''}${esc(ep.name || 'New Episode')}</div>
+          ${network ? `<div class="ep-network">${esc(network)}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
 
-      metaRow.innerHTML = [
-        rating && `<span class="modal-meta-item">⭐ ${rating}</span>`,
-        year && `<span class="modal-meta-item">📅 ${year}</span>`,
-        status && `<span class="modal-meta-item"><span class="status-dot ${statusLabel(status)}"></span> ${escHtml(status)}</span>`,
-        network && `<span class="modal-meta-item">📡 ${escHtml(network)}</span>`,
-        genres && `<span class="modal-meta-item">🎭 ${escHtml(genres)}</span>`,
-      ].filter(Boolean).join('');
+  content.innerHTML = html;
 
-      // Episode info
-      const nextEp = show._embedded && show._embedded.nextepisode;
-      const prevEp = show._embedded && show._embedded.previousepisode;
+  // Wire row clicks
+  content.querySelectorAll('.ep-row[data-show-id]').forEach(row => {
+    const id = parseInt(row.dataset.showId, 10);
+    if (!id) return;
+    row.addEventListener('click', () => showDetail(id));
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); }
+    });
+  });
+}
 
-      const boxes = [];
-      if (nextEp) {
-        const cd = countdownText(nextEp.airdate);
-        boxes.push({
-          label: 'Next Episode',
-          value: `S${String(nextEp.season).padStart(2,'0')}E${String(nextEp.number).padStart(2,'0')}`,
-          sub: cd ? `${cd.text} · ${formatDateShort(nextEp.airdate)}` : formatDate(nextEp.airdate),
-          cls: cd && cd.cls === 'today' ? 'highlight' : (cd && cd.cls === 'soon' ? 'warn' : ''),
-        });
-      }
-      if (prevEp) {
-        boxes.push({
-          label: 'Previous Episode',
-          value: `S${String(prevEp.season).padStart(2,'0')}E${String(prevEp.number).padStart(2,'0')}`,
-          sub: formatDate(prevEp.airdate),
-          cls: '',
-        });
-      }
-      if (show.runtime) {
-        boxes.push({ label: 'Runtime', value: `${show.runtime} min`, sub: 'per episode', cls: '' });
-      }
-      if (show.language) {
-        boxes.push({ label: 'Language', value: show.language, sub: '', cls: '' });
-      }
+/* ── Show detail ────────────────────────────────────────────── */
+async function showDetail(id) {
+  setView('detail');
+  activeShowId = id;
 
-      epGrid.innerHTML = boxes.map(b => `
-        <div class="ep-info-box">
-          <div class="ep-info-box-label">${escHtml(b.label)}</div>
-          <div class="ep-info-box-value ${b.cls}">${escHtml(b.value)}</div>
-          ${b.sub ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;">${escHtml(b.sub)}</div>` : ''}
-        </div>`).join('');
+  // Mark schedule link as not active
+  document.getElementById('scheduleLink').classList.remove('active');
+  document.getElementById('scheduleLink').setAttribute('aria-pressed', 'false');
 
-      // Season progress (mock with premiered year)
-      if (show.premiered && prevEp) {
-        progressSection.style.display = 'block';
-        const seasonNum = prevEp.season || 1;
-        const epNum = prevEp.number || 1;
-        const estimatedTotal = 10;
-        const pct = Math.min(100, Math.round((epNum / estimatedTotal) * 100));
-        progressContent.innerHTML = `
-          <div class="progress-row">
-            <span class="progress-label">Season ${seasonNum} Progress</span>
-            <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
-            <span class="progress-pct">Ep ${epNum}</span>
-          </div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px;">Based on latest aired episode data.</div>`;
-      }
+  // Mark watchlist row active
+  renderWatchlist();
 
-      // Actions
-      const tracked = isTracked(show.id);
-      actions.innerHTML = `
-        <button class="btn ${tracked ? 'btn-danger' : 'btn-primary'}" id="modalTrackBtn">
-          ${tracked ? '− Remove from Watchlist' : '+ Add to Watchlist'}
+  const scroll = document.getElementById('detailScroll');
+  scroll.innerHTML = '<div class="spinner" role="status" aria-label="Loading show details"></div>';
+
+  try {
+    const show = await fetchShow(id);
+    allShowEpisodes = [];
+    renderDetailView(show);
+    // Load episodes in background
+    fetchEpisodes(id).then(eps => {
+      allShowEpisodes = eps;
+      renderSeasonNavigator(show, eps);
+    }).catch(() => {});
+  } catch (err) {
+    scroll.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load</div><div class="empty-sub">${esc(err.message)}</div></div>`;
+  }
+}
+
+function renderDetailView(show) {
+  const scroll = document.getElementById('detailScroll');
+  const tracked = isTracked(show.id);
+
+  const posterSrc = show.image && (show.image.medium || show.image.original);
+  const imgHtml = posterSrc
+    ? `<img src="${esc(posterSrc)}" class="show-poster" alt="${esc(show.name)} poster" loading="lazy" />`
+    : `<div class="show-poster-ph">📺</div>`;
+
+  const genres = (show.genres || []).slice(0, 4);
+  const status = show.status || 'Unknown';
+  const network = show.network && show.network.name ? show.network.name : (show.webChannel && show.webChannel.name ? show.webChannel.name : '');
+  const year = show.premiered ? show.premiered.slice(0, 4) : '';
+  const runtime = show.runtime ? `${show.runtime} min` : '';
+
+  const genreChips = genres.map(g => `<span class="genre-chip">${esc(g)}</span>`).join('');
+  const statusChip = `<span class="status-chip ${statusCls(status)}">${esc(status)}</span>`;
+
+  const nextEp = show._embedded && show._embedded.nextepisode;
+  const prevEp = show._embedded && show._embedded.previousepisode;
+
+  // Next episode card
+  let nextEpHtml = '';
+  if (nextEp) {
+    const cd = countdownInfo(nextEp.airdate);
+    const epLabel = `S${String(nextEp.season).padStart(2,'0')}E${String(nextEp.number).padStart(2,'0')}`;
+    nextEpHtml = `<div class="next-ep-card" aria-label="Next episode info">
+      <div class="next-ep-countdown">
+        <div class="countdown-num">${esc(cd ? cd.num : '?')}</div>
+        <div class="countdown-unit">${esc(cd ? cd.unit : '')}</div>
+      </div>
+      <div class="next-ep-info">
+        <div class="next-ep-label">Next Episode</div>
+        <div class="next-ep-name">${esc(nextEp.name || 'New Episode')}</div>
+        <div class="next-ep-meta">${esc(epLabel)} · ${esc(formatDate(nextEp.airdate))}</div>
+        ${nextEp.airtime ? `<div class="next-ep-time">Airs at ${esc(nextEp.airtime)}${network ? ` on ${esc(network)}` : ''}</div>` : ''}
+      </div>
+    </div>`;
+  } else if (status === 'Ended' && prevEp) {
+    const epLabel = `S${String(prevEp.season).padStart(2,'0')}E${String(prevEp.number).padStart(2,'0')}`;
+    nextEpHtml = `<div class="next-ep-card">
+      <div class="next-ep-info" style="grid-column:1/-1;">
+        <div class="next-ep-label">Series Finale</div>
+        <div class="next-ep-name">${esc(prevEp.name || 'Finale')}</div>
+        <div class="next-ep-meta">${esc(epLabel)} · ${esc(formatDate(prevEp.airdate))}</div>
+      </div>
+    </div>`;
+  }
+
+  const summary = stripHtml(show.summary) || 'No synopsis available.';
+
+  scroll.innerHTML = `
+    <!-- Show header -->
+    <div class="show-header">
+      ${imgHtml}
+      <div class="show-meta">
+        <h1 class="show-name">${esc(show.name)}</h1>
+        <div class="show-tags">
+          ${statusChip}
+          ${genreChips}
+        </div>
+        <div class="show-attrs">
+          ${year ? `<span class="show-attr">📅 ${esc(year)}</span>` : ''}
+          ${network ? `<span class="show-attr">📡 ${esc(network)}</span>` : ''}
+          ${runtime ? `<span class="show-attr">⏱ ${esc(runtime)}</span>` : ''}
+          ${show.language ? `<span class="show-attr">🌐 ${esc(show.language)}</span>` : ''}
+          ${show.rating && show.rating.average ? `<span class="show-attr">⭐ ${show.rating.average}</span>` : ''}
+        </div>
+        <button class="show-track-btn ${tracked ? 'tracked' : 'untracked'}" id="trackBtn" aria-pressed="${tracked}" aria-label="${tracked ? 'Remove from watchlist' : 'Add to watchlist'}">
+          ${tracked ? '✓ Tracking' : '+ Track this show'}
         </button>
-        ${show.officialSite ? `<button class="btn btn-ghost" id="modalSiteBtn">🔗 Official Site</button>` : ''}`;
+      </div>
+    </div>
 
-      document.getElementById('modalTrackBtn').addEventListener('click', () => {
-        if (isTracked(show.id)) {
-          removeShow(show.id);
-          document.getElementById('modalTrackBtn').className = 'btn btn-primary';
-          document.getElementById('modalTrackBtn').textContent = '+ Add to Watchlist';
+    <!-- Next episode / finale -->
+    ${nextEpHtml}
+
+    <!-- Summary -->
+    <div>
+      <div class="section-label">Synopsis</div>
+      <p class="show-summary">${esc(summary)}</p>
+    </div>
+
+    <!-- Season navigator (populated after episodes load) -->
+    <div id="seasonSection">
+      <div class="spinner" role="status" aria-label="Loading episodes" style="width:20px;height:20px;margin:0;"></div>
+    </div>
+  `;
+
+  // Wire track button
+  document.getElementById('trackBtn').addEventListener('click', () => {
+    if (isTracked(show.id)) {
+      removeFromWatchlist(show.id);
+    } else {
+      addToWatchlist(show);
+    }
+    // Refresh detail view
+    renderDetailView(show);
+    // Re-attach season nav if already loaded
+    if (allShowEpisodes.length) renderSeasonNavigator(show, allShowEpisodes);
+  });
+}
+
+function renderSeasonNavigator(show, episodes) {
+  const section = document.getElementById('seasonSection');
+  if (!section) return;
+
+  if (!episodes || !episodes.length) {
+    section.innerHTML = '<div class="empty-sub" style="color:var(--color-ink-muted);font-size:var(--text-sm);">No episode data available.</div>';
+    return;
+  }
+
+  // Group by season
+  const seasons = {};
+  episodes.forEach(ep => {
+    const s = ep.season || 0;
+    if (!seasons[s]) seasons[s] = [];
+    seasons[s].push(ep);
+  });
+  const seasonNums = Object.keys(seasons).map(Number).sort((a,b) => a-b);
+  const latestSeason = seasonNums[seasonNums.length - 1];
+
+  section.innerHTML = `
+    <div class="section-label">Episodes</div>
+    <div class="season-nav">
+      <span class="season-label">Season:</span>
+      <select class="season-select" id="seasonSelect" aria-label="Select season">
+        ${seasonNums.map(n => `<option value="${n}"${n === latestSeason ? ' selected' : ''}>${n}</option>`).join('')}
+      </select>
+    </div>
+    <div id="episodeTableWrap" style="margin-top:var(--space-3);"></div>
+  `;
+
+  function renderSeasonEps(seasonNum) {
+    const eps = seasons[seasonNum] || [];
+    const wrap = document.getElementById('episodeTableWrap');
+    const showId = show.id;
+    const watched = watchedEps[showId] || {};
+
+    wrap.innerHTML = `<table class="ep-table" aria-label="Season ${seasonNum} episodes">
+      <thead>
+        <tr>
+          <th style="width:36px;">Ep</th>
+          <th>Title</th>
+          <th>Air Date</th>
+          <th style="width:60px;text-align:center;">Watched</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${eps.map(ep => {
+          const key = epKey(ep.season, ep.number);
+          const isWatched = !!watched[key];
+          return `<tr class="${isWatched ? 'ep-watched-row' : ''}">
+            <td class="ep-num">${ep.number != null ? String(ep.number).padStart(2,'0') : '—'}</td>
+            <td class="${isWatched ? 'ep-title-td' : ''}">${esc(ep.name || 'Episode ' + ep.number)}</td>
+            <td>${esc(formatDateShort(ep.airdate))}</td>
+            <td style="text-align:center;">
+              <input type="checkbox" class="ep-watched-cb" data-key="${esc(key)}" data-show="${showId}" ${isWatched ? 'checked' : ''} aria-label="Mark episode ${ep.number} as watched" />
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+    // Wire checkboxes
+    wrap.querySelectorAll('.ep-watched-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const sid = parseInt(cb.dataset.show, 10);
+        const key = cb.dataset.key;
+        if (!watchedEps[sid]) watchedEps[sid] = {};
+        if (cb.checked) {
+          watchedEps[sid][key] = true;
         } else {
-          addShow(show);
-          document.getElementById('modalTrackBtn').className = 'btn btn-danger';
-          document.getElementById('modalTrackBtn').textContent = '− Remove from Watchlist';
+          delete watchedEps[sid][key];
         }
+        saveWatched();
+        // Toggle row style
+        const row = cb.closest('tr');
+        if (row) {
+          row.classList.toggle('ep-watched-row', cb.checked);
+          const titleTd = row.querySelector('td:nth-child(2)');
+          if (titleTd) titleTd.classList.toggle('ep-title-td', cb.checked);
+        }
+      });
+    });
+  }
+
+  renderSeasonEps(latestSeason);
+
+  document.getElementById('seasonSelect').addEventListener('change', e => {
+    renderSeasonEps(Number(e.target.value));
+  });
+}
+
+/* ── View switching ─────────────────────────────────────────── */
+function setView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(`view-${name}`);
+  if (el) el.classList.add('active');
+}
+
+/* ── Enrich watchlist ───────────────────────────────────────── */
+async function enrichWatchlist() {
+  if (!watchlist.length) return;
+  const enriched = await Promise.all(
+    watchlist.map(s => fetchShow(s.id).catch(() => s))
+  );
+  watchlist = enriched;
+  saveWatchlist();
+  renderWatchlist();
+}
+
+/* ── Init ───────────────────────────────────────────────────── */
+function init() {
+  loadState();
+  renderWatchlist();
+  initSearch();
+
+  // Today's schedule button
+  document.getElementById('scheduleLink').addEventListener('click', () => {
+    activeShowId = null;
+    renderWatchlist();
+    loadSchedule();
+  });
+
+  // Load schedule on start
+  loadSchedule();
+
+  // Enrich watchlist in background
+  enrichWatchlist();
+
+  // Demo: pre-populate if empty
+  if (!watchlist.length) {
+    const demoIds = [82, 169, 1371]; // Breaking Bad, Game of Thrones, Stranger Things
+    Promise.all(demoIds.map(id => fetchShow(id).catch(() => null)))
+      .then(shows => {
+        shows.filter(Boolean).forEach(s => { if (!isTracked(s.id)) watchlist.push(s); });
+        saveWatchlist();
         renderWatchlist();
-      });
-
-      if (show.officialSite) {
-        document.getElementById('modalSiteBtn').addEventListener('click', () => {
-          window.open(show.officialSite, '_blank', 'noopener');
-        });
-      }
-
-    } catch (err) {
-      summaryEl.textContent = `Failed to load show details: ${err.message}`;
-      toast('Failed to load show details', 'error');
-    }
+      })
+      .catch(() => {});
   }
+}
 
-  function closeModal() {
-    const overlay = document.getElementById('modalOverlay');
-    overlay.classList.remove('open');
-    document.body.style.overflow = '';
-    modalShow = null;
-    // remove any dynamically added hero image
-    const heroImg = document.querySelector('.modal-hero img:not(.modal-close)');
-    if (heroImg) heroImg.remove();
-    document.getElementById('modalHeroPh').style.display = 'flex';
-  }
-
-  // ── Tabs ──────────────────────────────────────────────────────────────────
-  function initTabs() {
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        const name = tab.dataset.tab;
-        if (name === currentTab) return;
-
-        document.querySelectorAll('.nav-tab').forEach(t => {
-          t.classList.remove('active');
-          t.setAttribute('aria-selected', 'false');
-        });
-        tab.classList.add('active');
-        tab.setAttribute('aria-selected', 'true');
-
-        document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
-        document.getElementById(`pane-${name}`).classList.add('active');
-
-        currentTab = name;
-
-        if (name === 'schedule') renderSchedule();
-        else if (name === 'digest') generateDigest();
-        else if (name === 'calendar') renderCalendar();
-      });
-    });
-  }
-
-  // ── Digest copy/download ──────────────────────────────────────────────────
-  function initDigestActions() {
-    document.getElementById('copyDigestBtn').addEventListener('click', async () => {
-      const text = document.getElementById('digestTextarea').value;
-      try {
-        await navigator.clipboard.writeText(text);
-        toast('Digest copied to clipboard!', 'success');
-      } catch {
-        // Fallback
-        document.getElementById('digestTextarea').select();
-        document.execCommand('copy');
-        toast('Digest copied!', 'success');
-      }
-    });
-
-    document.getElementById('downloadDigestBtn').addEventListener('click', () => {
-      const text = document.getElementById('digestTextarea').value;
-      const blob = new Blob([text], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `tv-digest-${isoToday()}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast('Digest downloaded!', 'success');
-    });
-
-    document.getElementById('regenerateDigestBtn').addEventListener('click', () => {
-      generateDigest();
-    });
-  }
-
-  // ── Calendar nav ──────────────────────────────────────────────────────────
-  function initCalendarNav() {
-    document.getElementById('calPrevBtn').addEventListener('click', () => {
-      calendarOffset--;
-      renderCalendar();
-    });
-    document.getElementById('calNextBtn').addEventListener('click', () => {
-      calendarOffset++;
-      renderCalendar();
-    });
-  }
-
-  // ── Modal events ──────────────────────────────────────────────────────────
-  function initModal() {
-    document.getElementById('modalClose').addEventListener('click', closeModal);
-    document.getElementById('modalOverlay').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('modalOverlay')) closeModal();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && document.getElementById('modalOverlay').classList.contains('open')) {
-        closeModal();
-      }
-    });
-  }
-
-  // ── Refresh watchlist with enriched data ──────────────────────────────────
-  async function enrichWatchlist() {
-    if (!watchlist.length) return;
-    // Refresh show data in background for up-to-date next episode info
-    const enriched = await Promise.all(
-      watchlist.map(show =>
-        fetchShowDetail(show.id).catch(() => show)
-      )
-    );
-    watchlist = enriched;
-    saveWatchlist();
-    renderWatchlist();
-  }
-
-  // ── Init ──────────────────────────────────────────────────────────────────
-  function init() {
-    loadWatchlist();
-    renderWatchlist();
-    initSearch();
-    initTabs();
-    initModal();
-    initDigestActions();
-    initCalendarNav();
-
-    // Enrich watchlist data from API (non-blocking)
-    enrichWatchlist();
-
-    // Pre-populate with a few popular shows if watchlist empty (demo mode)
-    if (!watchlist.length) {
-      const demoIds = [82, 169, 1371]; // Breaking Bad, Game of Thrones, Stranger Things
-      Promise.all(demoIds.map(id => fetchShowDetail(id).catch(() => null)))
-        .then(shows => {
-          shows.filter(Boolean).forEach(s => { if (!isTracked(s.id)) watchlist.push(s); });
-          saveWatchlist();
-          renderWatchlist();
-        })
-        .catch(() => {});
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', init);
-})();
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>

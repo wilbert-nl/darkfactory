@@ -1,1936 +1,2020 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>National Park Event Notifier</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
-
-    :root {
-      --bg: #070c1a;
-      --surface: #0d1526;
-      --surface2: #141f36;
-      --border: rgba(245,158,11,0.2);
-      --accent: #f59e0b;
-      --accent2: #3b82f6;
-      --text: #e8eaf6;
-      --muted: #6b7da8;
-      --green: #10b981;
-      --red: #ef4444;
-      --orange: #f97316;
-      --radius: 8px;
-      --font-mono: 'Share Tech Mono', 'Courier New', monospace;
-      --font-body: 'DM Sans', system-ui, sans-serif;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    /* Header */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      flex-shrink: 0;
-    }
-
-    .logo-text h1 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1.2;
-    }
-
-    .logo-text p {
-      font-size: 0.72rem;
-      color: var(--muted);
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .watchlist-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.4rem 0.8rem;
-      font-size: 0.8rem;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .watchlist-badge:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .watchlist-badge .count {
-      background: var(--accent);
-      color: #fff;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.65rem;
-      font-weight: 700;
-    }
-
-    /* Nav tabs */
-    nav {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
-      display: flex;
-      gap: 0;
-      overflow-x: auto;
-    }
-
-    nav button {
-      background: none;
-      border: none;
-      color: var(--muted);
-      padding: 0.85rem 1.25rem;
-      font-size: 0.875rem;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-      white-space: nowrap;
-      font-weight: 500;
-    }
-
-    nav button:hover { color: var(--text); }
-
-    nav button.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
-
-    /* Main layout */
-    main {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    /* Views */
-    .view { display: none; }
-    .view.active { display: block; }
-
-    /* Section header */
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-    }
-
-    .section-title {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .section-subtitle {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-top: 0.2rem;
-    }
-
-    /* Search + filters */
-    .filters {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.5rem;
-    }
-
-    .search-wrap {
-      position: relative;
-      flex: 1;
-      min-width: 200px;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 0.9rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      font-size: 0.9rem;
-      pointer-events: none;
-    }
-
-    input[type="text"], select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      padding: 0.6rem 0.9rem;
-      font-size: 0.875rem;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 100%;
-    }
-
-    .search-wrap input {
-      padding-left: 2.4rem;
-    }
-
-    input[type="text"]:focus, select:focus {
-      border-color: var(--accent);
-    }
-
-    select {
-      cursor: pointer;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-      padding-right: 2rem;
-      min-width: 160px;
-    }
-
-    select option {
-      background: var(--surface2);
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      border: none;
-      border-radius: 8px;
-      padding: 0.6rem 1.1rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      background: #3dbb6e;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(74, 222, 128, 0.35);
-    }
-
-    .btn-secondary {
-      background: var(--surface2);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .btn-danger {
-      background: rgba(56, 189, 248, 0.12);
-      color: var(--accent2);
-      border: 1px solid rgba(56, 189, 248, 0.25);
-    }
-
-    .btn-danger:hover {
-      background: rgba(56, 189, 248, 0.2);
-    }
-
-    .btn-sm {
-      padding: 0.35rem 0.75rem;
-      font-size: 0.78rem;
-    }
-
-    .btn-icon {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      border-radius: 8px;
-      width: 36px;
-      height: 36px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 1rem;
-    }
-
-    .btn-icon:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    /* Park grid */
-    .park-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.25rem;
-    }
-
-    .park-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      transition: all 0.25s;
-      cursor: pointer;
-      position: relative;
-    }
-
-    .park-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    }
-
-    .park-card.watching {
-      border-color: var(--green);
-    }
-
-    .park-card-banner {
-      height: 8px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-    }
-
-    .park-card.watching .park-card-banner {
-      background: linear-gradient(90deg, var(--green), #00c9a7);
-    }
-
-    .park-card-body {
-      padding: 1.25rem;
-    }
-
-    .park-card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.75rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .park-icon {
-      font-size: 2rem;
-      flex-shrink: 0;
-    }
-
-    .park-actions {
-      display: flex;
-      gap: 0.4rem;
-      align-items: center;
-    }
-
-    .watch-btn {
-      border: none;
-      border-radius: 6px;
-      padding: 0.3rem 0.65rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: var(--surface2);
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-
-    .watch-btn:hover {
-      border-color: var(--green);
-      color: var(--green);
-    }
-
-    .watch-btn.watching {
-      background: rgba(67, 217, 173, 0.12);
-      color: var(--green);
-      border-color: var(--green);
-    }
-
-    .park-name {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 0.2rem;
-    }
-
-    .park-state {
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-bottom: 0.6rem;
-    }
-
-    .park-desc {
-      font-size: 0.82rem;
-      color: var(--muted);
-      line-height: 1.55;
-      margin-bottom: 0.9rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .park-stats {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .park-stat {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    .park-stat span:first-child {
-      font-size: 0.85rem;
-    }
-
-    .event-count-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      background: rgba(74, 222, 128, 0.12);
-      color: var(--accent);
-      border-radius: 6px;
-      padding: 0.2rem 0.55rem;
-      font-size: 0.72rem;
-      font-weight: 600;
-    }
-
-    /* Events list */
-    .events-controls {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-    }
-
-    .event-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .event-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 1rem;
-      align-items: start;
-      transition: all 0.2s;
-      animation: fadeSlideIn 0.3s ease both;
-    }
-
-    @keyframes fadeSlideIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .event-card:hover {
-      border-color: var(--accent);
-      background: var(--surface2);
-    }
-
-    .event-date-box {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.6rem 0.85rem;
-      text-align: center;
-      min-width: 58px;
-      flex-shrink: 0;
-    }
-
-    .event-date-month {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--accent);
-      letter-spacing: 0.05em;
-    }
-
-    .event-date-day {
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: var(--text);
-      line-height: 1;
-    }
-
-    .event-date-dow {
-      font-size: 0.65rem;
-      color: var(--muted);
-    }
-
-    .event-content { min-width: 0; }
-
-    .event-title {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 0.25rem;
-    }
-
-    .event-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 1rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .event-meta-item {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-
-    .event-desc {
-      font-size: 0.82rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .event-tags {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-      margin-top: 0.5rem;
-    }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.2rem 0.55rem;
-      border-radius: 20px;
-      font-size: 0.7rem;
-      font-weight: 600;
-    }
-
-    .tag-ranger { background: rgba(247, 201, 72, 0.12); color: var(--yellow); }
-    .tag-hike { background: rgba(67, 217, 173, 0.12); color: var(--green); }
-    .tag-star { background: rgba(74, 222, 128, 0.12); color: var(--accent); }
-    .tag-junior { background: rgba(56, 189, 248, 0.12); color: var(--accent2); }
-    .tag-tour { background: rgba(67, 217, 173, 0.08); color: #7ee8d5; }
-    .tag-wildlife { background: rgba(247, 201, 72, 0.08); color: #f5d97a; }
-
-    .event-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      align-items: flex-end;
-      flex-shrink: 0;
-    }
-
-    /* Calendar view */
-    .calendar-wrap {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-
-    .calendar-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .calendar-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .calendar-nav {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-    }
-
-    .cal-day-header {
-      padding: 0.6rem;
-      text-align: center;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--muted);
-      letter-spacing: 0.05em;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .cal-day {
-      min-height: 90px;
-      padding: 0.5rem;
-      border-right: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      transition: background 0.15s;
-      cursor: default;
-    }
-
-    .cal-day:nth-child(7n) { border-right: none; }
-
-    .cal-day.other-month .cal-day-num { color: var(--border); }
-
-    .cal-day.today {
-      background: rgba(74, 222, 128, 0.06);
-    }
-
-    .cal-day.has-events { cursor: pointer; }
-    .cal-day.has-events:hover { background: var(--surface2); }
-
-    .cal-day-num {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 0.35rem;
-    }
-
-    .cal-day.today .cal-day-num {
-      background: var(--accent);
-      color: #fff;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.72rem;
-    }
-
-    .cal-event-dot {
-      font-size: 0.65rem;
-      padding: 0.1rem 0.35rem;
-      border-radius: 3px;
-      margin-bottom: 0.15rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-
-    .cal-event-dot:hover { opacity: 0.8; }
-    .cal-event-dot.ranger { background: rgba(247,201,72,0.2); color: var(--yellow); }
-    .cal-event-dot.hike { background: rgba(67,217,173,0.2); color: var(--green); }
-    .cal-event-dot.star { background: rgba(74,222,128,0.2); color: var(--accent); }
-    .cal-event-dot.junior { background: rgba(56,189,248,0.2); color: var(--accent2); }
-    .cal-event-dot.tour { background: rgba(67,217,173,0.1); color: #7ee8d5; }
-    .cal-event-dot.wildlife { background: rgba(247,201,72,0.1); color: #f5d97a; }
-
-    /* Watchlist view */
-    .watchlist-empty {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--muted);
-    }
-
-    .watchlist-empty .empty-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-    }
-
-    .watchlist-empty h3 {
-      color: var(--text);
-      margin-bottom: 0.5rem;
-    }
-
-    /* Toast */
-    .toast-container {
-      position: fixed;
-      bottom: 1.5rem;
-      right: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      z-index: 999;
-    }
-
-    .toast {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 0.85rem 1.25rem;
-      font-size: 0.875rem;
-      color: var(--text);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      animation: toastIn 0.3s ease both;
-      max-width: 320px;
-    }
-
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
-    .toast.fadeout { animation: toastOut 0.3s ease both; }
-
-    @keyframes toastOut {
-      to { opacity: 0; transform: translateX(20px); }
-    }
-
-    .toast.success { border-color: var(--green); }
-    .toast.error { border-color: var(--accent2); }
-    .toast.info { border-color: var(--accent); }
-
-    /* Modal */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.65);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 200;
-      padding: 1rem;
-      animation: fadeIn 0.2s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      max-width: 520px;
-      width: 100%;
-      max-height: 85vh;
-      overflow-y: auto;
-      animation: slideUp 0.25s ease;
-    }
-
-    @keyframes slideUp {
-      from { transform: translateY(16px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .modal-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-size: 1.2rem;
-      cursor: pointer;
-      padding: 0.2rem;
-      border-radius: 4px;
-      transition: color 0.15s;
-    }
-
-    .modal-close:hover { color: var(--text); }
-
-    .modal-body {
-      padding: 1.5rem;
-    }
-
-    .modal-event-detail {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .detail-row {
-      display: flex;
-      gap: 0.75rem;
-      align-items: flex-start;
-    }
-
-    .detail-icon {
-      font-size: 1rem;
-      margin-top: 0.1rem;
-      flex-shrink: 0;
-      width: 20px;
-      text-align: center;
-    }
-
-    .detail-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.1rem;
-    }
-
-    .detail-value {
-      font-size: 0.9rem;
-      color: var(--text);
-    }
-
-    /* Loader spinner */
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: inline-block;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 3rem 2rem;
-      color: var(--muted);
-    }
-
-    .empty-state .icon {
-      font-size: 2.5rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .empty-state h3 {
-      color: var(--text);
-      font-size: 1rem;
-      margin-bottom: 0.4rem;
-    }
-
-    /* Stats bar */
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.1rem 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .stat-label {
-      font-size: 0.72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-    }
-
-    .stat-value {
-      font-size: 1.6rem;
-      font-weight: 800;
-      color: var(--text);
-      line-height: 1;
-    }
-
-    .stat-value.accent { color: var(--accent); }
-    .stat-value.green { color: var(--green); }
-    .stat-value.yellow { color: var(--yellow); }
-    .stat-value.pink { color: var(--accent2); }
-
-    /* Chip filter row */
-    .chip-row {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.25rem;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.3rem 0.75rem;
-      border-radius: 20px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--muted);
-      transition: all 0.2s;
-    }
-
-    .chip:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .chip.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-
-    /* Responsive */
-    @media (max-width: 640px) {
-      header { padding: 0.75rem 1rem; }
-      main { padding: 1rem; }
-      nav { padding: 0 1rem; }
-      .park-grid { grid-template-columns: 1fr; }
-      .event-card { grid-template-columns: auto 1fr; }
-      .event-actions { flex-direction: row; grid-column: 1 / -1; }
-      .stats-bar { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    /* === Travel v2 Design System === */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 800px 500px at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 400px 300px at 90% 90%, rgba(245,158,11,0.08) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    body > * { position: relative; z-index: 1; }
-
-    h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.02em; }
-    h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
-    h2 { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
-
-    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
-
-    .card, .result, .item, .flight, .route, .delay, .alert, .station, .transit, .park, .trail, .ev-station, .transport,
-    [class*="card"], [class*="item"], [class*="flight"], [class*="route"], [class*="result"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      animation: boardSlide 0.35s cubic-bezier(0.4,0,0.2,1) both;
-    }
-    .card:hover, .item:hover, [class*="card"]:hover { background: var(--surface2); }
-
-    .time, .code, .flight-number, .gate, .terminal, .delay-time, .duration, .distance,
-    .iss-time, .coords, .lat, .lon, .pass-time, .co2, .emission, .minutes, .seconds,
-    .countdown, .stat, .number, .metric, pre, code, .mono {
-      font-family: var(--font-mono);
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.04em;
-    }
-
-    .big-time, .big-number, .countdown, .pass-time {
-      font-family: var(--font-mono);
-      font-size: clamp(2rem, 5vw, 3rem);
-      color: var(--accent);
-      font-variant-numeric: tabular-nums;
-    }
-
-    input, select, textarea {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      padding: 0.65rem 1rem;
-      font-family: var(--font-body);
-      font-size: 0.9rem;
-      width: 100%;
-      transition: border-color 0.2s;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
-
-    button, .btn, input[type="submit"], input[type="button"] {
-      background: var(--accent);
-      color: #000;
-      border: none;
-      border-radius: var(--radius);
-      padding: 0.7rem 1.75rem;
-      font-family: var(--font-body);
-      font-weight: 700;
-      font-size: 0.88rem;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: transform 0.15s, filter 0.15s;
-    }
-    button:hover { filter: brightness(1.1); }
-    button:active { transform: scale(0.97); }
-
-    .tag, .badge, .status, .label, .type, .mode, .line, .provider {
-      display: inline-block;
-      background: rgba(245,158,11,0.1);
-      border: 1px solid rgba(245,158,11,0.25);
-      color: var(--accent);
-      border-radius: 4px;
-      padding: 0.15rem 0.6rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-family: var(--font-mono);
-    }
-
-    .on-time, .normal, .open, .available, .active, .lower { color: var(--green); }
-    .delayed, .late, .closed, .disrupted, .higher { color: var(--red); }
-    .caution, .minor-delay, .check { color: var(--orange); }
-
-    .status-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
-    .status-fill { height: 100%; background: var(--accent2); border-radius: 2px; transition: width 0.6s ease; }
-
-    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
-    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
-    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(245,158,11,0.06); font-variant-numeric: tabular-nums; }
-    tr:hover td { background: var(--surface2); }
-
-    @keyframes boardSlide {
-      from { opacity: 0; transform: translateY(-6px); }
-      to { opacity: 1; transform: none; }
-    }
-
-    @keyframes alertBlink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .delayed, .alert-active, .disrupted { animation: alertBlink 1.8s ease infinite; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trailhead — National Park Event Notifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep {
+  width: 1px; height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App Shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar-section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+  display: block;
+}
+
+/* Search */
+.search-wrap {
+  position: relative;
+}
+.search-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+.input-search {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-8);
+  transition: border-color 0.15s var(--ease-out);
+}
+.input-search:focus { outline: none; border-color: var(--color-accent); }
+.input-search::placeholder { color: var(--color-ink-muted); }
+
+/* Autocomplete suggestions */
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  z-index: 300;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.14);
+  overflow: hidden;
+  display: none;
+}
+.search-suggestions.open { display: block; }
+.suggestion-item {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 0.1s var(--ease-out);
+}
+.suggestion-item:hover { background: var(--color-accent-subtle); color: var(--color-accent); }
+.suggestion-item small {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* State filter */
+.select-field {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2346684d' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  padding-right: var(--space-8);
+}
+.select-field:focus { outline: none; border-color: var(--color-accent); }
+
+/* My Parks chips */
+.parks-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-height: 32px;
+}
+.park-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: 20px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  white-space: nowrap;
+  animation: chip-in 0.15s var(--ease-out);
+}
+@keyframes chip-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.chip-remove {
+  width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.12s var(--ease-out), background 0.12s var(--ease-out);
+}
+.chip-remove:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
+.parks-empty-hint {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  padding: var(--space-1) 0;
+}
+
+/* Popular parks quick-add */
+.popular-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+.popular-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease-out), color 0.12s var(--ease-out), background 0.12s var(--ease-out);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.popular-btn:hover { border-color: var(--color-accent); color: var(--color-accent); background: var(--color-accent-subtle); }
+.popular-btn.followed { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+.popular-btn.followed::after { content: '✓'; margin-left: auto; }
+
+/* Event type filter chips */
+.type-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.12s var(--ease-out);
+}
+.type-chip:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.type-chip.active { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-paper); }
+
+/* Template selector */
+.template-select-wrap { display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* API key area */
+.sidebar-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+.api-key-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+}
+.api-key-row { display: flex; align-items: center; gap: var(--space-2); }
+.input-api-key {
+  flex: 1; min-width: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  padding: var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  transition: border-color 0.15s var(--ease-out);
+}
+.input-api-key:focus { outline: none; border-color: var(--color-accent); }
+.input-api-key::placeholder { color: var(--color-ink-muted); }
+.btn-save-key {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s var(--ease-out);
+}
+.btn-save-key:hover { opacity: 0.85; }
+.api-key-hint {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+.api-key-hint a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Sidebar scroll area */
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-6);
+  flex-shrink: 0;
+  background: var(--color-paper);
+  gap: 0;
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--color-ink); }
+.tab-btn.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+/* Main scroll area */
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+}
+
+/* ── Panels ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: var(--space-16) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+.empty-icon {
+  font-size: 3rem;
+  opacity: 0.4;
+}
+.empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.empty-sub {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  max-width: 320px;
+  line-height: 1.65;
+}
+
+/* ── Section heading ── */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+}
+
+/* ── Alert cards ── */
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.alert-card {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  animation: card-in 0.18s var(--ease-out);
+}
+.alert-card.warn {
+  background: oklch(62% 0.15 72 / 0.06);
+  border-color: oklch(62% 0.15 72 / 0.3);
+}
+.alert-card.danger {
+  background: oklch(55% 0.20 25 / 0.06);
+  border-color: oklch(55% 0.20 25 / 0.3);
+}
+.alert-badge {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  height: fit-content;
+}
+.alert-badge.warn { background: oklch(62% 0.15 72 / 0.15); color: var(--color-warn); }
+.alert-badge.danger { background: oklch(55% 0.20 25 / 0.12); color: var(--color-danger); }
+.alert-body { flex: 1; min-width: 0; }
+.alert-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: 2px;
+}
+.alert-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+.alert-park {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 4px;
+}
+
+/* ── Event cards ── */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.event-card {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  align-items: start;
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+  animation: card-in 0.2s var(--ease-out);
+}
+.event-card:hover {
+  border-color: var(--color-accent-line);
+  box-shadow: 0 2px 8px oklch(18% 0.04 155 / 0.06);
+}
+
+.event-date-box {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-2);
+  text-align: center;
+  flex-shrink: 0;
+}
+.event-date-month {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+  letter-spacing: 0.03em;
+}
+.event-date-day {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.event-date-dow {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+}
+
+.event-body { min-width: 0; }
+.event-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: var(--space-1);
+}
+.event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.event-meta-item {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.event-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+  margin-bottom: var(--space-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.event-tags { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+.event-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-2);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-ranger   { background: oklch(62% 0.15 72 / 0.12); color: var(--color-warn); }
+.badge-hike     { background: oklch(52% 0.14 155 / 0.12); color: var(--color-success); }
+.badge-star     { background: oklch(60% 0.12 270 / 0.12); color: oklch(60% 0.12 270); }
+.badge-junior   { background: oklch(55% 0.18 200 / 0.12); color: oklch(55% 0.18 200); }
+.badge-wildlife { background: oklch(55% 0.14 100 / 0.12); color: oklch(55% 0.14 100); }
+.badge-default  { background: var(--color-accent-subtle); color: var(--color-accent); }
+
+.event-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+/* ── Park cards ── */
+.park-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.park-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+  animation: card-in 0.2s var(--ease-out);
+}
+.park-card:hover {
+  border-color: var(--color-accent-line);
+  box-shadow: 0 4px 16px oklch(18% 0.04 155 / 0.08);
+}
+.park-card-img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+  background: var(--color-paper-2);
+}
+.park-card-img-placeholder {
+  width: 100%;
+  height: 140px;
+  background: var(--color-paper-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: var(--color-border);
+}
+.park-card-body { padding: var(--space-4); }
+.park-card-name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-1);
+}
+.park-card-state {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+.park-card-fee {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.park-card-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Calendar ── */
+.calendar-wrap {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--space-6);
+}
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+}
+.calendar-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+.cal-nav-btn {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-ink-muted);
+  font-size: var(--text-base);
+  transition: border-color 0.12s var(--ease-out), color 0.12s var(--ease-out);
+}
+.cal-nav-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.cal-day-header {
+  padding: var(--space-2) var(--space-2);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+.cal-day {
+  min-height: 80px;
+  padding: var(--space-2);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s var(--ease-out);
+}
+.cal-day:nth-child(7n) { border-right: none; }
+.cal-day.other-month .cal-day-num { color: var(--color-border); }
+.cal-day.today { background: oklch(52% 0.14 155 / 0.04); }
+.cal-day.has-events { cursor: pointer; }
+.cal-day.has-events:hover { background: var(--color-accent-subtle); }
+.cal-day-num {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+.cal-day.today .cal-day-num {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.cal-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  display: inline-block;
+  margin: 1px;
+}
+.cal-dot.warn { background: var(--color-warn); }
+.cal-count {
+  font-size: 10px;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ── Notification generator ── */
+.notif-panel {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+.notif-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.field-label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+.textarea-email {
+  width: 100%;
+  min-height: 160px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  resize: vertical;
+  transition: border-color 0.15s var(--ease-out);
+  line-height: 1.6;
+}
+.textarea-email:focus { outline: none; border-color: var(--color-accent); }
+.input-venue {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 0.15s var(--ease-out);
+}
+.input-venue:focus { outline: none; border-color: var(--color-accent); }
+
+/* ── Buttons ── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 155 / 0.28); }
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease-out), color 0.12s var(--ease-out);
+  white-space: nowrap;
+}
+.btn-ghost:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+.btn-ics {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px var(--space-2);
+  background: var(--color-paper-2);
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease-out), color 0.12s var(--ease-out);
+  white-space: nowrap;
+}
+.btn-ics:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* Loading spinner */
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* Stats bar */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.stat-box {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-box-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+.stat-box-value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.stat-box-value.accent { color: var(--color-accent); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 50vh;
+  }
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .event-card { grid-template-columns: 48px 1fr; }
+  .event-actions { flex-direction: row; grid-column: 1 / -1; }
+  .park-cards-grid { grid-template-columns: 1fr; }
+  .notif-row { grid-template-columns: 1fr; }
+  .nav-page-label { display: none; }
+  .popular-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-card, .park-card, .alert-card { animation: none; }
+  .park-chip { animation: none; }
+  .btn-primary:hover { transform: none; box-shadow: none; }
+  .toast { transition: opacity 0.15s var(--ease-out); transform: translateY(0); }
+}
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <div class="logo-icon">🏔️</div>
-    <div class="logo-text">
-      <h1>Park Event Notifier</h1>
-      <p>National Park event tracking &amp; watchlist</p>
-    </div>
-  </div>
-  <div class="header-actions">
-    <button class="watchlist-badge" onclick="switchView('watchlist')" aria-label="View watchlist">
-      ⭐ Watchlist
-      <span class="count" id="watchlist-count">0</span>
-    </button>
-  </div>
-</header>
-
-<nav role="navigation" aria-label="Main navigation">
-  <button class="active" onclick="switchView('parks')" data-view="parks">🗺️ Parks</button>
-  <button onclick="switchView('events')" data-view="events">📅 Events</button>
-  <button onclick="switchView('calendar')" data-view="calendar">🗓️ Calendar</button>
-  <button onclick="switchView('watchlist')" data-view="watchlist">⭐ Watchlist</button>
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Trailhead<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">National Park Events</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
 </nav>
 
-<main>
+<div class="app-shell">
 
-  <!-- PARKS VIEW -->
-  <section id="view-parks" class="view active" role="main" aria-label="Parks directory">
-    <div class="section-header">
-      <div>
-        <div class="section-title">National Parks Directory</div>
-        <div class="section-subtitle">Browse and add parks to your watchlist</div>
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Controls">
+    <div class="sidebar-scroll">
+
+      <!-- Park search -->
+      <div class="sidebar-section" style="position:relative;">
+        <span class="sidebar-section-label">Search Parks</span>
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input
+            type="text"
+            class="input-search"
+            id="park-search"
+            placeholder="Name or state…"
+            autocomplete="off"
+            aria-label="Search parks by name or state"
+            aria-expanded="false"
+            aria-autocomplete="list"
+          >
+          <div class="search-suggestions" id="search-suggestions" role="listbox" aria-label="Park suggestions"></div>
+        </div>
       </div>
-    </div>
 
-    <div class="filters">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="park-search" placeholder="Search parks by name or state..." aria-label="Search parks" oninput="filterParks()" />
+      <!-- State filter -->
+      <div class="sidebar-section">
+        <label class="sidebar-section-label" for="state-filter">Filter by State</label>
+        <select class="select-field" id="state-filter" aria-label="Filter parks by state">
+          <option value="">All States</option>
+        </select>
       </div>
-      <select id="state-filter" aria-label="Filter by state" onchange="filterParks()">
-        <option value="">All States</option>
-      </select>
-    </div>
 
-    <div id="park-grid" class="park-grid" role="list"></div>
-  </section>
-
-  <!-- EVENTS VIEW -->
-  <section id="view-events" class="view" aria-label="Upcoming events">
-    <div class="section-header">
-      <div>
-        <div class="section-title">Upcoming Events</div>
-        <div class="section-subtitle">Ranger programs, guided hikes, star parties &amp; more</div>
+      <!-- My Parks -->
+      <div class="sidebar-section">
+        <span class="sidebar-section-label">My Parks <span id="park-count" style="font-weight:400;text-transform:none;letter-spacing:0;">(0 / 8)</span></span>
+        <div class="parks-chips" id="parks-chips" aria-label="Followed parks">
+          <span class="parks-empty-hint">Search or select a popular park below</span>
+        </div>
       </div>
-      <button class="btn btn-secondary" onclick="exportAllICS()" title="Export all visible events to ICS calendar file">
-        📤 Export ICS
-      </button>
-    </div>
 
-    <div class="stats-bar" id="events-stats"></div>
-
-    <div class="filters">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="event-search" placeholder="Search events..." aria-label="Search events" oninput="filterEvents()" />
+      <!-- Popular parks -->
+      <div class="sidebar-section">
+        <span class="sidebar-section-label">Popular Parks</span>
+        <div class="popular-grid" id="popular-grid">
+          <!-- populated by JS -->
+        </div>
       </div>
-      <select id="event-park-filter" aria-label="Filter by park" onchange="filterEvents()">
-        <option value="">All Parks</option>
-      </select>
-      <select id="event-type-filter" aria-label="Filter by event type" onchange="filterEvents()">
-        <option value="">All Types</option>
-        <option value="ranger">Ranger Talk</option>
-        <option value="hike">Guided Hike</option>
-        <option value="star">Star Party</option>
-        <option value="junior">Junior Ranger</option>
-        <option value="tour">Guided Tour</option>
-        <option value="wildlife">Wildlife Watch</option>
-      </select>
-    </div>
 
-    <div class="chip-row" id="event-park-chips"></div>
-
-    <div id="event-list" class="event-list"></div>
-  </section>
-
-  <!-- CALENDAR VIEW -->
-  <section id="view-calendar" class="view" aria-label="Event calendar">
-    <div class="section-header">
-      <div>
-        <div class="section-title">Event Calendar</div>
-        <div class="section-subtitle">Monthly view of all upcoming park events</div>
+      <!-- Event type filter -->
+      <div class="sidebar-section">
+        <span class="sidebar-section-label">Event Types</span>
+        <div class="type-chips" id="type-chips" role="group" aria-label="Filter by event type">
+          <!-- populated by JS -->
+        </div>
       </div>
-    </div>
 
-    <div class="calendar-wrap">
-      <div class="calendar-header">
-        <button class="btn-icon" onclick="calNav(-1)" aria-label="Previous month">&#8592;</button>
-        <div class="calendar-title" id="cal-title"></div>
-        <button class="btn-icon" onclick="calNav(1)" aria-label="Next month">&#8594;</button>
+      <!-- Notification template -->
+      <div class="sidebar-section">
+        <span class="sidebar-section-label">Notification Template</span>
+        <div class="template-select-wrap">
+          <select class="select-field" id="template-select" aria-label="Select notification template">
+            <option value="ranger">Ranger Program</option>
+            <option value="star">Star Party</option>
+            <option value="wildlife">Wildlife Walk</option>
+            <option value="hike">Guided Hike</option>
+            <option value="junior">Junior Ranger</option>
+          </select>
+        </div>
       </div>
-      <div class="calendar-grid" id="cal-grid" role="grid"></div>
-    </div>
-  </section>
 
-  <!-- WATCHLIST VIEW -->
-  <section id="view-watchlist" class="view" aria-label="Your watchlist">
-    <div class="section-header">
-      <div>
-        <div class="section-title">My Watchlist</div>
-        <div class="section-subtitle">Parks you are monitoring for upcoming events</div>
+    </div><!-- end sidebar-scroll -->
+
+    <!-- API key -->
+    <div class="sidebar-footer">
+      <span class="api-key-label">NPS API Key</span>
+      <div class="api-key-row">
+        <input
+          type="text"
+          class="input-api-key"
+          id="api-key-input"
+          placeholder="DEMO_KEY or your key…"
+          autocomplete="off"
+          aria-label="NPS API Key"
+        >
+        <button class="btn-save-key" id="btn-save-key">Save</button>
       </div>
-      <button class="btn btn-secondary" onclick="switchView('parks')" id="add-parks-btn">
-        + Add Parks
-      </button>
+      <p class="api-key-hint">
+        Using DEMO_KEY (100 req/day). Get a free key at
+        <a href="https://www.nps.gov/subjects/developer/get-started.htm" target="_blank" rel="noopener">nps.gov/subjects/developer</a>
+        to remove limits.
+      </p>
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Park events">
+
+    <!-- Tab bar -->
+    <div class="tab-bar" role="tablist" aria-label="Main content tabs">
+      <button class="tab-btn active" role="tab" aria-selected="true" data-tab="events" id="tab-events">Events Feed</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="alerts" id="tab-alerts">Alerts</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="parks" id="tab-parks">Park Cards</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="calendar" id="tab-calendar">Calendar</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="notify" id="tab-notify">Notify Guest</button>
     </div>
 
-    <div id="watchlist-content"></div>
-  </section>
+    <div class="main-scroll" id="main-scroll">
 
-</main>
+      <!-- EVENTS FEED -->
+      <div class="panel active" id="panel-events" role="tabpanel" aria-labelledby="tab-events">
+        <!-- populated by JS -->
+      </div>
 
-<!-- Event Detail Modal -->
-<div id="event-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title-text"></div>
-      <button class="modal-close" onclick="closeModal()" aria-label="Close modal">&times;</button>
-    </div>
-    <div class="modal-body" id="modal-body"></div>
-  </div>
+      <!-- ALERTS -->
+      <div class="panel" id="panel-alerts" role="tabpanel" aria-labelledby="tab-alerts">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- PARK CARDS -->
+      <div class="panel" id="panel-parks" role="tabpanel" aria-labelledby="tab-parks">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- CALENDAR -->
+      <div class="panel" id="panel-calendar" role="tabpanel" aria-labelledby="tab-calendar">
+        <div class="calendar-wrap" id="calendar-wrap">
+          <div class="calendar-header">
+            <button class="cal-nav-btn" id="cal-prev" aria-label="Previous month">&#8592;</button>
+            <span class="calendar-title" id="cal-title"></span>
+            <button class="cal-nav-btn" id="cal-next" aria-label="Next month">&#8594;</button>
+          </div>
+          <div class="cal-grid" id="cal-grid" role="grid"></div>
+        </div>
+        <div id="calendar-empty" class="empty-state" style="display:none;">
+          <div class="empty-icon">🗓️</div>
+          <p class="empty-title">No parks followed</p>
+          <p class="empty-sub">Follow parks in the sidebar to see their events on the calendar.</p>
+        </div>
+      </div>
+
+      <!-- NOTIFY GUEST -->
+      <div class="panel" id="panel-notify" role="tabpanel" aria-labelledby="tab-notify">
+        <!-- populated by JS -->
+      </div>
+
+    </div><!-- end main-scroll -->
+  </main>
 </div>
 
-<!-- Toast container -->
-<div class="toast-container" id="toast-container" aria-live="polite"></div>
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
-(function () {
-  'use strict';
+'use strict';
 
-  // ─── DATA ───────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-  const PARKS = [
-    { id: 'yose', name: 'Yosemite National Park', state: 'California', icon: '🏔️', desc: 'Home to granite cliffs, waterfalls, clear streams, giant sequoias, and biological diversity across vast wilderness areas in the Sierra Nevada.' },
-    { id: 'grca', name: 'Grand Canyon National Park', state: 'Arizona', icon: '🏜️', desc: 'One of the most spectacular examples of erosion on Earth, featuring layered bands of red rock revealing millions of years of geological history.' },
-    { id: 'yell', name: 'Yellowstone National Park', state: 'Wyoming', icon: '🌋', desc: 'The world\'s first national park, famous for geothermal features like Old Faithful geyser, hot springs, and diverse wildlife including bison and wolves.' },
-    { id: 'glac', name: 'Glacier National Park', state: 'Montana', icon: '🧊', desc: 'Known as the Crown of the Continent, featuring dramatic mountain scenery, pristine forests, alpine meadows, and over 700 miles of trails.' },
-    { id: 'zion', name: 'Zion National Park', state: 'Utah', icon: '🪨', desc: 'Massive sandstone cliffs of cream, pink and red rise dramatically from the canyon floor, home to the famous Narrows slot canyon hike.' },
-    { id: 'olym', name: 'Olympic National Park', state: 'Washington', icon: '🌲', desc: 'A park of three distinct ecosystems: rugged Pacific coastline, temperate rain forests in river valleys, and subalpine forests and wildflower meadows.' },
-    { id: 'acad', name: 'Acadia National Park', state: 'Maine', icon: '🌊', desc: 'The first national park east of the Mississippi, featuring rocky beaches, woodlands, and the highest point on the US Atlantic coast at Cadillac Mountain.' },
-    { id: 'romo', name: 'Rocky Mountain National Park', state: 'Colorado', icon: '⛰️', desc: 'Spanning the Continental Divide with elevations from 7,860 to 14,259 feet, home to elk, bighorn sheep, and over 300 miles of hiking trails.' },
-    { id: 'grsm', name: 'Great Smoky Mountains NP', state: 'Tennessee', icon: '🌿', desc: 'America\'s most visited national park features ancient mountains with more tree species than all of northern Europe and one of the best places for firefly viewing.' },
-    { id: 'josh', name: 'Joshua Tree National Park', state: 'California', icon: '🌵', desc: 'Where the Mojave and Colorado deserts converge, featuring Joshua trees, massive rock formations, and some of the darkest night skies in Southern California.' },
-    { id: 'dena', name: 'Denali National Park', state: 'Alaska', icon: '🦅', desc: 'Home to Denali, North America\'s highest peak at 20,310 feet, and vast wilderness with grizzly bears, wolves, caribou, and Dall sheep.' },
-    { id: 'ever', name: 'Everglades National Park', state: 'Florida', icon: '🐊', desc: 'The largest subtropical wilderness in the United States, protecting endangered and threatened species like the manatee, American crocodile, and Florida panther.' },
-    { id: 'arch', name: 'Arches National Park', state: 'Utah', icon: '🌅', desc: 'Contains the largest concentration of natural sandstone arches in the world, with over 2,000 cataloged formations including the iconic Delicate Arch.' },
-    { id: 'brca', name: 'Bryce Canyon National Park', state: 'Utah', icon: '🌄', desc: 'Famous for its unique geology of horseshoe-shaped amphitheaters filled with hoodoos — spire-shaped rock formations in shades of red, orange, and white.' },
-    { id: 'shen', name: 'Shenandoah National Park', state: 'Virginia', icon: '🍂', desc: 'Stretching along the Blue Ridge Mountains with Skyline Drive offering stunning views, waterfalls, deer, black bears, and blazing fall foliage.' },
-    { id: 'crla', name: 'Crater Lake National Park', state: 'Oregon', icon: '💧', desc: 'Features the deepest lake in the United States, formed from a collapsed volcano, with striking blue water visible for miles and the iconic Wizard Island.' },
-    { id: 'badl', name: 'Badlands National Park', state: 'South Dakota', icon: '🦬', desc: 'Striking landscapes of sharply eroded buttes, pinnacles, and spires intermixed with the largest undisturbed mixed grass prairie in the United States.' },
-    { id: 'maca', name: 'Mammoth Cave National Park', state: 'Kentucky', icon: '🦇', desc: 'The world\'s longest known cave system, with over 400 miles of surveyed passageways, rich in geological and biological formations including ancient cave fish.' },
-    { id: 'guis', name: 'Gulf Islands National Seashore', state: 'Florida', icon: '🏖️', desc: 'Pristine white-sand beaches, emerald Gulf waters, and barrier islands with sea turtle nesting, dolphin watching, and historic coastal fortifications.' },
-    { id: 'pinn', name: 'Pinnacles National Park', state: 'California', icon: '🦅', desc: 'Distinguished by its volcanic rock formations, talus caves, and condor habitat, with rare species including the California condor soaring overhead.' },
-  ];
+const POPULAR_PARKS = [
+  { name: 'Yellowstone', code: 'YELL' },
+  { name: 'Yosemite',    code: 'YOSE' },
+  { name: 'Grand Canyon',code: 'GRCA' },
+  { name: 'Zion',        code: 'ZION' },
+  { name: 'Gr. Smoky',   code: 'GRSM' },
+  { name: 'Acadia',      code: 'ACAD' },
+  { name: 'Rocky Mtn',   code: 'ROMO' },
+  { name: 'Olympic',     code: 'OLYM' },
+];
 
-  const EVENT_TYPES = [
-    { type: 'ranger', label: 'Ranger Talk', icon: '🎤', tagClass: 'tag-ranger', calClass: 'ranger' },
-    { type: 'hike',   label: 'Guided Hike',   icon: '🥾', tagClass: 'tag-hike',   calClass: 'hike'   },
-    { type: 'star',   label: 'Star Party',     icon: '🔭', tagClass: 'tag-star',   calClass: 'star'   },
-    { type: 'junior', label: 'Junior Ranger',  icon: '🏅', tagClass: 'tag-junior', calClass: 'junior' },
-    { type: 'tour',   label: 'Guided Tour',    icon: '🗺️', tagClass: 'tag-tour',   calClass: 'tour'   },
-    { type: 'wildlife', label: 'Wildlife Watch', icon: '🦉', tagClass: 'tag-wildlife', calClass: 'wildlife' },
-  ];
+const EVENT_TYPES = [
+  { key: 'Ranger Program', label: 'Ranger Program', badge: 'badge-ranger' },
+  { key: 'Star Party',     label: 'Star Party',     badge: 'badge-star'   },
+  { key: 'Guided Hike',    label: 'Guided Hike',    badge: 'badge-hike'   },
+  { key: 'Junior Ranger',  label: 'Junior Ranger',  badge: 'badge-junior' },
+  { key: 'Wildlife Talk',  label: 'Wildlife Talk',  badge: 'badge-wildlife'},
+];
 
-  const RANGER_TOPICS = [
-    'Geology of the Canyon', 'Fire Ecology', 'Birds of the Park', 'Bear Awareness',
-    'History of the Park', 'Plant Life in the Desert', 'Wildflower Walk',
-    'Invasive Species', 'Night Sky Science', 'Leave No Trace Principles',
-    'Climate Change Impact', 'Park Conservation Story', 'Wildlife Migration',
-    'Water Systems of the Park',
-  ];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-  const HIKE_NAMES = [
-    'Summit Trail Morning Hike', 'Waterfall Discovery Walk', 'Sunset Ridge Trek',
-    'Canyon Floor Exploration', 'Meadow Wander', 'Lake Shore Loop',
-    'Forest Canopy Trail', 'Historic Homestead Walk', 'Alpine Wildflower Hike',
-    'Coastal Tidepools Tour',
-  ];
+const MAX_PARKS = 8;
 
-  const TOUR_NAMES = [
-    'Visitor Center Orientation Tour', 'Historic Structures Walk',
-    'Cultural Heritage Tour', 'Photography Spots Tour', 'Junior Naturalist Discovery Tour',
-    'Sunrise Panorama Tour', 'Hidden Gems Tour',
-  ];
+// ── Storage ───────────────────────────────────────────────────────────────────
 
-  const LOCATIONS = [
-    'Visitor Center Amphitheater', 'Trailhead Parking Area', 'Park Headquarters',
-    'Summit Overlook', 'Campground Fire Ring', 'Ranger Station Patio',
-    'Main Lodge Lawn', 'Picnic Area B', 'Nature Center',
-  ];
+const ls = {
+  apiKey:  { get: () => localStorage.getItem('trailhead_key') || 'DEMO_KEY',   set: k => localStorage.setItem('trailhead_key', k) },
+  parks:   { get: () => { try { return JSON.parse(localStorage.getItem('trailhead_parks') || '[]'); } catch { return []; } },
+             set: v => localStorage.setItem('trailhead_parks', JSON.stringify(v)) },
+};
 
-  const TIMES = [
-    '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
-    '2:00 PM', '3:30 PM', '7:00 PM', '8:00 PM', '8:30 PM',
-  ];
+// ── State ─────────────────────────────────────────────────────────────────────
 
-  const DURATIONS = ['45 minutes', '1 hour', '1.5 hours', '2 hours', '3 hours'];
+let apiKey        = ls.apiKey.get();
+let followedParks = ls.parks.get(); // [{code, fullName, states, images, entranceFees, description}]
+let allParks      = []; // from NPS API
+let allEvents     = []; // from NPS API
+let allAlerts     = []; // from NPS API
+let activeTypeFilter = '';
+let currentTab    = 'events';
+let calYear       = new Date().getFullYear();
+let calMonth      = new Date().getMonth();
 
-  // ─── STATE ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-  let watchlist = JSON.parse(localStorage.getItem('npn-watchlist') || '[]');
-  let allEvents = [];
-  let filteredEvents = [];
-  let calYear = new Date().getFullYear();
-  let calMonth = new Date().getMonth();
-  let currentView = 'parks';
-  let activeTypeChip = '';
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-  // ─── EVENT GENERATION ────────────────────────────────────────────────────────
+function fmt(d) {
+  if (!d) return '';
+  const dt = typeof d === 'string' ? new Date(d) : d;
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
-  function seeded(seed) {
-    let s = seed;
-    return function () {
-      s = (s * 1664525 + 1013904223) & 0xffffffff;
-      return (s >>> 0) / 4294967296;
-    };
+function shortMon(d) {
+  return d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+}
+
+function badgeClass(category) {
+  if (!category) return 'badge-default';
+  const c = category.toLowerCase();
+  if (c.includes('ranger')) return 'badge-ranger';
+  if (c.includes('star') || c.includes('astro')) return 'badge-star';
+  if (c.includes('hike') || c.includes('walk')) return 'badge-hike';
+  if (c.includes('junior')) return 'badge-junior';
+  if (c.includes('wildlife') || c.includes('animal') || c.includes('bird')) return 'badge-wildlife';
+  return 'badge-default';
+}
+
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+
+// ── NPS API ───────────────────────────────────────────────────────────────────
+
+async function fetchParks() {
+  const url = `https://developer.nps.gov/api/v1/parks?api_key=${encodeURIComponent(apiKey)}&limit=500&fields=fullName,parkCode,states,description,images,entranceFees`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return (data.data || []).filter(p => p.parkCode && p.fullName);
+  } catch (e) {
+    toast('Could not load parks list — check API key or network.', 'error');
+    return [];
   }
+}
 
-  function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+async function fetchEvents(codes) {
+  if (!codes.length) return [];
+  const today = new Date().toISOString().slice(0, 10);
+  const url = `https://developer.nps.gov/api/v1/events?parkCode=${codes.join(',')}&api_key=${encodeURIComponent(apiKey)}&limit=50&dateStart=${today}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.data || [];
+  } catch {
+    toast('Could not load events — check API key or network.', 'error');
+    return [];
+  }
+}
 
-  function generateEvents() {
-    const events = [];
-    const now = new Date();
-    const seed = Math.floor(now / 86400000);
-    const rng = seeded(seed);
+async function fetchAlerts(codes) {
+  if (!codes.length) return [];
+  const url = `https://developer.nps.gov/api/v1/alerts?parkCode=${codes.join(',')}&api_key=${encodeURIComponent(apiKey)}&limit=20`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return data.data || [];
+  } catch {
+    return [];
+  }
+}
 
-    PARKS.forEach((park, pi) => {
-      const count = 6 + Math.floor(rng() * 7);
-      for (let i = 0; i < count; i++) {
-        const daysAhead = 1 + Math.floor(rng() * 59);
-        const date = new Date(now);
-        date.setDate(date.getDate() + daysAhead);
-        date.setHours(0, 0, 0, 0);
+// ── Sidebar population ────────────────────────────────────────────────────────
 
-        const typeObj = pick(EVENT_TYPES, rng);
-        let title;
-        switch (typeObj.type) {
-          case 'ranger':   title = `${pick(RANGER_TOPICS, rng)} — Ranger Talk`; break;
-          case 'hike':     title = pick(HIKE_NAMES, rng); break;
-          case 'star':     title = `Star Party: ${pick(['Milky Way', 'Saturn', 'Jupiter', 'Mars', 'Deep Sky Objects', 'Meteor Shower Watch'], rng)} Night`; break;
-          case 'junior':   title = `Junior Ranger Program: ${pick(['Explorer Badge', 'Nature Detectives', 'Wildlife Trackers', 'Junior Naturalist'], rng)}`; break;
-          case 'tour':     title = pick(TOUR_NAMES, rng); break;
-          case 'wildlife': title = `Wildlife Watch: ${pick(['Dawn Bird Survey', 'Bison Herd Observation', 'Elk Bugling Season', 'Condor Release Watch', 'Turtle Nesting Walk', 'Whale Watch'], rng)}`; break;
-          default:         title = 'Park Program';
-        }
+function populateStateFilter(parks) {
+  const states = [...new Set(
+    parks.flatMap(p => (p.states || '').split(',').map(s => s.trim()).filter(Boolean))
+  )].sort();
+  const sel = document.getElementById('state-filter');
+  sel.innerHTML = '<option value="">All States</option>' +
+    states.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+}
 
-        const desc = generateDesc(typeObj.type, park.name, rng);
-
-        events.push({
-          id: `${park.id}-${i}-${daysAhead}`,
-          parkId: park.id,
-          parkName: park.name,
-          parkState: park.state,
-          type: typeObj.type,
-          typeLabel: typeObj.label,
-          typeIcon: typeObj.icon,
-          tagClass: typeObj.tagClass,
-          calClass: typeObj.calClass,
-          title,
-          date,
-          time: pick(TIMES, rng),
-          duration: pick(DURATIONS, rng),
-          location: `${park.name} — ${pick(LOCATIONS, rng)}`,
-          desc,
-        });
+function renderPopularGrid() {
+  const grid = document.getElementById('popular-grid');
+  grid.innerHTML = POPULAR_PARKS.map(p => {
+    const followed = followedParks.some(f => f.parkCode && f.parkCode.toUpperCase() === p.code.toUpperCase());
+    return `<button class="popular-btn${followed ? ' followed' : ''}" data-code="${esc(p.code)}"
+      aria-pressed="${followed}" aria-label="${followed ? 'Following ' : 'Follow '}${esc(p.name)}">
+      ${esc(p.name)}
+    </button>`;
+  }).join('');
+  grid.querySelectorAll('.popular-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const code = btn.dataset.code;
+      const park = allParks.find(p => p.parkCode && p.parkCode.toUpperCase() === code.toUpperCase());
+      if (park) {
+        toggleFollow(park);
+        renderPopularGrid();
+      } else {
+        toast(`Park data not loaded yet — wait for parks list to fetch.`);
       }
     });
+  });
+}
 
-    events.sort((a, b) => a.date - b.date);
-    return events;
-  }
-
-  function generateDesc(type, parkName, rng) {
-    const descs = {
-      ranger: [
-        `Join a park ranger for an engaging presentation about the natural and cultural heritage of ${parkName}. Bring your curiosity and questions!`,
-        `An informative ranger-led talk exploring the ecology and history that makes ${parkName} one of America's most treasured places.`,
-        `Discover fascinating facts about ${parkName}'s landscape through an interactive ranger presentation. Suitable for all ages.`,
-      ],
-      hike: [
-        `A guided hike through some of the most scenic trails in ${parkName}. Moderate difficulty — bring water, sunscreen, and sturdy footwear.`,
-        `Explore ${parkName} with an expert ranger guide who will point out wildlife, geological features, and plant life along the trail.`,
-        `Join fellow nature enthusiasts for a memorable guided walk through the heart of ${parkName}. All fitness levels welcome.`,
-      ],
-      star: [
-        `Take advantage of ${parkName}'s dark skies for a ranger-guided stargazing session. Telescopes provided — no experience necessary.`,
-        `A magical evening under the stars at ${parkName}. Rangers will help you navigate the night sky and share stories of the cosmos.`,
-        `One of the best dark-sky parks in the country, ${parkName} hosts this monthly star party open to all visitors.`,
-      ],
-      junior: [
-        `Young visitors (ages 7–12) can earn their Junior Ranger badge through fun activities, games, and learning about ${parkName}'s ecosystems.`,
-        `An engaging program for children to learn about nature, conservation, and the importance of protecting ${parkName} for future generations.`,
-        `Kids explore the park through hands-on activities and earn an official Junior Ranger badge upon completion of the program.`,
-      ],
-      tour: [
-        `A comprehensive guided tour of ${parkName}'s key landmarks, history, and highlights. Perfect for first-time visitors.`,
-        `Rangers lead this informative walking tour covering the geology, wildlife, and cultural significance of ${parkName}.`,
-        `Explore the must-see spots of ${parkName} with expert interpretation from a knowledgeable ranger guide.`,
-      ],
-      wildlife: [
-        `Observe ${parkName}'s incredible wildlife in their natural habitat, guided by a ranger who will explain behaviors and ecology.`,
-        `An early morning opportunity to spot and learn about the diverse species that call ${parkName} home.`,
-        `A unique wildlife observation experience in ${parkName} with expert ranger guidance and binoculars recommended.`,
-      ],
-    };
-    const pool = descs[type] || descs.ranger;
-    return pick(pool, rng);
-  }
-
-  // ─── HELPERS ─────────────────────────────────────────────────────────────────
-
-  function saveWatchlist() {
-    localStorage.setItem('npn-watchlist', JSON.stringify(watchlist));
-    updateWatchlistBadge();
-  }
-
-  function isWatching(parkId) { return watchlist.includes(parkId); }
-
-  function toggleWatch(parkId) {
-    if (isWatching(parkId)) {
-      watchlist = watchlist.filter(id => id !== parkId);
-      toast(`Removed from watchlist`, 'info');
-    } else {
-      watchlist.push(parkId);
-      const park = PARKS.find(p => p.id === parkId);
-      toast(`${park ? park.name : 'Park'} added to watchlist ⭐`, 'success');
-    }
-    saveWatchlist();
-    refreshWatchButtons();
-  }
-
-  function updateWatchlistBadge() {
-    document.getElementById('watchlist-count').textContent = watchlist.length;
-  }
-
-  function refreshWatchButtons() {
-    document.querySelectorAll('.watch-btn').forEach(btn => {
-      const id = btn.dataset.parkId;
-      const watching = isWatching(id);
-      btn.textContent = watching ? '⭐ Watching' : '+ Watch';
-      btn.classList.toggle('watching', watching);
-      btn.setAttribute('aria-pressed', watching ? 'true' : 'false');
+function renderTypeChips() {
+  const wrap = document.getElementById('type-chips');
+  const allChip = `<button class="type-chip${activeTypeFilter === '' ? ' active' : ''}" data-type="" aria-pressed="${activeTypeFilter === ''}">All</button>`;
+  const chips = EVENT_TYPES.map(t =>
+    `<button class="type-chip${activeTypeFilter === t.key ? ' active' : ''}" data-type="${esc(t.key)}" aria-pressed="${activeTypeFilter === t.key}">${esc(t.label)}</button>`
+  ).join('');
+  wrap.innerHTML = allChip + chips;
+  wrap.querySelectorAll('.type-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTypeFilter = btn.dataset.type;
+      renderTypeChips();
+      renderEventsPanel();
     });
-    document.querySelectorAll('.park-card').forEach(card => {
-      card.classList.toggle('watching', isWatching(card.dataset.parkId));
+  });
+}
+
+function renderParksChips() {
+  const wrap = document.getElementById('parks-chips');
+  const count = document.getElementById('park-count');
+  count.textContent = `(${followedParks.length} / ${MAX_PARKS})`;
+  if (!followedParks.length) {
+    wrap.innerHTML = '<span class="parks-empty-hint">Search or select a popular park below</span>';
+    return;
+  }
+  wrap.innerHTML = followedParks.map(p => `
+    <span class="park-chip">
+      ${esc(p.fullName.replace('National Park', 'NP').replace('National Monument', 'NM').replace('National Seashore','NS').replace('National Recreation Area','NRA').slice(0, 24))}
+      <button class="chip-remove" data-code="${esc(p.parkCode)}" aria-label="Remove ${esc(p.fullName)} from followed parks" title="Remove">×</button>
+    </span>
+  `).join('');
+  wrap.querySelectorAll('.chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const code = btn.dataset.code;
+      const park = followedParks.find(p => p.parkCode === code);
+      if (park) removeFollow(park);
+    });
+  });
+}
+
+// ── Park search autocomplete ──────────────────────────────────────────────────
+
+const searchInput = document.getElementById('park-search');
+const suggestions = document.getElementById('search-suggestions');
+
+function filterParks() {
+  const q = searchInput.value.trim().toLowerCase();
+  const state = document.getElementById('state-filter').value.toLowerCase();
+  if (!q && !state) { suggestions.classList.remove('open'); return; }
+
+  let list = allParks;
+  if (state) {
+    list = list.filter(p => (p.states || '').toLowerCase().includes(state));
+  }
+  if (q) {
+    list = list.filter(p =>
+      p.fullName.toLowerCase().includes(q) ||
+      (p.states || '').toLowerCase().includes(q) ||
+      (p.parkCode || '').toLowerCase().includes(q)
+    );
+  }
+  list = list.slice(0, 8);
+
+  if (!list.length) {
+    suggestions.innerHTML = '<div class="suggestion-item" style="color:var(--color-ink-muted);cursor:default;">No parks found</div>';
+    suggestions.classList.add('open');
+    return;
+  }
+
+  suggestions.innerHTML = list.map(p => `
+    <div class="suggestion-item" role="option" data-code="${esc(p.parkCode)}" tabindex="0">
+      ${esc(p.fullName)}
+      <small>${esc(p.states || '')}</small>
+    </div>
+  `).join('');
+  suggestions.classList.add('open');
+  searchInput.setAttribute('aria-expanded', 'true');
+
+  suggestions.querySelectorAll('.suggestion-item[data-code]').forEach(item => {
+    item.addEventListener('click', () => {
+      const code = item.dataset.code;
+      const park = allParks.find(p => p.parkCode === code);
+      if (park) {
+        toggleFollow(park);
+        searchInput.value = '';
+        suggestions.classList.remove('open');
+        searchInput.setAttribute('aria-expanded', 'false');
+      }
+    });
+    item.addEventListener('keydown', e => {
+      if (e.key === 'Enter') item.click();
+    });
+  });
+}
+
+searchInput.addEventListener('input', filterParks);
+document.getElementById('state-filter').addEventListener('change', filterParks);
+
+document.addEventListener('pointerdown', e => {
+  if (!suggestions.contains(e.target) && e.target !== searchInput) {
+    suggestions.classList.remove('open');
+    searchInput.setAttribute('aria-expanded', 'false');
+  }
+}, { passive: true });
+
+// ── Follow / unfollow parks ───────────────────────────────────────────────────
+
+function toggleFollow(park) {
+  if (followedParks.some(p => p.parkCode === park.parkCode)) {
+    removeFollow(park);
+  } else {
+    addFollow(park);
+  }
+}
+
+async function addFollow(park) {
+  if (followedParks.length >= MAX_PARKS) {
+    toast(`Max ${MAX_PARKS} parks — remove one first.`, 'error');
+    return;
+  }
+  followedParks.push(park);
+  ls.parks.set(followedParks);
+  renderParksChips();
+  renderPopularGrid();
+  toast(`Following ${park.fullName}`, 'success');
+  await refreshParksData();
+}
+
+function removeFollow(park) {
+  followedParks = followedParks.filter(p => p.parkCode !== park.parkCode);
+  ls.parks.set(followedParks);
+  renderParksChips();
+  renderPopularGrid();
+  toast(`Removed ${park.fullName}`);
+  allEvents = allEvents.filter(e => !String(e.parkCode || '').toUpperCase().includes(park.parkCode.toUpperCase()));
+  allAlerts = allAlerts.filter(a => !String(a.parkCode || '').toUpperCase().includes(park.parkCode.toUpperCase()));
+  renderAll();
+}
+
+// ── Refresh data for followed parks ──────────────────────────────────────────
+
+async function refreshParksData() {
+  const codes = followedParks.map(p => p.parkCode.toLowerCase());
+  if (!codes.length) { allEvents = []; allAlerts = []; renderAll(); return; }
+
+  // show loading state
+  setLoadingState(true);
+  const [events, alerts] = await Promise.all([fetchEvents(codes), fetchAlerts(codes)]);
+  allEvents = events;
+  allAlerts = alerts;
+  setLoadingState(false);
+  renderAll();
+}
+
+function setLoadingState(loading) {
+  const evPanel = document.getElementById('panel-events');
+  if (loading) {
+    evPanel.innerHTML = '<div class="loading-row"><span class="spinner"></span><span>Loading events…</span></div>';
+  }
+}
+
+// ── Render all panels ─────────────────────────────────────────────────────────
+
+function renderAll() {
+  renderEventsPanel();
+  renderAlertsPanel();
+  renderParksPanel();
+  renderCalendar();
+  renderNotifyPanel();
+}
+
+// ── Events panel ──────────────────────────────────────────────────────────────
+
+function renderEventsPanel() {
+  const panel = document.getElementById('panel-events');
+  if (!followedParks.length) {
+    panel.innerHTML = emptyState('🌲', 'No parks followed', 'Follow parks from the sidebar to see their upcoming events here.');
+    return;
+  }
+
+  let events = [...allEvents].sort((a, b) => new Date(a.dates?.start || 0) - new Date(b.dates?.start || 0));
+
+  if (activeTypeFilter) {
+    events = events.filter(e => {
+      const cat = (e.category || e.types || '').toLowerCase();
+      return cat.includes(activeTypeFilter.toLowerCase());
     });
   }
 
-  function formatDate(d) {
-    return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const totalCount = allEvents.length;
+  const statHtml = `
+    <div class="stats-row" style="margin-bottom:var(--space-4);">
+      <div class="stat-box"><span class="stat-box-label">Total Events</span><span class="stat-box-value accent">${totalCount}</span></div>
+      <div class="stat-box"><span class="stat-box-label">Parks Followed</span><span class="stat-box-value">${followedParks.length}</span></div>
+      <div class="stat-box"><span class="stat-box-label">Active Alerts</span><span class="stat-box-value" style="${allAlerts.length ? 'color:var(--color-warn)' : ''}">${allAlerts.length}</span></div>
+      <div class="stat-box"><span class="stat-box-label">Showing</span><span class="stat-box-value">${events.length}</span></div>
+    </div>
+  `;
+
+  if (!events.length) {
+    panel.innerHTML = statHtml + emptyState('📅', 'No events found', activeTypeFilter ? 'Try a different event type filter.' : 'No upcoming events scheduled for followed parks.');
+    return;
   }
 
-  function shortMonth(d) {
-    return d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-  }
+  panel.innerHTML = statHtml +
+    '<div class="section-head"><span class="section-label">Upcoming Events</span></div>' +
+    '<div class="event-list">' +
+    events.map(ev => renderEventCard(ev)).join('') +
+    '</div>';
 
-  function shortDow(d) {
-    return d.toLocaleDateString('en-US', { weekday: 'short' });
-  }
+  panel.querySelectorAll('.btn-ics').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.evid;
+      const ev = allEvents.find(e => e.id === id);
+      if (ev) exportSingleICS(ev);
+    });
+  });
 
-  function daysFromNow(d) {
-    const diff = Math.round((d - new Date()) / 86400000);
-    if (diff === 0) return 'Today';
-    if (diff === 1) return 'Tomorrow';
-    return `In ${diff} days`;
-  }
+  panel.querySelectorAll('.btn-use-notif').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.evid;
+      const ev = allEvents.find(e => e.id === id);
+      if (ev) {
+        openNotifyForEvent(ev);
+        switchTab('notify');
+      }
+    });
+  });
+}
 
-  // ─── TOAST ────────────────────────────────────────────────────────────────────
+function renderEventCard(ev) {
+  const dateStr = ev.dates?.start || ev.dateStart || '';
+  const d = dateStr ? new Date(dateStr) : null;
+  const isValid = d && !isNaN(d);
+  const cat = ev.category || ev.types || 'Event';
+  const bc = badgeClass(cat);
+  const park = followedParks.find(p => p.parkCode && String(ev.parkCode || '').toUpperCase().includes(p.parkCode.toUpperCase()));
+  const parkName = park ? park.fullName : (ev.organizationName || ev.location || '');
+  const location = ev.location || ev.organizationName || '';
+  const timeStr = ev.times?.[0] ? `${ev.times[0].timestart || ''} – ${ev.times[0].timeend || ''}`.trim().replace(/^–\s*/, '').replace(/\s*–$/, '') : '';
+  const desc = (ev.description || ev.shortDescription || '').replace(/<[^>]*>/g, '');
 
-  function toast(msg, type = 'info') {
-    const tc = document.getElementById('toast-container');
-    const el = document.createElement('div');
-    el.className = `toast ${type}`;
-    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-    el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
-    tc.appendChild(el);
-    setTimeout(() => {
-      el.classList.add('fadeout');
-      setTimeout(() => el.remove(), 320);
-    }, 3000);
-  }
-
-  // ─── MODAL ────────────────────────────────────────────────────────────────────
-
-  function openEventModal(eventId) {
-    const ev = allEvents.find(e => e.id === eventId);
-    if (!ev) return;
-    const modal = document.getElementById('event-modal');
-    document.getElementById('modal-title-text').textContent = ev.title;
-    document.getElementById('modal-body').innerHTML = `
-      <div class="modal-event-detail">
-        <div class="event-tags" style="margin-bottom:0.5rem;">
-          <span class="tag ${ev.tagClass}">${ev.typeIcon} ${ev.typeLabel}</span>
+  return `
+    <article class="event-card" role="article">
+      <div class="event-date-box" aria-label="${isValid ? fmt(d) : 'Date TBD'}">
+        ${isValid ? `
+          <div class="event-date-month">${shortMon(d)}</div>
+          <div class="event-date-day">${d.getDate()}</div>
+          <div class="event-date-dow">${DAYS_SHORT[d.getDay()]}</div>
+        ` : '<div class="event-date-day" style="font-size:var(--text-sm);">TBD</div>'}
+      </div>
+      <div class="event-body">
+        <div class="event-title">${esc(ev.title || ev.eventId || 'Untitled Event')}</div>
+        <div class="event-meta">
+          ${parkName ? `<span class="event-meta-item">⛰ ${esc(parkName)}</span>` : ''}
+          ${timeStr ? `<span class="event-meta-item">⏰ ${esc(timeStr)}</span>` : ''}
+          ${location && location !== parkName ? `<span class="event-meta-item">📍 ${esc(location.slice(0, 60))}</span>` : ''}
+          ${isValid ? `<span class="event-meta-item" style="color:var(--color-accent);">${daysFromNow(d)}</span>` : ''}
         </div>
-        <div class="detail-row">
-          <div class="detail-icon">📅</div>
-          <div>
-            <div class="detail-label">Date</div>
-            <div class="detail-value">${formatDate(ev.date)}</div>
-          </div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-icon">⏰</div>
-          <div>
-            <div class="detail-label">Time &amp; Duration</div>
-            <div class="detail-value">${ev.time} · ${ev.duration}</div>
-          </div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-icon">📍</div>
-          <div>
-            <div class="detail-label">Location</div>
-            <div class="detail-value">${ev.location}</div>
-          </div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-icon">📝</div>
-          <div>
-            <div class="detail-label">Description</div>
-            <div class="detail-value">${ev.desc}</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
-          <button class="btn btn-primary" onclick="exportSingleICS('${ev.id}')" style="flex:1;">📤 Add to Calendar</button>
-          <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+        ${desc ? `<div class="event-desc">${esc(desc)}</div>` : ''}
+        <div class="event-tags">
+          <span class="event-badge ${bc}">${esc(cat)}</span>
         </div>
       </div>
-    `;
-    modal.style.display = 'flex';
-    modal.setAttribute('aria-hidden', 'false');
+      <div class="event-actions">
+        <button class="btn-ics" data-evid="${esc(ev.id || '')}" aria-label="Add to calendar">📅 ICS</button>
+        <button class="btn-ghost btn-use-notif" data-evid="${esc(ev.id || '')}" aria-label="Generate guest notification" style="font-size:11px;padding:3px var(--space-2);">✉ Notify</button>
+      </div>
+    </article>
+  `;
+}
+
+function daysFromNow(d) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const target = new Date(d); target.setHours(0,0,0,0);
+  const diff = Math.round((target - now) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff < 0) return `${Math.abs(diff)}d ago`;
+  return `In ${diff}d`;
+}
+
+// ── Alerts panel ──────────────────────────────────────────────────────────────
+
+function renderAlertsPanel() {
+  const panel = document.getElementById('panel-alerts');
+  if (!followedParks.length) {
+    panel.innerHTML = emptyState('🔔', 'No parks followed', 'Follow parks to see active alerts and closures.');
+    return;
+  }
+  if (!allAlerts.length) {
+    panel.innerHTML = emptyState('✅', 'No active alerts', 'All followed parks have clear conditions right now.');
+    return;
   }
 
-  function closeModal() {
-    const modal = document.getElementById('event-modal');
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-  }
+  const html = '<div class="section-head"><span class="section-label">Active Alerts</span></div>' +
+    '<div class="alerts-list">' +
+    allAlerts.map(a => {
+      const cat = (a.category || '').toLowerCase();
+      const isDanger = cat.includes('closure') || cat.includes('danger');
+      const clsCard = isDanger ? 'danger' : 'warn';
+      const clsBadge = isDanger ? 'danger' : 'warn';
+      const park = followedParks.find(p => p.parkCode && String(a.parkCode || '').toUpperCase().includes(p.parkCode.toUpperCase()));
+      const parkName = park ? park.fullName : (a.parkCode || '');
+      return `
+        <div class="alert-card ${clsCard}" role="alert">
+          <span class="alert-badge ${clsBadge}">${esc(a.category || 'Alert')}</span>
+          <div class="alert-body">
+            <div class="alert-title">${esc(a.title || 'Alert')}</div>
+            ${a.description ? `<div class="alert-desc">${esc((a.description || '').replace(/<[^>]*>/g, '').slice(0, 200))}${a.description.length > 200 ? '…' : ''}</div>` : ''}
+            ${parkName ? `<div class="alert-park">⛰ ${esc(parkName)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('') +
+    '</div>';
+  panel.innerHTML = html;
+}
 
-  document.getElementById('event-modal').addEventListener('click', function (e) {
-    if (e.target === this) closeModal();
+// ── Park cards panel ──────────────────────────────────────────────────────────
+
+function renderParksPanel() {
+  const panel = document.getElementById('panel-parks');
+  if (!followedParks.length) {
+    panel.innerHTML = emptyState('🏔', 'No parks followed', 'Follow parks from the sidebar to see their details here.');
+    return;
+  }
+  panel.innerHTML = '<div class="section-head"><span class="section-label">Followed Parks</span></div>' +
+    '<div class="park-cards-grid">' +
+    followedParks.map(p => renderParkCard(p)).join('') +
+    '</div>';
+}
+
+function renderParkCard(p) {
+  const img = p.images && p.images[0];
+  const fee = p.entranceFees && p.entranceFees[0];
+  const feeText = fee ? (Number(fee.cost) === 0 ? 'Free Entry' : `$${Number(fee.cost).toFixed(0)} entry`) : '';
+  const desc = (p.description || '').replace(/<[^>]*>/g, '');
+  const evCount = allEvents.filter(e => String(e.parkCode || '').toUpperCase().includes(p.parkCode.toUpperCase())).length;
+
+  return `
+    <article class="park-card">
+      ${img
+        ? `<img class="park-card-img" src="${esc(img.url)}" alt="${esc(img.altText || p.fullName)}" loading="lazy">`
+        : `<div class="park-card-img-placeholder" aria-hidden="true">🏔</div>`
+      }
+      <div class="park-card-body">
+        <div class="park-card-name">${esc(p.fullName)}</div>
+        <div class="park-card-state">📍 ${esc(p.states || '')}</div>
+        ${feeText ? `<span class="park-card-fee">💵 ${esc(feeText)}</span>` : ''}
+        ${desc ? `<div class="park-card-desc">${esc(desc)}</div>` : ''}
+        ${evCount ? `<div style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--color-accent);">📅 ${evCount} upcoming event${evCount !== 1 ? 's' : ''}</div>` : ''}
+      </div>
+    </article>
+  `;
+}
+
+// ── Calendar panel ────────────────────────────────────────────────────────────
+
+function renderCalendar() {
+  const title = document.getElementById('cal-title');
+  const grid  = document.getElementById('cal-grid');
+  const empty = document.getElementById('calendar-empty');
+
+  if (!followedParks.length) {
+    document.getElementById('calendar-wrap').style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+  document.getElementById('calendar-wrap').style.display = '';
+  empty.style.display = 'none';
+
+  title.textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Build event map keyed by YYYY-MM-DD
+  const evMap = {};
+  allEvents.forEach(ev => {
+    const ds = ev.dates?.start || ev.dateStart || '';
+    if (!ds) return;
+    const d = new Date(ds);
+    if (isNaN(d)) return;
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    evMap[key] = (evMap[key] || 0) + 1;
   });
 
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeModal();
+  const cells = [];
+  for (let i = firstDay - 1; i >= 0; i--) cells.push({ day: daysInPrev - i, month: calMonth - 1, other: true });
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, month: calMonth, other: false });
+  while (cells.length < 42) cells.push({ day: cells.length - firstDay - daysInMonth + 1, month: calMonth + 1, other: true });
+
+  const headerHtml = DAYS_SHORT.map(d => `<div class="cal-day-header" role="columnheader">${d}</div>`).join('');
+
+  const cellsHtml = cells.map(c => {
+    const date = new Date(calYear, c.month, c.day);
+    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    const count = evMap[key] || 0;
+    const isToday = date.getTime() === today.getTime();
+    const cls = ['cal-day', c.other ? 'other-month' : '', isToday ? 'today' : '', count > 0 ? 'has-events' : ''].filter(Boolean).join(' ');
+    const numEl = isToday ? `<div class="cal-day-num"><span>${c.day}</span></div>` : `<div class="cal-day-num">${c.day}</div>`;
+    const dots = count > 0
+      ? Array(Math.min(count, 4)).fill(0).map(() => '<span class="cal-dot" aria-hidden="true"></span>').join('') +
+        (count > 4 ? `<span class="cal-count"> +${count - 4}</span>` : '')
+      : '';
+    return `<div class="${cls}" role="gridcell" aria-label="${c.day}${count ? `, ${count} event${count>1?'s':''}` : ''}">${numEl}<div>${dots}</div></div>`;
+  }).join('');
+
+  grid.innerHTML = headerHtml + cellsHtml;
+}
+
+// ── Notify panel ──────────────────────────────────────────────────────────────
+
+let notifyEvent = null;
+
+function renderNotifyPanel() {
+  const panel = document.getElementById('panel-notify');
+  if (!followedParks.length) {
+    panel.innerHTML = emptyState('✉', 'No parks followed', 'Follow parks, then pick an event to generate guest notification copy.');
+    return;
+  }
+
+  const tmpl = document.getElementById('template-select').value;
+  const evOptions = allEvents.map(ev => {
+    const park = followedParks.find(p => p.parkCode && String(ev.parkCode || '').toUpperCase().includes(p.parkCode.toUpperCase()));
+    const parkName = park ? park.fullName : '';
+    return `<option value="${esc(ev.id || '')}">${esc((ev.title || 'Untitled').slice(0,60))}${parkName ? ` — ${esc(parkName.slice(0,30))}` : ''}</option>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="section-head"><span class="section-label">Guest Notification Generator</span></div>
+    <div class="notif-panel">
+      <div class="notif-row">
+        <div>
+          <label class="field-label" for="notif-event-select">Event</label>
+          <select class="select-field" id="notif-event-select" aria-label="Select event for notification">
+            <option value="">— Select an event —</option>
+            ${evOptions}
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="notif-venue">Venue name (editable)</label>
+          <input type="text" class="input-venue" id="notif-venue" placeholder="e.g. Grand Canyon Lodge" value="${notifyEvent ? esc(notifyEvent.location || '') : ''}">
+        </div>
+      </div>
+      <div>
+        <label class="field-label" for="notif-email-body">Generated Email Copy</label>
+        <textarea class="textarea-email" id="notif-email-body" aria-label="Generated notification email copy">${buildEmailCopy(tmpl, notifyEvent)}</textarea>
+      </div>
+      <div style="display:flex;gap:var(--space-3);margin-top:var(--space-4);flex-wrap:wrap;">
+        <button class="btn-primary" id="btn-generate-notif">Generate</button>
+        <button class="btn-ghost" id="btn-copy-notif">Copy to Clipboard</button>
+      </div>
+    </div>
+  `;
+
+  const sel = document.getElementById('notif-event-select');
+  if (notifyEvent) sel.value = notifyEvent.id || '';
+
+  document.getElementById('btn-generate-notif').addEventListener('click', () => {
+    const id = document.getElementById('notif-event-select').value;
+    const venue = document.getElementById('notif-venue').value.trim();
+    const ev = allEvents.find(e => e.id === id);
+    if (!ev) { toast('Select an event first.', 'error'); return; }
+    notifyEvent = ev;
+    if (venue) notifyEvent = { ...ev, location: venue };
+    document.getElementById('notif-email-body').value = buildEmailCopy(tmpl, notifyEvent);
+    toast('Email copy generated!', 'success');
   });
 
-  // ─── ICS EXPORT ───────────────────────────────────────────────────────────────
-
-  function icsDate(d, timeStr) {
-    const parts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    let h = parseInt(parts[1], 10);
-    const m = parseInt(parts[2], 10);
-    const ap = parts[3].toUpperCase();
-    if (ap === 'PM' && h !== 12) h += 12;
-    if (ap === 'AM' && h === 12) h = 0;
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(h)}${pad(m)}00`;
-  }
-
-  function buildICS(events) {
-    const uid = () => `npn-${Date.now()}-${Math.random().toString(36).slice(2)}@darkfactory`;
-    const lines = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//National Park Event Notifier//EN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
-    ];
-    events.forEach(ev => {
-      const dt = icsDate(ev.date, ev.time);
-      lines.push(
-        'BEGIN:VEVENT',
-        `UID:${uid()}`,
-        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').split('.')[0]}Z`,
-        `DTSTART:${dt}`,
-        `SUMMARY:${ev.title.replace(/,/g,'\\,')}`,
-        `DESCRIPTION:${ev.desc.replace(/\n/g,'\\n').replace(/,/g,'\\,')}`,
-        `LOCATION:${ev.location.replace(/,/g,'\\,')}`,
-        'END:VEVENT'
-      );
+  document.getElementById('btn-copy-notif').addEventListener('click', () => {
+    const body = document.getElementById('notif-email-body').value;
+    if (!body) { toast('Generate the copy first.', 'error'); return; }
+    navigator.clipboard.writeText(body).then(() => toast('Copied to clipboard!', 'success')).catch(() => {
+      document.getElementById('notif-email-body').select();
+      document.execCommand('copy');
+      toast('Copied!', 'success');
     });
-    lines.push('END:VCALENDAR');
-    return lines.join('\r\n');
-  }
+  });
+}
 
-  function downloadICS(content, filename) {
-    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('Calendar file downloaded!', 'success');
-  }
+function openNotifyForEvent(ev) {
+  notifyEvent = ev;
+  renderNotifyPanel();
+}
 
-  function exportAllICS() {
-    const evs = filteredEvents.length > 0 ? filteredEvents : allEvents;
-    if (evs.length === 0) { toast('No events to export', 'error'); return; }
-    downloadICS(buildICS(evs), 'national-park-events.ics');
-  }
+function buildEmailCopy(template, ev) {
+  if (!ev) return '';
+  const dateStr = ev.dates?.start || ev.dateStart || '';
+  const d = dateStr ? new Date(dateStr) : null;
+  const dateFormatted = d && !isNaN(d) ? fmt(d) : 'an upcoming date';
+  const timeStr = ev.times?.[0] ? `${ev.times[0].timestart || ''} – ${ev.times[0].timeend || ''}`.trim().replace(/^–\s*/, '') : '';
+  const location = ev.location || '';
+  const title = ev.title || 'Special Event';
+  const desc = (ev.description || ev.shortDescription || '').replace(/<[^>]*>/g, '').slice(0, 200);
 
-  function exportSingleICS(eventId) {
-    const ev = allEvents.find(e => e.id === eventId);
-    if (!ev) return;
-    downloadICS(buildICS([ev]), `${ev.parkId}-event.ics`);
-    closeModal();
-  }
+  const templates = {
+    ranger: `Dear Guest,
 
-  // ─── PARKS VIEW ──────────────────────────────────────────────────────────────
+We are delighted to share an exciting opportunity during your upcoming visit!
 
-  function renderParks(list) {
-    const grid = document.getElementById('park-grid');
-    if (list.length === 0) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🔍</div><h3>No parks found</h3><p>Try a different search or state filter.</p></div>`;
-      return;
+🎤 RANGER PROGRAM: ${title}
+
+Join one of our knowledgeable park rangers for this special program. Whether you're a first-time visitor or a seasoned park enthusiast, you'll come away with a deeper appreciation for one of America's natural treasures.
+
+📅 Date: ${dateFormatted}
+${timeStr ? `⏰ Time: ${timeStr}\n` : ''}${location ? `📍 Location: ${location}\n` : ''}
+${desc ? `About this program:\n${desc}\n\n` : ''}Attendance is free with park admission. No prior registration required — just show up and enjoy!
+
+We hope to see you there.
+
+Warm regards,
+[Your Name / Property Name]`,
+
+    star: `Dear Guest,
+
+The night sky awaits! We wanted to make sure you didn't miss this extraordinary event during your stay.
+
+🔭 STAR PARTY: ${title}
+
+${location || 'the park'} offers some of the darkest skies in the region, and our rangers have organized a spectacular stargazing evening just for visitors like you.
+
+📅 Date: ${dateFormatted}
+${timeStr ? `⏰ Time: ${timeStr}\n` : ''}${location ? `📍 Location: ${location}\n` : ''}
+${desc ? `What to expect:\n${desc}\n\n` : ''}Telescopes and star maps provided by rangers. Dress warmly and bring a flashlight with a red filter if possible.
+
+Clear skies ahead!
+
+Best wishes,
+[Your Name / Property Name]`,
+
+    wildlife: `Dear Guest,
+
+Nature has something special in store for you! Don't miss this ranger-led wildlife experience during your visit.
+
+🦉 WILDLIFE WALK: ${title}
+
+Experience the incredible biodiversity of the park with an expert guide who will help you spot and identify the remarkable species that call this landscape home.
+
+📅 Date: ${dateFormatted}
+${timeStr ? `⏰ Time: ${timeStr}\n` : ''}${location ? `📍 Location: ${location}\n` : ''}
+${desc ? `Program details:\n${desc}\n\n` : ''}We recommend bringing binoculars, comfortable walking shoes, and layered clothing. All ages welcome!
+
+We hope you enjoy this unforgettable wildlife encounter.
+
+With warm regards,
+[Your Name / Property Name]`,
+
+    hike: `Dear Guest,
+
+Lace up your boots — an adventure is waiting for you!
+
+🥾 GUIDED HIKE: ${title}
+
+Explore the park's most scenic trails with an experienced ranger guide who will point out geological features, wildflowers, wildlife, and the hidden stories of the landscape.
+
+📅 Date: ${dateFormatted}
+${timeStr ? `⏰ Time: ${timeStr}\n` : ''}${location ? `📍 Location: ${location}\n` : ''}
+${desc ? `About this hike:\n${desc}\n\n` : ''}Please bring: water, sunscreen, snacks, and sturdy footwear. Moderate fitness level recommended.
+
+We look forward to hiking with you!
+
+Best,
+[Your Name / Property Name]`,
+
+    junior: `Dear Guest (and Junior Rangers),
+
+We have a very special event for our youngest adventurers!
+
+🏅 JUNIOR RANGER PROGRAM: ${title}
+
+Kids can earn their official Junior Ranger badge through fun activities, interactive games, and hands-on learning about the park's ecosystems and wildlife.
+
+📅 Date: ${dateFormatted}
+${timeStr ? `⏰ Time: ${timeStr}\n` : ''}${location ? `📍 Location: ${location}\n` : ''}
+${desc ? `Program highlights:\n${desc}\n\n` : ''}Recommended ages: 5–12. Parents welcome to join. Activity booklets provided by rangers.
+
+We can't wait to swear in the next generation of Junior Rangers!
+
+Warmly,
+[Your Name / Property Name]`,
+  };
+
+  return templates[template] || templates.ranger;
+}
+
+// ── ICS Export ────────────────────────────────────────────────────────────────
+
+function exportSingleICS(ev) {
+  const dateStr = ev.dates?.start || ev.dateStart || '';
+  const d = dateStr ? new Date(dateStr) : new Date();
+  if (isNaN(d)) { toast('No valid date for this event.', 'error'); return; }
+
+  const pad = n => String(n).padStart(2, '0');
+  const dtStart = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+  const dtEnd   = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate() + 1)}`;
+  const title   = (ev.title || 'Park Event').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  const loc     = (ev.location || '').replace(/,/g,'\\,');
+  const desc    = (ev.description || ev.shortDescription || '').replace(/<[^>]*>/g,'').slice(0,300).replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  const uid_val = `npn-${Date.now()}-${Math.random().toString(36).slice(2)}@trailhead`;
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Trailhead//National Park Event Notifier//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid_val}`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').split('.')[0]}Z`,
+    `DTSTART;VALUE=DATE:${dtStart}`,
+    `DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${desc}`,
+    `LOCATION:${loc}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `park-event-${(ev.title || 'event').slice(0,30).replace(/\s+/g,'-').toLowerCase()}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Calendar file downloaded!', 'success');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+
+function switchTab(name) {
+  currentTab = name;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const active = btn.dataset.tab === name;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${name}`);
+  });
+  if (name === 'calendar') renderCalendar();
+  if (name === 'notify') renderNotifyPanel();
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// ── Calendar nav ──────────────────────────────────────────────────────────────
+
+document.getElementById('cal-prev').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+});
+document.getElementById('cal-next').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+});
+
+// ── API key ───────────────────────────────────────────────────────────────────
+
+const apiKeyInput = document.getElementById('api-key-input');
+apiKeyInput.value = apiKey === 'DEMO_KEY' ? '' : apiKey;
+apiKeyInput.placeholder = apiKey === 'DEMO_KEY' ? 'DEMO_KEY (active)' : 'Your NPS key…';
+
+document.getElementById('btn-save-key').addEventListener('click', () => {
+  const val = apiKeyInput.value.trim() || 'DEMO_KEY';
+  apiKey = val;
+  ls.apiKey.set(val);
+  toast(`API key ${val === 'DEMO_KEY' ? 'reset to DEMO_KEY' : 'saved'}`, 'success');
+  apiKeyInput.placeholder = val === 'DEMO_KEY' ? 'DEMO_KEY (active)' : 'Your NPS key…';
+  // Re-fetch with new key
+  if (followedParks.length) refreshParksData();
+});
+apiKeyInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-save-key').click();
+});
+
+// ── Template selector ─────────────────────────────────────────────────────────
+
+document.getElementById('template-select').addEventListener('change', () => {
+  if (currentTab === 'notify') renderNotifyPanel();
+});
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+
+function emptyState(icon, title, sub) {
+  return `<div class="empty-state"><div class="empty-icon">${icon}</div><p class="empty-title">${esc(title)}</p><p class="empty-sub">${esc(sub)}</p></div>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function init() {
+  // Render sidebar immediately with any cached followed parks
+  renderParksChips();
+  renderPopularGrid();
+  renderTypeChips();
+  renderAll();
+
+  // Fetch full parks list for autocomplete
+  allParks = await fetchParks();
+  if (allParks.length) {
+    populateStateFilter(allParks);
+
+    // Hydrate followed parks with fresh data (restore image/fee data)
+    if (followedParks.length) {
+      followedParks = followedParks.map(fp => {
+        const fresh = allParks.find(p => p.parkCode === fp.parkCode);
+        return fresh || fp;
+      });
+      ls.parks.set(followedParks);
+      renderParksChips();
+      renderPopularGrid();
+      await refreshParksData();
     }
-    grid.innerHTML = list.map(park => {
-      const evCount = allEvents.filter(e => e.parkId === park.id).length;
-      const watching = isWatching(park.id);
-      return `
-        <article class="park-card${watching ? ' watching' : ''}" role="listitem" data-park-id="${park.id}" tabindex="0"
-          onclick="parkCardClick('${park.id}')" onkeydown="if(event.key==='Enter')parkCardClick('${park.id}')">
-          <div class="park-card-banner"></div>
-          <div class="park-card-body">
-            <div class="park-card-top">
-              <div class="park-icon">${park.icon}</div>
-              <div class="park-actions">
-                <button class="watch-btn${watching ? ' watching' : ''}"
-                  data-park-id="${park.id}"
-                  aria-pressed="${watching}"
-                  onclick="event.stopPropagation();toggleWatch('${park.id}')"
-                  aria-label="${watching ? 'Remove from watchlist' : 'Add to watchlist'}">
-                  ${watching ? '⭐ Watching' : '+ Watch'}
-                </button>
-              </div>
-            </div>
-            <div class="park-name">${park.name}</div>
-            <div class="park-state">📍 ${park.state}</div>
-            <div class="park-desc">${park.desc}</div>
-            <div class="park-stats">
-              <div class="event-count-badge">📅 ${evCount} events</div>
-            </div>
-          </div>
-        </article>
-      `;
-    }).join('');
   }
+}
 
-  function parkCardClick(parkId) {
-    document.getElementById('event-park-filter').value = parkId;
-    switchView('events');
-    filterEvents();
-  }
-
-  function filterParks() {
-    const q = document.getElementById('park-search').value.toLowerCase();
-    const state = document.getElementById('state-filter').value;
-    const list = PARKS.filter(p => {
-      const matchQ = !q || p.name.toLowerCase().includes(q) || p.state.toLowerCase().includes(q);
-      const matchS = !state || p.state === state;
-      return matchQ && matchS;
-    });
-    renderParks(list);
-  }
-
-  function initParksView() {
-    const sel = document.getElementById('state-filter');
-    const states = [...new Set(PARKS.map(p => p.state))].sort();
-    sel.innerHTML = `<option value="">All States</option>` +
-      states.map(s => `<option value="${s}">${s}</option>`).join('');
-    renderParks(PARKS);
-  }
-
-  // ─── EVENTS VIEW ─────────────────────────────────────────────────────────────
-
-  function renderEventsStats(events) {
-    const counts = {};
-    EVENT_TYPES.forEach(t => { counts[t.type] = 0; });
-    events.forEach(e => { if (counts[e.type] !== undefined) counts[e.type]++; });
-
-    const statDefs = [
-      { label: 'Total Events', val: events.length, cls: 'accent' },
-      { label: 'Ranger Talks', val: counts.ranger, cls: 'yellow' },
-      { label: 'Guided Hikes', val: counts.hike, cls: 'green' },
-      { label: 'Star Parties', val: counts.star, cls: 'accent' },
-      { label: 'Junior Ranger', val: counts.junior, cls: 'pink' },
-    ];
-
-    document.getElementById('events-stats').innerHTML = statDefs.map(s =>
-      `<div class="stat-card"><div class="stat-label">${s.label}</div><div class="stat-value ${s.cls}">${s.val}</div></div>`
-    ).join('');
-  }
-
-  function renderEventList(events) {
-    const el = document.getElementById('event-list');
-    if (events.length === 0) {
-      el.innerHTML = `<div class="empty-state"><div class="icon">📅</div><h3>No events found</h3><p>Try adjusting your filters or add more parks to see events.</p></div>`;
-      return;
-    }
-
-    el.innerHTML = events.map((ev, idx) => `
-      <article class="event-card" role="article" style="animation-delay:${Math.min(idx * 30, 300)}ms">
-        <div class="event-date-box" aria-label="${formatDate(ev.date)}">
-          <div class="event-date-month">${shortMonth(ev.date)}</div>
-          <div class="event-date-day">${ev.date.getDate()}</div>
-          <div class="event-date-dow">${shortDow(ev.date)}</div>
-        </div>
-        <div class="event-content">
-          <div class="event-title">${ev.title}</div>
-          <div class="event-meta">
-            <span class="event-meta-item">📍 ${ev.parkName}</span>
-            <span class="event-meta-item">⏰ ${ev.time}</span>
-            <span class="event-meta-item">⏱️ ${ev.duration}</span>
-            <span class="event-meta-item" style="color:var(--green);">🕐 ${daysFromNow(ev.date)}</span>
-          </div>
-          <div class="event-desc">${ev.desc}</div>
-          <div class="event-tags">
-            <span class="tag ${ev.tagClass}">${ev.typeIcon} ${ev.typeLabel}</span>
-          </div>
-        </div>
-        <div class="event-actions">
-          <button class="btn btn-secondary btn-sm" onclick="openEventModal('${ev.id}')" aria-label="View details for ${ev.title}">Details</button>
-          <button class="btn btn-secondary btn-sm" onclick="exportSingleICS('${ev.id}')" aria-label="Add to calendar">📤</button>
-        </div>
-      </article>
-    `).join('');
-  }
-
-  function renderEventParkChips() {
-    const row = document.getElementById('event-park-chips');
-    const parkCounts = {};
-    allEvents.forEach(e => {
-      parkCounts[e.parkId] = (parkCounts[e.parkId] || 0) + 1;
-    });
-    const topParks = PARKS.filter(p => parkCounts[p.id] > 0).slice(0, 8);
-    row.innerHTML = topParks.map(p =>
-      `<button class="chip" data-park-chip="${p.id}" onclick="toggleParkChip('${p.id}')" aria-pressed="false">
-        ${p.icon} ${p.name.replace('National Park', 'NP').replace('National Seashore', 'NS')}
-        <span style="color:var(--muted);">${parkCounts[p.id]}</span>
-      </button>`
-    ).join('');
-  }
-
-  function toggleParkChip(parkId) {
-    const sel = document.getElementById('event-park-filter');
-    if (sel.value === parkId) {
-      sel.value = '';
-    } else {
-      sel.value = parkId;
-    }
-    document.querySelectorAll('[data-park-chip]').forEach(c => {
-      c.classList.toggle('active', c.dataset.parkChip === sel.value);
-      c.setAttribute('aria-pressed', c.dataset.parkChip === sel.value ? 'true' : 'false');
-    });
-    filterEvents();
-  }
-
-  function filterEvents() {
-    const q = document.getElementById('event-search').value.toLowerCase();
-    const parkId = document.getElementById('event-park-filter').value;
-    const typeFilter = document.getElementById('event-type-filter').value;
-
-    // Sync chips
-    document.querySelectorAll('[data-park-chip]').forEach(c => {
-      c.classList.toggle('active', c.dataset.parkChip === parkId);
-      c.setAttribute('aria-pressed', c.dataset.parkChip === parkId ? 'true' : 'false');
-    });
-
-    filteredEvents = allEvents.filter(ev => {
-      const matchQ = !q || ev.title.toLowerCase().includes(q) || ev.parkName.toLowerCase().includes(q) || ev.desc.toLowerCase().includes(q);
-      const matchP = !parkId || ev.parkId === parkId;
-      const matchT = !typeFilter || ev.type === typeFilter;
-      return matchQ && matchP && matchT;
-    });
-
-    renderEventsStats(filteredEvents);
-    renderEventList(filteredEvents);
-  }
-
-  function initEventsView() {
-    const sel = document.getElementById('event-park-filter');
-    sel.innerHTML = `<option value="">All Parks</option>` +
-      PARKS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    renderEventParkChips();
-    filteredEvents = [...allEvents];
-    filterEvents();
-  }
-
-  // ─── CALENDAR VIEW ────────────────────────────────────────────────────────────
-
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-  function renderCalendar() {
-    document.getElementById('cal-title').textContent = `${MONTHS[calMonth]} ${calYear}`;
-
-    const grid = document.getElementById('cal-grid');
-    const headerHtml = DAYS.map(d => `<div class="cal-day-header" role="columnheader">${d}</div>`).join('');
-
-    const firstDay = new Date(calYear, calMonth, 1).getDay();
-    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-    const daysInPrev = new Date(calYear, calMonth, 0).getDate();
-    const today = new Date(); today.setHours(0,0,0,0);
-
-    const cellData = [];
-    for (let i = firstDay - 1; i >= 0; i--) {
-      cellData.push({ day: daysInPrev - i, month: calMonth - 1, year: calYear, other: true });
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      cellData.push({ day: d, month: calMonth, year: calYear, other: false });
-    }
-    const remaining = 42 - cellData.length;
-    for (let d = 1; d <= remaining; d++) {
-      cellData.push({ day: d, month: calMonth + 1, year: calYear, other: true });
-    }
-
-    const evByDate = {};
-    allEvents.forEach(ev => {
-      const key = `${ev.date.getFullYear()}-${ev.date.getMonth()}-${ev.date.getDate()}`;
-      if (!evByDate[key]) evByDate[key] = [];
-      evByDate[key].push(ev);
-    });
-
-    const cellsHtml = cellData.map(c => {
-      const cellDate = new Date(c.year, c.month, c.day);
-      const key = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${cellDate.getDate()}`;
-      const evs = evByDate[key] || [];
-      const isToday = cellDate.getTime() === today.getTime();
-      const cls = [
-        'cal-day',
-        c.other ? 'other-month' : '',
-        isToday ? 'today' : '',
-        evs.length > 0 ? 'has-events' : '',
-      ].filter(Boolean).join(' ');
-
-      const numEl = isToday
-        ? `<div class="cal-day-num"><span>${c.day}</span></div>`
-        : `<div class="cal-day-num">${c.day}</div>`;
-
-      const dotsHtml = evs.slice(0, 3).map(ev =>
-        `<div class="cal-event-dot ${ev.calClass}" onclick="openEventModal('${ev.id}')" role="button" tabindex="0"
-          title="${ev.title}" onkeydown="if(event.key==='Enter')openEventModal('${ev.id}')">
-          ${ev.typeIcon} ${ev.title.length > 14 ? ev.title.slice(0,14)+'…' : ev.title}
-        </div>`
-      ).join('');
-
-      const moreHtml = evs.length > 3
-        ? `<div class="cal-event-dot" style="color:var(--muted);background:var(--surface2);">+${evs.length - 3} more</div>`
-        : '';
-
-      return `<div class="${cls}" role="gridcell" aria-label="${formatDate(cellDate)}${evs.length ? `, ${evs.length} events` : ''}">${numEl}${dotsHtml}${moreHtml}</div>`;
-    }).join('');
-
-    grid.innerHTML = headerHtml + cellsHtml;
-  }
-
-  function calNav(dir) {
-    calMonth += dir;
-    if (calMonth < 0) { calMonth = 11; calYear--; }
-    if (calMonth > 11) { calMonth = 0; calYear++; }
-    renderCalendar();
-  }
-
-  // ─── WATCHLIST VIEW ──────────────────────────────────────────────────────────
-
-  function renderWatchlist() {
-    const container = document.getElementById('watchlist-content');
-    if (watchlist.length === 0) {
-      container.innerHTML = `
-        <div class="watchlist-empty">
-          <div class="empty-icon">⭐</div>
-          <h3>Your watchlist is empty</h3>
-          <p>Add parks from the Parks directory to start tracking their events.</p>
-          <button class="btn btn-primary" style="margin-top:1.25rem;" onclick="switchView('parks')">Browse Parks</button>
-        </div>
-      `;
-      return;
-    }
-
-    const watched = PARKS.filter(p => watchlist.includes(p.id));
-    container.innerHTML = watched.map(park => {
-      const parkEvs = allEvents.filter(e => e.parkId === park.id);
-      const next = parkEvs[0];
-      return `
-        <div style="background:var(--surface);border:1px solid var(--green);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-              <span style="font-size:2rem;">${park.icon}</span>
-              <div>
-                <div style="font-weight:700;color:var(--text);">${park.name}</div>
-                <div style="font-size:0.78rem;color:var(--muted);">📍 ${park.state} · ${parkEvs.length} upcoming events</div>
-              </div>
-            </div>
-            <div style="display:flex;gap:0.5rem;">
-              <button class="btn btn-secondary btn-sm" onclick="parkCardClick('${park.id}')">View Events</button>
-              <button class="btn btn-danger btn-sm" onclick="toggleWatch('${park.id}');renderWatchlist();">Remove</button>
-            </div>
-          </div>
-          ${next ? `
-            <div style="margin-top:1rem;padding:0.85rem 1rem;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent);">
-              <div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.35rem;">Next Event</div>
-              <div style="font-size:0.9rem;font-weight:600;color:var(--text);">${next.title}</div>
-              <div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem;">
-                ${formatDate(next.date)} at ${next.time} · ${daysFromNow(next.date)}
-              </div>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }).join('');
-  }
-
-  // ─── NAVIGATION ──────────────────────────────────────────────────────────────
-
-  function switchView(name) {
-    currentView = name;
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('nav button').forEach(b => {
-      b.classList.toggle('active', b.dataset.view === name);
-    });
-    document.getElementById(`view-${name}`).classList.add('active');
-
-    if (name === 'events') filterEvents();
-    if (name === 'calendar') renderCalendar();
-    if (name === 'watchlist') renderWatchlist();
-  }
-
-  // ─── INIT ────────────────────────────────────────────────────────────────────
-
-  function init() {
-    allEvents = generateEvents();
-    filteredEvents = [...allEvents];
-    updateWatchlistBadge();
-    initParksView();
-    initEventsView();
-    renderCalendar();
-  }
-
-  init();
-
-})();
+init();
 </script>
 </body>
 </html>

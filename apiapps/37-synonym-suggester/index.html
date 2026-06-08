@@ -1,1596 +1,1645 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Synonym Suggester — Write with Confidence</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-
-    :root {
-      --bg: #0a0a0a;
-      --surface: #111111;
-      --surface2: #1a1a1a;
-      --border: rgba(255,255,255,0.08);
-      --accent: #ffffff;
-      --accent2: #3b82f6;
-      --text: #ededed;
-      --muted: #6b7280;
-      --green: #22c55e;
-      --red: #ef4444;
-      --yellow: #f59e0b;
-      --radius: 6px;
-      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-      --font-body: 'Inter', system-ui, sans-serif;
-    }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    /* ── scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--surface); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    /* ── layout ── */
-    .app-shell {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      min-height: 100vh;
-    }
-
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      height: 60px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 700;
-      font-size: 1.05rem;
-      letter-spacing: -0.02em;
-    }
-
-    .logo-icon {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-
-    .tagline {
-      font-size: 0.75rem;
-      color: var(--muted);
-      font-weight: 400;
-    }
-
-    .header-controls {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .mode-toggle {
-      display: flex;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .mode-btn {
-      padding: 6px 14px;
-      border: none;
-      background: none;
-      color: var(--muted);
-      font-size: 0.78rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-
-    .mode-btn.active {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .mode-btn:hover:not(.active) {
-      color: var(--text);
-      background: rgba(0,229,255, 0.12);
-    }
-
-    /* ── main content ── */
-    main {
-      display: grid;
-      grid-template-columns: 1fr 380px;
-      gap: 0;
-      height: calc(100vh - 60px);
-      overflow: hidden;
-    }
-
-    /* ── left panel ── */
-    .left-panel {
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border);
-      overflow: hidden;
-    }
-
-    .panel-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-
-    .panel-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .search-wrap {
-      display: flex;
-      gap: 8px;
-      flex: 1;
-      max-width: 400px;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 0.9rem;
-      padding: 8px 14px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    input[type="text"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0,229,255, 0.15);
-    }
-
-    input[type="text"]::placeholder { color: var(--muted); }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: #7c74ff;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0,229,255, 0.4);
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-ghost {
-      background: var(--surface2);
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-
-    .btn-ghost:hover {
-      color: var(--text);
-      border-color: var(--accent);
-    }
-
-    /* ── quick lookup mode ── */
-    #quick-mode {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .lookup-header {
-      padding: 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-
-    .lookup-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .word-input-wrap {
-      position: relative;
-      flex: 1;
-    }
-
-    .word-input-wrap input {
-      width: 100%;
-      font-size: 1rem;
-      padding: 10px 40px 10px 14px;
-    }
-
-    .clear-btn {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 14px;
-      padding: 2px 4px;
-      line-height: 1;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    .word-input-wrap input:not(:placeholder-shown) + .clear-btn { opacity: 1; }
-    .clear-btn:hover { color: var(--text); }
-
-    .pos-filter {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .pos-label {
-      font-size: 0.75rem;
-      color: var(--muted);
-      font-weight: 500;
-      margin-right: 2px;
-    }
-
-    .pos-chip {
-      padding: 3px 10px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: none;
-      color: var(--muted);
-      font-size: 0.72rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .pos-chip:hover { color: var(--text); border-color: var(--accent); }
-    .pos-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-    .results-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    /* ── word definition card ── */
-    .definition-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 18px;
-      margin-bottom: 20px;
-      animation: slideIn 0.25s ease-out;
-    }
-
-    .def-word {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: -0.02em;
-    }
-
-    .def-phonetic {
-      font-size: 0.82rem;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .def-meanings {
-      margin-top: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .def-pos {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--accent2);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 2px;
-    }
-
-    .def-text {
-      font-size: 0.85rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    /* ── word strength meter ── */
-    .strength-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .strength-label {
-      font-size: 0.72rem;
-      color: var(--muted);
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .strength-track {
-      flex: 1;
-      height: 6px;
-      background: var(--surface2);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .strength-fill {
-      height: 100%;
-      border-radius: 3px;
-      transition: width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    }
-
-    .strength-val {
-      font-size: 0.72rem;
-      font-weight: 700;
-      min-width: 32px;
-      text-align: right;
-    }
-
-    /* ── synonym/antonym sections ── */
-    .section-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-label::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .words-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 24px;
-    }
-
-    .word-chip {
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text);
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.18s;
-      position: relative;
-    }
-
-    .word-chip:hover {
-      border-color: var(--accent);
-      background: rgba(0,229,255, 0.1);
-      transform: translateY(-1px);
-    }
-
-    .word-chip.ant {
-      border-color: rgba(124,58,237, 0.3);
-    }
-
-    .word-chip.ant:hover {
-      border-color: var(--accent2);
-      background: rgba(124,58,237, 0.1);
-    }
-
-    .word-chip .score-dot {
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      margin-right: 5px;
-      vertical-align: middle;
-    }
-
-    /* ── empty / loading ── */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      gap: 12px;
-      color: var(--muted);
-      text-align: center;
-      padding: 40px;
-    }
-
-    .empty-icon { font-size: 48px; opacity: 0.3; }
-    .empty-title { font-size: 1rem; font-weight: 600; color: var(--text); }
-    .empty-sub { font-size: 0.85rem; }
-
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-
-    /* ── writing assistant mode ── */
-    #writing-mode {
-      display: none;
-      flex-direction: column;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    #writing-mode.active { display: flex; }
-    #quick-mode.hidden { display: none; }
-
-    .editor-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      gap: 12px;
-      overflow: hidden;
-    }
-
-    .editor-toolbar {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .formality-select {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 0.82rem;
-      padding: 6px 12px;
-      outline: none;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-
-    .formality-select:focus { border-color: var(--accent); }
-
-    .word-count {
-      margin-left: auto;
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    .editable-text {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 18px;
-      font-size: 0.95rem;
-      line-height: 1.8;
-      color: var(--text);
-      outline: none;
-      overflow-y: auto;
-      cursor: text;
-      transition: border-color 0.2s;
-      min-height: 120px;
-    }
-
-    .editable-text:focus { border-color: var(--border); }
-    .editable-text:empty::before {
-      content: attr(data-placeholder);
-      color: var(--muted);
-      pointer-events: none;
-    }
-
-    .editable-text .clickable-word {
-      display: inline;
-      cursor: pointer;
-      border-radius: 3px;
-      padding: 1px 2px;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .editable-text .clickable-word:hover {
-      background: rgba(0,229,255, 0.2);
-      color: #fff;
-    }
-
-    .editable-text .clickable-word.selected {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .hint-bar {
-      font-size: 0.75rem;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .kbd {
-      display: inline-block;
-      padding: 1px 6px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-family: monospace;
-      color: var(--text);
-    }
-
-    /* ── right panel ── */
-    .right-panel {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--surface);
-    }
-
-    .right-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-
-    .right-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 20px;
-    }
-
-    /* ── recent words ── */
-    .recent-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .recent-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.18s;
-      gap: 8px;
-    }
-
-    .recent-item:hover {
-      border-color: var(--accent);
-      background: rgba(0,229,255, 0.08);
-    }
-
-    .recent-word {
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: var(--text);
-    }
-
-    .recent-count {
-      font-size: 0.72rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    /* ── nuance card ── */
-    .nuance-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
-      border-radius: 8px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-      animation: slideIn 0.2s ease-out;
-    }
-
-    .nuance-word {
-      font-weight: 700;
-      color: var(--accent);
-      font-size: 0.95rem;
-      margin-bottom: 4px;
-    }
-
-    .nuance-note {
-      font-size: 0.8rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .formality-badge {
-      display: inline-block;
-      padding: 1px 8px;
-      border-radius: 10px;
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-right: 6px;
-    }
-
-    .badge-formal { background: rgba(0,229,255, 0.2); color: var(--accent); }
-    .badge-casual { background: rgba(67, 217, 173, 0.15); color: var(--green); }
-    .badge-neutral { background: rgba(247, 201, 72, 0.15); color: var(--yellow); }
-
-    /* ── replace btn in writing mode ── */
-    .replace-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 10px;
-      background: rgba(0,229,255, 0.15);
-      border: 1px solid rgba(0,229,255, 0.3);
-      border-radius: 5px;
-      color: var(--accent);
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s;
-      margin-top: 6px;
-    }
-
-    .replace-btn:hover {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-    }
-
-    /* ── toast ── */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 20px;
-      font-size: 0.85rem;
-      color: var(--text);
-      z-index: 999;
-      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-      pointer-events: none;
-      white-space: nowrap;
-    }
-
-    .toast.show { transform: translateX(-50%) translateY(0); }
-
-    /* ── animations ── */
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .loading-pulse { animation: pulse 1.2s ease-in-out infinite; }
-
-    /* ── error state ── */
-    .error-msg {
-      background: rgba(124,58,237, 0.1);
-      border: 1px solid rgba(124,58,237, 0.3);
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 0.85rem;
-      color: var(--accent2);
-    }
-
-    /* ── no results ── */
-    .no-results {
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.85rem;
-      padding: 20px;
-    }
-
-    /* ── responsive ── */
-    @media (max-width: 768px) {
-      main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-      .right-panel { border-right: none; border-top: 1px solid var(--border); max-height: 280px; }
-    }
-
-/* === Dev Tools v2 Design System === */
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synonym Suggester — App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Newsprint · nav: N9 */
+
+/* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+html { height: 100%; overflow-x: clip; }
 body {
-  background: var(--bg);
-  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-body);
-  min-height: 100vh;
-  line-height: 1.6;
-  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── N9 Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep {
+  width: 1px; height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+.nav-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
 }
 
-h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
-h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
-h2 { font-size: 1.1rem; color: var(--muted); font-weight: 500; }
-
-.container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
-
-.card, .result, .item, .output, .barcode-result, .vin-result, .isbn-result, .rhyme, .synonym,
-[class*="card"], [class*="result"], [class*="item"] {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  animation: toolsFade 0.25s ease both;
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.code, .value, pre, code, .mono, .barcode, .isbn, .vin, .word {
-  font-family: var(--font-mono);
-  font-size: 0.88rem;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  color: var(--text);
-  word-break: break-all;
+.sidebar-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.sidebar-section:last-child { border-bottom: none; }
+
+.section-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
 }
 
-input, select, textarea {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  padding: 0.65rem 1rem;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
+/* Word input */
+.word-input-wrap {
+  position: relative;
+  margin-bottom: var(--space-2);
+}
+.word-input {
   width: 100%;
-  transition: border-color 0.15s;
-}
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: rgba(255,255,255,0.3);
-}
-
-button, .btn, input[type="submit"], input[type="button"] {
-  background: var(--text);
-  color: var(--bg);
-  border: none;
-  border-radius: var(--radius);
-  padding: 0.65rem 1.5rem;
   font-family: var(--font-body);
+  font-size: var(--text-lg);
   font-weight: 600;
-  font-size: 0.88rem;
+  padding: var(--space-3) 40px var(--space-3) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+  letter-spacing: -0.01em;
+}
+.word-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-bg);
+}
+.word-input::placeholder { color: var(--color-ink-muted); font-weight: 400; }
+.clear-input {
+  position: absolute;
+  right: 10px; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none;
+  color: var(--color-ink-muted);
   cursor: pointer;
-  transition: transform 0.1s, opacity 0.1s;
+  font-size: 14px;
+  padding: 2px 4px; line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s;
+  border-radius: var(--radius-sm);
 }
-button:hover { opacity: 0.9; }
-button:active { transform: scale(0.97); }
+.word-input:not(:placeholder-shown) ~ .clear-input { opacity: 1; }
+.clear-input:hover { color: var(--color-ink); }
 
-.tag, .badge, .status, .label, .part-of-speech, .section-header {
-  display: inline-block;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  border-radius: 4px;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.72rem;
+.btn-search {
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: oklch(97% 0.008 72);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s var(--ease-out);
+}
+.btn-search:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(50% 0.16 52 / 0.28); }
+.btn-search:active { transform: translateY(0); box-shadow: none; }
+.btn-search:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Result type tabs */
+.tab-row {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+.tab-btn {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--color-ink); border-color: var(--color-accent-line); }
+.tab-btn.active {
+  background: var(--color-accent);
+  color: oklch(97% 0.008 72);
+  border-color: var(--color-accent);
 }
 
-.valid, .found, .success { color: var(--green); }
-.invalid, .not-found, .error { color: var(--red); }
-.warning { color: var(--yellow); }
+/* Filter controls */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.filter-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+  min-width: 50px;
+}
+.filter-select {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out);
+}
+.filter-select:focus { outline: none; border-color: var(--color-accent); }
 
-/* Word list / rhyme list */
-.word-list, .rhyme-list, .synonym-list {
+.slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.slider-wrap input[type="range"] {
+  flex: 1;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+.slider-val {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+}
+
+/* Toggle */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.toggle-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.toggle-switch {
+  position: relative;
+  width: 36px; height: 20px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--color-border);
+  border-radius: 20px;
+  transition: background 0.2s var(--ease-out);
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 2px; top: 2px;
+  width: 16px; height: 16px;
+  background: var(--color-white);
+  border-radius: 50%;
+  transition: transform 0.2s var(--ease-out);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--color-accent); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); }
+
+/* Chip lists (recent + collection) */
+.chip-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  list-style: none;
+  gap: var(--space-1);
 }
-.word-list li, .rhyme-list li, .synonym-list li {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.25rem 0.75rem;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: all 0.15s var(--ease-out);
 }
-.word-list li:hover, .rhyme-list li:hover, .synonym-list li:hover { border-color: rgba(255,255,255,0.3); }
-
-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
-th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-weight: 600; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
-td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
-
-@keyframes toolsFade {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
+.chip:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.chip .chip-remove {
+  background: none; border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer; font-size: 10px;
+  padding: 0; line-height: 1;
+  transition: color 0.15s;
 }
-  </style>
+.chip .chip-remove:hover { color: var(--color-danger); }
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-sidebar {
+  padding: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* Main panel tabs (Compare / Replace) */
+.main-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  background: var(--color-paper-2);
+}
+.main-tab {
+  padding: var(--space-3) var(--space-4);
+  background: none; border: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s var(--ease-out);
+}
+.main-tab:hover { color: var(--color-ink); }
+.main-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+/* Results view */
+.results-view { display: none; flex-direction: column; overflow: hidden; flex: 1; }
+.results-view.active { display: flex; }
+
+.results-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Definition panel */
+.def-panel {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  animation: fadeUp 0.22s var(--ease-out);
+}
+.def-word-display {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-right: var(--space-2);
+  flex-shrink: 0;
+}
+.def-body { flex: 1; min-width: 0; }
+.pos-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  color: var(--color-accent);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-2);
+}
+.def-text {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+}
+.btn-save-word {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+.btn-save-word:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
+.btn-save-word.saved { background: var(--color-accent-subtle); border-color: var(--color-accent-line); color: var(--color-accent); }
+
+/* Results group */
+.results-group { display: flex; flex-direction: column; gap: var(--space-3); animation: fadeUp 0.22s var(--ease-out); }
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.group-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+.group-line { flex: 1; height: 1px; background: var(--color-border); }
+.group-count {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+/* Word chips grid */
+.words-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.word-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  user-select: none;
+}
+.word-chip:hover {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px oklch(50% 0.16 52 / 0.10);
+}
+.word-chip.high-score {
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-bg);
+}
+.word-chip .score-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.word-chip .chip-tags {
+  font-size: 10px;
+  color: var(--color-ink-muted);
+  font-weight: 400;
+}
+.word-chip .chip-actions {
+  display: none;
+  position: absolute;
+  right: -2px; top: -2px;
+  gap: 2px;
+}
+.word-chip:hover .chip-actions { display: flex; }
+.chip-action-btn {
+  padding: 2px 6px;
+  background: var(--color-ink);
+  color: oklch(97% 0.008 72);
+  border: none;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s;
+}
+.chip-action-btn:hover { background: var(--color-accent); }
+.chip-action-btn.save-btn { background: var(--color-accent); }
+.chip-action-btn.save-btn:hover { background: var(--color-success); }
+
+/* Antonyms section */
+.ant-group .group-label { color: oklch(62% 0.15 72); }
+.ant-group .group-line { background: oklch(30% 0.04 72); }
+.word-chip.ant {
+  border-color: oklch(35% 0.04 72);
+  background: oklch(18% 0.03 72);
+}
+.word-chip.ant:hover {
+  border-color: oklch(62% 0.15 72 / 0.6);
+  background: oklch(22% 0.04 72);
+}
+
+/* Empty / loading */
+.main-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-16);
+  text-align: center;
+  color: var(--color-ink-muted);
+}
+.empty-icon { font-size: 3rem; opacity: 0.3; }
+.empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.empty-sub { font-size: var(--text-base); color: var(--color-ink-muted); max-width: 320px; line-height: 1.7; }
+
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Compare view ── */
+.compare-view { display: none; flex-direction: column; overflow: hidden; flex: 1; }
+.compare-view.active { display: flex; }
+.compare-scroll {
+  flex: 1; overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.compare-inputs {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-4);
+  align-items: center;
+}
+.compare-vs {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--color-ink-muted);
+  font-weight: 300;
+  text-align: center;
+}
+.input-compare {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 600;
+  padding: var(--space-3) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  width: 100%;
+  transition: border-color 0.15s var(--ease-out);
+}
+.input-compare:focus { outline: none; border-color: var(--color-accent); }
+.input-compare::placeholder { color: var(--color-ink-muted); font-weight: 400; }
+.btn-compare {
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-6);
+  background: var(--color-accent);
+  color: oklch(97% 0.008 72);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s var(--ease-out);
+}
+.btn-compare:hover { transform: translateY(-1px); }
+.compare-results {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+.compare-col-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+.compare-shared {
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+.shared-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
+  margin-bottom: var(--space-2);
+  text-align: center;
+}
+
+/* ── Replace view ── */
+.replace-view { display: none; flex-direction: column; overflow: hidden; flex: 1; }
+.replace-view.active { display: flex; }
+.replace-scroll {
+  flex: 1; overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  gap: var(--space-6);
+}
+.replace-editor-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.replace-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+}
+.replace-textarea {
+  flex: 1;
+  min-height: 200px;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.8;
+  padding: var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  resize: none;
+  transition: border-color 0.15s var(--ease-out);
+}
+.replace-textarea:focus { outline: none; border-color: var(--color-accent); }
+.replace-textarea::placeholder { color: var(--color-ink-muted); }
+
+.replace-text-display {
+  flex: 1;
+  min-height: 200px;
+  font-size: var(--text-base);
+  line-height: 1.8;
+  padding: var(--space-4);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  overflow-y: auto;
+  cursor: text;
+}
+.replace-text-display:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-ink-muted);
+}
+.clickable-word {
+  border-radius: 3px;
+  padding: 1px 2px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.clickable-word:hover { background: oklch(22% 0.04 155); }
+.clickable-word.selected {
+  background: var(--color-accent);
+  color: oklch(97% 0.008 72);
+  border-radius: 3px;
+}
+.replace-syns-col {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.replace-syn-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.replace-syn-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.12s var(--ease-out);
+}
+.replace-syn-item:hover { border-color: var(--color-accent-line); background: var(--color-accent-subtle); }
+.replace-syn-word { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.btn-replace-word {
+  padding: 2px 8px;
+  background: var(--color-accent);
+  color: oklch(97% 0.008 72);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.1s;
+}
+.btn-replace-word:hover { opacity: 0.85; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px var(--color-shadow);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Animations ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+  }
+  .sidebar-scroll { max-height: 40vh; }
+  .main { overflow: visible; }
+  .results-view { overflow: visible; }
+  .results-view.active { display: block; }
+  .compare-view.active { display: block; }
+  .replace-view.active { display: block; }
+  .results-scroll, .compare-scroll, .replace-scroll { overflow: visible; }
+  .compare-inputs { grid-template-columns: 1fr; }
+  .compare-results { grid-template-columns: 1fr; }
+  .compare-vs { display: none; }
+  .replace-scroll { flex-direction: column; }
+  .replace-syns-col { width: 100%; }
+  .nav-label { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word-chip, .btn-search, .btn-compare { transition: none; }
+  .word-chip:hover { transform: none; box-shadow: none; }
+  .spinner { animation: none; border-color: var(--color-accent); }
+  @keyframes fadeUp { from { opacity: 1; } }
+}
+</style>
 </head>
 <body>
+
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Synonym<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-label">Synonym Suggester</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
+
 <div class="app-shell">
-  <header>
-    <div class="logo">
-      <div class="logo-icon" aria-hidden="true">✦</div>
-      <div>
-        <div>Synonym Suggester</div>
-        <div class="tagline">Write naturally in English</div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Search and saved words">
+
+    <!-- Word input -->
+    <div class="sidebar-section">
+      <div class="word-input-wrap">
+        <input
+          type="text"
+          class="word-input"
+          id="word-input"
+          placeholder="Enter a word…"
+          autocomplete="off"
+          spellcheck="false"
+          autofocus
+          aria-label="Word to look up"
+        >
+        <button class="clear-input" id="clear-input" aria-label="Clear input">✕</button>
       </div>
+      <button class="btn-search" id="btn-search" aria-label="Look up synonyms">Look up synonyms</button>
     </div>
-    <div class="header-controls">
-      <div class="mode-toggle" role="group" aria-label="Mode selector">
-        <button class="mode-btn active" id="btn-quick" aria-pressed="true" onclick="switchMode('quick')">Quick Lookup</button>
-        <button class="mode-btn" id="btn-writing" aria-pressed="false" onclick="switchMode('writing')">Writing Assistant</button>
+
+    <!-- Result type tabs -->
+    <div class="sidebar-section">
+      <div class="section-title">Result Type</div>
+      <div class="tab-row" role="group" aria-label="Result type">
+        <button class="tab-btn active" data-tab="synonyms" aria-pressed="true">Synonyms</button>
+        <button class="tab-btn" data-tab="similar" aria-pressed="false">Similar</button>
+        <button class="tab-btn" data-tab="antonyms" aria-pressed="false">Antonyms</button>
       </div>
-    </div>
-  </header>
 
-  <main>
-    <!-- LEFT: Quick lookup + Writing editor -->
-    <div class="left-panel">
+      <!-- Count filter -->
+      <div class="filter-row">
+        <span class="filter-label">Show</span>
+        <select class="filter-select" id="count-filter" aria-label="Number of results to show">
+          <option value="20">Top 20</option>
+          <option value="50">Top 50</option>
+          <option value="all">All</option>
+        </select>
+      </div>
 
-      <!-- QUICK LOOKUP MODE -->
-      <div id="quick-mode">
-        <div class="lookup-header">
-          <div class="lookup-row">
-            <div class="word-input-wrap">
-              <input
-                type="text"
-                id="word-input"
-                placeholder="Enter a word…"
-                aria-label="Word to look up"
-                autocomplete="off"
-                spellcheck="false"
-              />
-              <button class="clear-btn" aria-label="Clear input" onclick="clearWordInput()">✕</button>
-            </div>
-            <button class="btn btn-primary" id="lookup-btn" onclick="lookupWord()" aria-label="Look up synonyms">
-              <span>Look Up</span>
-            </button>
-          </div>
-          <div class="pos-filter" role="group" aria-label="Filter by part of speech">
-            <span class="pos-label">Filter:</span>
-            <button class="pos-chip active" data-pos="all" onclick="setPosFilter(this)" aria-pressed="true">All</button>
-            <button class="pos-chip" data-pos="n" onclick="setPosFilter(this)" aria-pressed="false">Noun</button>
-            <button class="pos-chip" data-pos="v" onclick="setPosFilter(this)" aria-pressed="false">Verb</button>
-            <button class="pos-chip" data-pos="adj" onclick="setPosFilter(this)" aria-pressed="false">Adj</button>
-            <button class="pos-chip" data-pos="adv" onclick="setPosFilter(this)" aria-pressed="false">Adv</button>
-          </div>
-        </div>
-
-        <div class="results-scroll" id="quick-results" aria-live="polite">
-          <div class="empty-state" id="empty-quick">
-            <div class="empty-icon" aria-hidden="true">✦</div>
-            <div class="empty-title">Search for a word</div>
-            <div class="empty-sub">Type any English word to see synonyms, antonyms, and definitions</div>
-          </div>
+      <!-- Score threshold -->
+      <div class="filter-row">
+        <span class="filter-label">Min score</span>
+        <div class="slider-wrap" style="flex:1">
+          <input type="range" id="score-slider" min="0" max="100" value="0" step="5" aria-label="Minimum score threshold">
+          <span class="slider-val" id="score-val">0</span>
         </div>
       </div>
 
-      <!-- WRITING ASSISTANT MODE -->
-      <div id="writing-mode">
-        <div class="editor-area">
-          <div class="editor-toolbar">
-            <span class="panel-title">Writing Assistant</span>
-            <select class="formality-select" id="formality-select" aria-label="Formality level">
-              <option value="all">All registers</option>
-              <option value="formal">Formal / Business</option>
-              <option value="casual">Casual</option>
-              <option value="academic">Academic</option>
-            </select>
-            <span class="word-count" id="word-count">0 words</span>
-            <button class="btn btn-ghost" onclick="clearEditor()" aria-label="Clear editor">Clear</button>
+      <!-- Formality filter -->
+      <div class="filter-row">
+        <span class="filter-label">Register</span>
+        <select class="filter-select" id="formality-filter" aria-label="Formality filter">
+          <option value="all">All</option>
+          <option value="formal">Formal</option>
+          <option value="informal">Informal</option>
+          <option value="slang">Slang</option>
+        </select>
+      </div>
+
+      <!-- Context mode -->
+      <div class="toggle-row">
+        <span class="toggle-label">Context mode (adjectives/nouns)</span>
+        <label class="toggle-switch" aria-label="Enable context mode">
+          <input type="checkbox" id="context-toggle">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="sidebar-scroll">
+      <!-- Recent searches -->
+      <div class="sidebar-section">
+        <div class="section-title">Recent Searches</div>
+        <div class="chip-list" id="recent-searches">
+          <span class="empty-sidebar">No recent searches</span>
+        </div>
+      </div>
+
+      <!-- Word collection -->
+      <div class="sidebar-section">
+        <div class="section-title">My Collection</div>
+        <div class="chip-list" id="word-collection">
+          <span class="empty-sidebar">Saved words appear here</span>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Results">
+
+    <!-- Main tabs -->
+    <div class="main-tabs" role="tablist">
+      <button class="main-tab active" data-view="results" role="tab" aria-selected="true">Results</button>
+      <button class="main-tab" data-view="compare" role="tab" aria-selected="false">Compare Words</button>
+      <button class="main-tab" data-view="replace" role="tab" aria-selected="false">Writing Assistant</button>
+    </div>
+
+    <!-- RESULTS VIEW -->
+    <div class="results-view active" id="view-results" role="tabpanel">
+      <!-- Empty state -->
+      <div class="main-empty" id="results-empty">
+        <div class="empty-icon" aria-hidden="true">✦</div>
+        <div class="empty-title">Look up a word</div>
+        <div class="empty-sub">Type any English word in the sidebar and press "Look up synonyms" to explore.</div>
+      </div>
+
+      <!-- Loaded results -->
+      <div class="results-scroll" id="results-content" style="display:none" aria-live="polite">
+        <!-- Definition panel -->
+        <div id="def-panel"></div>
+        <!-- Synonym tiers -->
+        <div id="results-groups"></div>
+        <!-- Antonyms -->
+        <div id="antonyms-section"></div>
+        <!-- Context words -->
+        <div id="context-section"></div>
+      </div>
+    </div>
+
+    <!-- COMPARE VIEW -->
+    <div class="compare-view" id="view-compare" role="tabpanel">
+      <div class="compare-scroll">
+        <div>
+          <div class="section-title" style="margin-bottom:var(--space-3)">Compare synonym sets of two words</div>
+          <div class="compare-inputs">
+            <input type="text" class="input-compare" id="compare-word-a" placeholder="First word…" autocomplete="off" spellcheck="false" aria-label="First word to compare">
+            <div class="compare-vs">vs</div>
+            <input type="text" class="input-compare" id="compare-word-b" placeholder="Second word…" autocomplete="off" spellcheck="false" aria-label="Second word to compare">
           </div>
+          <div style="margin-top:var(--space-3)">
+            <button class="btn-compare" id="btn-compare" aria-label="Compare words">Compare</button>
+          </div>
+        </div>
+        <div id="compare-results" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- REPLACE / WRITING ASSISTANT VIEW -->
+    <div class="replace-view" id="view-replace" role="tabpanel">
+      <div class="replace-scroll">
+        <div class="replace-editor-col">
+          <span class="replace-label">Paste or type your text</span>
+          <textarea
+            class="replace-textarea"
+            id="replace-textarea"
+            placeholder="Paste a sentence or paragraph here, then click 'Tokenize' to make each word clickable…"
+            aria-label="Text for synonym replacement"
+          ></textarea>
+          <button class="btn-compare" id="btn-tokenize" style="align-self:flex-start" aria-label="Make words clickable">Make words clickable</button>
+          <span class="replace-label" style="margin-top:var(--space-2)">Click any word to see synonyms →</span>
           <div
-            class="editable-text"
-            id="editor"
-            contenteditable="true"
-            role="textbox"
-            aria-multiline="true"
-            data-placeholder="Paste or type your text here. Click any word to see synonym suggestions instantly…"
+            class="replace-text-display"
+            id="replace-display"
+            data-placeholder="Tokenized text appears here — click any word to look up synonyms"
+            aria-label="Tokenized text, click words to look up synonyms"
           ></div>
-          <div class="hint-bar" aria-label="Keyboard hints">
-            <span>Click a word to look up synonyms</span>
-            <span>·</span>
-            <kbd class="kbd">Ctrl+A</kbd> select all
-            <span>·</span>
-            <kbd class="kbd">Tab</kbd> to focus editor
+        </div>
+        <div class="replace-syns-col">
+          <span class="replace-label">Synonyms</span>
+          <div id="replace-syns-list" aria-live="polite">
+            <div style="font-size:var(--text-xs);color:var(--color-ink-muted);font-style:italic;padding:var(--space-2) 0">Click a word in the text to see its synonyms here</div>
           </div>
         </div>
       </div>
-
     </div>
 
-    <!-- RIGHT: Nuance notes + Recent lookups -->
-    <div class="right-panel" aria-label="Details and history panel">
-
-      <div class="right-header">
-        <div id="right-panel-title" class="panel-title">Recent Lookups</div>
-      </div>
-
-      <div class="right-scroll" id="right-content" aria-live="polite">
-        <div class="empty-state" id="empty-right">
-          <div class="empty-icon" aria-hidden="true">📖</div>
-          <div class="empty-title">No history yet</div>
-          <div class="empty-sub">Words you look up will appear here</div>
-        </div>
-      </div>
-
-    </div>
   </main>
 </div>
 
-<!-- Toast notification -->
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
-  'use strict';
+'use strict';
 
-  // ──────────────────────────────────────────────
-  // State
-  // ──────────────────────────────────────────────
-  let currentMode = 'quick';
-  let currentPosFilter = 'all';
-  let currentWordData = null;
-  let recentLookups = [];
-  let selectedWritingWord = null;
-  let writingWordNodes = [];
-  let lookupDebounce = null;
-  let isLoading = false;
+/* ─── Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 ─── */
 
-  const FORMALITY_NOTES = {
-    formal: { label: 'Formal', badge: 'badge-formal', hint: 'Best for business emails and professional writing' },
-    casual: { label: 'Casual', badge: 'badge-casual', hint: 'Natural in conversation and informal messages' },
-    academic: { label: 'Academic', badge: 'badge-formal', hint: 'Appropriate for research and scholarly writing' },
-    neutral: { label: 'Neutral', badge: 'badge-neutral', hint: 'Suitable for general writing contexts' },
-  };
+// ─── State ───────────────────────────────────────────────────────────────────
+const state = {
+  word: '',
+  tab: 'synonyms',       // synonyms | similar | antonyms
+  countFilter: 20,
+  scoreThreshold: 0,
+  formalityFilter: 'all',
+  contextMode: false,
+  synonyms: [],
+  antonyms: [],
+  similar: [],
+  contextWords: [],
+  definition: null,
+  loading: false,
+};
 
-  // POS code → readable label
-  const POS_LABELS = { n: 'noun', v: 'verb', adj: 'adjective', adv: 'adverb', u: 'general' };
+let recentSearches = [];     // max 8
+let wordCollection = [];     // saved words
+let selectedReplaceSpan = null;
+let toastTimer = null;
 
-  // ──────────────────────────────────────────────
-  // DOM refs
-  // ──────────────────────────────────────────────
-  const wordInput = document.getElementById('word-input');
-  const lookupBtn = document.getElementById('lookup-btn');
-  const quickResults = document.getElementById('quick-results');
-  const emptyQuick = document.getElementById('empty-quick');
-  const rightContent = document.getElementById('right-content');
-  const emptyRight = document.getElementById('empty-right');
-  const rightPanelTitle = document.getElementById('right-panel-title');
-  const editor = document.getElementById('editor');
-  const wordCountEl = document.getElementById('word-count');
-  const formalitySelect = document.getElementById('formality-select');
-  const toast = document.getElementById('toast');
+try { recentSearches = JSON.parse(localStorage.getItem('syn_recent') || '[]'); } catch {}
+try { wordCollection = JSON.parse(localStorage.getItem('syn_collection') || '[]'); } catch {}
 
-  // ──────────────────────────────────────────────
-  // Mode switching
-  // ──────────────────────────────────────────────
-  function switchMode(mode) {
-    currentMode = mode;
-    const quickEl = document.getElementById('quick-mode');
-    const writingEl = document.getElementById('writing-mode');
-    const btnQuick = document.getElementById('btn-quick');
-    const btnWriting = document.getElementById('btn-writing');
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+const wordInput      = document.getElementById('word-input');
+const clearInputBtn  = document.getElementById('clear-input');
+const btnSearch      = document.getElementById('btn-search');
+const scoreSlider    = document.getElementById('score-slider');
+const scoreVal       = document.getElementById('score-val');
+const formalityFilt  = document.getElementById('formality-filter');
+const countFilt      = document.getElementById('count-filter');
+const contextToggle  = document.getElementById('context-toggle');
+const recentEl       = document.getElementById('recent-searches');
+const collectionEl   = document.getElementById('word-collection');
+const resultsEmpty   = document.getElementById('results-empty');
+const resultsContent = document.getElementById('results-content');
+const defPanel       = document.getElementById('def-panel');
+const resultsGroups  = document.getElementById('results-groups');
+const antonymsSection= document.getElementById('antonyms-section');
+const contextSection = document.getElementById('context-section');
+const compareResults = document.getElementById('compare-results');
+const replaceSynsList= document.getElementById('replace-syns-list');
+const replaceTextarea= document.getElementById('replace-textarea');
+const replaceDisplay = document.getElementById('replace-display');
+const toastEl        = document.getElementById('toast');
 
-    if (mode === 'quick') {
-      quickEl.classList.remove('hidden');
-      writingEl.classList.remove('active');
-      btnQuick.classList.add('active');
-      btnWriting.classList.remove('active');
-      btnQuick.setAttribute('aria-pressed', 'true');
-      btnWriting.setAttribute('aria-pressed', 'false');
-      showRecentLookups();
-    } else {
-      quickEl.classList.add('hidden');
-      writingEl.classList.add('active');
-      btnQuick.classList.remove('active');
-      btnWriting.classList.add('active');
-      btnQuick.setAttribute('aria-pressed', 'false');
-      btnWriting.setAttribute('aria-pressed', 'true');
-      renderEditor();
-    }
-  }
+// ─── Utilities ────────────────────────────────────────────────────────────────
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escAttr = (s) => String(s ?? '').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
 
-  // ──────────────────────────────────────────────
-  // Word input / lookup
-  // ──────────────────────────────────────────────
-  function clearWordInput() {
-    wordInput.value = '';
-    wordInput.focus();
-    showEmptyQuick();
-  }
+function showToast(msg, type = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 2800);
+}
 
-  function showEmptyQuick() {
-    quickResults.innerHTML = '';
-    quickResults.appendChild(emptyQuick);
-  }
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => showToast(`Copied "${text}"`)).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast(`Copied "${text}"`);
+  });
+}
 
-  function setPosFilter(btn) {
-    document.querySelectorAll('.pos-chip').forEach(c => {
-      c.classList.remove('active');
-      c.setAttribute('aria-pressed', 'false');
-    });
-    btn.classList.add('active');
-    btn.setAttribute('aria-pressed', 'true');
-    currentPosFilter = btn.dataset.pos;
-    if (currentWordData) renderWordResults(currentWordData);
-  }
+// ─── Datamuse API ────────────────────────────────────────────────────────────
+async function fetchWords(params) {
+  const url = 'https://api.datamuse.com/words?' + new URLSearchParams(params);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
 
-  async function lookupWord() {
-    const word = wordInput.value.trim().toLowerCase();
-    if (!word || isLoading) return;
+async function lookupWord(word) {
+  if (!word || state.loading) return;
+  state.word = word;
+  state.loading = true;
+  btnSearch.disabled = true;
+  showLoading();
 
-    isLoading = true;
-    lookupBtn.disabled = true;
-    showLoading();
-
-    try {
-      const [synData, antData, mlData, defData] = await Promise.allSettled([
-        fetchSynonyms(word),
-        fetchAntonyms(word),
-        fetchMeansLike(word),
-        fetchDefinition(word),
-      ]);
-
-      const data = {
-        word,
-        synonyms: synData.status === 'fulfilled' ? synData.value : [],
-        antonyms: antData.status === 'fulfilled' ? antData.value : [],
-        meansLike: mlData.status === 'fulfilled' ? mlData.value : [],
-        definition: defData.status === 'fulfilled' ? defData.value : null,
-      };
-
-      currentWordData = data;
-      renderWordResults(data);
-      addToRecent(data);
-      showNuancePanel(data);
-    } catch (err) {
-      showError(`Could not fetch results: ${err.message}`);
-    } finally {
-      isLoading = false;
-      lookupBtn.disabled = false;
-    }
-  }
-
-  // ──────────────────────────────────────────────
-  // API calls
-  // ──────────────────────────────────────────────
-  async function fetchSynonyms(word) {
-    const res = await fetch(`https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=40`);
-    if (!res.ok) throw new Error('Synonym API error');
-    return res.json();
-  }
-
-  async function fetchAntonyms(word) {
-    const res = await fetch(`https://api.datamuse.com/words?rel_ant=${encodeURIComponent(word)}&max=20`);
-    if (!res.ok) throw new Error('Antonym API error');
-    return res.json();
-  }
-
-  async function fetchMeansLike(word) {
-    const res = await fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=20`);
-    if (!res.ok) throw new Error('ML API error');
-    return res.json();
-  }
-
-  async function fetchDefinition(word) {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-    if (!res.ok) return null;
-    const json = await res.json();
-    return Array.isArray(json) ? json[0] : null;
-  }
-
-  // ──────────────────────────────────────────────
-  // Rendering
-  // ──────────────────────────────────────────────
-  function showLoading() {
-    quickResults.innerHTML = `<div class="empty-state"><div class="spinner" aria-label="Loading"></div><div class="loading-pulse" style="color:var(--muted);font-size:0.85rem;margin-top:12px">Fetching results…</div></div>`;
-  }
-
-  function showError(msg) {
-    quickResults.innerHTML = `<div style="padding:20px"><div class="error-msg">${escHtml(msg)}</div></div>`;
-  }
-
-  function renderWordResults(data) {
-    const { word, synonyms, antonyms, meansLike, definition } = data;
-    const filterPos = currentPosFilter;
-
-    function filterByPos(words) {
-      if (filterPos === 'all') return words;
-      return words.filter(w => {
-        const tags = w.tags || [];
-        return tags.some(t => t === filterPos || t.startsWith(filterPos));
-      });
-    }
-
-    const filteredSyns = filterByPos(synonyms);
-    const filteredAnts = filterByPos(antonyms);
-    const filteredMl = filterByPos(meansLike);
-
-    let html = '';
-
-    // Definition card
-    if (definition) {
-      const phonetic = definition.phonetic || (definition.phonetics && definition.phonetics.find(p => p.text)?.text) || '';
-      const meanings = (definition.meanings || []).slice(0, 2);
-      const strength = computeStrength(synonyms, antonyms);
-      html += `<div class="definition-card" role="region" aria-label="Word definition">
-        <div class="def-word">${escHtml(word)}</div>
-        ${phonetic ? `<div class="def-phonetic">${escHtml(phonetic)}</div>` : ''}
-        <div class="def-meanings">
-          ${meanings.map(m => {
-            const def = (m.definitions || [])[0];
-            return def ? `<div><span class="def-pos">${escHtml(m.partOfSpeech || '')}</span><div class="def-text">${escHtml(def.definition || '')}</div></div>` : '';
-          }).join('')}
-        </div>
-        <div class="strength-bar" aria-label="Word strength">
-          <span class="strength-label">Word Strength</span>
-          <div class="strength-track" role="progressbar" aria-valuenow="${strength}" aria-valuemin="0" aria-valuemax="100">
-            <div class="strength-fill" style="width:0%;background:${strengthColor(strength)}" data-target="${strength}"></div>
-          </div>
-          <span class="strength-val" style="color:${strengthColor(strength)}">${strength}%</span>
-        </div>
-      </div>`;
-    }
-
-    // Synonyms
-    if (filteredSyns.length) {
-      html += `<div class="section-label">Synonyms (${filteredSyns.length})</div>`;
-      html += `<div class="words-grid" role="list">`;
-      filteredSyns.forEach(w => {
-        const score = w.score || 0;
-        const scoreNorm = Math.min(100, Math.round((score / 1000000) * 100));
-        const color = scoreNorm > 60 ? 'var(--green)' : scoreNorm > 30 ? 'var(--yellow)' : 'var(--muted)';
-        html += `<button class="word-chip" role="listitem" title="Score: ${score}" onclick="drillDown('${escAttr(w.word)}')" aria-label="Look up synonym ${escAttr(w.word)}">
-          <span class="score-dot" style="background:${color}" aria-hidden="true"></span>${escHtml(w.word)}
-        </button>`;
-      });
-      html += `</div>`;
-    } else if (filterPos !== 'all') {
-      html += `<div class="no-results">No synonyms found for the selected part of speech</div>`;
-    }
-
-    // Antonyms
-    if (filteredAnts.length) {
-      html += `<div class="section-label" style="color:var(--accent2)">Antonyms (${filteredAnts.length})</div>`;
-      html += `<div class="words-grid" role="list">`;
-      filteredAnts.forEach(w => {
-        html += `<button class="word-chip ant" role="listitem" onclick="drillDown('${escAttr(w.word)}')" aria-label="Look up antonym ${escAttr(w.word)}">${escHtml(w.word)}</button>`;
-      });
-      html += `</div>`;
-    }
-
-    // Means-like
-    if (filteredMl.length) {
-      html += `<div class="section-label">Related Meanings (${filteredMl.length})</div>`;
-      html += `<div class="words-grid" role="list">`;
-      filteredMl.slice(0, 15).forEach(w => {
-        html += `<button class="word-chip" role="listitem" onclick="drillDown('${escAttr(w.word)}')" aria-label="Look up related word ${escAttr(w.word)}">${escHtml(w.word)}</button>`;
-      });
-      html += `</div>`;
-    }
-
-    if (!filteredSyns.length && !filteredAnts.length && !filteredMl.length && !definition) {
-      html += `<div class="no-results"><div style="font-size:2rem;margin-bottom:8px">🔍</div>No results found for "<strong>${escHtml(word)}</strong>"</div>`;
-    }
-
-    quickResults.innerHTML = html;
-
-    // Animate strength bar
-    requestAnimationFrame(() => {
-      const fill = quickResults.querySelector('.strength-fill');
-      if (fill) {
-        setTimeout(() => {
-          fill.style.width = `${fill.dataset.target}%`;
-        }, 100);
-      }
-    });
-  }
-
-  function computeStrength(synonyms, antonyms) {
-    const synCount = synonyms.length;
-    const antCount = antonyms.length;
-    // More synonyms = richer word. Score 0–100.
-    const base = Math.min(100, Math.round((synCount / 40) * 70 + (antCount / 20) * 30));
-    return base;
-  }
-
-  function strengthColor(v) {
-    if (v >= 70) return 'var(--green)';
-    if (v >= 40) return 'var(--yellow)';
-    return 'var(--accent2)';
-  }
-
-  // ──────────────────────────────────────────────
-  // Nuance panel (right side)
-  // ──────────────────────────────────────────────
-  function showNuancePanel(data) {
-    rightPanelTitle.textContent = `Nuance Notes — ${data.word}`;
-
-    const formality = formalitySelect.value;
-    const topSyns = (data.synonyms || []).slice(0, 5);
-
-    if (!topSyns.length) {
-      rightContent.innerHTML = `<div class="no-results" style="padding-top:20px">No nuance data available</div>`;
-      showRecentBelow(data);
-      return;
-    }
-
-    let html = '';
-    topSyns.forEach((s, i) => {
-      const fTag = guessFormalityTag(s.word, i);
-      const fInfo = FORMALITY_NOTES[fTag] || FORMALITY_NOTES.neutral;
-      const show = formality === 'all' || formality === fTag || (formality === 'formal' && fTag === 'academic');
-      if (!show) return;
-      html += `<div class="nuance-card" role="article" aria-label="Nuance note for ${escAttr(s.word)}">
-        <div class="nuance-word">${escHtml(s.word)}</div>
-        <div class="nuance-note">
-          <span class="formality-badge ${fInfo.badge}">${fInfo.label}</span>
-          ${fInfo.hint}. Use "<em>${escHtml(s.word)}</em>" as an alternative to "<em>${escHtml(data.word)}</em>" in ${fTag === 'formal' ? 'professional contexts' : fTag === 'casual' ? 'everyday writing' : 'varied contexts'}.
-        </div>
-      </div>`;
-    });
-
-    if (!html) {
-      html = `<div class="no-results" style="padding-top:20px">No synonyms match the selected formality. Try "All registers".</div>`;
-    }
-
-    rightContent.innerHTML = html;
-    showRecentBelow(data);
-  }
-
-  function guessFormalityTag(word, index) {
-    // Heuristic: longer/Latinate words tend to be more formal
-    if (word.length > 9) return index % 2 === 0 ? 'formal' : 'academic';
-    if (word.length < 5) return 'casual';
-    return 'neutral';
-  }
-
-  function showRecentBelow(data) {
-    if (!recentLookups.length) return;
-    const div = document.createElement('div');
-    div.style.marginTop = '24px';
-    div.innerHTML = `<div class="section-label" style="margin-bottom:10px">Recent Lookups</div>`;
-    const list = buildRecentList();
-    div.appendChild(list);
-    rightContent.appendChild(div);
-  }
-
-  function showRecentLookups() {
-    rightPanelTitle.textContent = 'Recent Lookups';
-    if (!recentLookups.length) {
-      rightContent.innerHTML = '';
-      rightContent.appendChild(emptyRight);
-      return;
-    }
-    rightContent.innerHTML = '';
-    rightContent.appendChild(buildRecentList());
-  }
-
-  function buildRecentList() {
-    const wrap = document.createElement('div');
-    wrap.className = 'recent-list';
-    wrap.setAttribute('role', 'list');
-    recentLookups.forEach(item => {
-      const el = document.createElement('button');
-      el.className = 'recent-item';
-      el.setAttribute('role', 'listitem');
-      el.setAttribute('aria-label', `Re-look up ${item.word}`);
-      el.innerHTML = `<span class="recent-word">${escHtml(item.word)}</span>
-        <span class="recent-count">${item.synonyms.length} syn · ${item.antonyms.length} ant</span>`;
-      el.onclick = () => {
-        wordInput.value = item.word;
-        switchMode('quick');
-        currentWordData = item;
-        renderWordResults(item);
-        showNuancePanel(item);
-      };
-      wrap.appendChild(el);
-    });
-    return wrap;
-  }
-
-  function addToRecent(data) {
-    recentLookups = recentLookups.filter(r => r.word !== data.word);
-    recentLookups.unshift(data);
-    if (recentLookups.length > 10) recentLookups = recentLookups.slice(0, 10);
-  }
-
-  // ──────────────────────────────────────────────
-  // Drill-down (click a word chip → look it up)
-  // ──────────────────────────────────────────────
-  function drillDown(word) {
-    wordInput.value = word;
-    lookupWord();
-    showToast(`Looking up "${word}"…`);
-  }
-
-  // ──────────────────────────────────────────────
-  // Writing assistant
-  // ──────────────────────────────────────────────
-  function renderEditor() {
-    // Don't re-render if we have content already parsed
-    updateWordCount();
-    showRecentLookups();
-  }
-
-  function clearEditor() {
-    editor.innerHTML = '';
-    writingWordNodes = [];
-    selectedWritingWord = null;
-    updateWordCount();
-    showRecentLookups();
-  }
-
-  function updateWordCount() {
-    const text = editor.innerText || '';
-    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
-    wordCountEl.textContent = `${words.length} word${words.length !== 1 ? 's' : ''}`;
-  }
-
-  function tokenizeEditorText() {
-    const text = editor.innerText || '';
-    if (!text.trim()) return;
-
-    // Split into tokens (words and non-words)
-    const tokens = text.split(/(\s+|[^\w'-]+)/);
-    let html = '';
-    tokens.forEach(token => {
-      if (/^[\w'-]+$/.test(token) && token.length > 1) {
-        html += `<span class="clickable-word" role="button" tabindex="0" aria-label="Click to look up ${escAttr(token)}">${escHtml(token)}</span>`;
-      } else {
-        html += escHtml(token);
-      }
-    });
-
-    editor.innerHTML = html;
-    attachWordClickHandlers();
-  }
-
-  function attachWordClickHandlers() {
-    const words = editor.querySelectorAll('.clickable-word');
-    words.forEach(span => {
-      span.addEventListener('click', onWritingWordClick);
-      span.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onWritingWordClick.call(span, e);
-        }
-      });
-    });
-  }
-
-  async function onWritingWordClick(e) {
-    e.stopPropagation();
-    const span = e.currentTarget || this;
-    const word = span.textContent.trim().toLowerCase().replace(/[^a-z'-]/g, '');
-    if (!word || word.length < 2) return;
-
-    // Highlight selected
-    editor.querySelectorAll('.clickable-word').forEach(s => s.classList.remove('selected'));
-    span.classList.add('selected');
-    selectedWritingWord = span;
-
-    rightPanelTitle.textContent = `Synonyms for "${word}"`;
-    rightContent.innerHTML = `<div class="empty-state"><div class="spinner"></div></div>`;
-
-    const [synData, antData, defData] = await Promise.allSettled([
-      fetchSynonyms(word),
-      fetchAntonyms(word),
-      fetchDefinition(word),
+  try {
+    const [synRes, antRes, mlRes, defRes] = await Promise.allSettled([
+      fetchWords({ rel_syn: word, max: 50, md: 'd' }),
+      fetchWords({ rel_ant: word, max: 20 }),
+      fetchWords({ ml: word, max: 40, md: 'd' }),
+      fetchWords({ sp: word, md: 'd', max: 1 }),
     ]);
 
-    const synonyms = synData.status === 'fulfilled' ? synData.value : [];
-    const antonyms = antData.status === 'fulfilled' ? antData.value : [];
-    const definition = defData.status === 'fulfilled' ? defData.value : null;
+    state.synonyms  = synRes.status === 'fulfilled'  ? synRes.value  : [];
+    state.antonyms  = antRes.status === 'fulfilled'  ? antRes.value  : [];
+    state.similar   = mlRes.status === 'fulfilled'   ? mlRes.value   : [];
+    state.definition = (defRes.status === 'fulfilled' && defRes.value.length) ? defRes.value[0] : null;
+    state.contextWords = [];
 
-    const data = { word, synonyms, antonyms, meansLike: [], definition };
-    addToRecent(data);
-
-    // Render writing-mode synonym panel
-    const formality = formalitySelect.value;
-
-    let html = '';
-
-    // Definition snippet
-    if (definition) {
-      const meanings = (definition.meanings || []).slice(0, 1);
-      if (meanings.length) {
-        const def = (meanings[0].definitions || [])[0];
-        if (def) {
-          html += `<div class="definition-card" style="margin-bottom:16px">
-            <div class="def-word">${escHtml(word)}</div>
-            <div class="def-text" style="margin-top:6px">${escHtml(def.definition || '')}</div>
-          </div>`;
-        }
-      }
+    // If context mode is on, fetch context words
+    if (state.contextMode) {
+      await fetchContextWords(word);
     }
 
-    if (synonyms.length) {
-      html += `<div class="section-label">Synonyms — click to replace</div>`;
-      synonyms.slice(0, 20).forEach((s, i) => {
-        const fTag = guessFormalityTag(s.word, i);
-        const fInfo = FORMALITY_NOTES[fTag] || FORMALITY_NOTES.neutral;
-        const show = formality === 'all' || formality === fTag || (formality === 'formal' && fTag === 'academic');
-        if (!show) return;
-        html += `<div class="nuance-card">
-          <div class="nuance-word">${escHtml(s.word)}</div>
-          <div class="nuance-note"><span class="formality-badge ${fInfo.badge}">${fInfo.label}</span>${fInfo.hint}</div>
-          <button class="replace-btn" onclick="replaceWord('${escAttr(s.word)}')" aria-label="Replace ${escAttr(word)} with ${escAttr(s.word)}">↩ Replace</button>
-        </div>`;
-      });
+    addToRecent(word);
+    renderResults();
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    state.loading = false;
+    btnSearch.disabled = false;
+  }
+}
+
+async function fetchContextWords(word) {
+  // Try adjectives for noun and nouns for adjective
+  const [jjbRes, jjaRes] = await Promise.allSettled([
+    fetchWords({ rel_jjb: word, max: 15 }),
+    fetchWords({ rel_jja: word, max: 15 }),
+  ]);
+  const jjb = jjbRes.status === 'fulfilled' ? jjbRes.value : [];
+  const jja = jjaRes.status === 'fulfilled' ? jjaRes.value : [];
+  state.contextWords = [
+    ...jjb.map(w => ({ ...w, _ctx: 'adjective' })),
+    ...jja.map(w => ({ ...w, _ctx: 'noun' })),
+  ];
+}
+
+// ─── Parsing helpers ──────────────────────────────────────────────────────────
+function parseDef(wordEntry) {
+  if (!wordEntry || !wordEntry.defs || !wordEntry.defs.length) return null;
+  const raw = wordEntry.defs[0];
+  const tabIdx = raw.indexOf('\t');
+  if (tabIdx === -1) return { pos: '', text: raw };
+  const pos = raw.slice(0, tabIdx);
+  const text = raw.slice(tabIdx + 1);
+  return { pos, text };
+}
+
+const POS_LABELS = { n: 'noun', v: 'verb', adj: 'adjective', adv: 'adverb', prep: 'preposition', conj: 'conjunction', u: 'general' };
+function posLabel(p) { return POS_LABELS[p] || p; }
+
+function normalizeScore(score) {
+  // Datamuse scores range 0–100000+, normalize to 0–100
+  return Math.min(100, Math.round((score / 150000) * 100));
+}
+
+function scoreColor(norm) {
+  if (norm >= 60) return 'oklch(50% 0.16 52)';    // green-ish accent
+  if (norm >= 30) return 'oklch(62% 0.15 72)';     // amber
+  return 'var(--color-border)';
+}
+
+function getFormalityTag(wordObj) {
+  const tags = wordObj.tags || [];
+  if (tags.includes('slang')) return 'slang';
+  if (tags.includes('informal')) return 'informal';
+  if (tags.includes('formal')) return 'formal';
+  return null;
+}
+
+function getInterestingTags(wordObj) {
+  const tags = wordObj.tags || [];
+  const keep = ['slang', 'informal', 'formal', 'rare', 'archaic', 'vulgar'];
+  return tags.filter(t => keep.includes(t));
+}
+
+// ─── Filtering ────────────────────────────────────────────────────────────────
+function filterWords(words) {
+  let out = words;
+
+  // Formality filter
+  if (state.formalityFilter !== 'all') {
+    out = out.filter(w => {
+      const tag = getFormalityTag(w);
+      return tag === state.formalityFilter;
+    });
+  }
+
+  // Score threshold
+  if (state.scoreThreshold > 0) {
+    out = out.filter(w => normalizeScore(w.score || 0) >= state.scoreThreshold);
+  }
+
+  // Count filter
+  if (state.countFilter !== 'all') {
+    out = out.slice(0, Number(state.countFilter));
+  }
+
+  return out;
+}
+
+// ─── Rendering ────────────────────────────────────────────────────────────────
+function showLoading() {
+  resultsEmpty.style.display = 'none';
+  resultsContent.style.display = 'flex';
+  defPanel.innerHTML = '';
+  resultsGroups.innerHTML = `<div class="main-empty" style="flex:1"><div class="spinner" aria-label="Loading"></div></div>`;
+  antonymsSection.innerHTML = '';
+  contextSection.innerHTML = '';
+}
+
+function showError(msg) {
+  resultsEmpty.style.display = 'none';
+  resultsContent.style.display = 'flex';
+  defPanel.innerHTML = '';
+  resultsGroups.innerHTML = `<div style="padding:var(--space-4);background:oklch(55% 0.20 25 / 0.08);border:1px solid oklch(55% 0.20 25 / 0.25);border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--color-danger)">Error: ${esc(msg)}</div>`;
+  antonymsSection.innerHTML = '';
+  contextSection.innerHTML = '';
+}
+
+function renderResults() {
+  resultsEmpty.style.display = 'none';
+  resultsContent.style.display = 'flex';
+
+  // Definition panel
+  renderDefPanel();
+
+  // Main words based on tab
+  const tab = state.tab;
+  let words = tab === 'synonyms' ? state.synonyms
+            : tab === 'antonyms' ? state.antonyms
+            : state.similar;
+
+  const filtered = filterWords(words);
+  renderWordGroups(filtered, tab === 'antonyms');
+
+  // Antonyms section (always shown below synonyms when in synonyms tab)
+  if (tab === 'synonyms' && state.antonyms.length) {
+    const filteredAnts = filterWords(state.antonyms);
+    renderAntonymsSection(filteredAnts);
+  } else {
+    antonymsSection.innerHTML = '';
+  }
+
+  // Context words
+  if (state.contextMode && state.contextWords.length) {
+    renderContextSection();
+  } else {
+    contextSection.innerHTML = '';
+  }
+}
+
+function renderDefPanel() {
+  const def = parseDef(state.definition);
+  const isSaved = wordCollection.includes(state.word);
+  if (!def) {
+    defPanel.innerHTML = `
+      <div class="def-panel">
+        <div class="def-word-display">${esc(state.word)}</div>
+        <div class="def-body">
+          <div class="def-text">No definition found.</div>
+        </div>
+        <button class="btn-save-word${isSaved ? ' saved' : ''}" onclick="toggleSaveWord('${escAttr(state.word)}')" aria-label="Save word to collection">
+          ${isSaved ? '✓ Saved' : '+ Save'}
+        </button>
+      </div>`;
+    return;
+  }
+
+  defPanel.innerHTML = `
+    <div class="def-panel">
+      <div class="def-word-display">${esc(state.word)}</div>
+      <div class="def-body">
+        ${def.pos ? `<div class="pos-badge">${esc(posLabel(def.pos))}</div>` : ''}
+        <div class="def-text">${esc(def.text)}</div>
+      </div>
+      <button class="btn-save-word${isSaved ? ' saved' : ''}" id="save-word-btn" onclick="toggleSaveWord('${escAttr(state.word)}')" aria-label="Save word to collection">
+        ${isSaved ? '✓ Saved' : '+ Save'}
+      </button>
+    </div>`;
+}
+
+function renderWordGroups(words, isAntonyms = false) {
+  if (!words.length) {
+    resultsGroups.innerHTML = `<div style="padding:var(--space-4);font-size:var(--text-sm);color:var(--color-ink-muted);font-style:italic">No results found${state.formalityFilter !== 'all' ? ' for this formality filter' : ''}. Try adjusting your filters.</div>`;
+    return;
+  }
+
+  // Group: best (top 10), good (11-30), more (rest)
+  const best = words.slice(0, 10);
+  const good = words.slice(10, 30);
+  const more = words.slice(30);
+
+  let html = '';
+
+  if (best.length) html += buildGroup('Best matches', best, isAntonyms);
+  if (good.length) html += buildGroup('Good matches', good, isAntonyms);
+  if (more.length) html += buildGroup('More options', more, isAntonyms);
+
+  resultsGroups.innerHTML = html;
+}
+
+function buildGroup(label, words, isAntonyms) {
+  const chips = words.map(w => buildWordChip(w, isAntonyms)).join('');
+  const antClass = isAntonyms ? ' ant-group' : '';
+  return `
+    <div class="results-group${antClass}">
+      <div class="group-header">
+        <span class="group-label">${esc(label)}</span>
+        <span class="group-line" aria-hidden="true"></span>
+        <span class="group-count">${words.length}</span>
+      </div>
+      <div class="words-grid" role="list">
+        ${chips}
+      </div>
+    </div>`;
+}
+
+function buildWordChip(w, isAntonym = false) {
+  const norm = normalizeScore(w.score || 0);
+  const color = scoreColor(norm);
+  const highScore = norm >= 60;
+  const interestingTags = getInterestingTags(w);
+  const tagsHtml = interestingTags.length
+    ? `<span class="chip-tags">${interestingTags.slice(0, 2).map(t => esc(t)).join(' · ')}</span>`
+    : '';
+  const antClass = isAntonym ? ' ant' : '';
+  const highClass = highScore && !isAntonym ? ' high-score' : '';
+
+  return `<div class="word-chip${antClass}${highClass}" role="listitem" title="Score: ${w.score || 0}" onclick="chipClick('${escAttr(w.word)}')">
+    <span class="score-dot" style="background:${color}" aria-hidden="true"></span>
+    <span>${esc(w.word)}</span>
+    ${tagsHtml}
+    <span class="chip-actions" role="group" aria-label="Word actions">
+      <button class="chip-action-btn" onclick="event.stopPropagation();copyToClipboard('${escAttr(w.word)}')" aria-label="Copy ${esc(w.word)}">Copy</button>
+      <button class="chip-action-btn save-btn" onclick="event.stopPropagation();saveWordToCollection('${escAttr(w.word)}')" aria-label="Save ${esc(w.word)}">Save</button>
+    </span>
+  </div>`;
+}
+
+function renderAntonymsSection(ants) {
+  if (!ants.length) { antonymsSection.innerHTML = ''; return; }
+  const chips = ants.map(w => buildWordChip(w, true)).join('');
+  antonymsSection.innerHTML = `
+    <div class="results-group ant-group" style="animation:fadeUp 0.22s ease">
+      <div class="group-header">
+        <span class="group-label">Antonyms</span>
+        <span class="group-line" aria-hidden="true"></span>
+        <span class="group-count" style="background:oklch(92% 0.04 72);border:1px solid oklch(80% 0.08 72);border-radius:var(--radius-sm);padding:1px 8px;font-size:10px;font-weight:700;color:oklch(48% 0.12 72)">${ants.length}</span>
+      </div>
+      <div class="words-grid" role="list">${chips}</div>
+    </div>`;
+}
+
+function renderContextSection() {
+  const adjs = state.contextWords.filter(w => w._ctx === 'adjective');
+  const nouns = state.contextWords.filter(w => w._ctx === 'noun');
+  let html = '';
+
+  if (adjs.length) {
+    const chips = adjs.map(w => buildWordChip(w)).join('');
+    html += `
+      <div class="results-group" style="animation:fadeUp 0.22s ease">
+        <div class="group-header">
+          <span class="group-label">Describing adjectives</span>
+          <span class="group-line"></span>
+          <span class="group-count">${adjs.length}</span>
+        </div>
+        <div class="words-grid" role="list">${chips}</div>
+      </div>`;
+  }
+
+  if (nouns.length) {
+    const chips = nouns.map(w => buildWordChip(w)).join('');
+    html += `
+      <div class="results-group" style="animation:fadeUp 0.22s ease">
+        <div class="group-header">
+          <span class="group-label">Related nouns</span>
+          <span class="group-line"></span>
+          <span class="group-count">${nouns.length}</span>
+        </div>
+        <div class="words-grid" role="list">${chips}</div>
+      </div>`;
+  }
+
+  contextSection.innerHTML = html;
+}
+
+function chipClick(word) {
+  wordInput.value = word;
+  lookupWord(word);
+  showToast(`Looking up "${word}"…`);
+}
+
+// ─── Word collection ──────────────────────────────────────────────────────────
+function toggleSaveWord(word) {
+  if (wordCollection.includes(word)) {
+    wordCollection = wordCollection.filter(w => w !== word);
+    showToast(`"${word}" removed from collection`);
+  } else {
+    wordCollection = [word, ...wordCollection];
+    showToast(`"${word}" saved to collection`, 'success');
+  }
+  saveCollection();
+  renderCollection();
+  // Refresh the save button in the def panel
+  const btn = document.getElementById('save-word-btn');
+  if (btn) {
+    const isSaved = wordCollection.includes(word);
+    btn.className = 'btn-save-word' + (isSaved ? ' saved' : '');
+    btn.textContent = isSaved ? '✓ Saved' : '+ Save';
+  }
+}
+
+function saveWordToCollection(word) {
+  if (!wordCollection.includes(word)) {
+    wordCollection = [word, ...wordCollection];
+    saveCollection();
+    renderCollection();
+    showToast(`"${word}" saved to collection`, 'success');
+  } else {
+    showToast(`"${word}" already in collection`);
+  }
+}
+
+function saveCollection() {
+  try { localStorage.setItem('syn_collection', JSON.stringify(wordCollection)); } catch {}
+}
+
+function renderCollection() {
+  if (!wordCollection.length) {
+    collectionEl.innerHTML = '<span class="empty-sidebar">Saved words appear here</span>';
+    return;
+  }
+  collectionEl.innerHTML = wordCollection.map(w => `
+    <div class="chip" onclick="chipClick('${escAttr(w)}')" aria-label="Look up ${esc(w)}">
+      ${esc(w)}
+      <button class="chip-remove" onclick="event.stopPropagation();removeFromCollection('${escAttr(w)}')" aria-label="Remove ${esc(w)}">✕</button>
+    </div>`).join('');
+}
+
+function removeFromCollection(word) {
+  wordCollection = wordCollection.filter(w => w !== word);
+  saveCollection();
+  renderCollection();
+  showToast(`"${word}" removed`);
+}
+
+// ─── Recent searches ──────────────────────────────────────────────────────────
+function addToRecent(word) {
+  recentSearches = [word, ...recentSearches.filter(w => w !== word)].slice(0, 8);
+  try { localStorage.setItem('syn_recent', JSON.stringify(recentSearches)); } catch {}
+  renderRecent();
+}
+
+function renderRecent() {
+  if (!recentSearches.length) {
+    recentEl.innerHTML = '<span class="empty-sidebar">No recent searches</span>';
+    return;
+  }
+  recentEl.innerHTML = recentSearches.map(w => `
+    <div class="chip" onclick="chipClick('${escAttr(w)}')" aria-label="Search again for ${esc(w)}">${esc(w)}</div>`
+  ).join('');
+}
+
+// ─── View tabs ────────────────────────────────────────────────────────────────
+function switchMainView(view) {
+  document.querySelectorAll('.main-tab').forEach(btn => {
+    const active = btn.dataset.view === view;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active);
+  });
+  document.querySelectorAll('.results-view, .compare-view, .replace-view').forEach(el => {
+    el.classList.remove('active');
+  });
+  const target = document.getElementById('view-' + view);
+  if (target) target.classList.add('active');
+}
+
+// ─── Result type tabs ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const active = btn.dataset.tab === tab;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', active);
+  });
+  if (state.word) renderResults();
+}
+
+// ─── Compare feature ──────────────────────────────────────────────────────────
+async function doCompare() {
+  const wordA = document.getElementById('compare-word-a').value.trim().toLowerCase();
+  const wordB = document.getElementById('compare-word-b').value.trim().toLowerCase();
+  if (!wordA || !wordB) { showToast('Enter two words to compare', 'error'); return; }
+
+  compareResults.innerHTML = `<div class="main-empty" style="padding:var(--space-8)"><div class="spinner"></div></div>`;
+
+  const [resA, resB] = await Promise.allSettled([
+    fetchWords({ rel_syn: wordA, max: 50 }),
+    fetchWords({ rel_syn: wordB, max: 50 }),
+  ]);
+
+  const synsA = resA.status === 'fulfilled' ? resA.value.map(w => w.word) : [];
+  const synsB = resB.status === 'fulfilled' ? resB.value.map(w => w.word) : [];
+  const shared = synsA.filter(w => synsB.includes(w));
+
+  const chipHtml = (words) => words.length
+    ? words.map(w => `<div class="chip" onclick="chipClick('${escAttr(w)}')" style="cursor:pointer">${esc(w)}</div>`).join('')
+    : '<span style="font-size:var(--text-xs);color:var(--color-ink-muted);font-style:italic">None found</span>';
+
+  compareResults.innerHTML = `
+    <div class="compare-results">
+      <div>
+        <div class="compare-col-title">${esc(wordA)}</div>
+        <div class="chip-list">${chipHtml(synsA.slice(0, 20))}</div>
+      </div>
+      <div class="compare-shared">
+        <div class="shared-label">Shared (${shared.length})</div>
+        <div class="chip-list">${chipHtml(shared)}</div>
+      </div>
+      <div>
+        <div class="compare-col-title">${esc(wordB)}</div>
+        <div class="chip-list">${chipHtml(synsB.slice(0, 20))}</div>
+      </div>
+    </div>`;
+}
+
+// ─── Writing assistant / Replace feature ─────────────────────────────────────
+function tokenizeText() {
+  const text = replaceTextarea.value;
+  if (!text.trim()) { showToast('Paste some text first', 'error'); return; }
+  const tokens = text.split(/(\s+|[^\w'-]+)/);
+  let html = '';
+  tokens.forEach(token => {
+    if (/^[\w'-]+$/.test(token) && token.length > 1) {
+      html += `<span class="clickable-word" tabindex="0" role="button" aria-label="Look up ${esc(token)}">${esc(token)}</span>`;
     } else {
-      html += `<div class="no-results">No synonyms found for "<strong>${escHtml(word)}</strong>"</div>`;
-    }
-
-    rightContent.innerHTML = html || `<div class="no-results">No data found</div>`;
-  }
-
-  function replaceWord(replacement) {
-    if (!selectedWritingWord) return;
-    const original = selectedWritingWord.textContent;
-    // Preserve capitalisation
-    let rep = replacement;
-    if (original[0] === original[0].toUpperCase() && original[0] !== original[0].toLowerCase()) {
-      rep = rep[0].toUpperCase() + rep.slice(1);
-    }
-    selectedWritingWord.textContent = rep;
-    selectedWritingWord.classList.remove('selected');
-    selectedWritingWord = null;
-    showToast(`Replaced with "${rep}"`);
-    updateWordCount();
-  }
-
-  // ──────────────────────────────────────────────
-  // Toast
-  // ──────────────────────────────────────────────
-  let toastTimer = null;
-  function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
-  }
-
-  // ──────────────────────────────────────────────
-  // Utils
-  // ──────────────────────────────────────────────
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  function escAttr(str) {
-    return String(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-  }
-
-  // ──────────────────────────────────────────────
-  // Event listeners
-  // ──────────────────────────────────────────────
-  wordInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') lookupWord();
-  });
-
-  wordInput.addEventListener('input', () => {
-    clearTimeout(lookupDebounce);
-    const val = wordInput.value.trim();
-    if (val.length > 1) {
-      lookupDebounce = setTimeout(() => {
-        if (wordInput.value.trim() === val) lookupWord();
-      }, 800);
+      html += esc(token);
     }
   });
+  replaceDisplay.innerHTML = html;
+  attachReplaceHandlers();
+  showToast('Click any word to see synonyms');
+}
 
-  // Editor events
-  editor.addEventListener('input', () => {
-    updateWordCount();
+function attachReplaceHandlers() {
+  replaceDisplay.querySelectorAll('.clickable-word').forEach(span => {
+    span.addEventListener('click', onReplaceWordClick);
+    span.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onReplaceWordClick.call(span, e); }
+    });
   });
+}
 
-  editor.addEventListener('paste', e => {
-    // Paste as plain text
-    e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-    document.execCommand('insertText', false, text);
-    setTimeout(() => {
-      tokenizeEditorText();
-      updateWordCount();
-    }, 0);
-  });
+async function onReplaceWordClick(e) {
+  const span = e.currentTarget || this;
+  const word = span.textContent.trim().toLowerCase().replace(/[^a-z'-]/g, '');
+  if (!word || word.length < 2) return;
 
-  // Tokenize on blur (after manual typing)
-  editor.addEventListener('blur', () => {
-    tokenizeEditorText();
-  });
+  // Deselect previous
+  replaceDisplay.querySelectorAll('.clickable-word').forEach(s => s.classList.remove('selected'));
+  span.classList.add('selected');
+  selectedReplaceSpan = span;
 
-  // Formality change re-renders right panel
-  formalitySelect.addEventListener('change', () => {
-    if (currentWordData && currentMode === 'quick') {
-      showNuancePanel(currentWordData);
+  replaceSynsList.innerHTML = `<div class="main-empty" style="padding:var(--space-4)"><div class="spinner" style="width:24px;height:24px;border-width:2px"></div></div>`;
+
+  try {
+    const syns = await fetchWords({ rel_syn: word, max: 20 });
+    if (!syns.length) {
+      replaceSynsList.innerHTML = `<div style="font-size:var(--text-xs);color:var(--color-ink-muted);font-style:italic;padding:var(--space-2) 0">No synonyms found for "${esc(word)}"</div>`;
+      return;
     }
-  });
+    replaceSynsList.innerHTML = `
+      <div class="replace-syn-list" role="list">
+        ${syns.slice(0, 15).map(w => `
+          <div class="replace-syn-item" role="listitem">
+            <span class="replace-syn-word">${esc(w.word)}</span>
+            <button class="btn-replace-word" onclick="replaceSelectedWord('${escAttr(w.word)}')" aria-label="Replace with ${esc(w.word)}">↩ Use</button>
+          </div>`).join('')}
+      </div>`;
+  } catch {
+    replaceSynsList.innerHTML = `<div style="font-size:var(--text-xs);color:var(--color-danger)">Error fetching synonyms</div>`;
+  }
+}
 
-  // Initial state
-  showRecentLookups();
+function replaceSelectedWord(replacement) {
+  if (!selectedReplaceSpan) return;
+  const original = selectedReplaceSpan.textContent;
+  let rep = replacement;
+  // Preserve capitalisation
+  if (original.length && original[0] === original[0].toUpperCase() && original[0] !== original[0].toLowerCase()) {
+    rep = rep[0].toUpperCase() + rep.slice(1);
+  }
+  selectedReplaceSpan.textContent = rep;
+  selectedReplaceSpan.classList.remove('selected');
+  selectedReplaceSpan = null;
+  replaceSynsList.innerHTML = `<div style="font-size:var(--text-xs);color:var(--color-ink-muted);font-style:italic;padding:var(--space-2) 0">Click a word in the text to see its synonyms here</div>`;
+  showToast(`Replaced with "${rep}"`, 'success');
+}
+
+// ─── Event wiring ─────────────────────────────────────────────────────────────
+// Word input
+wordInput.addEventListener('keydown', e => { if (e.key === 'Enter') lookupWord(wordInput.value.trim().toLowerCase()); });
+clearInputBtn.addEventListener('click', () => { wordInput.value = ''; wordInput.focus(); });
+btnSearch.addEventListener('click', () => lookupWord(wordInput.value.trim().toLowerCase()));
+
+// Result type tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// Main view tabs
+document.querySelectorAll('.main-tab').forEach(btn => {
+  btn.addEventListener('click', () => switchMainView(btn.dataset.view));
+});
+
+// Filters — re-render on change
+scoreSlider.addEventListener('input', () => {
+  state.scoreThreshold = Number(scoreSlider.value);
+  scoreVal.textContent = scoreSlider.value;
+  if (state.word) renderResults();
+});
+formalityFilt.addEventListener('change', () => {
+  state.formalityFilter = formalityFilt.value;
+  if (state.word) renderResults();
+});
+countFilt.addEventListener('change', () => {
+  state.countFilter = countFilt.value === 'all' ? 'all' : Number(countFilt.value);
+  if (state.word) renderResults();
+});
+contextToggle.addEventListener('change', async () => {
+  state.contextMode = contextToggle.checked;
+  if (state.word) {
+    if (state.contextMode && !state.contextWords.length) {
+      await fetchContextWords(state.word);
+    }
+    renderResults();
+  }
+});
+
+// Compare
+document.getElementById('btn-compare').addEventListener('click', doCompare);
+document.getElementById('compare-word-a').addEventListener('keydown', e => { if (e.key === 'Enter') doCompare(); });
+document.getElementById('compare-word-b').addEventListener('keydown', e => { if (e.key === 'Enter') doCompare(); });
+
+// Tokenize
+document.getElementById('btn-tokenize').addEventListener('click', tokenizeText);
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderRecent();
+renderCollection();
+wordInput.focus();
 </script>
 </body>
 </html>

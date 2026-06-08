@@ -1,1132 +1,1250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Password Strength Checker — Dark Factory</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Passguard — Password Strength Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Terminal · nav: N9 */
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #080b0e;
-      --surface: #0d1117;
-      --surface2: #161b22;
-      --border: rgba(255,255,255,0.08);
-      --accent: #58a6ff;
-      --accent2: #f78166;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --green: #3fb950;
-      --red: #f85149;
-      --yellow: #d29922;
-      --radius: 6px;
-      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-      --font-body: 'Inter', system-ui, sans-serif;
-    }
+html { height: 100%; overflow-x: clip; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 24px 16px 48px;
-    }
+body {
+  min-height: 100%;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
 
-    /* ── Header ── */
-    header {
-      width: 100%;
-      max-width: 800px;
-      text-align: center;
-      margin-bottom: 32px;
-    }
-    header .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.35);
-      color: var(--accent);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 4px 12px;
-      border-radius: 20px;
-      margin-bottom: 16px;
-    }
-    header h1 {
-      font-size: clamp(24px, 4vw, 38px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, var(--text) 30%, var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 10px;
-    }
-    header p {
-      color: var(--muted);
-      font-size: 15px;
-      max-width: 520px;
-      margin: 0 auto;
-      line-height: 1.6;
-    }
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
 
-    /* ── Privacy notice ── */
-    .privacy-notice {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(67, 217, 173, 0.08);
-      border: 1px solid rgba(67, 217, 173, 0.25);
-      border-radius: var(--radius);
-      padding: 10px 16px;
-      font-size: 13px;
-      color: var(--green);
-      max-width: 800px;
-      width: 100%;
-      margin-bottom: 24px;
-    }
-    .privacy-notice svg { flex-shrink: 0; }
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
 
-    /* ── Main grid ── */
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      max-width: 800px;
-      width: 100%;
-    }
-    @media (max-width: 600px) {
-      .grid { grid-template-columns: 1fr; }
-    }
-    .full-width { grid-column: 1 / -1; }
+/* ── N9 Fixed Nav ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
 
-    /* ── Card ── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-    }
-    .card-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
 
-    /* ── Password input area ── */
-    .input-wrapper {
-      position: relative;
-    }
-    .input-wrapper input[type="password"],
-    .input-wrapper input[type="text"] {
-      width: 100%;
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 18px;
-      font-family: 'Courier New', monospace;
-      padding: 14px 48px 14px 16px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      letter-spacing: 0.05em;
-    }
-    .input-wrapper input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
-    }
-    .toggle-vis {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      padding: 4px;
-      border-radius: 4px;
-      transition: color 0.15s;
-    }
-    .toggle-vis:hover { color: var(--text); }
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
 
-    /* ── Strength meter ── */
-    .strength-meter-wrap {
-      margin-top: 16px;
-    }
-    .strength-label-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .strength-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--muted);
-      transition: color 0.3s;
-    }
-    .strength-score {
-      font-size: 11px;
-      color: var(--muted);
-    }
-    .meter-segments {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 5px;
-    }
-    .meter-seg {
-      height: 6px;
-      border-radius: 4px;
-      background: var(--surface2);
-      transition: background 0.4s ease, transform 0.2s ease;
-      position: relative;
-      overflow: hidden;
-    }
-    .meter-seg.active::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-      animation: shimmer 1.5s infinite;
-    }
-    @keyframes shimmer {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-    .meter-seg.active { transform: scaleY(1.4); }
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
 
-    /* strength colours */
-    .s0 .meter-seg.active { background: var(--accent2); }
-    .s1 .meter-seg.active { background: var(--accent2); }
-    .s2 .meter-seg.active { background: var(--yellow); }
-    .s3 .meter-seg.active { background: var(--accent); }
-    .s4 .meter-seg.active { background: var(--green); }
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+.nav-back:hover { color: var(--color-ink); }
 
-    /* ── Feedback pills ── */
-    .feedback-section { margin-top: 16px; }
-    .feedback-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      min-height: 32px;
-    }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 12px;
-      font-weight: 500;
-      padding: 4px 10px;
-      border-radius: 20px;
-      animation: popIn 0.2s ease;
-    }
-    @keyframes popIn {
-      from { opacity: 0; transform: scale(0.8); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-    .pill.warn {
-      background: rgba(247, 201, 72, 0.12);
-      border: 1px solid rgba(247, 201, 72, 0.3);
-      color: var(--yellow);
-    }
-    .pill.bad {
-      background: rgba(124, 58, 237, 0.12);
-      border: 1px solid rgba(124, 58, 237, 0.3);
-      color: var(--accent2);
-    }
-    .pill.good {
-      background: rgba(67, 217, 173, 0.1);
-      border: 1px solid rgba(67, 217, 173, 0.25);
-      color: var(--green);
-    }
+/* ── Page body ── */
+.page-body {
+  margin-top: 52px;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+}
 
-    /* ── Stats grid ── */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 4px;
-    }
-    .stat-box {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-    }
-    .stat-box .label {
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 4px;
-    }
-    .stat-box .value {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-      font-family: 'Courier New', monospace;
-    }
+/* ── Container ── */
+.container {
+  width: 100%;
+  max-width: 680px;
+}
 
-    /* ── Entropy bar ── */
-    .entropy-bar-wrap { margin-top: 12px; }
-    .entropy-bar-bg {
-      background: var(--surface2);
-      border-radius: 4px;
-      height: 8px;
-      overflow: hidden;
-    }
-    .entropy-bar-fill {
-      height: 100%;
-      border-radius: 4px;
-      background: linear-gradient(90deg, var(--accent2), var(--yellow), var(--green));
-      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+/* ── Privacy banner ── */
+.privacy-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: oklch(14% 0.05 142);
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  font-weight: 500;
+}
+.privacy-banner svg { flex-shrink: 0; }
 
-    /* ── Generator ── */
-    .gen-options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: var(--muted);
-      cursor: pointer;
-      user-select: none;
-      transition: color 0.15s;
-    }
-    .checkbox-label:hover { color: var(--text); }
-    .checkbox-label input[type="checkbox"] {
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      border: 1.5px solid var(--border);
-      border-radius: 4px;
-      background: var(--surface2);
-      cursor: pointer;
-      position: relative;
-      flex-shrink: 0;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .checkbox-label input[type="checkbox"]:checked {
-      background: var(--accent);
-      border-color: var(--accent);
-    }
-    .checkbox-label input[type="checkbox"]:checked::after {
-      content: '';
-      position: absolute;
-      left: 4px;
-      top: 1px;
-      width: 5px;
-      height: 9px;
-      border: 2px solid #fff;
-      border-top: none;
-      border-left: none;
-      transform: rotate(45deg);
-    }
+/* ── Card ── */
+.card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  width: 100%;
+}
 
-    .slider-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    .slider-row label {
-      font-size: 13px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .slider-row input[type="range"] {
-      flex: 1;
-      appearance: none;
-      height: 4px;
-      background: var(--surface2);
-      border-radius: 2px;
-      outline: none;
-      cursor: pointer;
-    }
-    .slider-row input[type="range"]::-webkit-slider-thumb {
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: var(--accent);
-      cursor: pointer;
-      transition: transform 0.15s;
-    }
-    .slider-row input[type="range"]::-webkit-slider-thumb:hover {
-      transform: scale(1.2);
-    }
-    .slider-val {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--accent);
-      min-width: 28px;
-      text-align: right;
-    }
+.card + .card { border-top: none; border-radius: 0; }
+.card:first-of-type { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.card:last-of-type { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.card-solo { border-radius: var(--radius-lg); }
 
-    .gen-output {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .gen-output input {
-      flex: 1;
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      padding: 10px 14px;
-      outline: none;
-      letter-spacing: 0.03em;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 18px;
-      border-radius: 8px;
-      border: none;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
-      white-space: nowrap;
-    }
-    .btn:hover { opacity: 0.88; }
-    .btn:active { transform: scale(0.97); }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 2px 12px rgba(0, 229, 255, 0.35);
-    }
-    .btn-ghost {
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
-      color: var(--muted);
-    }
-    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
-    .btn-sm { padding: 7px 12px; font-size: 12px; }
+.card-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
-    .gen-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.card-stack .card {
+  border-radius: 0;
+  border-top: none;
+}
+.card-stack .card:first-child {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-top: 1px solid var(--color-border);
+}
+.card-stack .card:last-child {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
 
-    /* ── Passphrase ── */
-    .passphrase-output {
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 15px;
-      font-family: 'Courier New', monospace;
-      color: var(--text);
-      min-height: 44px;
-      word-break: break-word;
-      margin-bottom: 10px;
-      letter-spacing: 0.02em;
-    }
+.card-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.card-title svg { color: var(--color-accent); flex-shrink: 0; }
 
-    /* ── Copy toast ── */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--green);
-      color: #0f1117;
-      font-size: 13px;
-      font-weight: 700;
-      padding: 10px 18px;
-      border-radius: 8px;
-      opacity: 0;
-      transform: translateY(8px);
-      pointer-events: none;
-      transition: opacity 0.25s, transform 0.25s;
-      z-index: 999;
-    }
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+/* ── Password input ── */
+.input-wrapper {
+  position: relative;
+}
 
-    /* ── Char analysis ── */
-    .char-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-    .char-row:last-child { margin-bottom: 0; }
-    .char-type {
-      font-size: 12px;
-      color: var(--muted);
-      width: 80px;
-      flex-shrink: 0;
-    }
-    .char-bar-bg {
-      flex: 1;
-      height: 6px;
-      background: var(--surface2);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .char-bar-fill {
-      height: 100%;
-      border-radius: 3px;
-      transition: width 0.4s ease;
-    }
-    .char-count {
-      font-size: 12px;
-      color: var(--muted);
-      width: 24px;
-      text-align: right;
-    }
+.pw-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-xl);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) 52px var(--space-4) var(--space-4);
+  outline: none;
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+  letter-spacing: 0.04em;
+}
+.pw-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(72% 0.20 142 / 0.12);
+}
+.pw-input::placeholder { color: var(--color-ink-muted); letter-spacing: 0; }
 
-    footer {
-      margin-top: 40px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
+.btn-toggle-vis {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s var(--ease-out);
+}
+.btn-toggle-vis:hover { color: var(--color-ink); }
 
-    /* === Security/Infra Tools v2 Design System === */
-    body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; line-height: 1.6; background-image: radial-gradient(rgba(88,166,255,0.03) 1px, transparent 1px); background-size: 24px 24px; }
-    h1, h2, .title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.03em; }
-    h1 { font-size: clamp(1.4rem, 3vw, 1.8rem); color: var(--text); }
-    h2 { font-size: 1rem; color: var(--muted); font-weight: 500; }
-    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
-    .card, .result, .item, .output, .domain, .cert, .check, .breach, .password-result, .ssl-info,
-    [class*="card"], [class*="result"], [class*="item"], [class*="check"] {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; animation: secFade 0.25s ease both;
-    }
-    .card.danger, .result.danger, .breach-found, .expired, .unsafe { border-left: 3px solid var(--red); }
-    .card.safe, .result.safe, .no-breach, .valid, .secure { border-left: 3px solid var(--green); }
-    .card.warning, .result.warning, .expiring-soon { border-left: 3px solid var(--yellow); }
-    .code, .value, pre, code, .mono, .domain-name, .hash, .password, .ip { font-family: var(--font-mono); font-size: 0.85rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.2rem 0.5rem; color: var(--text); word-break: break-all; }
-    pre, .terminal, .log { font-family: var(--font-mono); font-size: 0.82rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; overflow-x: auto; color: var(--green); line-height: 1.8; }
-    input, select, textarea { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 0.65rem 1rem; font-family: var(--font-mono); font-size: 0.88rem; width: 100%; transition: border-color 0.15s; }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
-    button, .btn, input[type="submit"], input[type="button"] { background: var(--accent); color: #000; border: none; border-radius: var(--radius); padding: 0.65rem 1.5rem; font-family: var(--font-body); font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: transform 0.1s, opacity 0.1s; }
-    button:hover { opacity: 0.9; }
-    button:active { transform: scale(0.97); }
-    .strength-bar, .meter { height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; }
-    .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
-    .tag, .badge, .status, .label, .tld, .registrar { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
-    .available, .valid, .secure, .up, .safe, .strong { color: var(--green); }
-    .taken, .invalid, .expired, .down, .breached, .weak { color: var(--red); }
-    .expiring, .warning, .medium { color: var(--yellow); }
-    .info, .registered { color: var(--accent); }
-    .uptime-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--green); animation: pulse 2s ease infinite; }
-    .uptime-dot.down { background: var(--red); animation: none; }
-    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.82rem; }
-    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
-    td { padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    @keyframes secFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-    @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63,185,80,0.4); } 50% { box-shadow: 0 0 0 4px rgba(63,185,80,0); } }
-    @keyframes scanLine { from { transform: translateY(-100%); } to { transform: translateY(100vh); } }
-  </style>
+/* ── Strength meter ── */
+.meter-wrap {
+  margin-top: var(--space-4);
+}
+
+.meter-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.meter-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  transition: color 0.3s var(--ease-out);
+}
+
+.meter-score-text {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.meter-segs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.meter-seg {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  transition: background 0.35s var(--ease-out), border-color 0.35s var(--ease-out), transform 0.2s var(--ease-out);
+}
+
+.meter-seg.lit {
+  border-color: transparent;
+  transform: scaleY(1.3);
+}
+
+.score-0 .meter-seg.lit { background: oklch(55% 0.20 25); }
+.score-1 .meter-seg.lit { background: oklch(62% 0.17 38); }
+.score-2 .meter-seg.lit { background: oklch(62% 0.15 72); }
+.score-3 .meter-seg.lit { background: oklch(52% 0.14 220); }
+.score-4 .meter-seg.lit { background: oklch(72% 0.20 142); }
+
+/* ── Quick generate button ── */
+.generate-quick {
+  margin-top: var(--space-3);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.12s var(--ease-out), opacity 0.12s var(--ease-out), box-shadow 0.12s var(--ease-out);
+  white-space: nowrap;
+}
+.btn:hover { opacity: 0.88; }
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  box-shadow: 0 2px 8px oklch(72% 0.20 142 / 0.28);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px oklch(52% 0.14 155 / 0.32);
+}
+
+.btn-ghost {
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-ink-muted);
+  border: 1px solid var(--color-border);
+}
+.btn-ghost:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent-line);
+  background: var(--color-accent-subtle);
+}
+
+.btn-sm {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+/* ── Stats grid ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.stat-box {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.stat-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-1);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  word-break: break-word;
+}
+.stat-value.muted { color: var(--color-ink-muted); }
+.stat-value.danger { color: var(--color-danger); }
+.stat-value.warn { color: var(--color-warn); }
+.stat-value.success { color: var(--color-success); }
+
+/* ── Length indicator ── */
+.length-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.length-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.length-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 99px;
+  transition: all 0.25s var(--ease-out);
+}
+.length-pill.danger {
+  background: oklch(55% 0.20 25 / 0.1);
+  color: var(--color-danger);
+  border: 1px solid oklch(55% 0.20 25 / 0.25);
+}
+.length-pill.warn {
+  background: oklch(62% 0.15 72 / 0.1);
+  color: var(--color-warn);
+  border: 1px solid oklch(62% 0.15 72 / 0.25);
+}
+.length-pill.success {
+  background: oklch(52% 0.14 155 / 0.1);
+  color: var(--color-success);
+  border: 1px solid oklch(52% 0.14 155 / 0.25);
+}
+
+/* ── Char composition ── */
+.char-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.char-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.char-type-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.char-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-paper-2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+.char-check.present {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.char-check svg { display: none; }
+.char-check.present svg { display: block; }
+
+.char-bar-bg {
+  flex: 1;
+  height: 5px;
+  background: var(--color-paper-2);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.char-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s var(--ease-out);
+}
+
+.char-count {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  width: 20px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Breach panel ── */
+.breach-state {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.breach-state.visible { display: flex; }
+
+.breach-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.breach-result {
+  display: none;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.breach-result.visible { display: flex; }
+.breach-result.found {
+  background: oklch(55% 0.20 25 / 0.08);
+  border: 1px solid oklch(55% 0.20 25 / 0.25);
+  color: var(--color-danger);
+}
+.breach-result.clean {
+  background: oklch(72% 0.20 142 / 0.08);
+  border: 1px solid oklch(52% 0.14 155 / 0.25);
+  color: var(--color-success);
+}
+.breach-result svg { flex-shrink: 0; margin-top: 1px; }
+
+.breach-privacy-note {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* ── Feedback section ── */
+.feedback-warning {
+  display: none;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: oklch(62% 0.15 72 / 0.08);
+  border: 1px solid oklch(62% 0.15 72 / 0.28);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-warn);
+  line-height: 1.5;
+}
+.feedback-warning.visible { display: flex; }
+.feedback-warning svg { flex-shrink: 0; margin-top: 1px; }
+
+.suggestions-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+.suggestion-item::before {
+  content: '→';
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+/* ── Generator ── */
+.gen-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s var(--ease-out);
+}
+.checkbox-label:hover { color: var(--color-ink); }
+
+.checkbox-label input[type="checkbox"] {
+  appearance: none;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-paper-2);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color 0.15s var(--ease-out), background 0.15s var(--ease-out);
+}
+.checkbox-label input[type="checkbox"]:checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.checkbox-label input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: 2px solid var(--color-paper);
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.slider-row label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  min-width: 48px;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  appearance: none;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  box-shadow: 0 1px 4px oklch(52% 0.14 155 / 0.35);
+  transition: transform 0.12s var(--ease-out);
+}
+.slider-row input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.slider-val {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  min-width: 30px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gen-output-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.gen-output-input {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  outline: none;
+  letter-spacing: 0.02em;
+  cursor: default;
+}
+
+.gen-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Generated password strength mini-meter */
+.gen-strength-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  min-height: 22px;
+}
+.gen-strength-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  min-width: 70px;
+}
+.gen-meter-segs {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+}
+.gen-meter-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background 0.25s var(--ease-out);
+}
+
+/* ── Embed snippet ── */
+.embed-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.embed-card-head {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.embed-card-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+}
+
+.embed-code {
+  font-family: 'Courier New', 'Menlo', monospace;
+  font-size: 13px;
+  color: var(--color-ink);
+  background: transparent;
+  line-height: 1.7;
+  padding: var(--space-4);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.embed-note {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.18);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+
+/* ── Hidden / utility ── */
+.hidden { display: none !important; }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .page-body { padding: var(--space-6) var(--space-3) var(--space-8); gap: var(--space-4); }
+  .card { padding: var(--space-4); }
+  .stats-grid { grid-template-columns: 1fr; }
+  .nav-page-label { display: none; }
+  .gen-options { gap: var(--space-2); }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .meter-seg, .char-bar-fill, .meter-label, .btn, .toast { transition: none; }
+  .spinner { animation: none; opacity: 0.6; }
+}
+</style>
 </head>
 <body>
 
-<header>
-  <div class="badge">
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-      <circle cx="5" cy="5" r="5"/>
+<!-- N9 Fixed Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Passguard<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Password Strength Checker</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+      <polyline points="15 18 9 12 15 6"/>
     </svg>
-    Dark Factory
+    Home
+  </a>
+</nav>
+
+<div class="page-body">
+
+  <!-- Privacy banner -->
+  <div class="container">
+    <div class="privacy-banner" role="note">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Your password never leaves this browser. All analysis runs locally, including the k-anonymity breach check.
+    </div>
   </div>
-  <h1>Password Strength Checker</h1>
-  <p>Real-time password analysis with entropy calculation, breach pattern detection, and secure password generation — all offline.</p>
-</header>
-
-<div class="privacy-notice" role="alert">
-  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-  </svg>
-  <strong>100% Private:</strong>&nbsp;Passwords are analyzed entirely in your browser. Nothing is ever sent to any server.
-</div>
-
-<main class="grid" role="main">
 
   <!-- ── Checker card ── -->
-  <section class="card full-width" aria-label="Password checker">
-    <div class="card-title">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-      </svg>
-      Analyze Password
-    </div>
+  <div class="container card-stack">
 
-    <div class="input-wrapper">
-      <input type="password" id="pwInput" placeholder="Type or paste a password…" autocomplete="off" spellcheck="false" aria-label="Password to analyze" />
-      <button class="toggle-vis" id="toggleVis" aria-label="Toggle password visibility" title="Show/hide">
-        <svg id="eyeIcon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-          <circle cx="12" cy="12" r="3"/>
+    <!-- Input + meter -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
-      </button>
+        Analyze Password
+      </div>
+
+      <div class="input-wrapper">
+        <input
+          type="password"
+          id="pw-input"
+          class="pw-input"
+          placeholder="Type or paste a password…"
+          autocomplete="new-password"
+          spellcheck="false"
+          aria-label="Password to analyze"
+        />
+        <button class="btn-toggle-vis" id="btn-toggle-vis" aria-label="Toggle password visibility">
+          <svg id="eye-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Strength meter -->
+      <div class="meter-wrap" id="meter-wrap">
+        <div class="meter-label-row">
+          <span class="meter-label" id="meter-label">Enter a password to analyze</span>
+          <span class="meter-score-text" id="meter-score-text"></span>
+        </div>
+        <div class="meter-segs" id="meter-segs" role="meter" aria-label="Password strength" aria-valuenow="0" aria-valuemin="0" aria-valuemax="5">
+          <div class="meter-seg" data-i="0"></div>
+          <div class="meter-seg" data-i="1"></div>
+          <div class="meter-seg" data-i="2"></div>
+          <div class="meter-seg" data-i="3"></div>
+          <div class="meter-seg" data-i="4"></div>
+        </div>
+      </div>
+
+      <!-- Quick generate -->
+      <div class="generate-quick">
+        <button class="btn btn-ghost btn-sm" id="btn-quick-gen" type="button">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Generate strong password
+        </button>
+      </div>
     </div>
 
-    <!-- Strength meter -->
-    <div class="strength-meter-wrap">
-      <div class="strength-label-row">
-        <span class="strength-label" id="strengthLabel">Enter a password</span>
-        <span class="strength-score" id="strengthScore"></span>
-      </div>
-      <div class="meter-segments" id="meterSegs" role="meter" aria-label="Password strength" aria-valuenow="0" aria-valuemin="0" aria-valuemax="5">
-        <div class="meter-seg" data-idx="0"></div>
-        <div class="meter-seg" data-idx="1"></div>
-        <div class="meter-seg" data-idx="2"></div>
-        <div class="meter-seg" data-idx="3"></div>
-        <div class="meter-seg" data-idx="4"></div>
-      </div>
-    </div>
-
-    <!-- Feedback pills -->
-    <div class="feedback-section" aria-live="polite" aria-label="Password feedback">
-      <div class="feedback-list" id="feedbackList"></div>
-    </div>
-  </section>
-
-  <!-- ── Stats ── -->
-  <section class="card" aria-label="Password statistics">
-    <div class="card-title">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
-        <line x1="6" y1="20" x2="6" y2="14"/>
-      </svg>
-      Statistics
-    </div>
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="label">Length</div>
-        <div class="value" id="statLength">—</div>
-      </div>
-      <div class="stat-box">
-        <div class="label">Entropy</div>
-        <div class="value" id="statEntropy">—</div>
-      </div>
-      <div class="stat-box">
-        <div class="label">Crack time</div>
-        <div class="value" id="statCrack">—</div>
-      </div>
-      <div class="stat-box">
-        <div class="label">Charset size</div>
-        <div class="value" id="statCharset">—</div>
-      </div>
-    </div>
-    <div class="entropy-bar-wrap">
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-        <span style="font-size:11px;color:var(--muted)">Entropy</span>
-        <span style="font-size:11px;color:var(--muted)">128 bits max shown</span>
-      </div>
-      <div class="entropy-bar-bg">
-        <div class="entropy-bar-fill" id="entropyBar" style="width:0%"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Char analysis ── -->
-  <section class="card" aria-label="Character composition">
-    <div class="card-title">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M12 8v4l3 3"/>
-      </svg>
-      Character Types
-    </div>
-    <div id="charAnalysis">
-      <div class="char-row">
-        <span class="char-type">Uppercase</span>
-        <div class="char-bar-bg"><div class="char-bar-fill" id="barUpper" style="width:0%;background:var(--accent)"></div></div>
-        <span class="char-count" id="cntUpper">0</span>
-      </div>
-      <div class="char-row">
-        <span class="char-type">Lowercase</span>
-        <div class="char-bar-bg"><div class="char-bar-fill" id="barLower" style="width:0%;background:var(--green)"></div></div>
-        <span class="char-count" id="cntLower">0</span>
-      </div>
-      <div class="char-row">
-        <span class="char-type">Digits</span>
-        <div class="char-bar-bg"><div class="char-bar-fill" id="barDigit" style="width:0%;background:var(--yellow)"></div></div>
-        <span class="char-count" id="cntDigit">0</span>
-      </div>
-      <div class="char-row">
-        <span class="char-type">Symbols</span>
-        <div class="char-bar-bg"><div class="char-bar-fill" id="barSymbol" style="width:0%;background:var(--accent2)"></div></div>
-        <span class="char-count" id="cntSymbol">0</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Password generator ── -->
-  <section class="card full-width" aria-label="Password generator">
-    <div class="card-title">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-      </svg>
-      Password Generator
-    </div>
-
-    <div class="slider-row">
-      <label for="lengthSlider">Length</label>
-      <input type="range" id="lengthSlider" min="8" max="64" value="16" aria-label="Password length" />
-      <span class="slider-val" id="lengthVal">16</span>
-    </div>
-
-    <div class="gen-options">
-      <label class="checkbox-label">
-        <input type="checkbox" id="optUpper" checked /> Uppercase (A-Z)
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="optLower" checked /> Lowercase (a-z)
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="optDigits" checked /> Digits (0-9)
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="optSymbols" checked /> Symbols (!@#…)
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="optExcludeAmbig" /> Exclude ambiguous (0O1lI)
-      </label>
-    </div>
-
-    <div class="gen-output">
-      <input type="text" id="genOutput" readonly aria-label="Generated password" placeholder="Click Generate…" />
-      <button class="btn btn-ghost btn-sm" id="copyGenBtn" aria-label="Copy generated password">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    <!-- Stats panel -->
+    <div class="card" id="stats-panel" aria-label="Password statistics">
+      <div class="card-title">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
-        Copy
-      </button>
+        Statistics
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Crack time (online)</div>
+          <div class="stat-value muted" id="stat-online">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Crack time (offline)</div>
+          <div class="stat-value muted" id="stat-offline">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Entropy</div>
+          <div class="stat-value muted" id="stat-entropy">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Charset size</div>
+          <div class="stat-value muted" id="stat-charset">—</div>
+        </div>
+      </div>
+
+      <!-- Length indicator -->
+      <div class="length-row">
+        <span class="length-label">Length</span>
+        <span class="length-pill" id="length-pill">—</span>
+      </div>
+
+      <!-- Character composition -->
+      <div class="char-rows" style="margin-top: var(--space-4);">
+        <div class="char-row">
+          <span class="char-type-label">Uppercase</span>
+          <div class="char-check" id="check-upper" aria-label="Uppercase present">
+            <svg width="10" height="10" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="char-bar-bg"><div class="char-bar-fill" id="bar-upper" style="width:0%;background:oklch(52% 0.14 220)"></div></div>
+          <span class="char-count" id="cnt-upper">0</span>
+        </div>
+        <div class="char-row">
+          <span class="char-type-label">Lowercase</span>
+          <div class="char-check" id="check-lower" aria-label="Lowercase present">
+            <svg width="10" height="10" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="char-bar-bg"><div class="char-bar-fill" id="bar-lower" style="width:0%;background:oklch(72% 0.20 142)"></div></div>
+          <span class="char-count" id="cnt-lower">0</span>
+        </div>
+        <div class="char-row">
+          <span class="char-type-label">Digits</span>
+          <div class="char-check" id="check-digit" aria-label="Digits present">
+            <svg width="10" height="10" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="char-bar-bg"><div class="char-bar-fill" id="bar-digit" style="width:0%;background:oklch(62% 0.15 72)"></div></div>
+          <span class="char-count" id="cnt-digit">0</span>
+        </div>
+        <div class="char-row">
+          <span class="char-type-label">Symbols</span>
+          <div class="char-check" id="check-symbol" aria-label="Symbols present">
+            <svg width="10" height="10" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="char-bar-bg"><div class="char-bar-fill" id="bar-symbol" style="width:0%;background:oklch(55% 0.20 25)"></div></div>
+          <span class="char-count" id="cnt-symbol">0</span>
+        </div>
+      </div>
     </div>
 
-    <div class="gen-actions">
-      <button class="btn btn-primary" id="generateBtn">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+    <!-- Breach check panel -->
+    <div class="card" id="breach-panel" aria-label="Breach check">
+      <div class="card-title">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Breach Database Check
+      </div>
+
+      <!-- Loading state -->
+      <div class="breach-state" id="breach-loading-state">
+        <div class="breach-loading">
+          <div class="spinner"></div>
+          <span>Checking against 10+ billion breached passwords…</span>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="breach-result" id="breach-result-found" role="alert">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span id="breach-found-text">Found in breaches — do not use this password.</span>
+      </div>
+
+      <div class="breach-result" id="breach-result-clean" role="status">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+        <span>Not found in any known breach databases.</span>
+      </div>
+
+      <!-- Privacy note -->
+      <div class="breach-privacy-note" style="margin-top: var(--space-3);">
+        <strong>How this works:</strong> We hash your password with SHA-1, send only the first 5 characters to Have&thinsp;I&thinsp;Been&thinsp;Pwned, and check if the rest of the hash appears in their response. Your actual password never leaves your browser.
+      </div>
+    </div>
+
+    <!-- Feedback panel -->
+    <div class="card" id="feedback-panel" aria-label="Password feedback" aria-live="polite">
+      <div class="card-title">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Feedback
+      </div>
+
+      <div class="feedback-warning" id="feedback-warning">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span id="feedback-warning-text"></span>
+      </div>
+
+      <ul class="suggestions-list" id="suggestions-list" aria-label="Improvement suggestions"></ul>
+
+      <p id="feedback-empty" class="hidden" style="font-size:var(--text-sm);color:var(--color-ink-muted);">
+        Enter a password above to see personalized feedback.
+      </p>
+    </div>
+
+  </div><!-- /card-stack -->
+
+  <!-- ── Password Generator ── -->
+  <div class="container">
+    <div class="card card-solo" aria-label="Password generator">
+      <div class="card-title">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
         </svg>
-        Generate
-      </button>
-      <button class="btn btn-ghost btn-sm" id="useGenBtn" title="Load into analyzer">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-        Analyze This
-      </button>
+        Password Generator
+      </div>
+
+      <!-- Length slider -->
+      <div class="slider-row">
+        <label for="gen-length-slider">Length</label>
+        <input type="range" id="gen-length-slider" min="12" max="32" value="16" aria-label="Password length">
+        <span class="slider-val" id="gen-length-val">16</span>
+      </div>
+
+      <!-- Options -->
+      <div class="gen-options">
+        <label class="checkbox-label">
+          <input type="checkbox" id="gen-upper" checked> Uppercase (A–Z)
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="gen-lower" checked> Lowercase (a–z)
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="gen-digits" checked> Digits (0–9)
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="gen-symbols" checked> Symbols (!@#…)
+        </label>
+      </div>
+
+      <!-- Generated output + mini strength -->
+      <div class="gen-strength-row">
+        <span class="gen-strength-label" id="gen-strength-label">—</span>
+        <div class="gen-meter-segs" id="gen-meter-segs" aria-hidden="true">
+          <div class="gen-meter-seg" data-gi="0"></div>
+          <div class="gen-meter-seg" data-gi="1"></div>
+          <div class="gen-meter-seg" data-gi="2"></div>
+          <div class="gen-meter-seg" data-gi="3"></div>
+          <div class="gen-meter-seg" data-gi="4"></div>
+        </div>
+      </div>
+
+      <div class="gen-output-row">
+        <input type="text" id="gen-output" class="gen-output-input" readonly aria-label="Generated password" placeholder="Click Generate…">
+        <button class="btn btn-ghost btn-sm" id="btn-copy-gen" type="button" aria-label="Copy generated password">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          Copy
+        </button>
+      </div>
+
+      <div class="gen-actions">
+        <button class="btn btn-primary" id="btn-generate" type="button">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Generate
+        </button>
+        <button class="btn btn-ghost btn-sm" id="btn-use-gen" type="button">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          Analyze This
+        </button>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <!-- ── Passphrase generator ── -->
-  <section class="card full-width" aria-label="Passphrase generator">
-    <div class="card-title">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      Passphrase Generator
-      <span style="margin-left:auto;font-size:11px;font-weight:400;color:var(--muted)">EFF-style word list</span>
+  <!-- ── Embeddable widget note ── -->
+  <div class="container">
+    <div class="embed-card" aria-label="Embed snippet">
+      <div class="embed-card-head">
+        <span class="embed-card-title">Embed this widget</span>
+        <span style="font-size:var(--text-xs);color:var(--color-ink-muted)">cosmetic preview</span>
+      </div>
+      <pre class="embed-code" aria-label="Example embed code"><code>&lt;!-- Passguard · Password Strength Widget --&gt;
+&lt;script
+  src="https://cdn.passguard.io/v1/widget.min.js"
+  data-target="#password-field"
+  data-theme="garden"
+  data-locale="en"
+  defer
+&gt;&lt;/script&gt;
+
+&lt;!-- Optionally listen for events --&gt;
+&lt;script&gt;
+  document.addEventListener('passguard:score', (e) =&gt; {
+    console.log('strength score:', e.detail.score);   // 0–4
+    console.log('breached:', e.detail.breached);       // true | false
+  });
+&lt;/script&gt;</code></pre>
+      <div class="embed-note">
+        Drop this into any sign-up form. The widget auto-attaches to your password field and enhances it with a real-time strength meter and breach check — no additional configuration required.
+      </div>
     </div>
+  </div>
 
-    <div class="slider-row">
-      <label for="wordCount">Words</label>
-      <input type="range" id="wordCount" min="3" max="8" value="5" aria-label="Word count" />
-      <span class="slider-val" id="wordCountVal">5</span>
-    </div>
+</div><!-- /page-body -->
 
-    <div class="gen-options">
-      <label class="checkbox-label">
-        <input type="checkbox" id="ppSeparator" checked /> Use separator
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="ppCapitalize" checked /> Capitalize words
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="ppAddNumber" checked /> Append number
-      </label>
-    </div>
-
-    <div class="passphrase-output" id="passphraseOutput" aria-live="polite">Click Generate Passphrase…</div>
-
-    <div class="gen-actions">
-      <button class="btn btn-primary" id="genPassphraseBtn">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-        </svg>
-        Generate Passphrase
-      </button>
-      <button class="btn btn-ghost btn-sm" id="copyPPBtn">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-        </svg>
-        Copy
-      </button>
-      <button class="btn btn-ghost btn-sm" id="usePPBtn">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-        Analyze This
-      </button>
-    </div>
-  </section>
-
-</main>
-
-<div class="toast" id="toast" role="status" aria-live="polite">Copied!</div>
-
-<footer>
-  <p>Built by <a href="app.html" tabindex="-1">Dark Factory</a> &mdash; All analysis runs locally in your browser. No data leaves your device.</p>
-</footer>
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 'use strict';
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
 
-/* ── Common passwords list (top 100 of 1000) ── */
-const COMMON_PASSWORDS = new Set([
-  '123456','password','123456789','12345678','12345','1234567','1234567890',
-  'qwerty','abc123','111111','123123','admin','letmein','welcome','monkey',
-  'dragon','master','superman','michael','shadow','sunshine','princess','football',
-  'charlie','donald','password1','qwerty123','iloveyou','1q2w3e4r','000000',
-  'password123','qwertyuiop','1234','login','pass','test','guest','user',
-  'hello','baseball','ninja','mustang','joshua','thomas','hunter','ranger',
-  'harley','robert','solo','hockey','dallas','ranger','forever','trustno1',
-  'whatever','batman','summer','tigger','jordan','soccer','harley','ranger',
-  'access','thunder','555555','222222','696969','qazwsx','superman','1q2w3e',
-  'master','cheese','buster','zxcvbn','password2','asdfgh','asdfghjkl',
-  'passw0rd','12341234','654321','121212','666666','777777','123654','159753',
-  'qazwsxedc','zxcvbnm','asd123','abc1234','password12','test123','demo',
-  'service','enter','matrix','correct','horse','staple','battery','peanut',
-  'chocolate','pokemon','liverpool','chelsea','arsenal','ferrari','porsche',
-  'angel','flower','jessica','andrew','george','jordan123','liverpool1',
-]);
-
-/* ── Keyboard walk patterns ── */
-const KEYBOARD_WALKS = [
-  'qwertyuiop','asdfghjkl','zxcvbnm','qwerty','asdfgh','zxcvb',
-  '1234567890','1qaz2wsx','qazwsx','!qaz@wsx',
-  'qweasdzxc','!@#$%^&*()',
-];
-
-/* ── Dictionary words (500 common) ── */
-const DICTIONARY = new Set([
-  'the','and','for','are','but','not','you','all','can','her','was','one',
-  'our','out','day','get','has','him','his','how','man','new','now','old',
-  'see','two','way','who','boy','did','its','let','put','say','she','too',
-  'use','about','back','call','come','down','each','find','give','good',
-  'have','here','just','know','like','long','look','made','make','many',
-  'more','most','move','much','name','need','over','part','pick','play',
-  'said','same','seem','show','side','take','than','that','them','then',
-  'they','this','time','told','turn','very','want','well','went','were',
-  'what','when','where','which','will','with','word','work','year','your',
-  'able','also','away','baby','bank','base','best','blue','book','both',
-  'case','city','cold','come','cool','dark','data','dead','deal','deep',
-  'does','done','door','down','draw','drop','easy','else','even','ever',
-  'face','fact','fall','fast','feel','fill','fine','fire','fish','five',
-  'form','free','from','full','game','girl','give','glad','goes','gold',
-  'gone','grow','half','hand','hang','hard','head','hear','heat','help',
-  'hide','high','hold','home','hope','hour','huge','hunt','idea','into',
-  'iron','item','jump','keep','kill','kind','king','knew','land','last',
-  'late','lead','left','less','life','lift','line','link','list','live',
-  'load','lock','lone','lord','lose','loss','lost','loud','love','luck',
-  'mark','mass','mean','meet','mile','mind','mine','miss','mode','moon',
-  'move','must','near','next','nice','node','none','note','null','open',
-  'once','only','onto','oral','oven','over','page','paid','pass','path',
-  'peak','pick','pile','pipe','plan','plus','poem','pool','port','post',
-  'pour','prep','pull','pump','pure','push','race','rain','rank','rate',
-  'read','real','rest','rich','ride','ring','rise','risk','road','rock',
-  'roll','room','root','rose','rule','rush','safe','salt','sand','save',
-  'scan','seal','sell','send','sent','ship','shop','shot','shut','sick',
-  'sign','sink','site','size','skip','slow','snap','snow','soil','sold',
-  'sole','some','song','soon','sort','soul','soup','spot','star','stay',
-  'step','stop','such','suit','sure','swap','swim','tail','talk','tall',
-  'task','tear','tell','tend','term','test','text','thin','tied','till',
-  'tire','tool','tops','town','toys','tree','trip','true','tube','tune',
-  'type','ugly','unit','upon','user','vary','vast','verb','view','void',
-  'wait','wake','walk','wall','warm','wash','wave','weak','wear','week',
-  'wide','wind','wine','wing','wire','wise','wish','word','wore','worn',
-  'wrap','yarn','zone','zero','team','lead','code','data','file','port',
-  'host','node','http','list','name','call','chat','chat','hash','link',
-  'pass','salt','scan','seed','slip','sort','swap','sync','task','test',
-  'text','tree','type','unit','user','view','wrap','zone','auto','boot',
-  'byte','cast','copy','core','curl','date','dump','edit','exec','fail',
-  'fake','fast','flag','fork','func','hack','help','hide','hook','host',
-  'icon','idle','init','java','json','jump','kern','kill','lang','lazy',
-  'leak','lint','loop','lock','logs','loss','menu','mock','mode','null',
-  'open','page','ping','pipe','plan','plug','pool','port','post','pull',
-  'push','quit','race','rand','read','real','recv','redo','repo','rest',
-  'role','root','rout','rule','save','seed','send','skip','slow','snap',
-  'sock','spam','spec','spin','ssh','stat','stop','stub','sudo','swap',
-  'sync','tags','tail','temp','test','tick','time','todo','trim','true',
-  'tune','type','undo','unix','util','uuid','void','wait','warn','wire',
-  'with','work','wrap','xfer','yaml','python','linux','admin','apple',
-  'windows','google','amazon','facebook','twitter','github','gitlab',
-  'docker','nginx','redis','mysql','mongo','react','angular','spring',
-  'server','client','mobile','tablet','laptop','desktop','network',
-  'secure','secret','hidden','system','engine','bridge','stream','buffer',
-  'packet','socket','signal','thread','kernel','memory','module','object',
-  'schema','record','column','table','index','query','cache','store',
-  'model','layer','route','scope','stack','queue','event','timer','clock',
-]);
-
-/* ── EFF-style word list (200 words for passphrase) ── */
-const WORD_LIST = [
-  'abbey','abbot','above','abroad','absent','absurd','abyss','ache','acid',
-  'acorn','actor','adult','after','agile','alarm','album','alley','aloft',
-  'altar','ample','angel','ankle','annex','apple','apron','arctic','ardor',
-  'arena','arise','armor','arrow','atlas','attic','audit','avoid','awake',
-  'badge','bagel','baker','balmy','barge','barns','barrel','basin','batch',
-  'beach','beech','began','begin','bench','berry','birth','bison','black',
-  'blade','bland','blank','blast','blaze','bleat','blend','bless','blind',
-  'bliss','block','bloom','blown','blues','blunt','blush','board','bones',
-  'boost','booth','bound','brace','brain','brake','brand','brave','bread',
-  'bream','breed','breve','brine','bring','brisk','broad','brook','brown',
-  'brunt','brush','budge','build','bulky','bunch','bunny','burst','cable',
-  'camel','canal','candy','canoe','cargo','carry','carve','cedar','chair',
-  'chalk','charm','chase','chest','chief','child','chill','chord','chunk',
-  'civic','civil','clamp','clang','clank','clash','clasp','cleat','clerk',
-  'click','cliff','cling','clock','clone','close','cloud','clump','comet',
-  'comic','comma','coral','crane','creak','creek','crisp','cross','crown',
-  'crumb','crush','crust','crypt','curve','cycle','daisy','dance','darts',
-  'debut','decal','delta','dense','depot','depth','derby','digit','ditch',
-  'diver','dizzy','dodge','dowel','draft','drape','dream','drill','drift',
-  'drink','droop','drove','drums','dryer','dunce','eagle','early','earth',
-  'easel','elder','elite','emery','empty','entry','epoxy','erect','erupt',
-  'event','exact','exert','exist','expel','extra','exult','fable','facet',
-  'feast','fence','fetch','fiber','field','fiery','fifth','fifty','fight',
-  'filth','finch','first','fixed','flake','flame','flare','flash','flask',
-  'flair','flat','flaw','fleet','flesh','flint','float','flock','flood',
-  'floor','flora','flour','fluid','flume','flute','focal','foray','forge',
-  'foyer','frame','frank','fraud','fresh','frond','front','frost','froze',
-  'frugal','fugue','fully','fungi','funky','gains','gauze','gavel','gecko',
-  'ghost','giant','girth','gizmo','glade','gland','glare','glass','gleam',
-  'glean','glide','glint','gloom','gloss','glyph','grace','grade','grail',
-  'grain','grand','grant','graph','grasp','graze','greed','grief','grind',
-  'groan','grope','grout','guide','guile','guise','gulch','gorge','haven',
-];
-
-/* ── Utility ── */
-function secureRandom(max) {
+// ── Secure random utility ──────────────────────────────────────
+function secureRandInt(max) {
   const arr = new Uint32Array(1);
   crypto.getRandomValues(arr);
   return arr[0] % max;
 }
 
-function pick(arr) { return arr[secureRandom(arr.length)]; }
-
-/* ── Character set size ── */
-function charsetSize(pw) {
-  let size = 0;
-  if (/[a-z]/.test(pw)) size += 26;
-  if (/[A-Z]/.test(pw)) size += 26;
-  if (/[0-9]/.test(pw)) size += 10;
-  if (/[^a-zA-Z0-9]/.test(pw)) size += 32;
-  return size || 1;
+// ── SHA-1 via Web Crypto (for HIBP k-anonymity) ────────────────
+async function sha1Hex(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const buf = await crypto.subtle.digest('SHA-1', data);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
 }
 
-/* ── Entropy bits ── */
-function calcEntropy(pw) {
-  const cs = charsetSize(pw);
-  return Math.log2(cs) * pw.length;
-}
+// ── HIBP k-anonymity breach check ─────────────────────────────
+async function checkBreach(password) {
+  const hash = await sha1Hex(password);
+  const prefix = hash.slice(0, 5);
+  const suffix = hash.slice(5);
 
-/* ── Pattern detection ── */
-function detectKeyboardWalk(pw) {
-  const p = pw.toLowerCase();
-  for (const walk of KEYBOARD_WALKS) {
-    for (let i = 0; i <= walk.length - 4; i++) {
-      const seg = walk.slice(i, i + 4);
-      if (p.includes(seg)) return true;
+  const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+    headers: { 'Add-Padding': 'true' }
+  });
+  if (!res.ok) throw new Error(`HIBP API error: ${res.status}`);
+
+  const text = await res.text();
+  const lines = text.split('\r\n');
+
+  for (const line of lines) {
+    const [lineSuffix, countStr] = line.split(':');
+    if (lineSuffix === suffix) {
+      return { found: true, count: parseInt(countStr, 10) };
     }
   }
-  return false;
+  return { found: false, count: 0 };
 }
 
-function detectRepeats(pw) {
-  return /(.)\1{2,}/.test(pw);
-}
-
-function detectLeet(pw) {
-  return pw.toLowerCase().replace(/4/g,'a').replace(/3/g,'e').replace(/1/g,'i')
-           .replace(/0/g,'o').replace(/5/g,'s').replace(/7/g,'t');
-}
-
-function containsDictionaryWord(pw) {
-  const normalized = detectLeet(pw.toLowerCase());
-  for (const word of DICTIONARY) {
-    if (word.length >= 4 && normalized.includes(word)) return word;
-  }
-  return null;
-}
-
-/* ── Crack time estimate ── */
-function crackTime(entropy) {
-  const guessesPerSec = 1e10;
-  const seconds = Math.pow(2, entropy) / guessesPerSec;
-  if (seconds < 1) return 'Instant';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
-  if (seconds < 2592000) return `${Math.round(seconds / 86400)}d`;
-  if (seconds < 31536000) return `${Math.round(seconds / 2592000)} months`;
-  if (seconds < 3.15e9) return `${Math.round(seconds / 31536000)}y`;
-  if (seconds < 3.15e12) return `${(seconds / 3.15e9).toFixed(1)}k years`;
-  if (seconds < 3.15e18) return 'Millions of years';
-  return 'Longer than the universe';
-}
-
-/* ── Main strength analysis ── */
-function analyzePassword(pw) {
-  if (!pw) return null;
-
-  const entropy = calcEntropy(pw);
-  const len = pw.length;
-  const upper = (pw.match(/[A-Z]/g) || []).length;
-  const lower = (pw.match(/[a-z]/g) || []).length;
-  const digit = (pw.match(/[0-9]/g) || []).length;
+// ── Charset analysis ───────────────────────────────────────────
+function analyzeChars(pw) {
+  const upper  = (pw.match(/[A-Z]/g) || []).length;
+  const lower  = (pw.match(/[a-z]/g) || []).length;
+  const digit  = (pw.match(/[0-9]/g) || []).length;
   const symbol = (pw.match(/[^a-zA-Z0-9]/g) || []).length;
-  const cs = charsetSize(pw);
-
-  const warnings = [];
-  const goodPoints = [];
-  let penaltyScore = 0;
-
-  /* Check common passwords */
-  if (COMMON_PASSWORDS.has(pw.toLowerCase())) {
-    warnings.push({ type: 'bad', text: 'Extremely common password' });
-    penaltyScore += 3;
-  }
-
-  /* Length check */
-  if (len < 8) {
-    warnings.push({ type: 'bad', text: 'Too short (min 8)' });
-    penaltyScore += 2;
-  } else if (len < 12) {
-    warnings.push({ type: 'warn', text: 'Short — aim for 12+' });
-    penaltyScore += 1;
-  } else {
-    goodPoints.push({ type: 'good', text: `Good length (${len})` });
-  }
-
-  /* Keyboard walk */
-  if (detectKeyboardWalk(pw)) {
-    warnings.push({ type: 'warn', text: 'Keyboard pattern detected' });
-    penaltyScore += 2;
-  }
-
-  /* Repeats */
-  if (detectRepeats(pw)) {
-    warnings.push({ type: 'warn', text: 'Repeated characters' });
-    penaltyScore += 1;
-  }
-
-  /* Dictionary words */
-  const dictWord = containsDictionaryWord(pw);
-  if (dictWord) {
-    warnings.push({ type: 'warn', text: `Contains word "${dictWord}"` });
-    penaltyScore += 1;
-  }
-
-  /* Character variety */
-  const types = [upper > 0, lower > 0, digit > 0, symbol > 0].filter(Boolean).length;
-  if (types === 1) {
-    warnings.push({ type: 'bad', text: 'Only one character type' });
-    penaltyScore += 2;
-  } else if (types === 2) {
-    warnings.push({ type: 'warn', text: 'Mix more character types' });
-  } else if (types >= 3) {
-    goodPoints.push({ type: 'good', text: `${types} character types` });
-  }
-  if (symbol > 0) goodPoints.push({ type: 'good', text: 'Has symbols' });
-
-  /* All-numeric */
-  if (/^\d+$/.test(pw)) {
-    warnings.push({ type: 'bad', text: 'All digits — add letters' });
-    penaltyScore += 2;
-  }
-
-  /* Sequential digits/letters */
-  if (/0123|1234|2345|3456|4567|5678|6789|7890|abcd|bcde|cdef|defg/.test(pw.toLowerCase())) {
-    warnings.push({ type: 'warn', text: 'Sequential characters' });
-    penaltyScore += 1;
-  }
-
-  /* Entropy score */
-  let score;
-  if (entropy < 25) score = 0;
-  else if (entropy < 40) score = 1;
-  else if (entropy < 60) score = 2;
-  else if (entropy < 80) score = 3;
-  else score = 4;
-
-  score = Math.max(0, score - Math.floor(penaltyScore / 2));
-
-  const labels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
-  const feedback = [...warnings, ...goodPoints];
-  if (feedback.length === 0 && score >= 3) {
-    feedback.push({ type: 'good', text: 'Solid password!' });
-  }
-
-  return {
-    score, entropy, len, upper, lower, digit, symbol, cs,
-    label: labels[score], crackEstimate: crackTime(entropy),
-    feedback,
-  };
+  let charsetSize = 0;
+  if (upper  > 0) charsetSize += 26;
+  if (lower  > 0) charsetSize += 26;
+  if (digit  > 0) charsetSize += 10;
+  if (symbol > 0) charsetSize += 32;
+  return { upper, lower, digit, symbol, charsetSize: charsetSize || 1 };
 }
 
-/* ── DOM refs ── */
-const pwInput = document.getElementById('pwInput');
-const toggleVis = document.getElementById('toggleVis');
-const eyeIcon = document.getElementById('eyeIcon');
-const meterSegs = document.querySelectorAll('.meter-seg');
-const meterWrap = document.getElementById('meterSegs');
-const strengthLabel = document.getElementById('strengthLabel');
-const strengthScore = document.getElementById('strengthScore');
-const feedbackList = document.getElementById('feedbackList');
-const statLength = document.getElementById('statLength');
-const statEntropy = document.getElementById('statEntropy');
-const statCrack = document.getElementById('statCrack');
-const statCharset = document.getElementById('statCharset');
-const entropyBar = document.getElementById('entropyBar');
-const barUpper = document.getElementById('barUpper');
-const barLower = document.getElementById('barLower');
-const barDigit = document.getElementById('barDigit');
-const barSymbol = document.getElementById('barSymbol');
-const cntUpper = document.getElementById('cntUpper');
-const cntLower = document.getElementById('cntLower');
-const cntDigit = document.getElementById('cntDigit');
-const cntSymbol = document.getElementById('cntSymbol');
-const toast = document.getElementById('toast');
+// ── Entropy estimate ───────────────────────────────────────────
+function calcEntropy(pw) {
+  const { charsetSize } = analyzeChars(pw);
+  return (Math.log2(charsetSize) * pw.length).toFixed(1);
+}
 
-/* ── Toggle visibility ── */
-toggleVis.addEventListener('click', () => {
+// ── Score colors ───────────────────────────────────────────────
+const SCORE_COLORS = [
+  'oklch(55% 0.20 25)',   // 0 Very Weak — red
+  'oklch(62% 0.17 38)',   // 1 Weak — orange
+  'oklch(62% 0.15 72)',   // 2 Fair — yellow
+  'oklch(52% 0.14 220)',  // 3 Strong — blue
+  'oklch(72% 0.20 142)',  // 4 Very Strong — green
+];
+const SCORE_LABELS = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+const GEN_METER_COLORS = SCORE_COLORS;
+
+// ── DOM refs ───────────────────────────────────────────────────
+const pwInput        = document.getElementById('pw-input');
+const btnToggleVis   = document.getElementById('btn-toggle-vis');
+const eyeIcon        = document.getElementById('eye-icon');
+const meterSegsEl    = document.getElementById('meter-segs');
+const meterSegs      = meterSegsEl.querySelectorAll('.meter-seg');
+const meterLabel     = document.getElementById('meter-label');
+const meterScoreText = document.getElementById('meter-score-text');
+
+const statOnline  = document.getElementById('stat-online');
+const statOffline = document.getElementById('stat-offline');
+const statEntropy = document.getElementById('stat-entropy');
+const statCharset = document.getElementById('stat-charset');
+const lengthPill  = document.getElementById('length-pill');
+
+const checkUpper  = document.getElementById('check-upper');
+const checkLower  = document.getElementById('check-lower');
+const checkDigit  = document.getElementById('check-digit');
+const checkSymbol = document.getElementById('check-symbol');
+const barUpper    = document.getElementById('bar-upper');
+const barLower    = document.getElementById('bar-lower');
+const barDigit    = document.getElementById('bar-digit');
+const barSymbol   = document.getElementById('bar-symbol');
+const cntUpper    = document.getElementById('cnt-upper');
+const cntLower    = document.getElementById('cnt-lower');
+const cntDigit    = document.getElementById('cnt-digit');
+const cntSymbol   = document.getElementById('cnt-symbol');
+
+const breachLoadingState  = document.getElementById('breach-loading-state');
+const breachResultFound   = document.getElementById('breach-result-found');
+const breachFoundText     = document.getElementById('breach-found-text');
+const breachResultClean   = document.getElementById('breach-result-clean');
+
+const feedbackWarning     = document.getElementById('feedback-warning');
+const feedbackWarningText = document.getElementById('feedback-warning-text');
+const suggestionsList     = document.getElementById('suggestions-list');
+const feedbackEmpty       = document.getElementById('feedback-empty');
+
+const genLengthSlider = document.getElementById('gen-length-slider');
+const genLengthVal    = document.getElementById('gen-length-val');
+const genOutput       = document.getElementById('gen-output');
+const genStrengthLabel = document.getElementById('gen-strength-label');
+const genMeterSegs    = document.getElementById('gen-meter-segs').querySelectorAll('.gen-meter-seg');
+
+const toastEl = document.getElementById('toast');
+
+// ── Toast ──────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  toastEl.textContent = msg;
+  toastEl.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 2400);
+}
+
+// ── Toggle visibility ──────────────────────────────────────────
+btnToggleVis.addEventListener('click', () => {
   const isPass = pwInput.type === 'password';
   pwInput.type = isPass ? 'text' : 'password';
   eyeIcon.innerHTML = isPass
@@ -1134,229 +1252,291 @@ toggleVis.addEventListener('click', () => {
     : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
 });
 
-/* ── Update UI from analysis ── */
-function updateUI(result) {
-  if (!result) {
-    /* reset */
-    meterSegs.forEach(s => { s.classList.remove('active'); });
-    meterWrap.className = 'meter-segments';
-    strengthLabel.textContent = 'Enter a password';
-    strengthLabel.style.color = '';
-    strengthScore.textContent = '';
-    feedbackList.innerHTML = '';
-    statLength.textContent = '—';
-    statEntropy.textContent = '—';
-    statCrack.textContent = '—';
-    statCharset.textContent = '—';
-    entropyBar.style.width = '0%';
-    [barUpper, barLower, barDigit, barSymbol].forEach(b => { b.style.width = '0%'; });
-    [cntUpper, cntLower, cntDigit, cntSymbol].forEach(c => { c.textContent = '0'; });
+// ── Reset UI ───────────────────────────────────────────────────
+function resetUI() {
+  meterSegsEl.className = 'meter-segs';
+  meterSegs.forEach(s => s.classList.remove('lit'));
+  meterLabel.textContent = 'Enter a password to analyze';
+  meterLabel.style.color = '';
+  meterScoreText.textContent = '';
+  meterSegsEl.setAttribute('aria-valuenow', '0');
+
+  const statEls = [statOnline, statOffline, statEntropy, statCharset];
+  statEls.forEach(el => {
+    el.textContent = '—';
+    el.className = 'stat-value muted';
+  });
+
+  lengthPill.textContent = '—';
+  lengthPill.className = 'length-pill';
+
+  [checkUpper, checkLower, checkDigit, checkSymbol].forEach(el => el.classList.remove('present'));
+  [barUpper, barLower, barDigit, barSymbol].forEach(el => { el.style.width = '0%'; });
+  [cntUpper, cntLower, cntDigit, cntSymbol].forEach(el => { el.textContent = '0'; });
+
+  breachLoadingState.classList.remove('visible');
+  breachResultFound.classList.remove('visible');
+  breachResultClean.classList.remove('visible');
+
+  feedbackWarning.classList.remove('visible');
+  feedbackWarningText.textContent = '';
+  suggestionsList.innerHTML = '';
+  feedbackEmpty.classList.remove('hidden');
+}
+
+// ── Update strength meter ──────────────────────────────────────
+function updateMeter(score) {
+  meterSegsEl.className = `meter-segs score-${score}`;
+  meterSegs.forEach((seg, i) => {
+    seg.classList.toggle('lit', i <= score);
+  });
+  meterLabel.textContent = SCORE_LABELS[score];
+  meterLabel.style.color = SCORE_COLORS[score];
+  meterScoreText.textContent = `Score ${score + 1}/5`;
+  meterSegsEl.setAttribute('aria-valuenow', String(score + 1));
+}
+
+// ── Update stats panel ─────────────────────────────────────────
+function updateStats(pw, zResult) {
+  const chars = analyzeChars(pw);
+  const entropy = calcEntropy(pw);
+  const len = pw.length;
+
+  // Crack times from zxcvbn
+  const crack = zResult.crack_times_display;
+  statOnline.textContent  = crack.online_throttling_100_per_hour ?? crack.online_no_throttling_10_per_second ?? '—';
+  statOffline.textContent = crack.offline_fast_hashing_1e10_per_second ?? '—';
+  statOnline.className  = 'stat-value';
+  statOffline.className = 'stat-value';
+
+  statEntropy.textContent = `${entropy} bits`;
+  statEntropy.className   = 'stat-value';
+
+  statCharset.textContent = `${chars.charsetSize} chars`;
+  statCharset.className   = 'stat-value';
+
+  // Length pill
+  if (len < 8) {
+    lengthPill.textContent = `${len} — Too short`;
+    lengthPill.className = 'length-pill danger';
+  } else if (len < 12) {
+    lengthPill.textContent = `${len} — Acceptable`;
+    lengthPill.className = 'length-pill warn';
+  } else {
+    lengthPill.textContent = `${len} — Good`;
+    lengthPill.className = 'length-pill success';
+  }
+
+  // Char composition
+  const total = len || 1;
+  const setCheck = (el, barEl, cntEl, count) => {
+    el.classList.toggle('present', count > 0);
+    barEl.style.width = `${Math.min(100, (count / total) * 100)}%`;
+    cntEl.textContent = count;
+  };
+  setCheck(checkUpper,  barUpper,  cntUpper,  chars.upper);
+  setCheck(checkLower,  barLower,  cntLower,  chars.lower);
+  setCheck(checkDigit,  barDigit,  cntDigit,  chars.digit);
+  setCheck(checkSymbol, barSymbol, cntSymbol, chars.symbol);
+}
+
+// ── Update feedback section ────────────────────────────────────
+function updateFeedback(zResult) {
+  feedbackEmpty.classList.add('hidden');
+  const fb = zResult.feedback;
+
+  if (fb.warning) {
+    feedbackWarningText.textContent = fb.warning;
+    feedbackWarning.classList.add('visible');
+  } else {
+    feedbackWarning.classList.remove('visible');
+  }
+
+  suggestionsList.innerHTML = '';
+  if (fb.suggestions && fb.suggestions.length) {
+    fb.suggestions.forEach(sug => {
+      const li = document.createElement('li');
+      li.className = 'suggestion-item';
+      li.textContent = sug;
+      suggestionsList.appendChild(li);
+    });
+  } else if (!fb.warning) {
+    // No feedback at all — show generic success note
+    const li = document.createElement('li');
+    li.className = 'suggestion-item';
+    li.textContent = 'This password looks solid. Consider storing it in a password manager.';
+    suggestionsList.appendChild(li);
+  }
+}
+
+// ── Breach check (debounced separately) ───────────────────────
+let breachController = null;
+
+async function runBreachCheck(password) {
+  if (breachController) breachController.abort();
+  breachController = new AbortController();
+
+  breachLoadingState.classList.add('visible');
+  breachResultFound.classList.remove('visible');
+  breachResultClean.classList.remove('visible');
+
+  try {
+    const result = await checkBreach(password);
+
+    breachLoadingState.classList.remove('visible');
+
+    if (result.found) {
+      breachFoundText.textContent = `Found in ${result.count.toLocaleString()} breach${result.count !== 1 ? 'es' : ''} — do not use this password.`;
+      breachResultFound.classList.add('visible');
+    } else {
+      breachResultClean.classList.add('visible');
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    breachLoadingState.classList.remove('visible');
+    breachResultFound.classList.remove('visible');
+    breachResultClean.classList.remove('visible');
+    // Silently fail — HIBP is best-effort
+    const note = document.querySelector('.breach-privacy-note');
+    if (note) note.textContent = 'Breach check unavailable (network error). Your password was not sent anywhere.';
+  }
+}
+
+// ── Main analysis (debounced) ──────────────────────────────────
+let analysisTimer;
+let breachTimer;
+
+function analyzePassword(pw) {
+  if (!pw) {
+    resetUI();
     return;
   }
 
-  /* Meter segments */
-  const scoreColors = ['var(--accent2)','var(--accent2)','var(--yellow)','var(--accent)','var(--green)'];
-  const scoreLabels = ['Very Weak','Weak','Fair','Strong','Very Strong'];
-  meterWrap.className = `meter-segments s${result.score}`;
-  meterSegs.forEach((seg, i) => {
-    if (i <= result.score) {
-      seg.classList.add('active');
-    } else {
-      seg.classList.remove('active');
-    }
-  });
-
-  strengthLabel.textContent = result.label;
-  strengthLabel.style.color = scoreColors[result.score];
-  strengthScore.textContent = `Score ${result.score + 1}/5`;
-  meterWrap.setAttribute('aria-valuenow', result.score + 1);
-
-  /* Feedback pills */
-  feedbackList.innerHTML = '';
-  result.feedback.forEach(f => {
-    const pill = document.createElement('span');
-    pill.className = `pill ${f.type}`;
-    const icons = {
-      bad: `<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
-      warn: `<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-      good: `<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
-    };
-    pill.innerHTML = `${icons[f.type] || ''} ${f.text}`;
-    feedbackList.appendChild(pill);
-  });
-
-  /* Stats */
-  statLength.textContent = `${result.len} chars`;
-  statEntropy.textContent = `${result.entropy.toFixed(1)} bits`;
-  statCrack.textContent = result.crackEstimate;
-  statCharset.textContent = `${result.cs} chars`;
-  const pct = Math.min(100, (result.entropy / 128) * 100);
-  entropyBar.style.width = `${pct}%`;
-
-  /* Char analysis bars */
-  const total = result.len || 1;
-  barUpper.style.width = `${(result.upper / total) * 100}%`;
-  barLower.style.width = `${(result.lower / total) * 100}%`;
-  barDigit.style.width = `${(result.digit / total) * 100}%`;
-  barSymbol.style.width = `${(result.symbol / total) * 100}%`;
-  cntUpper.textContent = result.upper;
-  cntLower.textContent = result.lower;
-  cntDigit.textContent = result.digit;
-  cntSymbol.textContent = result.symbol;
+  // zxcvbn analysis (sync, fast)
+  const zResult = zxcvbn(pw);
+  updateMeter(zResult.score);
+  updateStats(pw, zResult);
+  updateFeedback(zResult);
 }
 
-/* ── Password input listener ── */
 pwInput.addEventListener('input', () => {
   const pw = pwInput.value;
-  updateUI(pw ? analyzePassword(pw) : null);
+
+  clearTimeout(analysisTimer);
+  clearTimeout(breachTimer);
+
+  if (!pw) {
+    resetUI();
+    return;
+  }
+
+  // Analyze immediately (zxcvbn is sync + fast)
+  analysisTimer = setTimeout(() => {
+    analyzePassword(pw);
+  }, 80);
+
+  // Breach check debounced longer (network call)
+  breachTimer = setTimeout(() => {
+    if (pw.length >= 4) runBreachCheck(pw);
+  }, 600);
 });
 
-/* ── Generator ── */
-const lengthSlider = document.getElementById('lengthSlider');
-const lengthVal = document.getElementById('lengthVal');
-const genOutput = document.getElementById('genOutput');
-const optUpper = document.getElementById('optUpper');
-const optLower = document.getElementById('optLower');
-const optDigits = document.getElementById('optDigits');
-const optSymbols = document.getElementById('optSymbols');
-const optExcludeAmbig = document.getElementById('optExcludeAmbig');
-
-lengthSlider.addEventListener('input', () => {
-  lengthVal.textContent = lengthSlider.value;
+// ── Generator ─────────────────────────────────────────────────
+genLengthSlider.addEventListener('input', () => {
+  genLengthVal.textContent = genLengthSlider.value;
 });
 
 function generatePassword() {
-  let chars = '';
-  const ambig = 'O0Il1';
-  const exclude = optExcludeAmbig.checked;
+  const len      = parseInt(genLengthSlider.value, 10);
+  const useUpper = document.getElementById('gen-upper').checked;
+  const useLower = document.getElementById('gen-lower').checked;
+  const useDigits = document.getElementById('gen-digits').checked;
+  const useSymbols = document.getElementById('gen-symbols').checked;
+
   let pool = '';
+  const upperChars  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowerChars  = 'abcdefghijklmnopqrstuvwxyz';
+  const digitChars  = '0123456789';
+  const symbolChars = '!@#$%^&*()-_=+[]{}|;:,.<>?';
 
-  if (optUpper.checked) {
-    const up = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    pool += exclude ? up.split('').filter(c => !ambig.includes(c)).join('') : up;
-  }
-  if (optLower.checked) {
-    const lo = 'abcdefghijklmnopqrstuvwxyz';
-    pool += exclude ? lo.split('').filter(c => !ambig.includes(c)).join('') : lo;
-  }
-  if (optDigits.checked) {
-    const di = '0123456789';
-    pool += exclude ? di.split('').filter(c => !ambig.includes(c)).join('') : di;
-  }
-  if (optSymbols.checked) pool += '!@#$%^&*()-_=+[]{}|;:,.<>?';
+  if (useUpper)   pool += upperChars;
+  if (useLower)   pool += lowerChars;
+  if (useDigits)  pool += digitChars;
+  if (useSymbols) pool += symbolChars;
 
-  if (!pool) {
-    pool = 'abcdefghijklmnopqrstuvwxyz';
-  }
+  if (!pool) pool = lowerChars; // fallback
 
-  const len = parseInt(lengthSlider.value, 10);
-  let result = '';
-  for (let i = 0; i < len; i++) {
-    result += pool[secureRandom(pool.length)];
-  }
+  // Generate base password
+  const arr = Array.from({ length: len }, () => pool[secureRandInt(pool.length)]);
 
-  /* Guarantee at least one of each selected type */
-  const ensure = [];
-  if (optUpper.checked) ensure.push('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c => !optExcludeAmbig.checked || !'O0Il1'.includes(c)));
-  if (optLower.checked) ensure.push('abcdefghijklmnopqrstuvwxyz'.split('').filter(c => !optExcludeAmbig.checked || !'O0Il1'.includes(c)));
-  if (optDigits.checked) ensure.push('0123456789'.split('').filter(c => !optExcludeAmbig.checked || !'O0Il1'.includes(c)));
-  if (optSymbols.checked) ensure.push('!@#$%^&*()-_=+[]{}|;:,.<>?'.split(''));
+  // Guarantee at least one char from each selected set
+  const requirements = [];
+  if (useUpper)   requirements.push(upperChars);
+  if (useLower)   requirements.push(lowerChars);
+  if (useDigits)  requirements.push(digitChars);
+  if (useSymbols) requirements.push(symbolChars);
 
-  const arr = result.split('');
-  ensure.forEach((charSet, idx) => {
-    if (charSet.length > 0 && idx < arr.length) {
-      const pos = secureRandom(arr.length);
-      arr[pos] = pick(charSet);
+  requirements.forEach((charSet, idx) => {
+    if (idx < arr.length) {
+      arr[idx] = charSet[secureRandInt(charSet.length)];
     }
   });
 
-  genOutput.value = arr.join('');
+  // Shuffle
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = secureRandInt(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+
+  const password = arr.join('');
+  genOutput.value = password;
+
+  // Show strength of generated password
+  if (typeof zxcvbn !== 'undefined') {
+    const zResult = zxcvbn(password);
+    const score = zResult.score;
+    genStrengthLabel.textContent = SCORE_LABELS[score];
+    genStrengthLabel.style.color = SCORE_COLORS[score];
+    genMeterSegs.forEach((seg, i) => {
+      seg.style.background = i <= score ? GEN_METER_COLORS[score] : 'var(--color-border)';
+    });
+  }
 }
 
-document.getElementById('generateBtn').addEventListener('click', generatePassword);
+document.getElementById('btn-generate').addEventListener('click', generatePassword);
 
-document.getElementById('copyGenBtn').addEventListener('click', () => {
-  if (genOutput.value) {
-    navigator.clipboard.writeText(genOutput.value).then(() => showToast('Password copied!'));
-  }
+document.getElementById('btn-copy-gen').addEventListener('click', () => {
+  if (!genOutput.value) return;
+  navigator.clipboard.writeText(genOutput.value)
+    .then(() => showToast('Password copied!', 'success'))
+    .catch(() => showToast('Copy failed — please select manually.'));
 });
 
-document.getElementById('useGenBtn').addEventListener('click', () => {
-  if (genOutput.value) {
-    pwInput.value = genOutput.value;
+document.getElementById('btn-use-gen').addEventListener('click', () => {
+  const pw = genOutput.value;
+  if (!pw) return;
+  pwInput.value = pw;
+  pwInput.type = 'password';
+  eyeIcon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+  analyzePassword(pw);
+  if (pw.length >= 4) runBreachCheck(pw);
+  pwInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+// Quick generate from checker card
+document.getElementById('btn-quick-gen').addEventListener('click', () => {
+  generatePassword();
+  const pw = genOutput.value;
+  if (pw) {
+    pwInput.value = pw;
     pwInput.type = 'password';
-    updateUI(analyzePassword(genOutput.value));
-    pwInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    analyzePassword(pw);
+    if (pw.length >= 4) runBreachCheck(pw);
   }
 });
 
-/* ── Passphrase generator ── */
-const wordCountSlider = document.getElementById('wordCount');
-const wordCountVal = document.getElementById('wordCountVal');
-const ppOutput = document.getElementById('passphraseOutput');
-
-wordCountSlider.addEventListener('input', () => {
-  wordCountVal.textContent = wordCountSlider.value;
-});
-
-function generatePassphrase() {
-  const count = parseInt(wordCountSlider.value, 10);
-  const useSep = document.getElementById('ppSeparator').checked;
-  const useCapitalize = document.getElementById('ppCapitalize').checked;
-  const addNumber = document.getElementById('ppAddNumber').checked;
-  const separators = ['-', '.', '_', '~'];
-  const sep = useSep ? separators[secureRandom(separators.length)] : '';
-
-  let words = [];
-  for (let i = 0; i < count; i++) {
-    let w = WORD_LIST[secureRandom(WORD_LIST.length)];
-    if (useCapitalize) w = w.charAt(0).toUpperCase() + w.slice(1);
-    words.push(w);
-  }
-
-  let phrase = words.join(sep || '');
-  if (addNumber) {
-    const num = String(secureRandom(100)).padStart(2, '0');
-    phrase += (sep || '') + num;
-  }
-
-  ppOutput.textContent = phrase;
-}
-
-document.getElementById('genPassphraseBtn').addEventListener('click', generatePassphrase);
-
-document.getElementById('copyPPBtn').addEventListener('click', () => {
-  const txt = ppOutput.textContent;
-  if (txt && txt !== 'Click Generate Passphrase...') {
-    navigator.clipboard.writeText(txt).then(() => showToast('Passphrase copied!'));
-  }
-});
-
-document.getElementById('usePPBtn').addEventListener('click', () => {
-  const txt = ppOutput.textContent;
-  if (txt && txt !== 'Click Generate Passphrase...') {
-    pwInput.value = txt;
-    pwInput.type = 'password';
-    updateUI(analyzePassword(txt));
-    pwInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-});
-
-/* ── Toast ── */
-function showToast(msg) {
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => { toast.classList.remove('show'); }, 2000);
-}
-
-/* ── Keyboard navigation ── */
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && e.target === pwInput) {
-    pwInput.blur();
-  }
-});
-
-/* ── Init ── */
+// ── Init ───────────────────────────────────────────────────────
+resetUI();
 generatePassword();
 </script>
 </body>

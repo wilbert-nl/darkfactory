@@ -1,1793 +1,1689 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Earthquake Alert Tool — Seismic Monitor for Construction Sites</title>
-  <style>
-    :root {
-      --bg: #02091a;
-      --surface: rgba(255,255,255,0.08);
-      --surface2: rgba(255,255,255,0.13);
-      --border: rgba(255,255,255,0.16);
-      --accent: #38bdf8;
-      --accent2: #fb923c;
-      --text: rgba(255,255,255,0.95);
-      --muted: rgba(255,255,255,0.5);
-      --green: #34d399;
-      --yellow: #fbbf24;
-      --radius: 20px;
-      --red: #ff4e6a;
-      --orange: #ff8c42;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ─── Header ─── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      flex-shrink: 0;
-    }
-
-    .logo-text {
-      font-size: 1.25rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .tagline {
-      color: var(--muted);
-      font-size: 0.82rem;
-      margin-left: auto;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-    }
-
-    .live-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: rgba(67, 217, 173, 0.12);
-      color: var(--green);
-      padding: 0.3rem 0.75rem;
-      border-radius: 20px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      border: 1px solid rgba(67, 217, 173, 0.25);
-    }
-
-    .live-dot {
-      width: 7px;
-      height: 7px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: pulse-dot 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-
-    /* ─── Layout ─── */
-    .main-layout {
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      grid-template-rows: auto 1fr;
-      height: calc(100vh - 65px);
-      overflow: hidden;
-    }
-
-    /* ─── Sidebar ─── */
-    .sidebar {
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      grid-row: 1 / 3;
-    }
-
-    .sidebar-header {
-      padding: 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .sidebar-title {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-    }
-
-    /* ─── Filters ─── */
-    .filters {
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-
-    .filter-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .filter-label {
-      font-size: 0.75rem;
-      color: var(--muted);
-      min-width: 75px;
-    }
-
-    select, input[type="range"] {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 0.35rem 0.6rem;
-      font-size: 0.8rem;
-      flex: 1;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-
-    select:hover, select:focus {
-      border-color: var(--accent);
-      outline: none;
-    }
-
-    input[type="range"] {
-      padding: 0;
-      accent-color: var(--accent);
-      border: none;
-      background: transparent;
-    }
-
-    .range-val {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--accent);
-      min-width: 28px;
-      text-align: right;
-    }
-
-    /* ─── Stats bar ─── */
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .stat-card {
-      background: var(--surface2);
-      border-radius: 8px;
-      padding: 0.5rem;
-      text-align: center;
-    }
-
-    .stat-value {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .stat-label {
-      font-size: 0.65rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    /* ─── Earthquake list ─── */
-    .eq-list {
-      overflow-y: auto;
-      flex: 1;
-      padding: 0.5rem;
-    }
-
-    .eq-list::-webkit-scrollbar { width: 4px; }
-    .eq-list::-webkit-scrollbar-track { background: transparent; }
-    .eq-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-    .eq-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 0.75rem;
-      border-radius: var(--radius);
-      cursor: pointer;
-      border: 1px solid transparent;
-      margin-bottom: 0.35rem;
-      transition: all 0.15s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .eq-item::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 3px;
-      border-radius: 2px 0 0 2px;
-    }
-
-    .eq-item:hover {
-      background: var(--surface2);
-      border-color: var(--border);
-    }
-
-    .eq-item.selected {
-      background: rgba(108, 99, 255, 0.12);
-      border-color: rgba(108, 99, 255, 0.35);
-    }
-
-    .eq-item.selected::before { background: var(--accent); }
-
-    .mag-badge {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 0.95rem;
-      flex-shrink: 0;
-    }
-
-    .eq-info { flex: 1; min-width: 0; }
-
-    .eq-place {
-      font-size: 0.82rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 0.2rem;
-    }
-
-    .eq-meta {
-      font-size: 0.72rem;
-      color: var(--muted);
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .eq-depth {
-      display: flex;
-      align-items: center;
-      gap: 0.2rem;
-    }
-
-    /* ─── Map area ─── */
-    .map-wrapper {
-      background: var(--surface2);
-      position: relative;
-      overflow: hidden;
-    }
-
-    #world-map {
-      width: 100%;
-      height: 100%;
-    }
-
-    .map-controls {
-      position: absolute;
-      bottom: 1rem;
-      right: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .map-btn {
-      width: 36px;
-      height: 36px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      transition: all 0.2s;
-    }
-
-    .map-btn:hover {
-      background: var(--surface2);
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    /* ─── Alert subscribe bar ─── */
-    .alert-bar {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 0.75rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .alert-bar-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .alert-input-group {
-      display: flex;
-      gap: 0.5rem;
-      flex: 1;
-      flex-wrap: wrap;
-    }
-
-    .alert-input {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 0.4rem 0.75rem;
-      font-size: 0.8rem;
-      transition: border-color 0.2s;
-      flex: 1;
-      min-width: 150px;
-    }
-
-    .alert-input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .alert-input::placeholder { color: var(--muted); }
-
-    .btn {
-      padding: 0.45rem 1rem;
-      border-radius: 8px;
-      border: none;
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #5b55e0);
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(108, 99, 255, 0.4);
-    }
-
-    .btn-primary:active { transform: translateY(0); }
-
-    .btn-secondary {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    /* ─── Detail panel (modal overlay) ─── */
-    .detail-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.65);
-      z-index: 200;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease;
-    }
-
-    .detail-overlay.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .detail-panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      width: 100%;
-      max-width: 560px;
-      max-height: 80vh;
-      overflow-y: auto;
-      transform: translateY(20px) scale(0.97);
-      transition: transform 0.25s ease;
-    }
-
-    .detail-overlay.open .detail-panel {
-      transform: translateY(0) scale(1);
-    }
-
-    .detail-header {
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    .detail-mag-big {
-      width: 64px;
-      height: 64px;
-      border-radius: 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .detail-mag-num {
-      font-size: 1.5rem;
-      font-weight: 800;
-      line-height: 1;
-    }
-
-    .detail-mag-lbl {
-      font-size: 0.6rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      opacity: 0.8;
-    }
-
-    .detail-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; }
-    .detail-sub { font-size: 0.82rem; color: var(--muted); }
-
-    .close-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      flex-shrink: 0;
-      transition: all 0.15s;
-    }
-
-    .close-btn:hover { color: var(--text); border-color: var(--accent); }
-
-    .detail-body { padding: 1.25rem 1.5rem; }
-
-    .detail-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .detail-stat {
-      background: var(--surface2);
-      border-radius: 10px;
-      padding: 0.75rem;
-    }
-
-    .detail-stat-label {
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 0.25rem;
-    }
-
-    .detail-stat-value {
-      font-size: 1rem;
-      font-weight: 700;
-    }
-
-    .checklist-section { margin-top: 1rem; }
-
-    .checklist-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 0.6rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .checklist-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .checklist-item {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 0.5rem 0.6rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.15s;
-      user-select: none;
-    }
-
-    .checklist-item:hover { background: var(--surface2); }
-
-    .checklist-item input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: var(--green);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .checklist-item label {
-      font-size: 0.82rem;
-      cursor: pointer;
-    }
-
-    .checklist-item.checked label {
-      text-decoration: line-through;
-      color: var(--muted);
-    }
-
-    .detail-footer {
-      padding: 1rem 1.5rem;
-      border-top: 1px solid var(--border);
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-    }
-
-    .usgs-link {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.8rem;
-      font-weight: 600;
-      transition: opacity 0.2s;
-    }
-
-    .usgs-link:hover { opacity: 0.75; }
-
-    /* ─── Mag scale panel ─── */
-    .scale-panel {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 0.6rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      font-size: 0.75rem;
-      overflow-x: auto;
-    }
-
-    .scale-title {
-      color: var(--muted);
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      white-space: nowrap;
-      font-weight: 600;
-    }
-
-    .scale-items {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-    }
-
-    .scale-item {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      white-space: nowrap;
-    }
-
-    .scale-dot {
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    /* ─── Toast ─── */
-    .toast-container {
-      position: fixed;
-      bottom: 5rem;
-      right: 1.5rem;
-      z-index: 300;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .toast {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 0.75rem 1rem;
-      font-size: 0.82rem;
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      animation: slide-in 0.3s ease, fade-out 0.3s ease 2.5s forwards;
-      max-width: 300px;
-    }
-
-    .toast.success { border-left: 3px solid var(--green); }
-    .toast.error { border-left: 3px solid var(--red); }
-    .toast.info { border-left: 3px solid var(--accent); }
-
-    @keyframes slide-in {
-      from { transform: translateX(50px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-
-    @keyframes fade-out {
-      to { opacity: 0; transform: translateY(10px); }
-    }
-
-    /* ─── Loading state ─── */
-    .loading-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      padding: 3rem 1rem;
-      color: var(--muted);
-    }
-
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .empty-state {
-      text-align: center;
-      padding: 2rem 1rem;
-      color: var(--muted);
-    }
-
-    .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .empty-state p { font-size: 0.85rem; }
-
-    /* ─── Map tooltip ─── */
-    .map-tooltip {
-      position: absolute;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.75rem;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.15s;
-      z-index: 10;
-      max-width: 200px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    }
-
-    .map-tooltip.visible { opacity: 1; }
-    .map-tooltip strong { display: block; margin-bottom: 0.2rem; }
-
-    /* ─── Seismic wave animation on map markers ─── */
-    @keyframes seismic-wave {
-      0% { r: 0; opacity: 0.8; }
-      100% { r: 30; opacity: 0; }
-    }
-
-    .quake-wave {
-      animation: seismic-wave 2s ease-out infinite;
-    }
-
-    /* ─── Scrollbar global ─── */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-    /* ─── Responsive ─── */
-    @media (max-width: 768px) {
-      .main-layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 280px auto;
-        height: auto;
-      }
-      .sidebar {
-        grid-row: auto;
-        max-height: 320px;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-      }
-      .map-wrapper {
-        min-height: 280px;
-      }
-      .tagline { display: none; }
-    }
-
-    /* ─── Refresh btn ─── */
-    .refresh-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 0.35rem 0.7rem;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.78rem;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-
-    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    .refresh-btn.spinning svg {
-      animation: spin 0.8s linear infinite;
-    }
-
-    /* ─── Subscription chip ─── */
-    .sub-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      background: rgba(67, 217, 173, 0.12);
-      border: 1px solid rgba(67, 217, 173, 0.25);
-      color: var(--green);
-      border-radius: 20px;
-      padding: 0.25rem 0.65rem;
-      font-size: 0.72rem;
-      font-weight: 600;
-    }
-
-    .sub-chip .remove-sub {
-      cursor: pointer;
-      opacity: 0.7;
-      margin-left: 0.2rem;
-      font-size: 0.9rem;
-    }
-
-    .sub-chip .remove-sub:hover { opacity: 1; }
-
-    .subscriptions-list {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-    }
-
-    /* ─── Progress bar for checklist ─── */
-    .checklist-progress {
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      margin-bottom: 0.75rem;
-      overflow: hidden;
-    }
-
-    .checklist-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--green), #2bb898);
-      border-radius: 2px;
-      transition: width 0.3s ease;
-    }
-
-/* ── Weather design system v2 ── */
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seismiq — Earthquake Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Midnight · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
-  background: linear-gradient(180deg, #02091a 0%, #0d1f3c 50%, #153050 100%) fixed;
-  min-height: 100vh;
-  color: rgba(255,255,255,0.9);
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
-body::before {
-  content: '';
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── Magnitude severity colors (OKLCH) ── */
+:root {
+  --mag-grey:     oklch(65% 0.01 155);
+  --mag-amber:    oklch(62% 0.15 72);
+  --mag-orange:   oklch(58% 0.18 45);
+  --mag-red:      oklch(50% 0.22 25);
+  --mag-deep-red: oklch(40% 0.22 20);
+
+  --mag-grey-bg:     oklch(65% 0.01 155 / 0.12);
+  --mag-amber-bg:    oklch(62% 0.15 72 / 0.12);
+  --mag-orange-bg:   oklch(58% 0.18 45 / 0.12);
+  --mag-red-bg:      oklch(50% 0.22 25 / 0.12);
+  --mag-deep-red-bg: oklch(40% 0.22 20 / 0.12);
+}
+
+/* ── N9 Fixed nav ── */
+.nav {
   position: fixed;
-  width: 500px; height: 500px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(56,189,248,.12) 0%, transparent 70%);
-  top: -150px; right: -100px;
-  animation: floatOrb 10s ease-in-out infinite;
-  pointer-events: none; z-index: 0;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
 }
-body::after {
-  content: '';
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-live {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-success);
+  background: oklch(55% 0.14 155 / 0.08);
+  border: 1px solid oklch(55% 0.14 155 / 0.2);
+  border-radius: 20px;
+  padding: var(--space-1) var(--space-3);
+}
+
+.nav-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+
+.nav-updated {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-section {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4);
+  flex-shrink: 0;
+}
+
+.sidebar-section-title {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* ── Filter controls ── */
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.filter-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.filter-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.03em;
+}
+
+.filter-val {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.input-select {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out);
+}
+.input-select:focus { outline: none; border-color: var(--color-accent); }
+.input-select option { background: var(--color-paper); color: var(--color-ink); }
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.input-text {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color 0.15s var(--ease-out);
+}
+.input-text:focus { outline: none; border-color: var(--color-accent); }
+.input-text::placeholder { color: var(--color-ink-muted); }
+
+.btn-apply {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+  margin-top: var(--space-2);
+}
+.btn-apply:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-apply:active { transform: translateY(0); }
+
+/* ── Stats panel ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.stat-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-2);
+  text-align: center;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+  margin-top: 3px;
+}
+
+/* ── My Sites ── */
+.sites-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 140px;
+  overflow-y: auto;
+  margin-bottom: var(--space-3);
+}
+
+.site-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.site-chip-name {
+  font-weight: 600;
+  color: var(--color-ink);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.site-chip-meta {
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.site-chip-remove {
+  background: none;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: var(--text-base);
+  line-height: 1;
+  padding: 0;
+  transition: color 0.12s var(--ease-out);
+  flex-shrink: 0;
+}
+.site-chip-remove:hover { color: var(--color-danger); }
+
+.add-site-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.add-site-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.btn-add-site {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-accent);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: 1px dashed var(--color-accent-line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s var(--ease-out), border-style 0.12s var(--ease-out);
+}
+.btn-add-site:hover { background: var(--color-accent-subtle); border-style: solid; }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+/* ── Table toolbar ── */
+.table-toolbar {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+.table-summary {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  flex: 1;
+}
+.table-summary strong { color: var(--color-ink); font-weight: 600; }
+
+.btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease-out), color 0.15s var(--ease-out);
+  flex-shrink: 0;
+}
+.btn-refresh:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+.btn-refresh svg { transition: transform 0.4s var(--ease-out); }
+.btn-refresh.spinning svg { animation: spin-icon 0.8s linear infinite; }
+@keyframes spin-icon { to { transform: rotate(360deg); } }
+
+/* ── Mag legend ── */
+.mag-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mag-legend::-webkit-scrollbar { display: none; }
+
+.legend-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-text {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* ── Table area ── */
+.table-wrap {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+.table-wrap::-webkit-scrollbar { width: 5px; height: 5px; }
+.table-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-paper-2);
+}
+
+th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-muted);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  user-select: none;
+}
+
+th[aria-sort] { cursor: pointer; }
+th[aria-sort]:hover { color: var(--color-ink); }
+
+.th-sort-icon {
+  display: inline-block;
+  margin-left: var(--space-1);
+  opacity: 0.4;
+  font-size: 0.65rem;
+}
+th[aria-sort="ascending"]  .th-sort-icon,
+th[aria-sort="descending"] .th-sort-icon { opacity: 1; color: var(--color-accent); }
+
+th.right, td.right { text-align: right; }
+
+tbody tr {
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 0.1s var(--ease-out);
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: oklch(14% 0.012 252); }
+tbody tr.selected { background: var(--color-accent-subtle); }
+
+td {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-ink);
+  vertical-align: middle;
+}
+
+.td-time {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.td-place {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mag-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.td-depth {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.usgs-row-link {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.7;
+  transition: opacity 0.12s var(--ease-out);
+}
+.usgs-row-link:hover { opacity: 1; }
+
+/* ── Near-site alert badge ── */
+.site-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-warn);
+  background: oklch(62% 0.15 72 / 0.1);
+  border: 1px solid oklch(62% 0.15 72 / 0.25);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  white-space: nowrap;
+}
+
+/* ── Loading / empty states ── */
+.state-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-16);
+  color: var(--color-ink-muted);
+  text-align: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin-icon 0.7s linear infinite;
+}
+
+.state-icon { font-size: 2rem; }
+.state-title { font-size: var(--text-base); font-weight: 600; color: var(--color-ink); }
+.state-sub { font-size: var(--text-sm); max-width: 280px; line-height: 1.6; }
+
+/* ── Detail slide-in ── */
+.detail-overlay {
   position: fixed;
-  width: 320px; height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(251,146,60,.08) 0%, transparent 70%);
-  bottom: 8%; left: -80px;
-  animation: floatOrb 14s ease-in-out infinite reverse;
-  pointer-events: none; z-index: 0;
+  inset: 0;
+  background: oklch(18% 0.04 155 / 0.5);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s var(--ease-out);
 }
-/* Glassmorphism cards */
-.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] {
-  background: rgba(255,255,255,0.08) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255,255,255,0.18) !important;
-  border-radius: 20px !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 8px 32px rgba(0,0,0,0.3);
+.detail-overlay.open {
+  opacity: 1;
+  pointer-events: all;
 }
-h1 {
-  font-weight: 200;
-  font-size: clamp(2.5rem, 7vw, 5rem);
-  letter-spacing: -.02em;
-  color: rgba(255,255,255,0.95);
-  text-shadow: 0 0 30px rgba(56,189,248,.4);
-  -webkit-text-fill-color: rgba(255,255,255,0.95);
+
+.detail-panel {
+  background: var(--color-paper);
+  border-left: 1px solid var(--color-border);
+  width: 440px;
+  max-width: 100vw;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform 0.25s var(--ease-out);
 }
-h2, h3 { font-weight: 300; color: rgba(255,255,255,0.85); letter-spacing: -.01em; -webkit-text-fill-color: rgba(255,255,255,0.85); }
-p, label, span, td, th, li { color: rgba(255,255,255,0.8); }
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
-@keyframes floatOrb { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-22px) scale(1.04);} }
-@keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
-@keyframes glowPulse { 0%,100%{text-shadow:0 0 10px rgba(56,189,248,.4);} 50%{text-shadow:0 0 30px rgba(56,189,248,.9),0 0 60px rgba(56,189,248,.3);} }
-@keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.5);} 50%{box-shadow:0 0 0 8px rgba(251,146,60,0);} }
-.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] { animation: fadeUp .5s ease both; }
-.card:nth-child(2){animation-delay:.08s} .card:nth-child(3){animation-delay:.16s} .card:nth-child(4){animation-delay:.24s}
-[class*="alert"],[class*="warning"] { animation: alertPulse 2s ease-in-out infinite; }
-button,[class*="btn"] {
-  background: rgba(255,255,255,0.1) !important;
-  border: 1px solid rgba(255,255,255,0.22) !important;
-  backdrop-filter: blur(8px);
-  color: rgba(255,255,255,0.9) !important;
-  transition: all .2s;
-  border-radius: 12px;
+.detail-overlay.open .detail-panel {
+  transform: translateX(0);
 }
-button:hover,[class*="btn"]:hover {
-  background: rgba(56,189,248,0.2) !important;
-  border-color: rgba(56,189,248,0.5) !important;
-  box-shadow: 0 4px 20px rgba(56,189,248,.3);
-  transform: translateY(-1px);
+
+.detail-head {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
 }
-input, select {
-  background: rgba(255,255,255,0.08) !important;
-  border: 1px solid rgba(255,255,255,0.16) !important;
-  backdrop-filter: blur(8px);
-  color: rgba(255,255,255,0.9) !important;
+
+.detail-mag-block {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
-input::placeholder { color: rgba(255,255,255,0.4); }
-input:focus, select:focus {
-  border-color: rgba(56,189,248,.6) !important;
-  box-shadow: 0 0 0 3px rgba(56,189,248,.2);
-  outline: none;
+
+.detail-mag-num {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
-select option { background: #0d1f3c; color: white; }
-  </style>
+
+.detail-mag-lbl {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.detail-head-info { flex: 1; min-width: 0; }
+
+.detail-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  line-height: 1.3;
+  margin-bottom: var(--space-1);
+}
+
+.detail-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+
+.detail-close {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-lg);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+}
+.detail-close:hover { color: var(--color-ink); border-color: var(--color-accent); }
+
+.detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.detail-stat {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.detail-stat-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-1);
+}
+
+.detail-stat-value {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-sig-bar {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.sig-track {
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: var(--space-2);
+}
+
+.sig-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-accent);
+  transition: width 0.4s var(--ease-out);
+}
+
+.detail-nearby-sites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nearby-site-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: oklch(62% 0.15 72 / 0.06);
+  border: 1px solid oklch(62% 0.15 72 / 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.nearby-site-icon { font-size: var(--text-base); flex-shrink: 0; }
+
+.nearby-site-name { font-weight: 600; color: var(--color-ink); }
+.nearby-site-dist { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.detail-footer {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.btn-usgs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+}
+.btn-usgs:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* ── Section heading in detail body ── */
+.detail-section-head {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-2);
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(90% 0.006 250 / 0.20);
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error   { background: var(--color-danger); }
+.toast.warn    { background: var(--color-warn); }
+
+/* ── Mobile ── */
+@media (max-width: 767px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+    margin-top: 52px;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+  }
+
+  .main { overflow: visible; }
+
+  .table-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    height: auto;
+  }
+
+  table { min-width: 640px; }
+
+  .detail-panel {
+    width: 100vw;
+    height: 90vh;
+  }
+
+  .detail-overlay {
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .detail-panel {
+    transform: translateY(100%);
+  }
+  .detail-overlay.open .detail-panel {
+    transform: translateY(0);
+  }
+
+  .nav-page-label { display: none; }
+  .nav-live { display: none; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .detail-panel { transition: none; }
+  .detail-overlay { transition: opacity 0.1s; }
+  .spinner { animation-duration: 1.5s; }
+  .nav-live-dot { animation: none; opacity: 1; }
+}
+</style>
 </head>
 <body>
 
-<!-- ─── Header ─── -->
-<header>
-  <div class="logo-icon" aria-hidden="true">🌍</div>
-  <div>
-    <div class="logo-text">SeismicWatch</div>
-    <div style="font-size:0.68rem;color:var(--muted);margin-top:1px;">Construction Site Earthquake Monitor</div>
-  </div>
-  <div class="tagline">Powered by USGS Earthquake Hazards Program</div>
-  <div class="header-actions">
-    <div class="live-badge">
-      <div class="live-dot"></div>
-      LIVE
-    </div>
-    <a href="app.html" class="btn btn-primary" style="text-decoration:none;" aria-label="Open Seismiq app">
-      Open Seismiq ↗
-    </a>
-    <button class="refresh-btn" id="refreshBtn" aria-label="Refresh earthquake data">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M21 12a9 9 0 11-6.219-8.56"/>
-        <path d="M21 3v5h-5"/>
-      </svg>
-      Refresh
-    </button>
-  </div>
-</header>
+<!-- N9 Fixed nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Seismiq<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Earthquake Monitor</span>
+  <span class="nav-live" aria-label="Live data">
+    <span class="nav-live-dot" aria-hidden="true"></span>
+    LIVE
+  </span>
+  <span class="nav-updated" id="nav-updated" aria-live="polite"></span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">&#8592; Home</a>
+</nav>
 
-<!-- ─── Main Layout ─── -->
-<div class="main-layout">
+<div class="app-shell">
 
-  <!-- ─── Sidebar ─── -->
-  <aside class="sidebar" role="complementary" aria-label="Earthquake list and filters">
-    <div class="sidebar-header">
-      <div class="sidebar-title">Filters</div>
-      <div class="filters">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" aria-label="Filters and site monitoring">
+
+    <!-- Filters -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Filters</div>
+      <div class="filter-group">
+
         <div class="filter-row">
-          <label class="filter-label" for="timeRange">Time range</label>
-          <select id="timeRange">
-            <option value="1">Last hour</option>
-            <option value="24" selected>Last 24h</option>
-            <option value="168">Last 7 days</option>
-            <option value="720">Last 30 days</option>
+          <label class="filter-label" for="filter-timerange">Time range</label>
+          <select class="input-select" id="filter-timerange" aria-label="Time range">
+            <option value="1">Past 24 hours</option>
+            <option value="7" selected>Past 7 days</option>
+            <option value="30">Past 30 days</option>
           </select>
         </div>
+
         <div class="filter-row">
-          <label class="filter-label" for="minMag">Min mag</label>
-          <input type="range" id="minMag" min="2.5" max="8" step="0.5" value="4.5"
-                 aria-label="Minimum magnitude filter" />
-          <span class="range-val" id="minMagVal">4.5</span>
+          <div class="filter-label-row">
+            <label class="filter-label" for="filter-mag">Min. magnitude</label>
+            <span class="filter-val" id="filter-mag-val" aria-live="polite">2.5</span>
+          </div>
+          <input
+            type="range"
+            id="filter-mag"
+            min="2.5" max="8.0" step="0.5" value="2.5"
+            aria-label="Minimum magnitude"
+            aria-valuemin="2.5" aria-valuemax="8.0" aria-valuenow="2.5"
+          >
         </div>
+
         <div class="filter-row">
-          <label class="filter-label" for="regionFilter">Region</label>
-          <select id="regionFilter">
-            <option value="all">All regions</option>
-            <option value="pacific">Pacific Ring of Fire</option>
-            <option value="america">Americas</option>
-            <option value="asia">Asia</option>
-            <option value="europe">Europe / Med</option>
-            <option value="oceania">Oceania</option>
-            <option value="africa">Africa</option>
-          </select>
+          <label class="filter-label" for="filter-region">Region search</label>
+          <input
+            type="text"
+            class="input-text"
+            id="filter-region"
+            placeholder="e.g. California, Japan, Turkey…"
+            aria-label="Filter by region or place name"
+          >
         </div>
+
+        <button class="btn-apply" id="btn-apply-filters" aria-label="Apply filters and fetch data">
+          Apply filters
+        </button>
       </div>
     </div>
 
     <!-- Stats -->
-    <div class="stats-bar" role="region" aria-label="Earthquake statistics">
-      <div class="stat-card">
-        <div class="stat-value" id="statTotal">—</div>
-        <div class="stat-label">Total</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="statMax" style="color:var(--accent2)">—</div>
-        <div class="stat-label">Max Mag</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="statMajor" style="color:var(--yellow)">—</div>
-        <div class="stat-label">Major ≥6</div>
-      </div>
-    </div>
-
-    <!-- List -->
-    <div class="eq-list" id="eqList" role="list" aria-label="Earthquake events">
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <span>Loading earthquake data…</span>
-      </div>
-    </div>
-  </aside>
-
-  <!-- ─── Map ─── -->
-  <main class="map-wrapper" role="main" aria-label="World earthquake map">
-    <svg id="world-map" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"
-         aria-label="World map with earthquake markers" role="img">
-      <!-- Ocean background -->
-      <rect width="1000" height="500" fill="#131825"/>
-      <!-- Grid lines -->
-      <g stroke="#1e2438" stroke-width="0.5" opacity="0.8">
-        <!-- Latitude lines -->
-        <line x1="0" y1="83.3" x2="1000" y2="83.3"/>
-        <line x1="0" y1="166.7" x2="1000" y2="166.7"/>
-        <line x1="0" y1="250" x2="1000" y2="250"/>
-        <line x1="0" y1="333.3" x2="1000" y2="333.3"/>
-        <line x1="0" y1="416.7" x2="1000" y2="416.7"/>
-        <!-- Longitude lines -->
-        <line x1="100" y1="0" x2="100" y2="500"/>
-        <line x1="200" y1="0" x2="200" y2="500"/>
-        <line x1="300" y1="0" x2="300" y2="500"/>
-        <line x1="400" y1="0" x2="400" y2="500"/>
-        <line x1="500" y1="0" x2="500" y2="500"/>
-        <line x1="600" y1="0" x2="600" y2="500"/>
-        <line x1="700" y1="0" x2="700" y2="500"/>
-        <line x1="800" y1="0" x2="800" y2="500"/>
-        <line x1="900" y1="0" x2="900" y2="500"/>
-      </g>
-      <!-- Equator line -->
-      <line x1="0" y1="250" x2="1000" y2="250" stroke="#2e3350" stroke-width="1" stroke-dasharray="4,4"/>
-      <!-- Landmasses (simplified) -->
-      <g fill="#1e2540" stroke="#252d45" stroke-width="0.5">
-        <!-- North America -->
-        <path d="M 100 60 L 160 50 L 210 55 L 230 90 L 250 130 L 240 180 L 220 200 L 210 240 L 180 270 L 150 260 L 130 280 L 110 320 L 90 310 L 80 280 L 70 250 L 60 220 L 70 180 L 80 150 L 90 110 Z"/>
-        <!-- Central America + Caribbean -->
-        <path d="M 180 270 L 200 280 L 195 300 L 185 310 L 175 305 L 170 290 Z"/>
-        <!-- South America -->
-        <path d="M 200 290 L 230 280 L 270 290 L 290 320 L 300 360 L 290 400 L 270 440 L 250 460 L 220 455 L 200 430 L 185 390 L 180 350 L 190 310 Z"/>
-        <!-- Europe -->
-        <path d="M 450 80 L 490 70 L 530 75 L 550 90 L 540 110 L 520 120 L 500 130 L 480 125 L 460 115 L 445 100 Z"/>
-        <!-- Scandinavia -->
-        <path d="M 480 50 L 510 40 L 525 55 L 520 80 L 500 85 L 480 75 Z"/>
-        <!-- UK/Ireland -->
-        <path d="M 445 80 L 460 70 L 468 82 L 462 95 L 448 92 Z"/>
-        <!-- Africa -->
-        <path d="M 470 140 L 520 130 L 560 140 L 580 180 L 590 230 L 580 290 L 560 340 L 530 380 L 500 400 L 480 390 L 460 360 L 445 310 L 440 260 L 450 210 L 455 170 Z"/>
-        <!-- Russia / Northern Asia -->
-        <path d="M 530 60 L 600 45 L 700 40 L 780 50 L 830 60 L 860 80 L 850 110 L 810 120 L 760 115 L 700 120 L 650 130 L 600 125 L 560 115 L 545 100 L 530 85 Z"/>
-        <!-- Middle East -->
-        <path d="M 555 140 L 600 135 L 630 150 L 635 175 L 610 185 L 575 175 L 560 160 Z"/>
-        <!-- South Asia -->
-        <path d="M 620 150 L 680 145 L 720 155 L 730 190 L 700 220 L 660 225 L 630 210 L 615 180 Z"/>
-        <!-- Southeast Asia -->
-        <path d="M 710 180 L 760 175 L 790 185 L 800 205 L 780 220 L 750 215 L 720 205 Z"/>
-        <!-- China / East Asia -->
-        <path d="M 690 100 L 760 90 L 820 100 L 840 130 L 830 160 L 800 175 L 760 175 L 710 165 L 680 145 L 670 120 Z"/>
-        <!-- Japan -->
-        <path d="M 830 110 L 845 105 L 855 115 L 850 130 L 838 135 L 828 125 Z"/>
-        <path d="M 842 100 L 852 95 L 860 103 L 856 115 L 845 110 Z"/>
-        <!-- Australia -->
-        <path d="M 760 290 L 820 280 L 870 285 L 900 310 L 910 350 L 900 390 L 870 410 L 830 415 L 790 405 L 760 380 L 745 340 L 750 305 Z"/>
-        <!-- New Zealand -->
-        <path d="M 920 380 L 930 370 L 940 378 L 938 395 L 925 398 Z"/>
-        <path d="M 925 400 L 935 395 L 942 405 L 937 418 L 924 415 Z"/>
-        <!-- Greenland -->
-        <path d="M 170 30 L 210 20 L 240 25 L 245 50 L 230 65 L 200 70 L 175 58 Z"/>
-        <!-- Iceland -->
-        <path d="M 410 50 L 430 45 L 440 52 L 435 65 L 415 67 Z"/>
-        <!-- Indonesia / Philippines -->
-        <path d="M 760 240 L 790 235 L 810 245 L 815 260 L 795 268 L 768 260 Z"/>
-        <path d="M 800 250 L 825 242 L 838 252 L 835 268 L 818 272 L 803 264 Z"/>
-        <path d="M 820 230 L 840 222 L 855 230 L 852 245 L 835 250 L 822 242 Z"/>
-        <!-- Philippines -->
-        <path d="M 800 190 L 815 185 L 825 195 L 820 210 L 806 213 Z"/>
-      </g>
-      <!-- Earthquake markers will be injected here -->
-      <g id="quake-markers"></g>
-    </svg>
-
-    <!-- Map tooltip -->
-    <div class="map-tooltip" id="mapTooltip" role="tooltip"></div>
-
-    <!-- Map controls -->
-    <div class="map-controls">
-      <button class="map-btn" id="zoomIn" title="Zoom in" aria-label="Zoom in">+</button>
-      <button class="map-btn" id="zoomOut" title="Zoom out" aria-label="Zoom out">−</button>
-      <button class="map-btn" id="resetView" title="Reset view" aria-label="Reset map view">⌂</button>
-    </div>
-
-    <!-- Magnitude scale -->
-    <div class="scale-panel" role="region" aria-label="Magnitude scale legend">
-      <span class="scale-title">Magnitude Scale</span>
-      <div class="scale-items">
-        <div class="scale-item">
-          <div class="scale-dot" style="width:8px;height:8px;background:#43d9ad;"></div>
-          <span style="color:var(--muted)">2.5–3.9 Minor</span>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Summary</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total" aria-label="Total events">—</div>
+          <div class="stat-label">Total</div>
         </div>
-        <div class="scale-item">
-          <div class="scale-dot" style="width:11px;height:11px;background:#f7c948;"></div>
-          <span style="color:var(--muted)">4.0–4.9 Light</span>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-max" style="color:var(--mag-red)" aria-label="Maximum magnitude">—</div>
+          <div class="stat-label">Max Mag</div>
         </div>
-        <div class="scale-item">
-          <div class="scale-dot" style="width:15px;height:15px;background:#ff8c42;"></div>
-          <span style="color:var(--muted)">5.0–5.9 Moderate</span>
-        </div>
-        <div class="scale-item">
-          <div class="scale-dot" style="width:20px;height:20px;background:#ff4e6a;"></div>
-          <span style="color:var(--muted)">6.0–6.9 Strong</span>
-        </div>
-        <div class="scale-item">
-          <div class="scale-dot" style="width:26px;height:26px;background:#c026d3;"></div>
-          <span style="color:var(--muted)">7.0+ Major</span>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-avg" aria-label="Average magnitude">—</div>
+          <div class="stat-label">Avg Mag</div>
         </div>
       </div>
     </div>
-  </main>
 
-  <!-- ─── Alert subscribe bar (spans full width below map) ─── -->
-  <div class="alert-bar" role="region" aria-label="Alert subscriptions" style="grid-column:1/-1;">
-    <span class="alert-bar-title">
-      🔔 Site Alerts
-    </span>
-    <div class="alert-input-group">
-      <input class="alert-input" type="text" id="siteName" placeholder="Site name (e.g. Downtown Tower)" aria-label="Construction site name" />
-      <input class="alert-input" type="text" id="siteRegion" placeholder="Region (e.g. California, Japan)" aria-label="Site region or location" />
-      <select id="siteMinMag" class="alert-input" style="min-width:130px;" aria-label="Minimum magnitude threshold">
-        <option value="4.0">≥ M4.0 alert</option>
-        <option value="4.5" selected>≥ M4.5 alert</option>
-        <option value="5.0">≥ M5.0 alert</option>
-        <option value="5.5">≥ M5.5 alert</option>
-        <option value="6.0">≥ M6.0 alert</option>
-      </select>
-      <button class="btn btn-primary" id="subscribeBtn" aria-label="Subscribe to site alerts">
-        <span>+ Subscribe</span>
-      </button>
-    </div>
-    <div class="subscriptions-list" id="subscriptionsList"></div>
-  </div>
-</div>
+    <!-- My Sites -->
+    <div class="sidebar-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:var(--space-3);">
+      <div class="sidebar-section-title">My Sites</div>
 
-<!-- ─── Detail Modal ─── -->
-<div class="detail-overlay" id="detailOverlay" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
-  <div class="detail-panel" id="detailPanel">
-    <div class="detail-header">
-      <div style="display:flex;align-items:center;gap:1rem;flex:1;min-width:0;">
-        <div class="detail-mag-big" id="detailMagBig">
-          <span class="detail-mag-num" id="detailMagNum">—</span>
-          <span class="detail-mag-lbl">Mag</span>
-        </div>
-        <div style="min-width:0;">
-          <div class="detail-title" id="detailTitle">—</div>
-          <div class="detail-sub" id="detailSub">—</div>
-        </div>
-      </div>
-      <button class="close-btn" id="closeDetail" aria-label="Close detail panel">✕</button>
-    </div>
-    <div class="detail-body">
-      <div class="detail-grid">
-        <div class="detail-stat">
-          <div class="detail-stat-label">Magnitude</div>
-          <div class="detail-stat-value" id="dMag">—</div>
-        </div>
-        <div class="detail-stat">
-          <div class="detail-stat-label">Depth</div>
-          <div class="detail-stat-value" id="dDepth">—</div>
-        </div>
-        <div class="detail-stat">
-          <div class="detail-stat-label">Coordinates</div>
-          <div class="detail-stat-value" id="dCoords">—</div>
-        </div>
-        <div class="detail-stat">
-          <div class="detail-stat-label">Time (UTC)</div>
-          <div class="detail-stat-value" id="dTime">—</div>
-        </div>
-        <div class="detail-stat">
-          <div class="detail-stat-label">Felt Reports</div>
-          <div class="detail-stat-value" id="dFelt">—</div>
-        </div>
-        <div class="detail-stat">
-          <div class="detail-stat-label">Alert Level</div>
-          <div class="detail-stat-value" id="dAlert">—</div>
-        </div>
+      <div class="sites-list" id="sites-list" aria-label="Monitored construction sites" aria-live="polite">
+        <!-- populated by JS -->
       </div>
 
-      <!-- Inspection Checklist -->
-      <div class="checklist-section">
-        <div class="checklist-title">Post-Quake Site Inspection Checklist</div>
-        <div class="checklist-progress">
-          <div class="checklist-progress-bar" id="checklistBar" style="width:0%"></div>
+      <div class="add-site-form" aria-label="Add a new site">
+        <div class="filter-row">
+          <label class="filter-label" for="site-name">Site name</label>
+          <input type="text" class="input-text" id="site-name" placeholder="e.g. Downtown Tower" aria-label="Site name">
         </div>
-        <div id="checklist">
-          <!-- Generated by JS -->
+        <div class="filter-row">
+          <label class="filter-label" for="site-location">City or coordinates</label>
+          <input type="text" class="input-text" id="site-location" placeholder="e.g. San Francisco or 37.77,-122.41" aria-label="Site city or lat,lng coordinates">
         </div>
-      </div>
-    </div>
-    <div class="detail-footer">
-      <a class="usgs-link" id="usgsLink" href="#" target="_blank" rel="noopener noreferrer">
-        ↗ View on USGS
-      </a>
-      <button class="btn btn-secondary" id="signOffBtn" style="margin-left:auto;">Sign Off Inspection</button>
-    </div>
-  </div>
-</div>
-
-<!-- ─── Toast container ─── -->
-<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-
-<script>
-(function () {
-  'use strict';
-
-  // ─── Constants ───────────────────────────────────────────────
-  const USGS_BASE = `https://earthquake.usgs.gov/fdsnws/event/1/query`;
-  const CHECKLIST_ITEMS = [
-    `Check all load-bearing structures for visible cracks`,
-    `Inspect scaffolding and temporary supports for stability`,
-    `Verify utility lines (gas, electric, water) are intact`,
-    `Account for all workers — conduct head count`,
-    `Inspect ground for signs of liquefaction or subsidence`,
-    `Document any structural damage with photos`,
-    `Contact structural engineer if any damage observed`,
-    `Review and update site safety risk assessment`,
-  ];
-
-  const MAG_COLORS = [
-    { min: 7.0, color: '#c026d3', label: 'Major' },
-    { min: 6.0, color: '#ff4e6a', label: 'Strong' },
-    { min: 5.0, color: '#ff8c42', label: 'Moderate' },
-    { min: 4.0, color: '#f7c948', label: 'Light' },
-    { min: 0,   color: '#43d9ad', label: 'Minor' },
-  ];
-
-  // ─── State ────────────────────────────────────────────────────
-  let allQuakes = [];
-  let filteredQuakes = [];
-  let selectedQuake = null;
-  let subscriptions = [];
-  let checklistState = {};
-  let mapScale = 1;
-  let mapTranslateX = 0;
-  let mapTranslateY = 0;
-
-  // ─── DOM refs ─────────────────────────────────────────────────
-  const eqList = document.getElementById('eqList');
-  const quakeMarkers = document.getElementById('quake-markers');
-  const statTotal = document.getElementById('statTotal');
-  const statMax = document.getElementById('statMax');
-  const statMajor = document.getElementById('statMajor');
-  const detailOverlay = document.getElementById('detailOverlay');
-  const mapTooltip = document.getElementById('mapTooltip');
-  const subscriptionsList = document.getElementById('subscriptionsList');
-  const checklistEl = document.getElementById('checklist');
-  const checklistBar = document.getElementById('checklistBar');
-
-  // ─── Utility: magnitude color ─────────────────────────────────
-  function magColor(m) {
-    for (const { min, color } of MAG_COLORS) {
-      if (m >= min) return color;
-    }
-    return '#43d9ad';
-  }
-
-  function magLabel(m) {
-    for (const { min, label } of MAG_COLORS) {
-      if (m >= min) return label;
-    }
-    return 'Minor';
-  }
-
-  function magRadius(m) {
-    if (m >= 7.0) return 14;
-    if (m >= 6.0) return 10;
-    if (m >= 5.0) return 7;
-    if (m >= 4.0) return 5;
-    return 3.5;
-  }
-
-  // ─── Utility: toast ───────────────────────────────────────────
-  function showToast(msg, type = 'info') {
-    const tc = document.getElementById('toastContainer');
-    const t = document.createElement('div');
-    t.className = `toast ${type}`;
-    const icons = { success: '✓', error: '✕', info: 'ℹ' };
-    t.innerHTML = `<span>${icons[type] || 'ℹ'}</span><span>${msg}</span>`;
-    tc.appendChild(t);
-    setTimeout(() => t.remove(), 3200);
-  }
-
-  // ─── Utility: format time ─────────────────────────────────────
-  function formatTime(ts) {
-    const d = new Date(ts);
-    return d.toUTCString().replace(' GMT', ' UTC');
-  }
-
-  function timeAgo(ts) {
-    const diff = Date.now() - ts;
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  }
-
-  // ─── Utility: lon/lat → SVG coords ───────────────────────────
-  function lonLatToXY(lon, lat) {
-    const x = ((lon + 180) / 360) * 1000;
-    const y = ((90 - lat) / 180) * 500;
-    return { x, y };
-  }
-
-  // ─── Region filter ────────────────────────────────────────────
-  function matchesRegion(place, lat, lon) {
-    const region = document.getElementById('regionFilter').value;
-    if (region === 'all') return true;
-    const p = (place || '').toLowerCase();
-
-    const checks = {
-      pacific: () => lon > 120 || lon < -60,
-      america: () => lon >= -170 && lon <= -30,
-      asia: () => (lon >= 25 && lon <= 150) && lat >= 0,
-      europe: () => (lon >= -15 && lon <= 40) && lat >= 35,
-      oceania: () => lon >= 110 && lon <= 180 && lat <= 5,
-      africa: () => (lon >= -20 && lon <= 55) && lat >= -40 && lat <= 38,
-    };
-
-    return checks[region] ? checks[region]() : true;
-  }
-
-  // ─── Fetch quakes ─────────────────────────────────────────────
-  async function fetchQuakes() {
-    const refreshBtn = document.getElementById('refreshBtn');
-    refreshBtn.classList.add('spinning');
-
-    const hours = parseInt(document.getElementById('timeRange').value, 10);
-    const minMag = parseFloat(document.getElementById('minMag').value);
-    const endTime = new Date().toISOString();
-    const startTime = new Date(Date.now() - hours * 3600 * 1000).toISOString();
-
-    const url = `${USGS_BASE}?format=geojson&starttime=${startTime}&endtime=${endTime}&minmagnitude=${minMag}&orderby=time&limit=200`;
-
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      allQuakes = data.features || [];
-      applyFilters();
-      showToast(`Loaded ${allQuakes.length} earthquakes`, 'success');
-    } catch (err) {
-      showToast(`Failed to load data: ${err.message}`, 'error');
-      eqList.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load earthquake data. Check your connection and try again.</p></div>`;
-    } finally {
-      refreshBtn.classList.remove('spinning');
-    }
-  }
-
-  // ─── Apply filters ────────────────────────────────────────────
-  function applyFilters() {
-    const region = document.getElementById('regionFilter').value;
-    filteredQuakes = allQuakes.filter(f => {
-      const [lon, lat] = f.geometry.coordinates;
-      return matchesRegion(f.properties.place, lat, lon);
-    });
-    renderList();
-    renderMap();
-    updateStats();
-    checkSubscriptions();
-  }
-
-  // ─── Render list ──────────────────────────────────────────────
-  function renderList() {
-    if (filteredQuakes.length === 0) {
-      eqList.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>No earthquakes match the current filters.</p></div>`;
-      return;
-    }
-
-    const html = filteredQuakes.map((f, i) => {
-      const p = f.properties;
-      const mag = p.mag ? p.mag.toFixed(1) : '?';
-      const color = magColor(p.mag || 0);
-      const isSelected = selectedQuake && selectedQuake.id === f.id;
-      const depth = f.geometry.coordinates[2];
-
-      return `<div class="eq-item${isSelected ? ' selected' : ''}" role="listitem" tabindex="0"
-               data-index="${i}" aria-label="M${mag} earthquake near ${p.place}">
-        <div class="mag-badge" style="background:${color}22;color:${color};">${mag}</div>
-        <div class="eq-info">
-          <div class="eq-place" title="${p.place || 'Unknown location'}">${p.place || 'Unknown location'}</div>
-          <div class="eq-meta">
-            <span>${timeAgo(p.time)}</span>
-            <span class="eq-depth">⬇ ${depth ? depth.toFixed(0) : '?'} km</span>
-            <span style="color:${color};font-weight:600;">${magLabel(p.mag || 0)}</span>
+        <div class="add-site-row">
+          <div class="filter-row">
+            <div class="filter-label-row">
+              <label class="filter-label" for="site-radius">Radius (km)</label>
+              <span class="filter-val" id="site-radius-val" aria-live="polite">100</span>
+            </div>
+            <input type="range" id="site-radius" min="50" max="500" step="50" value="100" aria-label="Alert radius in kilometres">
+          </div>
+          <div class="filter-row">
+            <label class="filter-label" for="site-threshold">Alert threshold</label>
+            <select class="input-select" id="site-threshold" aria-label="Minimum magnitude for site alert">
+              <option value="3.0">M3.0+</option>
+              <option value="4.0" selected>M4.0+</option>
+              <option value="5.0">M5.0+</option>
+            </select>
           </div>
         </div>
-      </div>`;
-    }).join('');
+        <button class="btn-add-site" id="btn-add-site" aria-label="Add this site to monitoring">
+          + Add site
+        </button>
+      </div>
+    </div>
 
-    eqList.innerHTML = html;
+  </aside>
 
-    // Event delegation
-    eqList.querySelectorAll('.eq-item').forEach(el => {
-      el.addEventListener('click', () => openDetail(filteredQuakes[parseInt(el.dataset.index, 10)]));
-      el.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openDetail(filteredQuakes[parseInt(el.dataset.index, 10)]);
-        }
-      });
-    });
+  <!-- ── Main panel ── -->
+  <main class="main" aria-label="Earthquake feed">
+
+    <!-- Toolbar -->
+    <div class="table-toolbar">
+      <p class="table-summary" id="table-summary" aria-live="polite">Loading&hellip;</p>
+      <button class="btn-refresh" id="btn-refresh" aria-label="Refresh earthquake data">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 11-6.22-8.56"/>
+          <path d="M21 3v5h-5"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Magnitude legend -->
+    <div class="mag-legend" aria-label="Magnitude severity scale" role="note">
+      <span class="legend-label">Scale</span>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:var(--mag-grey)"></span>
+        <span class="legend-text">&lt;3 Minor</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:var(--mag-amber)"></span>
+        <span class="legend-text">3–4 Light</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:var(--mag-orange)"></span>
+        <span class="legend-text">4–5 Moderate</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:var(--mag-red)"></span>
+        <span class="legend-text">5–6 Strong</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot" style="background:var(--mag-deep-red)"></span>
+        <span class="legend-text">6+ Major</span>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap" id="table-wrap">
+      <div class="state-wrap" id="loading-state" aria-live="polite">
+        <div class="spinner" role="status" aria-label="Loading earthquake data"></div>
+        <p class="state-title">Fetching earthquake data</p>
+        <p class="state-sub">Connecting to USGS Earthquake Hazards Program&hellip;</p>
+      </div>
+
+      <table id="eq-table" style="display:none" aria-label="Earthquake events">
+        <thead>
+          <tr>
+            <th scope="col" id="th-time" aria-sort="descending" data-col="time">
+              Time (local) <span class="th-sort-icon" aria-hidden="true">&#x25BC;</span>
+            </th>
+            <th scope="col" id="th-place" data-col="place">
+              Location <span class="th-sort-icon" aria-hidden="true">&#x25BA;</span>
+            </th>
+            <th scope="col" class="right" id="th-mag" data-col="mag">
+              Mag <span class="th-sort-icon" aria-hidden="true">&#x25BA;</span>
+            </th>
+            <th scope="col" class="right" id="th-depth" data-col="depth">
+              Depth (km) <span class="th-sort-icon" aria-hidden="true">&#x25BA;</span>
+            </th>
+            <th scope="col">Alert</th>
+            <th scope="col">USGS</th>
+          </tr>
+        </thead>
+        <tbody id="eq-tbody">
+        </tbody>
+      </table>
+
+      <div class="state-wrap" id="empty-state" style="display:none">
+        <span class="state-icon" aria-hidden="true">&#128269;</span>
+        <p class="state-title">No earthquakes found</p>
+        <p class="state-sub">Try widening your filters or expanding the time range.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Detail slide-in panel ── -->
+<div class="detail-overlay" id="detail-overlay" role="dialog" aria-modal="true" aria-labelledby="detail-title-text">
+  <div class="detail-panel" id="detail-panel">
+
+    <div class="detail-head">
+      <div class="detail-mag-block" id="detail-mag-block" aria-hidden="true">
+        <span class="detail-mag-num" id="detail-mag-num">—</span>
+        <span class="detail-mag-lbl">Mag</span>
+      </div>
+      <div class="detail-head-info">
+        <div class="detail-title" id="detail-title-text">—</div>
+        <div class="detail-sub" id="detail-sub">—</div>
+      </div>
+      <button class="detail-close" id="detail-close" aria-label="Close event detail">&#10005;</button>
+    </div>
+
+    <div class="detail-body" id="detail-body">
+
+      <!-- Key stats grid -->
+      <div>
+        <div class="detail-section-head">Event details</div>
+        <div class="detail-grid">
+          <div class="detail-stat">
+            <div class="detail-stat-label">Time (local)</div>
+            <div class="detail-stat-value" id="d-time" style="font-size:var(--text-sm)">—</div>
+          </div>
+          <div class="detail-stat">
+            <div class="detail-stat-label">Magnitude</div>
+            <div class="detail-stat-value" id="d-mag">—</div>
+          </div>
+          <div class="detail-stat">
+            <div class="detail-stat-label">Depth</div>
+            <div class="detail-stat-value" id="d-depth">—</div>
+          </div>
+          <div class="detail-stat">
+            <div class="detail-stat-label">Coordinates</div>
+            <div class="detail-stat-value" id="d-coords" style="font-size:var(--text-xs)">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Significance -->
+      <div class="detail-sig-bar">
+        <div class="detail-stat-label">Significance score (USGS)</div>
+        <div class="detail-stat-value" id="d-sig">—</div>
+        <div class="sig-track" aria-hidden="true">
+          <div class="sig-fill" id="d-sig-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Nearby sites -->
+      <div id="d-nearby-wrap" style="display:none">
+        <div class="detail-section-head">&#9888; Near your sites</div>
+        <div class="detail-nearby-sites" id="d-nearby-list"></div>
+      </div>
+
+    </div>
+
+    <div class="detail-footer">
+      <a class="btn-usgs" id="d-usgs-link" href="#" target="_blank" rel="noopener noreferrer">
+        &#x2197; View on USGS
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<script>
+'use strict';
+
+/* ── Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 ── */
+
+// ── Constants ──────────────────────────────────────────────────────────
+const USGS_BASE = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const STORAGE_KEY = 'seismiq_sites';
+
+// ── State ──────────────────────────────────────────────────────────────
+let allQuakes = [];      // raw from API
+let displayQuakes = [];  // after client-side region filter
+let sites = [];          // localStorage
+let sortCol = 'time';
+let sortAsc = false;
+let selectedId = null;
+let lastFetch = null;
+let updaterInterval = null;
+
+// ── DOM refs ───────────────────────────────────────────────────────────
+const tableWrap    = document.getElementById('table-wrap');
+const loadingState = document.getElementById('loading-state');
+const emptyState   = document.getElementById('empty-state');
+const eqTable      = document.getElementById('eq-table');
+const eqTbody      = document.getElementById('eq-tbody');
+const tableSummary = document.getElementById('table-summary');
+const statTotal    = document.getElementById('stat-total');
+const statMax      = document.getElementById('stat-max');
+const statAvg      = document.getElementById('stat-avg');
+const navUpdated   = document.getElementById('nav-updated');
+const sitesList    = document.getElementById('sites-list');
+const btnRefresh   = document.getElementById('btn-refresh');
+const detailOverlay = document.getElementById('detail-overlay');
+const detailClose   = document.getElementById('detail-close');
+
+// ── Magnitude helpers ──────────────────────────────────────────────────
+function magColor(m) {
+  if (m >= 6)   return 'var(--mag-deep-red)';
+  if (m >= 5)   return 'var(--mag-red)';
+  if (m >= 4)   return 'var(--mag-orange)';
+  if (m >= 3)   return 'var(--mag-amber)';
+  return 'var(--mag-grey)';
+}
+
+function magBg(m) {
+  if (m >= 6)   return 'var(--mag-deep-red-bg)';
+  if (m >= 5)   return 'var(--mag-red-bg)';
+  if (m >= 4)   return 'var(--mag-orange-bg)';
+  if (m >= 3)   return 'var(--mag-amber-bg)';
+  return 'var(--mag-grey-bg)';
+}
+
+function magLabel(m) {
+  if (m >= 6) return 'Major';
+  if (m >= 5) return 'Strong';
+  if (m >= 4) return 'Moderate';
+  if (m >= 3) return 'Light';
+  return 'Minor';
+}
+
+// ── Haversine distance (km) ────────────────────────────────────────────
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Near-site detection ────────────────────────────────────────────────
+function nearSites(qLat, qLon, mag) {
+  return sites.filter(s =>
+    s.lat != null &&
+    mag >= s.threshold &&
+    haversine(qLat, qLon, s.lat, s.lng) <= s.radius
+  ).map(s => ({
+    name: s.name,
+    dist: Math.round(haversine(qLat, qLon, s.lat, s.lng))
+  }));
+}
+
+// ── Format helpers ─────────────────────────────────────────────────────
+function fmtLocal(ts) {
+  return new Date(ts).toLocaleString(undefined, {
+    month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+function fmtFull(ts) {
+  return new Date(ts).toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZoneName: 'short'
+  });
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── USGS fetch ─────────────────────────────────────────────────────────
+async function fetchQuakes() {
+  btnRefresh.classList.add('spinning');
+  btnRefresh.disabled = true;
+  showLoading();
+
+  const days = parseInt(document.getElementById('filter-timerange').value, 10);
+  const minMag = parseFloat(document.getElementById('filter-mag').value);
+
+  const startDate = new Date(Date.now() - days * 24 * 3600 * 1000);
+  const startStr = startDate.toISOString().slice(0, 10);
+
+  const url = `${USGS_BASE}?format=geojson&starttime=${startStr}&minmagnitude=${minMag}&orderby=time&limit=200`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`USGS API error ${res.status}`);
+    const data = await res.json();
+    allQuakes = (data.features || []).map(f => ({
+      id:     f.id,
+      time:   f.properties.time,
+      place:  f.properties.place || 'Unknown location',
+      mag:    f.properties.mag ?? 0,
+      depth:  f.geometry.coordinates[2] ?? 0,
+      lat:    f.geometry.coordinates[1],
+      lon:    f.geometry.coordinates[0],
+      sig:    f.properties.sig ?? 0,
+      url:    f.properties.url || `https://earthquake.usgs.gov/earthquakes/eventpage/${f.id}`,
+      type:   f.properties.type || 'earthquake',
+    }));
+    lastFetch = Date.now();
+    applyClientFilters();
+    toast(`Loaded ${allQuakes.length} earthquakes`, 'success');
+    startUpdater();
+  } catch (err) {
+    showEmpty();
+    toast('Failed to load data: ' + err.message, 'error');
+    tableSummary.innerHTML = 'Could not load earthquake data.';
+  } finally {
+    btnRefresh.classList.remove('spinning');
+    btnRefresh.disabled = false;
+  }
+}
+
+// ── Client-side region filter ──────────────────────────────────────────
+function applyClientFilters() {
+  const regionQ = document.getElementById('filter-region').value.trim().toLowerCase();
+  displayQuakes = regionQ
+    ? allQuakes.filter(q => q.place.toLowerCase().includes(regionQ))
+    : allQuakes.slice();
+  applySortAndRender();
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────
+function applySortAndRender() {
+  displayQuakes.sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (sortCol === 'place') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return sortAsc ? -1 : 1;
+    if (va > vb) return sortAsc ?  1 : -1;
+    return 0;
+  });
+  renderTable();
+  updateStats();
+  updateNavTimestamp();
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────
+function updateStats() {
+  const n = displayQuakes.length;
+  statTotal.textContent = n;
+  if (n === 0) {
+    statMax.textContent = '—';
+    statAvg.textContent = '—';
+    return;
+  }
+  const mags = displayQuakes.map(q => q.mag);
+  statMax.textContent = Math.max(...mags).toFixed(1);
+  statAvg.textContent = (mags.reduce((s, m) => s + m, 0) / n).toFixed(1);
+}
+
+// ── Render table ───────────────────────────────────────────────────────
+function renderTable() {
+  if (displayQuakes.length === 0) {
+    showEmpty();
+    return;
   }
 
-  // ─── Render map markers ───────────────────────────────────────
-  function renderMap() {
-    const svgNS = 'http://www.w3.org/2000/svg';
-    quakeMarkers.innerHTML = '';
+  eqTable.style.display = '';
+  loadingState.style.display = 'none';
+  emptyState.style.display = 'none';
 
-    filteredQuakes.forEach((f, i) => {
-      const [lon, lat] = f.geometry.coordinates;
-      const { x, y } = lonLatToXY(lon, lat);
-      const mag = f.properties.mag || 0;
-      const r = magRadius(mag);
-      const color = magColor(mag);
+  const days = parseInt(document.getElementById('filter-timerange').value, 10);
+  const label = days === 1 ? 'past 24 hours' : days === 7 ? 'past 7 days' : 'past 30 days';
+  tableSummary.innerHTML = `<strong>${displayQuakes.length}</strong> earthquakes in the ${label}`;
 
-      const g = document.createElementNS(svgNS, 'g');
-      g.setAttribute('class', 'quake-marker');
-      g.style.cursor = 'pointer';
-
-      // Wave ring for major events
-      if (mag >= 5.5) {
-        const wave = document.createElementNS(svgNS, 'circle');
-        wave.setAttribute('cx', x);
-        wave.setAttribute('cy', y);
-        wave.setAttribute('r', r);
-        wave.setAttribute('fill', 'none');
-        wave.setAttribute('stroke', color);
-        wave.setAttribute('stroke-width', '1.5');
-        wave.setAttribute('opacity', '0.6');
-        wave.classList.add('quake-wave');
-        wave.style.animationDelay = `${(i * 0.15) % 2}s`;
-        g.appendChild(wave);
-      }
-
-      // Main dot
-      const circle = document.createElementNS(svgNS, 'circle');
-      circle.setAttribute('cx', x);
-      circle.setAttribute('cy', y);
-      circle.setAttribute('r', r);
-      circle.setAttribute('fill', color);
-      circle.setAttribute('fill-opacity', '0.85');
-      circle.setAttribute('stroke', '#fff');
-      circle.setAttribute('stroke-width', '0.5');
-      g.appendChild(circle);
-
-      // Tooltip & click
-      g.addEventListener('mouseenter', evt => showMapTooltip(evt, f));
-      g.addEventListener('mousemove', evt => positionMapTooltip(evt));
-      g.addEventListener('mouseleave', () => hideMapTooltip());
-      g.addEventListener('click', () => openDetail(f));
-
-      quakeMarkers.appendChild(g);
-    });
-  }
-
-  // ─── Map tooltip ──────────────────────────────────────────────
-  function showMapTooltip(evt, f) {
-    const p = f.properties;
-    const mag = p.mag ? p.mag.toFixed(1) : '?';
-    mapTooltip.innerHTML = `<strong>M${mag} — ${magLabel(p.mag || 0)}</strong>${p.place || 'Unknown'}<br><span style="color:var(--muted);font-size:0.68rem;">${timeAgo(p.time)}</span>`;
-    mapTooltip.classList.add('visible');
-    positionMapTooltip(evt);
-  }
-
-  function positionMapTooltip(evt) {
-    const mapRect = document.getElementById('world-map').closest('.map-wrapper').getBoundingClientRect();
-    const x = evt.clientX - mapRect.left + 12;
-    const y = evt.clientY - mapRect.top - 10;
-    mapTooltip.style.left = `${Math.min(x, mapRect.width - 210)}px`;
-    mapTooltip.style.top = `${Math.max(y, 5)}px`;
-  }
-
-  function hideMapTooltip() {
-    mapTooltip.classList.remove('visible');
-  }
-
-  // ─── Update stats ─────────────────────────────────────────────
-  function updateStats() {
-    const total = filteredQuakes.length;
-    const maxMag = total > 0 ? Math.max(...filteredQuakes.map(f => f.properties.mag || 0)) : 0;
-    const major = filteredQuakes.filter(f => (f.properties.mag || 0) >= 6.0).length;
-
-    statTotal.textContent = total;
-    statMax.textContent = total > 0 ? maxMag.toFixed(1) : '—';
-    statMajor.textContent = major;
-  }
-
-  // ─── Open detail modal ────────────────────────────────────────
-  function openDetail(quake) {
-    selectedQuake = quake;
-    const p = quake.properties;
-    const [lon, lat, depth] = quake.geometry.coordinates;
-    const mag = p.mag || 0;
-    const color = magColor(mag);
-
-    document.getElementById('detailMagBig').style.background = `${color}22`;
-    document.getElementById('detailMagBig').style.color = color;
-    document.getElementById('detailMagNum').textContent = mag.toFixed(1);
-    document.getElementById('detailTitle').textContent = p.place || 'Unknown location';
-    document.getElementById('detailSub').textContent = `${magLabel(mag)} earthquake — ${formatTime(p.time)}`;
-    document.getElementById('dMag').textContent = `M${mag.toFixed(1)}`;
-    document.getElementById('dDepth').textContent = `${depth ? depth.toFixed(1) : '?'} km`;
-    document.getElementById('dCoords').textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
-    document.getElementById('dTime').textContent = formatTime(p.time);
-    document.getElementById('dFelt').textContent = p.felt != null ? p.felt : 'No data';
-    document.getElementById('dAlert').innerHTML = p.alert
-      ? `<span style="text-transform:capitalize;color:${alertColor(p.alert)}">${p.alert}</span>`
-      : `<span style="color:var(--muted)">None</span>`;
-
-    const link = p.url || `https://earthquake.usgs.gov/earthquakes/eventpage/${quake.id}`;
-    document.getElementById('usgsLink').href = link;
-
-    // Checklist
-    const ckKey = quake.id;
-    if (!checklistState[ckKey]) checklistState[ckKey] = new Array(CHECKLIST_ITEMS.length).fill(false);
-    renderChecklist(ckKey);
-
-    detailOverlay.classList.add('open');
-    document.getElementById('closeDetail').focus();
-
-    // Highlight in list
-    renderList();
-  }
-
-  function alertColor(a) {
-    const map = { green: 'var(--green)', yellow: 'var(--yellow)', orange: 'var(--orange)', red: 'var(--red)' };
-    return map[a] || 'var(--muted)';
-  }
-
-  // ─── Checklist ────────────────────────────────────────────────
-  function renderChecklist(ckKey) {
-    const state = checklistState[ckKey];
-    checklistEl.innerHTML = CHECKLIST_ITEMS.map((item, i) => {
-      const checked = state[i];
-      return `<div class="checklist-item${checked ? ' checked' : ''}" data-ci="${i}">
-        <input type="checkbox" id="ci_${i}" ${checked ? 'checked' : ''} aria-label="${item}" />
-        <label for="ci_${i}">${item}</label>
-      </div>`;
-    }).join('');
-
-    updateChecklistProgress(ckKey);
-
-    checklistEl.querySelectorAll('.checklist-item').forEach(el => {
-      const idx = parseInt(el.dataset.ci, 10);
-      const cb = el.querySelector('input[type="checkbox"]');
-      cb.addEventListener('change', () => {
-        checklistState[ckKey][idx] = cb.checked;
-        el.classList.toggle('checked', cb.checked);
-        updateChecklistProgress(ckKey);
-      });
-    });
-  }
-
-  function updateChecklistProgress(ckKey) {
-    const state = checklistState[ckKey];
-    const done = state.filter(Boolean).length;
-    const pct = Math.round((done / state.length) * 100);
-    checklistBar.style.width = `${pct}%`;
-  }
-
-  // ─── Close detail ─────────────────────────────────────────────
-  function closeDetail() {
-    detailOverlay.classList.remove('open');
-    selectedQuake = null;
-    renderList();
-  }
-
-  // ─── Sign off ─────────────────────────────────────────────────
-  document.getElementById('signOffBtn').addEventListener('click', () => {
-    if (!selectedQuake) return;
-    const ckKey = selectedQuake.id;
-    const state = checklistState[ckKey];
-    const done = state.filter(Boolean).length;
-
-    if (done < state.length) {
-      showToast(`Complete all ${state.length} checklist items before signing off`, 'error');
-      return;
+  // Update column sort icons
+  ['time','place','mag','depth'].forEach(col => {
+    const th = document.getElementById('th-' + col);
+    if (!th) return;
+    const icon = th.querySelector('.th-sort-icon');
+    if (col === sortCol) {
+      th.setAttribute('aria-sort', sortAsc ? 'ascending' : 'descending');
+      icon.textContent = sortAsc ? '▲' : '▼';
+    } else {
+      th.setAttribute('aria-sort', 'none');
+      icon.textContent = '►';
     }
-    showToast('Inspection signed off and recorded!', 'success');
-    closeDetail();
   });
 
-  // ─── Subscribe to region alerts ───────────────────────────────
-  document.getElementById('subscribeBtn').addEventListener('click', () => {
-    const name = document.getElementById('siteName').value.trim();
-    const region = document.getElementById('siteRegion').value.trim();
-    const minMag = document.getElementById('siteMinMag').value;
+  eqTbody.innerHTML = '';
 
-    if (!name || !region) {
-      showToast('Please enter both site name and region', 'error');
-      return;
-    }
+  displayQuakes.forEach(q => {
+    const nearby = nearSites(q.lat, q.lon, q.mag);
+    const hasAlert = nearby.length > 0;
+    const color = magColor(q.mag);
+    const bg = magBg(q.mag);
 
-    if (subscriptions.some(s => s.name.toLowerCase() === name.toLowerCase())) {
-      showToast(`Site "${name}" is already subscribed`, 'error');
-      return;
-    }
+    const tr = document.createElement('tr');
+    tr.dataset.id = q.id;
+    if (q.id === selectedId) tr.classList.add('selected');
+    tr.setAttribute('tabindex', '0');
+    tr.setAttribute('aria-label', `M${q.mag.toFixed(1)} earthquake, ${q.place}, ${fmtLocal(q.time)}`);
 
-    // Request browser notification permission
-    if ('Notification' in window && Notification.permission !== 'granted') {
-      Notification.requestPermission();
-    }
+    // Alert badge HTML
+    const alertHtml = hasAlert
+      ? nearby.map(s =>
+          `<span class="site-badge" title="${esc(s.name)} is ${s.dist} km away">&#9888; ${esc(s.name)}: ${s.dist}&nbsp;km</span>`
+        ).join(' ')
+      : '';
 
-    subscriptions.push({ name, region, minMag: parseFloat(minMag) });
-    renderSubscriptions();
-    document.getElementById('siteName').value = '';
-    document.getElementById('siteRegion').value = '';
-    showToast(`Alert set for "${name}" (M≥${minMag})`, 'success');
-    checkSubscriptions();
-  });
+    tr.innerHTML = `
+      <td class="td-time" headers="th-time">${esc(fmtLocal(q.time))}</td>
+      <td class="td-place" headers="th-place" title="${esc(q.place)}">
+        ${esc(q.place)}
+        ${alertHtml}
+      </td>
+      <td class="right" headers="th-mag">
+        <span class="mag-badge" style="color:${color};background:${bg};">${q.mag.toFixed(1)}</span>
+      </td>
+      <td class="right td-depth" headers="th-depth">${q.depth.toFixed(0)}&nbsp;km</td>
+      <td>${hasAlert ? '<span class="site-badge">&#9888; Near site</span>' : '<span style="color:var(--color-ink-muted);font-size:var(--text-xs)">—</span>'}</td>
+      <td>
+        <a class="usgs-row-link" href="${esc(q.url)}" target="_blank" rel="noopener noreferrer" aria-label="View on USGS (opens in new tab)" onclick="event.stopPropagation()">
+          &#x2197; USGS
+        </a>
+      </td>
+    `;
 
-  function renderSubscriptions() {
-    if (subscriptions.length === 0) {
-      subscriptionsList.innerHTML = '';
-      return;
-    }
-    subscriptionsList.innerHTML = subscriptions.map((s, i) => {
-      return `<div class="sub-chip" role="listitem">
-        📍 ${escHtml(s.name)} (M≥${s.minMag})
-        <span class="remove-sub" data-i="${i}" role="button" tabindex="0" aria-label="Remove subscription for ${escHtml(s.name)}" title="Remove">✕</span>
-      </div>`;
-    }).join('');
-
-    subscriptionsList.querySelectorAll('.remove-sub').forEach(el => {
-      const remove = () => {
-        const idx = parseInt(el.dataset.i, 10);
-        const removed = subscriptions.splice(idx, 1)[0];
-        renderSubscriptions();
-        showToast(`Removed alert for "${removed.name}"`, 'info');
-      };
-      el.addEventListener('click', remove);
-      el.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); remove(); }
-      });
+    tr.addEventListener('click', () => openDetail(q.id));
+    tr.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(q.id); }
     });
+
+    eqTbody.appendChild(tr);
+  });
+}
+
+// ── State views ────────────────────────────────────────────────────────
+function showLoading() {
+  loadingState.style.display = '';
+  emptyState.style.display = 'none';
+  eqTable.style.display = 'none';
+  tableSummary.innerHTML = 'Loading&hellip;';
+}
+
+function showEmpty() {
+  loadingState.style.display = 'none';
+  emptyState.style.display = '';
+  eqTable.style.display = 'none';
+  tableSummary.innerHTML = 'No earthquakes match the current filters.';
+}
+
+// ── Column sort ────────────────────────────────────────────────────────
+['time','place','mag','depth'].forEach(col => {
+  const th = document.getElementById('th-' + col);
+  if (!th) return;
+  th.addEventListener('click', () => {
+    if (sortCol === col) { sortAsc = !sortAsc; }
+    else { sortCol = col; sortAsc = col === 'place'; }
+    applySortAndRender();
+  });
+  th.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); th.click(); }
+  });
+});
+
+// ── Detail panel ───────────────────────────────────────────────────────
+function openDetail(id) {
+  const q = displayQuakes.find(x => x.id === id);
+  if (!q) return;
+  selectedId = id;
+
+  const color = magColor(q.mag);
+  const bg = magBg(q.mag);
+  const nearby = nearSites(q.lat, q.lon, q.mag);
+
+  document.getElementById('detail-mag-block').style.background = bg;
+  document.getElementById('detail-mag-block').style.color = color;
+  document.getElementById('detail-mag-num').textContent = q.mag.toFixed(1);
+  document.getElementById('detail-title-text').textContent = q.place;
+  document.getElementById('detail-sub').textContent =
+    `${magLabel(q.mag)} earthquake · ${fmtFull(q.time)}`;
+
+  document.getElementById('d-time').textContent = fmtFull(q.time);
+  document.getElementById('d-mag').textContent = `M${q.mag.toFixed(1)} ${magLabel(q.mag)}`;
+  document.getElementById('d-depth').textContent = `${q.depth.toFixed(1)} km`;
+  document.getElementById('d-coords').textContent = `${q.lat.toFixed(4)}, ${q.lon.toFixed(4)}`;
+
+  const sigPct = Math.min(100, Math.round(q.sig / 10));
+  document.getElementById('d-sig').textContent = `${q.sig} / 1000`;
+  document.getElementById('d-sig-fill').style.width = `${sigPct}%`;
+  document.getElementById('d-sig-fill').style.background = color;
+
+  const nearbyWrap = document.getElementById('d-nearby-wrap');
+  const nearbyList = document.getElementById('d-nearby-list');
+  if (nearby.length > 0) {
+    nearbyWrap.style.display = '';
+    nearbyList.innerHTML = nearby.map(s => `
+      <div class="nearby-site-item">
+        <span class="nearby-site-icon" aria-hidden="true">&#128205;</span>
+        <div>
+          <div class="nearby-site-name">${esc(s.name)}</div>
+          <div class="nearby-site-dist">${s.dist}&nbsp;km from epicentre</div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    nearbyWrap.style.display = 'none';
   }
 
-  function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  document.getElementById('d-usgs-link').href = q.url;
+
+  detailOverlay.classList.add('open');
+  detailClose.focus();
+
+  // Highlight row
+  eqTbody.querySelectorAll('tr').forEach(tr => {
+    tr.classList.toggle('selected', tr.dataset.id === id);
+  });
+}
+
+function closeDetail() {
+  detailOverlay.classList.remove('open');
+  selectedId = null;
+  eqTbody.querySelectorAll('tr.selected').forEach(tr => tr.classList.remove('selected'));
+}
+
+detailClose.addEventListener('click', closeDetail);
+detailOverlay.addEventListener('click', e => { if (e.target === detailOverlay) closeDetail(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && detailOverlay.classList.contains('open')) closeDetail();
+});
+
+// ── Sites management ───────────────────────────────────────────────────
+function loadSites() {
+  try { sites = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { sites = []; }
+}
+
+function saveSites() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sites));
+}
+
+function renderSites() {
+  if (sites.length === 0) {
+    sitesList.innerHTML = '<p style="font-size:var(--text-xs);color:var(--color-ink-muted);">No sites configured yet.</p>';
+    return;
   }
+  sitesList.innerHTML = sites.map((s, i) => `
+    <div class="site-chip" role="listitem">
+      <span class="site-chip-name" title="${esc(s.name)}">${esc(s.name)}</span>
+      <span class="site-chip-meta">≤${s.radius}&nbsp;km · M${s.threshold}+</span>
+      <button class="site-chip-remove" data-i="${i}" aria-label="Remove site ${esc(s.name)}" title="Remove">&#x00D7;</button>
+    </div>
+  `).join('');
 
-  // ─── Check subscriptions against live data ────────────────────
-  function checkSubscriptions() {
-    if (subscriptions.length === 0) return;
-
-    subscriptions.forEach(sub => {
-      const matches = filteredQuakes.filter(f => {
-        const mag = f.properties.mag || 0;
-        const place = (f.properties.place || '').toLowerCase();
-        return mag >= sub.minMag && place.includes(sub.region.toLowerCase());
-      });
-
-      if (matches.length > 0 && 'Notification' in window && Notification.permission === 'granted') {
-        const top = matches[0];
-        const mag = top.properties.mag.toFixed(1);
-        new Notification(`SeismicWatch Alert: ${sub.name}`, {
-          body: `M${mag} earthquake near ${top.properties.place}. Inspect site immediately.`,
-          icon: `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>`,
-        });
-      }
+  sitesList.querySelectorAll('.site-chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.i, 10);
+      const name = sites[idx].name;
+      sites.splice(idx, 1);
+      saveSites();
+      renderSites();
+      toast(`Removed "${name}"`, '');
+      // Re-render table to update near-site badges
+      if (displayQuakes.length > 0) renderTable();
     });
+  });
+}
+
+// Geocode via Nominatim
+async function geocodeLocation(query) {
+  const url = `${NOMINATIM}?q=${encodeURIComponent(query)}&format=json&limit=1`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+  if (!res.ok) throw new Error('Geocoding failed');
+  const data = await res.json();
+  if (!data.length) throw new Error(`Could not find "${query}"`);
+  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+}
+
+document.getElementById('site-radius').addEventListener('input', function () {
+  document.getElementById('site-radius-val').textContent = this.value;
+});
+
+document.getElementById('btn-add-site').addEventListener('click', async () => {
+  const nameEl      = document.getElementById('site-name');
+  const locationEl  = document.getElementById('site-location');
+  const radiusEl    = document.getElementById('site-radius');
+  const thresholdEl = document.getElementById('site-threshold');
+
+  const name     = nameEl.value.trim();
+  const location = locationEl.value.trim();
+  const radius   = parseInt(radiusEl.value, 10);
+  const threshold = parseFloat(thresholdEl.value);
+
+  if (!name) { toast('Enter a site name', 'error'); nameEl.focus(); return; }
+  if (!location) { toast('Enter a city or coordinates', 'error'); locationEl.focus(); return; }
+
+  const btn = document.getElementById('btn-add-site');
+  btn.disabled = true;
+  btn.textContent = 'Locating…';
+
+  try {
+    let lat, lng;
+
+    // Check if it's lat,lng format
+    const latLngMatch = location.match(/^(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)$/);
+    if (latLngMatch) {
+      lat = parseFloat(latLngMatch[1]);
+      lng = parseFloat(latLngMatch[2]);
+    } else {
+      const coords = await geocodeLocation(location);
+      lat = coords.lat;
+      lng = coords.lng;
+    }
+
+    const site = { name, lat, lng, radius, threshold };
+    sites.push(site);
+    saveSites();
+    renderSites();
+
+    nameEl.value = '';
+    locationEl.value = '';
+
+    toast(`Added "${name}" (${lat.toFixed(3)}, ${lng.toFixed(3)})`, 'success');
+    if (displayQuakes.length > 0) renderTable();
+
+  } catch (err) {
+    toast('Could not locate site: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Add site';
   }
+});
 
-  // ─── Filter event listeners ───────────────────────────────────
-  document.getElementById('minMag').addEventListener('input', function () {
-    document.getElementById('minMagVal').textContent = this.value;
-  });
+// ── Filter application ─────────────────────────────────────────────────
+document.getElementById('filter-mag').addEventListener('input', function () {
+  const v = parseFloat(this.value);
+  document.getElementById('filter-mag-val').textContent = v.toFixed(1);
+  this.setAttribute('aria-valuenow', v);
+});
 
-  document.getElementById('timeRange').addEventListener('change', fetchQuakes);
-  document.getElementById('minMag').addEventListener('change', fetchQuakes);
-  document.getElementById('regionFilter').addEventListener('change', applyFilters);
+document.getElementById('btn-apply-filters').addEventListener('click', fetchQuakes);
+btnRefresh.addEventListener('click', fetchQuakes);
 
-  // ─── Refresh button ───────────────────────────────────────────
-  document.getElementById('refreshBtn').addEventListener('click', fetchQuakes);
+// ── Last-updated counter ───────────────────────────────────────────────
+function updateNavTimestamp() {
+  if (!lastFetch) { navUpdated.textContent = ''; return; }
+  navUpdated.textContent = 'Updated ' + timeAgo(lastFetch);
+}
 
-  // ─── Modal close ──────────────────────────────────────────────
-  document.getElementById('closeDetail').addEventListener('click', closeDetail);
-  detailOverlay.addEventListener('click', e => {
-    if (e.target === detailOverlay) closeDetail();
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && detailOverlay.classList.contains('open')) closeDetail();
-  });
+function startUpdater() {
+  if (updaterInterval) clearInterval(updaterInterval);
+  updaterInterval = setInterval(updateNavTimestamp, 30000);
+}
 
-  // ─── Map zoom controls ────────────────────────────────────────
-  const mapSvg = document.getElementById('world-map');
-  let viewBox = { x: 0, y: 0, w: 1000, h: 500 };
+// ── Toast ──────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
 
-  function applyViewBox() {
-    mapSvg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-  }
+// ── Auto-refresh every 5 minutes ──────────────────────────────────────
+setInterval(fetchQuakes, 5 * 60 * 1000);
 
-  document.getElementById('zoomIn').addEventListener('click', () => {
-    const cx = viewBox.x + viewBox.w / 2;
-    const cy = viewBox.y + viewBox.h / 2;
-    viewBox.w = Math.max(200, viewBox.w * 0.7);
-    viewBox.h = Math.max(100, viewBox.h * 0.7);
-    viewBox.x = cx - viewBox.w / 2;
-    viewBox.y = cy - viewBox.h / 2;
-    applyViewBox();
-  });
-
-  document.getElementById('zoomOut').addEventListener('click', () => {
-    viewBox.w = Math.min(1000, viewBox.w / 0.7);
-    viewBox.h = Math.min(500, viewBox.h / 0.7);
-    viewBox.x = Math.max(0, (1000 - viewBox.w) / 2);
-    viewBox.y = Math.max(0, (500 - viewBox.h) / 2);
-    applyViewBox();
-  });
-
-  document.getElementById('resetView').addEventListener('click', () => {
-    viewBox = { x: 0, y: 0, w: 1000, h: 500 };
-    applyViewBox();
-  });
-
-  // Map drag pan
-  let isPanning = false;
-  let panStart = { x: 0, y: 0 };
-
-  mapSvg.addEventListener('mousedown', e => {
-    if (e.target.closest('.quake-marker')) return;
-    isPanning = true;
-    panStart = { x: e.clientX, y: e.clientY };
-    mapSvg.style.cursor = 'grabbing';
-  });
-
-  window.addEventListener('mousemove', e => {
-    if (!isPanning) return;
-    const dx = (e.clientX - panStart.x) * (viewBox.w / mapSvg.clientWidth);
-    const dy = (e.clientY - panStart.y) * (viewBox.h / mapSvg.clientHeight);
-    viewBox.x -= dx;
-    viewBox.y -= dy;
-    viewBox.x = Math.max(0, Math.min(1000 - viewBox.w, viewBox.x));
-    viewBox.y = Math.max(0, Math.min(500 - viewBox.h, viewBox.y));
-    applyViewBox();
-    panStart = { x: e.clientX, y: e.clientY };
-  });
-
-  window.addEventListener('mouseup', () => {
-    isPanning = false;
-    mapSvg.style.cursor = 'default';
-  });
-
-  // Scroll to zoom
-  mapSvg.addEventListener('wheel', e => {
-    e.preventDefault();
-    const factor = e.deltaY > 0 ? 1.15 : 0.87;
-    const rect = mapSvg.getBoundingClientRect();
-    const mx = ((e.clientX - rect.left) / rect.width) * viewBox.w + viewBox.x;
-    const my = ((e.clientY - rect.top) / rect.height) * viewBox.h + viewBox.y;
-
-    viewBox.w = Math.max(200, Math.min(1000, viewBox.w * factor));
-    viewBox.h = Math.max(100, Math.min(500, viewBox.h * factor));
-    viewBox.x = mx - ((e.clientX - rect.left) / rect.width) * viewBox.w;
-    viewBox.y = my - ((e.clientY - rect.top) / rect.height) * viewBox.h;
-    viewBox.x = Math.max(0, Math.min(1000 - viewBox.w, viewBox.x));
-    viewBox.y = Math.max(0, Math.min(500 - viewBox.h, viewBox.y));
-    applyViewBox();
-  }, { passive: false });
-
-  // ─── Auto-refresh every 5 minutes ────────────────────────────
-  setInterval(fetchQuakes, 5 * 60 * 1000);
-
-  // ─── Initial load ─────────────────────────────────────────────
-  fetchQuakes();
-})();
+// ── Init ───────────────────────────────────────────────────────────────
+loadSites();
+renderSites();
+fetchQuakes();
 </script>
 </body>
 </html>

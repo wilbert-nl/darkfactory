@@ -1,911 +1,1093 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UV Index Tracker — Outdoor Safety Monitor</title>
-  <style>
-    :root {
-      --bg: #02091a;
-      --surface: rgba(255,255,255,0.08);
-      --surface2: rgba(255,255,255,0.13);
-      --border: rgba(255,255,255,0.16);
-      --accent: #38bdf8;
-      --accent2: #fb923c;
-      --text: rgba(255,255,255,0.95);
-      --muted: rgba(255,255,255,0.5);
-      --green: #34d399;
-      --yellow: #fbbf24;
-      --radius: 20px;
-
-      --uv-low: #34d399;
-      --uv-moderate: #fbbf24;
-      --uv-high: #fb923c;
-      --uv-very-high: #fb923c;
-      --uv-extreme: #b44fff;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(8px);
-    }
-
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      flex-shrink: 0;
-    }
-
-    header h1 {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    header p {
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    /* ── Main layout ── */
-    main {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 1.5rem 1rem 3rem;
-    }
-
-    /* ── Search bar ── */
-    .search-section {
-      margin-bottom: 1.5rem;
-    }
-
-    .search-row {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .search-input-wrap {
-      position: relative;
-      flex: 1;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 0.9rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      pointer-events: none;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.7rem 0.9rem 0.7rem 2.5rem;
-      color: var(--text);
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    input[type="text"]:focus {
-      border-color: var(--accent);
-    }
-
-    input[type="text"]::placeholder { color: var(--muted); }
-
-    .btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      padding: 0.7rem 1.2rem;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s, opacity 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      white-space: nowrap;
-    }
-
-    .btn:hover { background: #7d75ff; }
-    .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-    .btn-secondary {
-      background: var(--surface2);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover { background: var(--border); }
-
-    /* Suggestions dropdown */
-    .suggestions {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      z-index: 200;
-      overflow: hidden;
-      display: none;
-    }
-
-    .suggestions.visible { display: block; }
-
-    .suggestion-item {
-      padding: 0.65rem 1rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.15s;
-    }
-
-    .suggestion-item:last-child { border-bottom: none; }
-    .suggestion-item:hover, .suggestion-item:focus { background: var(--surface2); outline: none; }
-    .suggestion-item .country { color: var(--muted); font-size: 0.8rem; margin-left: 0.4rem; }
-
-    /* Skin type selector */
-    .skin-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-top: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .skin-label {
-      font-size: 0.85rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    .skin-options {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-    }
-
-    .skin-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.3rem 0.75rem;
-      font-size: 0.8rem;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .skin-btn:hover { border-color: var(--accent); color: var(--text); }
-    .skin-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-
-    /* ── Error / status banner ── */
-    .status-banner {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      font-size: 0.9rem;
-      color: var(--muted);
-      display: none;
-    }
-
-    .status-banner.visible { display: flex; }
-    .status-banner.error { border-color: var(--accent2); color: var(--accent2); }
-    .status-banner.loading { border-color: var(--accent); color: var(--accent); }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .spinner {
-      width: 18px;
-      height: 18px;
-      border: 2px solid currentColor;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
-    }
-
-    /* ── Content grid ── */
-    .content { display: none; }
-    .content.visible { display: block; }
-
-    .top-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    @media (max-width: 640px) {
-      .top-grid { grid-template-columns: 1fr; }
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-    }
-
-    .card-title {
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-      font-weight: 600;
-    }
-
-    /* ── UV Gauge ── */
-    .gauge-card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .gauge-wrap {
-      position: relative;
-      width: 180px;
-      height: 100px;
-      overflow: visible;
-    }
-
-    .gauge-bg {
-      fill: none;
-      stroke: var(--surface2);
-      stroke-width: 14;
-      stroke-linecap: round;
-    }
-
-    .gauge-arc {
-      fill: none;
-      stroke-width: 14;
-      stroke-linecap: round;
-      transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.6s;
-    }
-
-    .gauge-value {
-      position: absolute;
-      bottom: 4px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 2.8rem;
-      font-weight: 800;
-      line-height: 1;
-      transition: color 0.5s;
-    }
-
-    .gauge-label {
-      font-size: 1rem;
-      font-weight: 700;
-      text-align: center;
-      transition: color 0.4s;
-    }
-
-    .gauge-desc {
-      font-size: 0.8rem;
-      color: var(--muted);
-      text-align: center;
-    }
-
-    /* ── Recommendation card ── */
-    .rec-card .rec-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.6rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.87rem;
-    }
-
-    .rec-card .rec-item:last-child { border-bottom: none; }
-
-    .rec-icon {
-      font-size: 1.1rem;
-      flex-shrink: 0;
-      margin-top: 0.05rem;
-    }
-
-    .rec-text strong { color: var(--text); font-weight: 600; }
-    .rec-text span { color: var(--muted); }
-
-    /* ── Safe Exposure ── */
-    .exposure-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.6rem;
-    }
-
-    .exposure-item {
-      background: var(--surface2);
-      border-radius: 8px;
-      padding: 0.65rem;
-      text-align: center;
-    }
-
-    .exposure-item .time {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--green);
-    }
-
-    .exposure-item .type {
-      font-size: 0.7rem;
-      color: var(--muted);
-      margin-top: 0.2rem;
-    }
-
-    /* ── Hourly chart ── */
-    .chart-card {
-      margin-bottom: 1rem;
-    }
-
-    .chart-scroll {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .chart-scroll::-webkit-scrollbar { height: 4px; }
-    .chart-scroll::-webkit-scrollbar-track { background: var(--surface2); border-radius: 2px; }
-    .chart-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    svg.hour-chart {
-      display: block;
-      overflow: visible;
-    }
-
-    /* ── 3-day forecast ── */
-    .forecast-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
-    }
-
-    .forecast-day {
-      background: var(--surface2);
-      border-radius: 8px;
-      padding: 0.9rem;
-      text-align: center;
-      border: 1px solid transparent;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-
-    .forecast-day:hover { border-color: var(--accent); transform: translateY(-2px); }
-
-    .forecast-day .day-name {
-      font-size: 0.75rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 0.4rem;
-    }
-
-    .forecast-day .day-uv {
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1;
-      margin-bottom: 0.3rem;
-    }
-
-    .forecast-day .day-level {
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
-    /* ── Threshold alert ── */
-    .alert-card {
-      margin-bottom: 1rem;
-    }
-
-    .alert-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .alert-row label {
-      font-size: 0.87rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    input[type="range"] {
-      flex: 1;
-      min-width: 120px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    .threshold-val {
-      font-size: 1rem;
-      font-weight: 700;
-      min-width: 24px;
-      text-align: center;
-    }
-
-    .alert-status {
-      width: 100%;
-      margin-top: 0.5rem;
-      padding: 0.6rem 1rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-align: center;
-      display: none;
-    }
-
-    .alert-status.triggered {
-      display: block;
-      background: rgba(251,146,60, 0.15);
-      border: 1px solid var(--accent2);
-      color: var(--accent2);
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    .alert-status.safe {
-      display: block;
-      background: rgba(67, 217, 173, 0.1);
-      border: 1px solid var(--green);
-      color: var(--green);
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-
-    /* ── Alert log ── */
-    .log-card { margin-bottom: 1rem; }
-
-    .log-list {
-      list-style: none;
-      max-height: 180px;
-      overflow-y: auto;
-    }
-
-    .log-list::-webkit-scrollbar { width: 4px; }
-    .log-list::-webkit-scrollbar-track { background: var(--surface2); }
-    .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    .log-item {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.82rem;
-    }
-
-    .log-item:last-child { border-bottom: none; }
-
-    .log-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .log-empty {
-      color: var(--muted);
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 1rem;
-    }
-
-    /* ── Fade in animation ── */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .fade-in { animation: fadeIn 0.4s ease both; }
-
-    /* ── Utility ── */
-    .section-title {
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-      font-weight: 600;
-    }
-
-    .location-name {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 0.25rem;
-    }
-
-    .location-coords {
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    /* ── Footer ── */
-    footer {
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.78rem;
-      margin-top: 2rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--border);
-    }
-
-    /* ── Weather design system v2 ── */
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SunGuard — UV Index Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Garden · nav: N9 */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
-  background: linear-gradient(180deg, #02091a 0%, #0d1f3c 50%, #153050 100%) fixed;
-  min-height: 100vh;
-  color: rgba(255,255,255,0.9);
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
-body::before {
-  content: '';
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── UV color tokens ── */
+:root {
+  --uv-low:       oklch(58% 0.16 148);
+  --uv-moderate:  oklch(74% 0.16 88);
+  --uv-high:      oklch(68% 0.18 55);
+  --uv-very-high: oklch(55% 0.20 25);
+  --uv-extreme:   oklch(48% 0.20 305);
+
+  --uv-low-bg:       oklch(20% 0.04 148);
+  --uv-moderate-bg:  oklch(20% 0.04 88);
+  --uv-high-bg:      oklch(20% 0.04 55);
+  --uv-very-high-bg: oklch(20% 0.04 25);
+  --uv-extreme-bg:   oklch(20% 0.04 305);
+}
+
+/* ── N9 Nav ── */
+.nav {
   position: fixed;
-  width: 500px; height: 500px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(56,189,248,.12) 0%, transparent 70%);
-  top: -150px; right: -100px;
-  animation: floatOrb 10s ease-in-out infinite;
-  pointer-events: none; z-index: 0;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
 }
-body::after {
-  content: '';
-  position: fixed;
-  width: 320px; height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(251,146,60,.08) 0%, transparent 70%);
-  bottom: 8%; left: -80px;
-  animation: floatOrb 14s ease-in-out infinite reverse;
-  pointer-events: none; z-index: 0;
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
-.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] {
-  background: rgba(255,255,255,0.08) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255,255,255,0.18) !important;
-  border-radius: 20px !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 8px 32px rgba(0,0,0,0.3);
+.nav-logo-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--color-accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
-h1 {
-  font-weight: 200;
-  font-size: clamp(2.5rem, 7vw, 5rem);
-  letter-spacing: -.02em;
-  color: rgba(255,255,255,0.95);
-  text-shadow: 0 0 30px rgba(56,189,248,.4);
-  -webkit-text-fill-color: rgba(255,255,255,0.95);
+.nav-logo-icon svg { color: var(--color-paper); }
+.nav-logo span { color: var(--color-accent); }
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
 }
-h2, h3 { font-weight: 300; color: rgba(255,255,255,0.85); -webkit-text-fill-color: rgba(255,255,255,0.85); }
-p, label, span, td, th, li { color: rgba(255,255,255,0.8); }
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
-@keyframes floatOrb { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-22px) scale(1.04);} }
-@keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
-@keyframes alertPulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.5);} 50%{box-shadow:0 0 0 8px rgba(251,146,60,0);} }
-.card,[class*="card"],[class*="widget"],[class*="panel"],[class*="result"] { animation: fadeUp .5s ease both; }
-.card:nth-child(2){animation-delay:.08s} .card:nth-child(3){animation-delay:.16s} .card:nth-child(4){animation-delay:.24s}
-[class*="alert"],[class*="warning"] { animation: alertPulse 2s ease-in-out infinite; }
-button,[class*="btn"] {
-  background: rgba(255,255,255,0.1) !important;
-  border: 1px solid rgba(255,255,255,0.22) !important;
-  backdrop-filter: blur(8px);
-  color: rgba(255,255,255,0.9) !important;
-  transition: all .2s;
-  border-radius: 12px;
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
 }
-button:hover,[class*="btn"]:hover {
-  background: rgba(56,189,248,0.2) !important;
-  border-color: rgba(56,189,248,0.5) !important;
-  box-shadow: 0 4px 20px rgba(56,189,248,.3);
-  transform: translateY(-1px);
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease-out);
+  min-height: 44px;
 }
-input, select {
-  background: rgba(255,255,255,0.08) !important;
-  border: 1px solid rgba(255,255,255,0.16) !important;
-  color: rgba(255,255,255,0.9) !important;
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
 }
-input::placeholder { color: rgba(255,255,255,0.4); }
-input:focus, select:focus {
-  border-color: rgba(56,189,248,.6) !important;
-  box-shadow: 0 0 0 3px rgba(56,189,248,.2);
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-head {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.sidebar-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-3);
+}
+
+/* Search input */
+.search-wrap {
+  position: relative;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+.input-search {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 10px 10px 34px;
+  min-height: 44px;
+  transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out);
+}
+.input-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+.input-search::placeholder { color: var(--color-ink-muted); }
+
+/* Autocomplete dropdown */
+.suggestions-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.12);
+  z-index: 300;
+  overflow: hidden;
+  display: none;
+}
+.suggestions-dropdown.open { display: block; }
+.suggestion-item {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s var(--ease-out);
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover, .suggestion-item:focus {
+  background: var(--color-accent-subtle);
   outline: none;
 }
-select option { background: #0d1f3c; color: white; }
-  </style>
+.suggestion-country {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 1px;
+}
+
+/* Locate button */
+.btn-locate {
+  margin-top: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+}
+.btn-locate:hover { background: var(--color-paper-3); border-color: var(--color-accent); }
+.btn-locate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Threshold setting */
+.threshold-section {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.threshold-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-3);
+}
+.threshold-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.threshold-row label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  flex: 1;
+}
+.input-threshold {
+  width: 64px;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  text-align: center;
+  min-height: 44px;
+  transition: border-color 0.15s var(--ease-out);
+}
+.input-threshold:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.14 155 / 0.10);
+}
+
+/* Saved locations */
+.saved-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+}
+.saved-section-head {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-left: 2px solid var(--color-accent);
+  color: var(--color-ink-muted);
+}
+.saved-empty {
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.65;
+}
+.saved-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+  min-height: 44px;
+}
+.saved-item:hover { background: var(--color-paper-3); }
+.saved-item.active {
+  background: var(--color-paper-3);
+  border-left-color: var(--color-accent);
+}
+.saved-item-info { flex: 1; min-width: 0; }
+.saved-item-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.saved-item-meta {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 1px;
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Empty state ── */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  text-align: center;
+  gap: var(--space-4);
+}
+.empty-icon {
+  width: 72px;
+  height: 72px;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-muted);
+}
+.empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.empty-sub {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  max-width: 300px;
+  line-height: 1.65;
+}
+
+/* ── Loading / error state ── */
+.status-bar {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+.status-bar.visible { display: flex; }
+.status-bar.loading { color: var(--color-accent); background: var(--color-accent-subtle); }
+.status-bar.error { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.06); border-bottom-color: oklch(55% 0.20 25 / 0.3); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── Dashboard ── */
+.dashboard { display: none; flex-direction: column; gap: 0; flex: 1; overflow: hidden; }
+.dashboard.visible { display: flex; }
+
+/* Alert banner */
+.alert-banner {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  background: oklch(55% 0.20 25 / 0.08);
+  border-bottom: 1px solid oklch(55% 0.20 25 / 0.3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-danger);
+  flex-shrink: 0;
+}
+.alert-banner.visible { display: flex; }
+@keyframes alert-pulse { 0%,100%{opacity:1} 50%{opacity:0.75} }
+.alert-banner.visible { animation: alert-pulse 2.5s ease-in-out infinite; }
+
+/* ── Gauge card ── */
+.gauge-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+.gauge-card-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+  align-self: flex-start;
+}
+.gauge-wrap {
+  position: relative;
+  width: 200px;
+  height: 110px;
+}
+.gauge-value {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 3.5rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  transition: color 0.4s var(--ease-out);
+}
+.gauge-level-label {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  transition: color 0.4s var(--ease-out);
+}
+.gauge-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* ── Stats row ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+.stat-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.stat-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.stat-sub {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* ── Section heading ── */
+.section-head {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* ── Hourly chart ── */
+.chart-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+}
+.chart-bars-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.chart-bars-wrap::-webkit-scrollbar { height: 4px; }
+.chart-bars-wrap::-webkit-scrollbar-track { background: var(--color-paper-2); border-radius: 2px; }
+.chart-bars-wrap::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  min-width: 480px;
+  padding-bottom: var(--space-6);
+  position: relative;
+}
+.chart-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 28px;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+.chart-bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: opacity 0.15s var(--ease-out);
+  position: relative;
+}
+.chart-bar.current-hour {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 1px;
+}
+.chart-bar-label {
+  position: absolute;
+  bottom: -22px;
+  font-size: 9px;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  text-align: center;
+}
+.chart-bar-val {
+  position: absolute;
+  top: -16px;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Forecast strip ── */
+.forecast-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+.forecast-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  text-align: center;
+  transition: border-color 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+}
+.forecast-card:hover { border-color: var(--color-accent-line); transform: translateY(-2px); }
+.forecast-day-name {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+.forecast-uv {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: var(--space-2);
+}
+.forecast-badge {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+/* ── Protection tips ── */
+.tips-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+}
+.tips-list { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+.tip-item:last-child { border-bottom: none; }
+.tip-icon { flex-shrink: 0; font-size: 1rem; margin-top: 1px; }
+.tip-text strong { color: var(--color-ink); font-weight: 600; }
+.tip-text span { color: var(--color-ink-muted); display: block; font-size: var(--text-xs); margin-top: 1px; }
+
+/* ── Top layout: gauge + tips ── */
+.top-row {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* ── Location header ── */
+.location-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.location-name {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.location-coords {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(18% 0.04 155 / 0.2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Animation ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.3s var(--ease-out) both; }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+  .main { overflow: visible; }
+  .dashboard.visible { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+  .top-row { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .forecast-strip { grid-template-columns: 1fr; }
+  .gauge-card { padding: var(--space-4); }
+}
+@media (max-width: 480px) {
+  .stats-row { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-up { animation: none; }
+  .alert-banner.visible { animation: none; }
+  .forecast-card:hover { transform: none; }
+}
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo-icon" aria-hidden="true">☀️</div>
-  <div>
-    <h1>UV Index Tracker</h1>
-    <p>Outdoor safety monitor for field crews</p>
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <div class="nav-logo">
+    <div class="nav-logo-icon" aria-hidden="true">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+    </div>
+    SunGuard<span>.</span>
   </div>
-</header>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">UV Index Tracker</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
 
-<main>
+<div class="app-shell">
 
-  <!-- Search section -->
-  <section class="search-section" aria-label="Location search">
-    <div class="search-row">
-      <div class="search-input-wrap">
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Location settings">
+
+    <div class="sidebar-head">
+      <div class="sidebar-title">Job Site Location</div>
+      <div class="search-wrap">
         <span class="search-icon" aria-hidden="true">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
           </svg>
         </span>
         <input
-          id="city-input"
           type="text"
-          placeholder="Search city or job site location…"
+          class="input-search"
+          id="city-input"
+          placeholder="Search city or location…"
           autocomplete="off"
-          aria-label="City search"
+          aria-label="Search city"
           aria-autocomplete="list"
           aria-controls="suggestions-list"
-        />
-        <div class="suggestions" id="suggestions-list" role="listbox" aria-label="Location suggestions"></div>
+          aria-haspopup="listbox"
+        >
+        <div class="suggestions-dropdown" id="suggestions-list" role="listbox" aria-label="Location suggestions"></div>
       </div>
-      <button class="btn" id="search-btn" aria-label="Search UV data">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-          <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-        </svg>
-        Get UV
-      </button>
-      <button class="btn btn-secondary" id="locate-btn" title="Use my location" aria-label="Use current location">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <button class="btn-locate" id="locate-btn" aria-label="Use my current location">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>
         </svg>
+        Use my location
       </button>
     </div>
-    <div class="skin-row">
-      <span class="skin-label">Skin type:</span>
-      <div class="skin-options" role="group" aria-label="Select skin type">
-        <button class="skin-btn active" data-skin="1" aria-pressed="true">Type I–II</button>
-        <button class="skin-btn" data-skin="2" aria-pressed="false">Type III–IV</button>
-        <button class="skin-btn" data-skin="3" aria-pressed="false">Type V–VI</button>
+
+    <!-- Saved locations -->
+    <div class="saved-section" aria-label="Saved locations">
+      <div class="saved-section-head">Recent locations</div>
+      <div id="saved-list">
+        <p class="saved-empty">No saved locations yet. Search for a location to get started.</p>
       </div>
     </div>
-  </section>
 
-  <!-- Status banner -->
-  <div class="status-banner" id="status-banner" role="status" aria-live="polite">
-    <span id="status-icon"></span>
-    <span id="status-text"></span>
-  </div>
-
-  <!-- Main content -->
-  <div class="content" id="content" aria-live="polite">
-
-    <!-- Location info row -->
-    <div style="margin-bottom:1rem" class="fade-in">
-      <div class="location-name" id="location-name"></div>
-      <div class="location-coords" id="location-coords"></div>
+    <!-- Threshold setting -->
+    <div class="threshold-section">
+      <span class="threshold-label">Alert Threshold</span>
+      <div class="threshold-row">
+        <label for="threshold-input">Alert when UV &ge;</label>
+        <input
+          type="number"
+          class="input-threshold"
+          id="threshold-input"
+          min="1"
+          max="12"
+          value="6"
+          aria-label="UV alert threshold value"
+        >
+      </div>
     </div>
 
-    <!-- Top grid: gauge + recommendation -->
-    <div class="top-grid">
+  </aside>
 
-      <!-- UV Gauge -->
-      <div class="card gauge-card fade-in" aria-label="Current UV index gauge">
-        <div class="card-title">Current UV Index</div>
-        <div class="gauge-wrap">
-          <svg viewBox="0 0 180 100" width="180" height="100" role="img" aria-label="UV gauge arc">
-            <!-- half-circle arc: radius=80, center=(90,90) -->
-            <!-- total arc = π*80 ≈ 251.3 -->
-            <path
-              class="gauge-bg"
-              d="M 10 90 A 80 80 0 0 1 170 90"
-            />
-            <path
-              class="gauge-arc"
-              id="gauge-arc"
-              d="M 10 90 A 80 80 0 0 1 170 90"
-              stroke-dasharray="251.3"
-              stroke-dashoffset="251.3"
-              stroke="var(--uv-low)"
-            />
-          </svg>
-          <div class="gauge-value" id="gauge-value" style="color: var(--uv-low)">—</div>
+  <!-- Main panel -->
+  <main class="main" aria-label="UV Dashboard">
+
+    <!-- Status bar -->
+    <div class="status-bar" id="status-bar" role="status" aria-live="polite">
+      <span id="status-icon"></span>
+      <span id="status-text"></span>
+    </div>
+
+    <!-- Alert banner -->
+    <div class="alert-banner" id="alert-banner" role="alert" aria-live="assertive">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true" flex-shrink="0">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span id="alert-text"></span>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon" aria-hidden="true">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </div>
+      <p class="empty-title">No location selected</p>
+      <p class="empty-sub">Search for a city or use your current location to see UV index data and safety recommendations.</p>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard" aria-live="polite">
+      <div class="main-scroll" id="main-scroll">
+
+        <!-- Location header -->
+        <div class="location-header fade-up">
+          <h1 class="location-name" id="location-name">—</h1>
+          <span class="location-coords" id="location-coords"></span>
         </div>
-        <div class="gauge-label" id="gauge-label">—</div>
-        <div class="gauge-desc" id="gauge-updated"></div>
-      </div>
 
-      <!-- Sunscreen recommendation -->
-      <div class="card rec-card fade-in" aria-label="Safety recommendations">
-        <div class="card-title">Safety Recommendations</div>
-        <div id="rec-list"></div>
-      </div>
+        <!-- Top row: gauge + protection tips -->
+        <div class="top-row fade-up">
 
-    </div>
+          <!-- Gauge -->
+          <div class="gauge-card" aria-label="Current UV index">
+            <div class="gauge-card-title">Current UV Index</div>
+            <div class="gauge-wrap" aria-hidden="true">
+              <svg id="gauge-svg" viewBox="0 0 200 110" width="200" height="110" role="img" aria-label="UV index gauge arc">
+                <!-- half-circle: radius=88, center=(100,100) -->
+                <!-- arc length = π*88 ≈ 276.5 -->
+                <path
+                  d="M 12 100 A 88 88 0 0 1 188 100"
+                  fill="none"
+                  stroke="var(--color-border)"
+                  stroke-width="14"
+                  stroke-linecap="round"
+                />
+                <path
+                  id="gauge-arc"
+                  d="M 12 100 A 88 88 0 0 1 188 100"
+                  fill="none"
+                  stroke="var(--uv-low)"
+                  stroke-width="14"
+                  stroke-linecap="round"
+                  stroke-dasharray="276.5"
+                  stroke-dashoffset="276.5"
+                  style="transition: stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1), stroke 0.5s var(--ease-out);"
+                />
+              </svg>
+              <div class="gauge-value" id="gauge-value" style="color: var(--uv-low)">—</div>
+            </div>
+            <div class="gauge-level-label" id="gauge-level" style="color: var(--uv-low)">—</div>
+            <div class="gauge-sub" id="gauge-time">—</div>
+          </div>
 
-    <!-- Safe exposure times -->
-    <div class="card fade-in" style="margin-bottom:1rem">
-      <div class="card-title">Safe Exposure Times (with SPF 30)</div>
-      <div class="exposure-grid" id="exposure-grid"></div>
-    </div>
+          <!-- Protection tips -->
+          <div class="tips-card" aria-label="Protection recommendations">
+            <div class="section-head">Protection Tips</div>
+            <ul class="tips-list" id="tips-list" aria-label="UV protection recommendations">
+              <!-- populated by JS -->
+            </ul>
+          </div>
 
-    <!-- Threshold alert -->
-    <div class="card alert-card fade-in">
-      <div class="card-title">Alert Threshold</div>
-      <div class="alert-row">
-        <label for="threshold-range">Trigger alert when UV ≥</label>
-        <input type="range" id="threshold-range" min="1" max="11" value="6" aria-label="UV alert threshold" />
-        <span class="threshold-val" id="threshold-val">6</span>
-      </div>
-      <div class="alert-status" id="alert-status"></div>
-    </div>
+        </div>
 
-    <!-- Hourly UV chart -->
-    <div class="card chart-card fade-in">
-      <div class="card-title">Hourly UV Forecast — Today</div>
-      <div class="chart-scroll">
-        <svg id="hour-chart" class="hour-chart"></svg>
-      </div>
-    </div>
+        <!-- Today stats row -->
+        <div class="stats-row fade-up" aria-label="Today UV statistics">
+          <div class="stat-card">
+            <span class="stat-label">Peak UV Today</span>
+            <span class="stat-value" id="stat-peak">—</span>
+            <span class="stat-sub" id="stat-peak-sub">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Peak Time</span>
+            <span class="stat-value" id="stat-peak-time">—</span>
+            <span class="stat-sub">today's highest UV</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Hours Above Threshold</span>
+            <span class="stat-value" id="stat-hours-above">—</span>
+            <span class="stat-sub" id="stat-hours-sub">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Recommended SPF</span>
+            <span class="stat-value" id="stat-spf">—</span>
+            <span class="stat-sub">based on peak UV</span>
+          </div>
+        </div>
 
-    <!-- 3-day forecast -->
-    <div class="card fade-in" style="margin-bottom:1rem">
-      <div class="card-title">3-Day UV Forecast</div>
-      <div class="forecast-grid" id="forecast-grid"></div>
-    </div>
+        <!-- Hourly chart -->
+        <div class="chart-card fade-up" aria-label="Hourly UV forecast for today">
+          <div class="section-head">Hourly UV — Today (6 am – 8 pm)</div>
+          <div class="chart-bars-wrap">
+            <div class="chart-bars" id="chart-bars" role="img" aria-label="Bar chart of hourly UV index values"></div>
+          </div>
+        </div>
 
-    <!-- Alert log -->
-    <div class="card log-card fade-in">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>Alert Log</span>
-        <button class="btn btn-secondary" id="clear-log-btn" style="font-size:0.75rem;padding:0.3rem 0.7rem">Clear</button>
-      </div>
-      <ul class="log-list" id="alert-log" aria-label="Alert history log"></ul>
-    </div>
+        <!-- 3-day forecast -->
+        <div class="fade-up">
+          <div class="section-head">3-Day UV Forecast</div>
+          <div class="forecast-strip" id="forecast-strip" aria-label="3-day UV forecast"></div>
+        </div>
 
-  </div><!-- /content -->
+      </div><!-- /main-scroll -->
+    </div><!-- /dashboard -->
 
-</main>
+  </main>
+</div>
 
-<footer>
-  <p>Data from <a href="https://open-meteo.com" target="_blank" rel="noopener" style="color:var(--accent)">Open-Meteo</a> · Free, no API key required</p>
-</footer>
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
 (function () {
   'use strict';
 
   /* ── Constants ── */
-  const GEO_URL  = `https://geocoding-api.open-meteo.com/v1/search`;
-  const UV_URL   = `https://api.open-meteo.com/v1/forecast`;
-  const ARC_LEN  = 251.3;
-  const MAX_UV   = 12;
+  const GEO_URL = 'https://geocoding-api.open-meteo.com/v1/search';
+  const UV_URL  = 'https://api.open-meteo.com/v1/forecast';
+  const ARC_LEN = 276.5;
+  const MAX_UV  = 13;
+  const MAX_SAVED = 5;
 
   /* ── State ── */
-  let currentUV     = null;
-  let currentThresh = 6;
-  let skinType      = 1;
-  let alertLog      = JSON.parse(localStorage.getItem('uv-alert-log') || '[]');
-  let geoTimer      = null;
+  let currentUV    = null;
+  let threshold    = 6;
+  let todayPeakUV  = null;
+  let activeLocKey = null;
+  let geoTimer     = null;
 
-  /* ── DOM refs ── */
+  /* ── DOM ── */
   const cityInput     = document.getElementById('city-input');
-  const searchBtn     = document.getElementById('search-btn');
+  const suggestionsList = document.getElementById('suggestions-list');
   const locateBtn     = document.getElementById('locate-btn');
-  const sugList       = document.getElementById('suggestions-list');
-  const statusBanner  = document.getElementById('status-banner');
+  const savedListEl   = document.getElementById('saved-list');
+  const thresholdInput = document.getElementById('threshold-input');
+  const statusBar     = document.getElementById('status-bar');
   const statusIcon    = document.getElementById('status-icon');
   const statusText    = document.getElementById('status-text');
-  const content       = document.getElementById('content');
+  const alertBanner   = document.getElementById('alert-banner');
+  const alertText     = document.getElementById('alert-text');
+  const emptyState    = document.getElementById('empty-state');
+  const dashboard     = document.getElementById('dashboard');
   const locationName  = document.getElementById('location-name');
-  const locationCoord = document.getElementById('location-coords');
+  const locationCoords = document.getElementById('location-coords');
   const gaugeArc      = document.getElementById('gauge-arc');
   const gaugeValue    = document.getElementById('gauge-value');
-  const gaugeLabel    = document.getElementById('gauge-label');
-  const gaugeUpdated  = document.getElementById('gauge-updated');
-  const recList       = document.getElementById('rec-list');
-  const exposureGrid  = document.getElementById('exposure-grid');
-  const threshRange   = document.getElementById('threshold-range');
-  const threshVal     = document.getElementById('threshold-val');
-  const alertStatus   = document.getElementById('alert-status');
-  const hourChart     = document.getElementById('hour-chart');
-  const forecastGrid  = document.getElementById('forecast-grid');
-  const alertLogEl    = document.getElementById('alert-log');
-  const clearLogBtn   = document.getElementById('clear-log-btn');
+  const gaugeLevel    = document.getElementById('gauge-level');
+  const gaugeTime     = document.getElementById('gauge-time');
+  const tipsList      = document.getElementById('tips-list');
+  const statPeak      = document.getElementById('stat-peak');
+  const statPeakSub   = document.getElementById('stat-peak-sub');
+  const statPeakTime  = document.getElementById('stat-peak-time');
+  const statHoursAbove = document.getElementById('stat-hours-above');
+  const statHoursSub  = document.getElementById('stat-hours-sub');
+  const statSpf       = document.getElementById('stat-spf');
+  const chartBars     = document.getElementById('chart-bars');
+  const forecastStrip = document.getElementById('forecast-strip');
+  const toastEl       = document.getElementById('toast');
 
-  /* ── UV category helpers ── */
-  function uvCategory(uv) {
-    if (uv < 3)  return { label: 'Low',       color: 'var(--uv-low)',       spf: 'None required',    icon: '🟢' };
-    if (uv < 6)  return { label: 'Moderate',  color: 'var(--uv-moderate)',  spf: 'SPF 15+',          icon: '🟡' };
-    if (uv < 8)  return { label: 'High',      color: 'var(--uv-high)',      spf: 'SPF 30+',          icon: '🟠' };
-    if (uv < 11) return { label: 'Very High', color: 'var(--uv-very-high)', spf: 'SPF 50+',          icon: '🔴' };
-    return            { label: 'Extreme',    color: 'var(--uv-extreme)',   spf: 'SPF 50+ essential', icon: '🟣' };
+  /* ── UV level helpers ── */
+  function uvInfo(uv) {
+    if (uv < 3)  return { label: 'Low',       color: 'var(--uv-low)',       bg: 'var(--uv-low-bg)',       spf: null };
+    if (uv < 6)  return { label: 'Moderate',  color: 'var(--uv-moderate)',  bg: 'var(--uv-moderate-bg)',  spf: 15 };
+    if (uv < 8)  return { label: 'High',      color: 'var(--uv-high)',      bg: 'var(--uv-high-bg)',      spf: 30 };
+    if (uv < 11) return { label: 'Very High', color: 'var(--uv-very-high)', bg: 'var(--uv-very-high-bg)', spf: 50 };
+    return              { label: 'Extreme',   color: 'var(--uv-extreme)',   bg: 'var(--uv-extreme-bg)',   spf: 50 };
   }
 
-  /* safe exposure minutes by skin type & UV (Fitzpatrick) */
-  function safeMinutes(uv, skin) {
-    if (!uv || uv <= 0) return null;
-    const base = skin === 1 ? 10 : skin === 2 ? 20 : 40; // minutes at UV 1
-    const mins = Math.round((base * 2.5) / uv * 10) / 10;
-    return Math.max(mins, 1);
+  function fmtHour(isoStr) {
+    const hh = parseInt(isoStr.split('T')[1].split(':')[0], 10);
+    if (hh === 0)  return '12 am';
+    if (hh < 12)   return `${hh} am`;
+    if (hh === 12) return '12 pm';
+    return `${hh - 12} pm`;
   }
 
-  /* ── Status banner ── */
+  function fmtDay(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function spfRecommended(peakUV) {
+    const raw = Math.round(peakUV * 3);
+    return Math.min(raw, 50);
+  }
+
+  /* ── Status helpers ── */
   function showStatus(msg, type) {
-    statusBanner.className = `status-banner visible ${type}`;
-    if (type === 'loading') {
-      statusIcon.innerHTML = `<div class="spinner"></div>`;
-    } else if (type === 'error') {
-      statusIcon.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-    } else {
-      statusIcon.innerHTML = '';
-    }
+    statusBar.className = `status-bar visible ${type}`;
+    statusIcon.innerHTML = type === 'loading'
+      ? '<div class="spinner" aria-hidden="true"></div>'
+      : '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
     statusText.textContent = msg;
   }
 
   function hideStatus() {
-    statusBanner.className = 'status-banner';
+    statusBar.className = 'status-bar';
   }
 
-  /* ── Geocoding / search ── */
+  /* ── Toast ── */
+  let toastTimer;
+  function showToast(msg, type = '') {
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.className = 'toast'; }, 3500);
+  }
+
+  /* ── localStorage saved locations ── */
+  function getSaved() {
+    try { return JSON.parse(localStorage.getItem('sunguard_saved') || '[]'); } catch { return []; }
+  }
+
+  function saveLoc(loc) {
+    let saved = getSaved().filter(s => s.key !== loc.key);
+    saved.unshift(loc);
+    if (saved.length > MAX_SAVED) saved = saved.slice(0, MAX_SAVED);
+    localStorage.setItem('sunguard_saved', JSON.stringify(saved));
+    renderSaved();
+  }
+
+  function getLastLoc() {
+    try { return JSON.parse(localStorage.getItem('sunguard_last') || 'null'); } catch { return null; }
+  }
+
+  function setLastLoc(loc) {
+    localStorage.setItem('sunguard_last', JSON.stringify(loc));
+  }
+
+  function renderSaved() {
+    const saved = getSaved();
+    if (!saved.length) {
+      savedListEl.innerHTML = '<p class="saved-empty">No saved locations yet.</p>';
+      return;
+    }
+    savedListEl.innerHTML = '';
+    saved.forEach(loc => {
+      const el = document.createElement('div');
+      el.className = 'saved-item' + (loc.key === activeLocKey ? ' active' : '');
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', `Load ${loc.name}`);
+      el.innerHTML = `
+        <div class="saved-item-info">
+          <div class="saved-item-name">${esc(loc.name)}</div>
+          <div class="saved-item-meta">${loc.lat.toFixed(2)}°, ${loc.lon.toFixed(2)}°</div>
+        </div>
+      `;
+      el.addEventListener('click', () => loadLocation(loc));
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadLocation(loc); } });
+      savedListEl.appendChild(el);
+    });
+  }
+
+  /* ── Geocoding ── */
   async function searchCity(query) {
-    const res  = await fetch(`${GEO_URL}?name=${encodeURIComponent(query)}&count=6&language=en&format=json`);
-    if (!res.ok) throw new Error(`Geocoding failed (${res.status})`);
+    const res = await fetch(`${GEO_URL}?name=${encodeURIComponent(query)}&count=5&language=en&format=json`);
+    if (!res.ok) throw new Error(`Geocoding error (${res.status})`);
     const data = await res.json();
     return data.results || [];
   }
 
-  function showSuggestions(results) {
-    if (!results.length) {
-      sugList.classList.remove('visible');
-      return;
-    }
-    sugList.innerHTML = results.map((r, i) => {
-      const label = [r.name, r.admin1, r.country].filter(Boolean).join(', ');
-      return `<div class="suggestion-item" role="option" tabindex="0" data-idx="${i}" data-lat="${r.latitude}" data-lon="${r.longitude}" data-name="${encodeURIComponent(label)}">${r.name}<span class="country">${[r.admin1, r.country].filter(Boolean).join(', ')}</span></div>`;
+  function renderSuggestions(results) {
+    if (!results.length) { suggestionsList.classList.remove('open'); return; }
+    suggestionsList.innerHTML = results.map(r => {
+      const name = r.name;
+      const sub = [r.admin1, r.country].filter(Boolean).join(', ');
+      return `<div class="suggestion-item" role="option" tabindex="0" data-lat="${r.latitude}" data-lon="${r.longitude}" data-name="${esc(name)}" data-sub="${esc(sub)}">
+        ${esc(name)}
+        ${sub ? `<span class="suggestion-country">${esc(sub)}</span>` : ''}
+      </div>`;
     }).join('');
-    sugList.classList.add('visible');
+    suggestionsList.classList.add('open');
 
-    sugList.querySelectorAll('.suggestion-item').forEach(el => {
+    suggestionsList.querySelectorAll('.suggestion-item').forEach(el => {
       el.addEventListener('click', () => pickSuggestion(el));
       el.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickSuggestion(el); }
@@ -916,79 +1098,81 @@ select option { background: #0d1f3c; color: white; }
   function pickSuggestion(el) {
     const lat  = parseFloat(el.dataset.lat);
     const lon  = parseFloat(el.dataset.lon);
-    const name = decodeURIComponent(el.dataset.name);
-    cityInput.value = name;
-    sugList.classList.remove('visible');
-    fetchUV(lat, lon, name);
+    const name = el.dataset.name + (el.dataset.sub ? ', ' + el.dataset.sub : '');
+    cityInput.value = el.dataset.name;
+    suggestionsList.classList.remove('open');
+    const loc = { key: `${lat.toFixed(4)},${lon.toFixed(4)}`, name, lat, lon };
+    loadLocation(loc);
   }
 
   cityInput.addEventListener('input', () => {
     clearTimeout(geoTimer);
     const q = cityInput.value.trim();
-    if (q.length < 2) { sugList.classList.remove('visible'); return; }
+    if (q.length < 2) { suggestionsList.classList.remove('open'); return; }
     geoTimer = setTimeout(async () => {
       try {
         const results = await searchCity(q);
-        showSuggestions(results);
-      } catch (_) { /* silent */ }
-    }, 350);
+        renderSuggestions(results);
+      } catch { /* silent */ }
+    }, 400);
   });
 
   cityInput.addEventListener('keydown', e => {
-    if (e.key === 'Escape') sugList.classList.remove('visible');
+    if (e.key === 'Escape') suggestionsList.classList.remove('open');
     if (e.key === 'Enter') {
-      sugList.classList.remove('visible');
+      suggestionsList.classList.remove('open');
       const q = cityInput.value.trim();
-      if (q) triggerSearch();
+      if (!q) return;
+      triggerSearch();
+    }
+    if (e.key === 'ArrowDown') {
+      const first = suggestionsList.querySelector('.suggestion-item');
+      if (first) first.focus();
     }
   });
 
   document.addEventListener('click', e => {
-    if (!e.target.closest('.search-input-wrap')) sugList.classList.remove('visible');
+    if (!e.target.closest('.search-wrap')) suggestionsList.classList.remove('open');
   });
-
-  searchBtn.addEventListener('click', triggerSearch);
 
   async function triggerSearch() {
     const q = cityInput.value.trim();
-    if (!q) { showStatus('Please enter a city or location name.', 'error'); return; }
+    if (!q) return;
     showStatus(`Searching for "${q}"…`, 'loading');
-    searchBtn.disabled = true;
     try {
       const results = await searchCity(q);
-      if (!results.length) { showStatus(`No results found for "${q}". Try another city name.`, 'error'); return; }
-      const r     = results[0];
-      const label = [r.name, r.admin1, r.country].filter(Boolean).join(', ');
-      cityInput.value = label;
-      sugList.classList.remove('visible');
-      await fetchUV(r.latitude, r.longitude, label);
+      if (!results.length) {
+        showStatus(`No results for "${q}". Try another city name.`, 'error');
+        return;
+      }
+      const r = results[0];
+      const sub = [r.admin1, r.country].filter(Boolean).join(', ');
+      const name = r.name + (sub ? ', ' + sub : '');
+      cityInput.value = r.name;
+      const loc = { key: `${r.latitude.toFixed(4)},${r.longitude.toFixed(4)}`, name, lat: r.latitude, lon: r.longitude };
+      await loadLocation(loc);
     } catch (err) {
-      showStatus(`Error: ${err.message}`, 'error');
-    } finally {
-      searchBtn.disabled = false;
+      showStatus(`Search error: ${err.message}`, 'error');
     }
   }
 
   /* ── Geolocation ── */
   locateBtn.addEventListener('click', () => {
     if (!navigator.geolocation) {
-      showStatus('Geolocation is not supported by your browser.', 'error');
+      showToast('Geolocation not supported by your browser.', 'error');
       return;
     }
     showStatus('Getting your location…', 'loading');
     locateBtn.disabled = true;
     navigator.geolocation.getCurrentPosition(
-      async pos => {
-        try {
-          const { latitude: lat, longitude: lon } = pos.coords;
-          const label = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-          cityInput.value = label;
-          await fetchUV(lat, lon, 'Your Location');
-        } catch (err) {
-          showStatus(`Error: ${err.message}`, 'error');
-        } finally {
-          locateBtn.disabled = false;
-        }
+      pos => {
+        locateBtn.disabled = false;
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const name = `${lat.toFixed(3)}°, ${lon.toFixed(3)}°`;
+        const loc = { key: `${lat.toFixed(4)},${lon.toFixed(4)}`, name: 'My Location', lat, lon };
+        cityInput.value = 'My Location';
+        loadLocation(loc);
       },
       err => {
         locateBtn.disabled = false;
@@ -998,305 +1182,264 @@ select option { background: #0d1f3c; color: white; }
     );
   });
 
-  /* ── Fetch UV data ── */
-  async function fetchUV(lat, lon, name) {
+  /* ── Load location → fetch UV ── */
+  async function loadLocation(loc) {
+    activeLocKey = loc.key;
+    renderSaved();
     showStatus('Fetching UV data…', 'loading');
-    content.classList.remove('visible');
-    searchBtn.disabled = true;
+    emptyState.style.display = 'none';
+    dashboard.classList.remove('visible');
     try {
       const params = new URLSearchParams({
-        latitude: lat,
-        longitude: lon,
-        hourly: 'uv_index',
-        daily: 'uv_index_max',
+        latitude:  loc.lat,
+        longitude: loc.lon,
+        hourly:    'uv_index',
+        daily:     'uv_index_max',
         forecast_days: 3,
-        timezone: 'auto'
+        timezone:  'auto'
       });
-      const res  = await fetch(`${UV_URL}?${params}`);
+      const res = await fetch(`${UV_URL}?${params}`);
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
-      renderAll(lat, lon, name, data);
+      renderDashboard(loc, data);
+      saveLoc(loc);
+      setLastLoc(loc);
       hideStatus();
     } catch (err) {
       showStatus(`Failed to load UV data: ${err.message}`, 'error');
-    } finally {
-      searchBtn.disabled = false;
+      emptyState.style.display = '';
     }
   }
 
-  /* ── Render everything ── */
-  function renderAll(lat, lon, name, data) {
-    const now       = new Date();
-    const hourNow   = now.getHours();
-    const hourly    = data.hourly;
-    const daily     = data.daily;
+  /* ── Render dashboard ── */
+  function renderDashboard(loc, data) {
+    const now     = new Date();
+    const hourNow = now.getHours();
+    const hourly  = data.hourly;
+    const daily   = data.daily;
 
-    /* find current UV from hourly (today's hours) */
-    const todayHourly = hourly.time.map((t, i) => ({ t, uv: hourly.uv_index[i] }))
-      .filter(h => h.t.startsWith(data.daily.time[0]));
+    /* Identify today's hourly data */
+    const todayDate = daily.time[0];
+    const todayHourly = hourly.time.map((t, i) => ({ t, uv: hourly.uv_index[i] || 0 }))
+      .filter(h => h.t.startsWith(todayDate));
 
-    const nearestHour = todayHourly.reduce((best, h) => {
-      const hh = parseInt(h.t.split('T')[1].split(':')[0], 10);
-      return Math.abs(hh - hourNow) < Math.abs(parseInt(best.t.split('T')[1].split(':')[0], 10) - hourNow) ? h : best;
-    }, todayHourly[0] || { uv: 0, t: '' });
+    /* Current UV: nearest hour */
+    const nearest = todayHourly.reduce((best, h) => {
+      const hh = parseInt(h.t.split('T')[1], 10);
+      return Math.abs(hh - hourNow) < Math.abs(parseInt(best.t.split('T')[1], 10) - hourNow) ? h : best;
+    }, todayHourly[0] || { uv: 0, t: todayDate + 'T12:00' });
 
-    currentUV = Math.round((nearestHour.uv || 0) * 10) / 10;
-    const cat = uvCategory(currentUV);
+    currentUV = Math.round((nearest.uv) * 10) / 10;
+    const cat = uvInfo(currentUV);
+
+    /* Today stats */
+    const todayUVs = todayHourly.map(h => h.uv);
+    todayPeakUV = Math.max(...todayUVs);
+    const peakIdx = todayUVs.indexOf(todayPeakUV);
+    const peakHourStr = todayHourly[peakIdx]?.t || '';
+    const peakTime = peakHourStr ? fmtHour(peakHourStr) : '—';
+    const hoursAbove = todayHourly.filter(h => h.uv >= threshold).length;
+    const spf = todayPeakUV > 0 ? spfRecommended(todayPeakUV) : null;
 
     /* ── Location ── */
-    locationName.textContent  = name;
-    locationCoord.textContent = `${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E · Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    locationName.textContent  = loc.name;
+    locationCoords.textContent = `${loc.lat.toFixed(4)}° N, ${loc.lon.toFixed(4)}° E`;
 
     /* ── Gauge ── */
-    const fraction  = Math.min(currentUV / MAX_UV, 1);
-    const dashOffset = ARC_LEN * (1 - fraction);
-    gaugeArc.style.strokeDashoffset = dashOffset;
+    const fraction = Math.min(currentUV / MAX_UV, 1);
+    gaugeArc.style.strokeDashoffset = ARC_LEN * (1 - fraction);
     gaugeArc.style.stroke           = cat.color;
     gaugeValue.textContent          = currentUV.toFixed(1);
     gaugeValue.style.color          = cat.color;
-    gaugeLabel.textContent          = cat.label;
-    gaugeLabel.style.color          = cat.color;
-    gaugeUpdated.textContent        = `Today at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    gaugeLevel.textContent          = cat.label;
+    gaugeLevel.style.color          = cat.color;
+    gaugeTime.textContent           = `Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-    /* ── Recommendations ── */
-    const recs = buildRecs(currentUV, skinType);
-    recList.innerHTML = recs.map(r =>
-      `<div class="rec-item"><span class="rec-icon">${r.icon}</span><div class="rec-text"><strong>${r.title}</strong><br><span>${r.detail}</span></div></div>`
+    /* ── Tips ── */
+    tipsList.innerHTML = buildTips(currentUV).map(tip =>
+      `<li class="tip-item">
+        <span class="tip-icon" aria-hidden="true">${tip.icon}</span>
+        <div class="tip-text"><strong>${esc(tip.title)}</strong><span>${esc(tip.detail)}</span></div>
+      </li>`
     ).join('');
 
-    /* ── Safe exposure ── */
-    const baseMin = safeMinutes(currentUV, skinType);
-    const spfMult = [1, 2, 5]; // none, SPF15, SPF30 multiplier approx
-    const spfLabels = ['No SPF', 'SPF 15', 'SPF 30'];
-    exposureGrid.innerHTML = spfMult.map((m, i) => {
-      const mins = baseMin ? Math.round(baseMin * m) : null;
-      const display = mins ? (mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`) : 'N/A';
-      return `<div class="exposure-item"><div class="time">${display}</div><div class="type">${spfLabels[i]}</div></div>`;
-    }).join('');
+    /* ── Stats ── */
+    const peakCat = uvInfo(todayPeakUV);
+    statPeak.textContent    = todayPeakUV.toFixed(1);
+    statPeak.style.color    = peakCat.color;
+    statPeakSub.textContent = peakCat.label;
+    statPeakTime.textContent = peakTime;
+    statHoursAbove.textContent = hoursAbove;
+    statHoursSub.textContent = `UV ≥ ${threshold} today`;
+    statSpf.textContent = spf != null ? `SPF ${spf}` : 'None';
+    statSpf.style.color = spf != null ? peakCat.color : 'inherit';
 
-    /* ── Threshold check ── */
-    updateAlertStatus();
+    /* ── Alert banner ── */
+    if (todayPeakUV >= threshold) {
+      alertText.textContent = `UV index will reach ${todayPeakUV.toFixed(1)} today — apply SPF ${spf || 30} before going outside.`;
+      alertBanner.classList.add('visible');
+    } else {
+      alertBanner.classList.remove('visible');
+    }
 
     /* ── Hourly chart ── */
     renderHourlyChart(todayHourly, hourNow);
 
-    /* ── 3-day forecast ── */
+    /* ── Forecast ── */
     renderForecast(daily);
 
-    /* ── Alert log ── */
-    renderLog();
-
-    content.classList.add('visible');
+    /* Show dashboard */
+    dashboard.classList.add('visible');
   }
 
-  /* ── Build recommendations ── */
-  function buildRecs(uv, skin) {
-    const cat = uvCategory(uv);
-    const recs = [];
-
-    if (uv < 3) {
-      recs.push({ icon: '✅', title: 'No protection needed', detail: 'UV is low. Safe to work outdoors without special precautions.' });
-    } else if (uv < 6) {
-      recs.push({ icon: '🧴', title: `Apply ${cat.spf}`, detail: 'Reapply every 2 hours and after sweating.' });
-      recs.push({ icon: '😎', title: 'Wear sunglasses', detail: 'UV-protective wraparound lenses recommended.' });
-    } else if (uv < 8) {
-      recs.push({ icon: '🧴', title: `Apply ${cat.spf}`, detail: 'Reapply every 90 minutes on the job site.' });
-      recs.push({ icon: '👒', title: 'Wide-brim hat required', detail: 'Protect neck, face, and ears from direct exposure.' });
-      recs.push({ icon: '⏱️', title: '30-min shade breaks', detail: 'Schedule breaks every 90 minutes in shade.' });
-    } else if (uv < 11) {
-      recs.push({ icon: '🧴', title: `Apply ${cat.spf}`, detail: 'Reapply every 60 minutes. Cover all exposed skin.' });
-      recs.push({ icon: '👕', title: 'UPF 50+ clothing', detail: 'Long sleeves and full-cover gear strongly advised.' });
-      recs.push({ icon: '⏱️', title: '20-min breaks in shade', detail: 'Schedule frequent breaks; avoid midday sun (10am–2pm).' });
-      recs.push({ icon: '💧', title: 'Increase water intake', detail: 'Heat stress risk. 250ml water every 20 minutes.' });
-    } else {
-      recs.push({ icon: '🚨', title: `${cat.spf} — no exceptions`, detail: 'Extreme UV. Apply on all skin; reapply every 45 minutes.' });
-      recs.push({ icon: '🏠', title: 'Reschedule outdoor work', detail: 'Consider postponing non-essential outdoor tasks.' });
-      recs.push({ icon: '⏱️', title: '15-min max exposure', detail: 'Limit unshaded exposure. Rotate crews to shade frequently.' });
-      recs.push({ icon: '💧', title: 'Emergency hydration plan', detail: 'Pre-hydrate crew. Station water every 50m on site.' });
-    }
-    return recs;
+  /* ── Protection tips ── */
+  function buildTips(uv) {
+    if (uv < 3) return [
+      { icon: '✅', title: 'No protection needed', detail: 'UV is low. Safe to work outdoors without special precautions.' },
+      { icon: '🌿', title: 'Stay hydrated', detail: 'Drink water regularly even in low UV conditions.' },
+    ];
+    if (uv < 6) return [
+      { icon: '🧴', title: 'Apply SPF 15+', detail: 'Reapply sunscreen every 2 hours and after sweating.' },
+      { icon: '😎', title: 'Wear sunglasses', detail: 'UV-protective wraparound lenses recommended.' },
+      { icon: '💧', title: 'Stay hydrated', detail: 'Drink water regularly — dehydration increases UV sensitivity.' },
+    ];
+    if (uv < 8) return [
+      { icon: '🧴', title: 'Apply SPF 30+', detail: 'Reapply every 90 minutes on the job site.' },
+      { icon: '👒', title: 'Wide-brim hat required', detail: 'Protect neck, face, and ears from direct exposure.' },
+      { icon: '⏱️', title: 'Schedule shade breaks', detail: 'Take 30-minute breaks in shade every 90 minutes.' },
+      { icon: '😎', title: 'Protective eyewear', detail: 'UV-400 rated lenses essential.' },
+    ];
+    if (uv < 11) return [
+      { icon: '🧴', title: 'Apply SPF 50+', detail: 'Reapply every 60 minutes. Cover all exposed skin.' },
+      { icon: '👕', title: 'UPF 50+ clothing', detail: 'Long sleeves and full-cover gear strongly advised.' },
+      { icon: '⏱️', title: 'Frequent shade breaks', detail: 'Rotate crews to shade every 20 minutes. Avoid 10am–4pm.' },
+      { icon: '💧', title: 'Increase water intake', detail: '250ml water every 20 minutes. Heat stress risk is high.' },
+    ];
+    return [
+      { icon: '🚨', title: 'SPF 50+ — no exceptions', detail: 'Extreme UV. Apply on all skin; reapply every 45 minutes.' },
+      { icon: '🏠', title: 'Reschedule outdoor work', detail: 'Consider postponing non-essential tasks until UV drops.' },
+      { icon: '⏱️', title: '15-min max unshaded exposure', detail: 'Limit direct sun exposure. Rotate crews frequently.' },
+      { icon: '💧', title: 'Emergency hydration plan', detail: 'Pre-hydrate crew. Station water every 50m on site.' },
+      { icon: '📋', title: 'Log compliance', detail: 'Record protective measures for employer liability records.' },
+    ];
   }
 
-  /* ── Hourly chart ── */
+  /* ── Hourly chart (CSS flex bars) ── */
   function renderHourlyChart(hours, currentHour) {
-    if (!hours || !hours.length) { hourChart.innerHTML = ''; return; }
+    /* filter 6am–8pm */
+    const filtered = hours.filter(h => {
+      const hh = parseInt(h.t.split('T')[1], 10);
+      return hh >= 6 && hh <= 20;
+    });
+    if (!filtered.length) { chartBars.innerHTML = '<p style="color:var(--color-ink-muted);font-size:var(--text-sm);padding:var(--space-4)">No hourly data available.</p>'; return; }
 
-    const W = Math.max(600, hours.length * 36);
-    const H = 160;
-    const padL = 36, padR = 12, padT = 16, padB = 36;
-    const chartW = W - padL - padR;
-    const chartH = H - padT - padB;
-    const maxUV  = Math.max(...hours.map(h => h.uv || 0), MAX_UV * 0.5);
+    const maxUV = Math.max(...filtered.map(h => h.uv), 1);
+    const chartH = 90; /* px usable height for bars */
 
-    function xPos(i) { return padL + (i / (hours.length - 1)) * chartW; }
-    function yPos(v) { return padT + (1 - v / (maxUV * 1.1)) * chartH; }
+    chartBars.innerHTML = '';
+    filtered.forEach(h => {
+      const hh  = parseInt(h.t.split('T')[1], 10);
+      const pct = Math.max((h.uv / maxUV) * 100, 1);
+      const cat = uvInfo(h.uv);
+      const isCurrent = hh === currentHour;
 
-    /* gradient fill points */
-    const pts = hours.map((h, i) => `${xPos(i)},${yPos(h.uv || 0)}`).join(' ');
-    const fillPts = `${padL},${padT + chartH} ` + pts + ` ${padL + chartW},${padT + chartH}`;
+      const label = hh === 0 ? '12a' : hh < 12 ? `${hh}a` : hh === 12 ? '12p' : `${hh - 12}p`;
 
-    /* line path */
-    const linePath = hours.map((h, i) => {
-      const x = xPos(i), y = yPos(h.uv || 0);
-      return i === 0 ? `M${x},${y}` : `L${x},${y}`;
-    }).join(' ');
+      const col = document.createElement('div');
+      col.className = 'chart-bar-col';
+      col.setAttribute('title', `${label}: UV ${h.uv.toFixed(1)}`);
 
-    /* hour labels */
-    const labelsHtml = hours.map((h, i) => {
-      const hh = parseInt(h.t.split('T')[1].split(':')[0], 10);
-      if (i % 3 !== 0) return '';
-      const label = hh === 0 ? '12am' : hh < 12 ? `${hh}am` : hh === 12 ? '12pm' : `${hh - 12}pm`;
-      return `<text x="${xPos(i)}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--muted)">${label}</text>`;
-    }).join('');
+      const bar = document.createElement('div');
+      bar.className = 'chart-bar' + (isCurrent ? ' current-hour' : '');
+      bar.style.height = `${pct}%`;
+      bar.style.background = cat.color;
+      bar.style.opacity = isCurrent ? '1' : '0.7';
 
-    /* UV value labels on bars */
-    const uvLabels = hours.map((h, i) => {
-      if ((h.uv || 0) < 1) return '';
-      return `<text x="${xPos(i)}" y="${yPos(h.uv || 0) - 5}" text-anchor="middle" font-size="9" fill="${uvCategory(h.uv || 0).color}">${(h.uv || 0).toFixed(1)}</text>`;
-    }).join('');
+      if (h.uv >= 1) {
+        const valEl = document.createElement('div');
+        valEl.className = 'chart-bar-val';
+        valEl.style.color = cat.color;
+        valEl.textContent = h.uv.toFixed(0);
+        bar.appendChild(valEl);
+      }
 
-    /* current time marker */
-    let markerHtml = '';
-    const curIdx = hours.findIndex(h => parseInt(h.t.split('T')[1].split(':')[0], 10) === currentHour);
-    if (curIdx >= 0) {
-      const mx = xPos(curIdx);
-      markerHtml = `<line x1="${mx}" y1="${padT}" x2="${mx}" y2="${padT + chartH}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>
-        <circle cx="${mx}" cy="${yPos(hours[curIdx].uv || 0)}" r="5" fill="var(--accent)" stroke="var(--bg)" stroke-width="2"/>`;
-    }
+      const labelEl = document.createElement('div');
+      labelEl.className = 'chart-bar-label';
+      labelEl.textContent = label;
 
-    hourChart.setAttribute('width', W);
-    hourChart.setAttribute('height', H);
-    hourChart.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    hourChart.innerHTML = `
-      <defs>
-        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/>
-          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <polygon points="${fillPts}" fill="url(#chartGrad)"/>
-      <path d="${linePath}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      ${uvLabels}
-      ${markerHtml}
-      ${labelsHtml}
-      <text x="${padL - 4}" y="${padT}" text-anchor="end" font-size="9" fill="var(--muted)">${maxUV.toFixed(0)}</text>
-      <text x="${padL - 4}" y="${padT + chartH}" text-anchor="end" font-size="9" fill="var(--muted)">0</text>
-    `;
+      col.appendChild(bar);
+      col.appendChild(labelEl);
+      chartBars.appendChild(col);
+    });
   }
 
   /* ── 3-day forecast ── */
   function renderForecast(daily) {
-    if (!daily || !daily.time) { forecastGrid.innerHTML = ''; return; }
-    const days    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    forecastGrid.innerHTML = daily.time.map((t, i) => {
-      const d    = new Date(t + 'T12:00:00');
-      const uv   = daily.uv_index_max[i] || 0;
-      const cat  = uvCategory(uv);
+    if (!daily?.time?.length) { forecastStrip.innerHTML = ''; return; }
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    forecastStrip.innerHTML = daily.time.map((dateStr, i) => {
+      const uv    = daily.uv_index_max[i] || 0;
+      const cat   = uvInfo(uv);
+      const d     = new Date(dateStr + 'T12:00:00');
       const label = i === 0 ? 'Today' : days[d.getDay()];
+      const date  = `${months[d.getMonth()]} ${d.getDate()}`;
+
+      /* icon based on UV level */
+      const icon = uv < 3 ? '🌤' : uv < 6 ? '⛅' : uv < 8 ? '☀️' : uv < 11 ? '🔆' : '🌞';
+
       return `
-        <div class="forecast-day">
-          <div class="day-name">${label}<br><span style="font-size:0.7rem;color:var(--muted)">${months[d.getMonth()]} ${d.getDate()}</span></div>
-          <div class="day-uv" style="color:${cat.color}">${uv.toFixed(1)}</div>
-          <div class="day-level" style="color:${cat.color}">${cat.label}</div>
+        <div class="forecast-card" aria-label="${label}: UV ${uv.toFixed(1)}, ${cat.label}">
+          <div class="forecast-day-name">${esc(label)}<br><span style="font-weight:400;color:var(--color-ink-muted)">${esc(date)}</span></div>
+          <div style="font-size:1.75rem;margin-bottom:var(--space-2)" aria-hidden="true">${icon}</div>
+          <div class="forecast-uv" style="color:${cat.color}">${uv.toFixed(1)}</div>
+          <span class="forecast-badge" style="color:${cat.color};background:${cat.bg}">${esc(cat.label)}</span>
         </div>`;
     }).join('');
   }
 
-  /* ── Threshold / alert ── */
-  threshRange.addEventListener('input', () => {
-    currentThresh = parseInt(threshRange.value, 10);
-    threshVal.textContent = currentThresh;
-    updateAlertStatus();
-  });
+  /* ── Threshold change ── */
+  thresholdInput.addEventListener('change', () => {
+    const val = parseInt(thresholdInput.value, 10);
+    if (!isNaN(val) && val >= 1 && val <= 12) {
+      threshold = val;
+      /* re-run alert check if data loaded */
+      if (todayPeakUV !== null) {
+        const spf = todayPeakUV > 0 ? spfRecommended(todayPeakUV) : null;
+        const hoursAbove = parseInt(statHoursAbove.textContent, 10) || 0;
+        statHoursSub.textContent = `UV ≥ ${threshold} today`;
 
-  function updateAlertStatus() {
-    if (currentUV === null) { alertStatus.className = 'alert-status'; return; }
-    if (currentUV >= currentThresh) {
-      alertStatus.className = 'alert-status triggered';
-      alertStatus.textContent = `⚠️ UV ${currentUV.toFixed(1)} exceeds threshold of ${currentThresh} — Take action now!`;
-      logAlert(currentUV, currentThresh);
-    } else {
-      alertStatus.className = 'alert-status safe';
-      alertStatus.textContent = `✅ UV ${currentUV.toFixed(1)} is below threshold of ${currentThresh} — Conditions acceptable.`;
-    }
-  }
-
-  /* ── Alert log ── */
-  function logAlert(uv, thresh) {
-    const entry = {
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
-      uv: uv.toFixed(1),
-      thresh,
-      loc: locationName.textContent
-    };
-    /* deduplicate: don't add if same uv+loc in last 5 min */
-    const last = alertLog[0];
-    if (!last || last.uv !== entry.uv || last.loc !== entry.loc) {
-      alertLog.unshift(entry);
-      if (alertLog.length > 50) alertLog.pop();
-      localStorage.setItem('uv-alert-log', JSON.stringify(alertLog));
-      renderLog();
-    }
-  }
-
-  function renderLog() {
-    if (!alertLog.length) {
-      alertLogEl.innerHTML = `<li class="log-empty">No alerts recorded yet. Alerts appear when UV exceeds your threshold.</li>`;
-      return;
-    }
-    alertLogEl.innerHTML = alertLog.map(e => {
-      const cat = uvCategory(parseFloat(e.uv));
-      return `<li class="log-item">
-        <span class="log-dot" style="background:${cat.color}"></span>
-        <span style="color:var(--muted);white-space:nowrap">${e.date} ${e.time}</span>
-        <span style="flex:1;color:var(--text)">${e.loc}</span>
-        <span style="font-weight:700;color:${cat.color}">UV ${e.uv}</span>
-        <span style="color:var(--muted);font-size:0.75rem">≥${e.thresh}</span>
-      </li>`;
-    }).join('');
-  }
-
-  clearLogBtn.addEventListener('click', () => {
-    alertLog = [];
-    localStorage.removeItem('uv-alert-log');
-    renderLog();
-  });
-
-  /* ── Skin type ── */
-  document.querySelectorAll('.skin-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.skin-btn').forEach(b => {
-        b.classList.remove('active');
-        b.setAttribute('aria-pressed', 'false');
-      });
-      btn.classList.add('active');
-      btn.setAttribute('aria-pressed', 'true');
-      skinType = parseInt(btn.dataset.skin, 10);
-      if (currentUV !== null) {
-        /* re-render recommendations and exposure times */
-        const recs = buildRecs(currentUV, skinType);
-        recList.innerHTML = recs.map(r =>
-          `<div class="rec-item"><span class="rec-icon">${r.icon}</span><div class="rec-text"><strong>${r.title}</strong><br><span>${r.detail}</span></div></div>`
-        ).join('');
-        const baseMin    = safeMinutes(currentUV, skinType);
-        const spfMult    = [1, 2, 5];
-        const spfLabels  = ['No SPF', 'SPF 15', 'SPF 30'];
-        exposureGrid.innerHTML = spfMult.map((m, i) => {
-          const mins = baseMin ? Math.round(baseMin * m) : null;
-          const display = mins ? (mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`) : 'N/A';
-          return `<div class="exposure-item"><div class="time">${display}</div><div class="type">${spfLabels[i]}</div></div>`;
-        }).join('');
+        if (todayPeakUV >= threshold) {
+          alertText.textContent = `UV index will reach ${todayPeakUV.toFixed(1)} today — apply SPF ${spf || 30} before going outside.`;
+          alertBanner.classList.add('visible');
+        } else {
+          alertBanner.classList.remove('visible');
+        }
       }
-    });
+    }
   });
 
-  /* ── Init: render empty log ── */
-  renderLog();
+  /* ── Escape key closes dropdown ── */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') suggestionsList.classList.remove('open');
+  });
+
+  /* ── HTML escaping ── */
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── Init: render saved, auto-load last location ── */
+  renderSaved();
+  const last = getLastLoc();
+  if (last) {
+    activeLocKey = last.key;
+    cityInput.value = last.name.split(',')[0];
+    loadLocation(last);
+  }
 
 })();
 </script>
-
 </body>
 </html>

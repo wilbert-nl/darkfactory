@@ -1,1530 +1,1914 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Transit Watch — Know Before You Go</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CommuteWatch — Transit Delay Notifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · tone: control-room utilitarian · anchor hue: electric-blue */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R4 V4 */
 
-    :root {
-      --bg: #070c1a;
-      --surface: #0d1526;
-      --surface2: #141f36;
-      --border: rgba(245,158,11,0.2);
-      --accent: #f59e0b;
-      --accent2: #3b82f6;
-      --text: #e8eaf6;
-      --muted: #6b7da8;
-      --green: #10b981;
-      --red: #ef4444;
-      --orange: #f97316;
-      --radius: 8px;
-      --font-mono: 'Share Tech Mono', 'Courier New', monospace;
-      --font-body: 'DM Sans', system-ui, sans-serif;
-    }
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow-x: clip; }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--font-body); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Nav — dark control-panel header ── */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-sidebar);
+  border-bottom: 1px solid var(--color-sidebar-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-white);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+.nav-sep { width: 1px; height: 16px; background: var(--color-sidebar-border); flex-shrink: 0; }
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-sidebar-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-refresh-indicator {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--color-sidebar-muted);
+  background: var(--color-sidebar-2);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.refresh-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--color-sidebar-border);
+  flex-shrink: 0;
+  transition: background var(--dur-base) var(--ease-out);
+}
+.refresh-dot.live { background: var(--color-success); animation: pulse-dot 2s infinite; }
+.refresh-dot.demo { background: var(--color-warn); }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-sidebar-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.nav-back:hover { color: var(--color-sidebar-ink); }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      min-height: 100vh;
-      line-height: 1.6;
-    }
+/* ── App Shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 264px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
 
-    /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* ── Sidebar — dark control panel ── */
+.sidebar {
+  background: var(--color-sidebar);
+  border-right: 1px solid var(--color-sidebar-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: var(--space-4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-sidebar-border) transparent;
+}
 
-    /* ── HEADER ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(12px);
-    }
-    .header-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 64px;
-      gap: 16px;
-    }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-    .logo-text {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.3px;
-    }
-    .logo-sub {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 400;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .live-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(67, 217, 173, 0.12);
-      border: 1px solid rgba(67, 217, 173, 0.3);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 12px;
-      color: var(--green);
-      font-weight: 600;
-    }
-    .live-dot {
-      width: 7px;
-      height: 7px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: pulse-dot 1.5s ease-in-out infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.7); }
-    }
+/* City tabs */
+.city-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--color-sidebar-border);
+  flex-shrink: 0;
+}
+.city-tab {
+  padding: var(--space-3) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--color-sidebar-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  text-align: center;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.city-tab:hover { color: var(--color-sidebar-ink); background: var(--color-sidebar-2); }
+.city-tab.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  background: var(--color-sidebar-2);
+}
 
-    /* ── LAYOUT ── */
-    main {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 32px 24px 64px;
-      display: grid;
-      grid-template-columns: 1fr 360px;
-      gap: 24px;
-      align-items: start;
-    }
-    @media (max-width: 900px) {
-      main { grid-template-columns: 1fr; }
-    }
+/* Sidebar sections */
+.sb-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-sidebar-border);
+}
+.sb-section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-sidebar-muted);
+  margin-bottom: var(--space-3);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--color-accent);
+  line-height: 1.2;
+}
 
-    /* ── SECTION TITLES ── */
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .section-title {
-      font-size: 14px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-    }
-    .section-count {
-      font-size: 12px;
-      color: var(--muted);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2px 10px;
-    }
+/* Line picker */
+.line-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.line-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  flex-shrink: 0;
+  color: var(--color-white);
+}
+.line-chip:hover { opacity: 0.85; transform: translateY(-1px); }
+.line-chip.selected {
+  border-color: var(--color-white);
+  box-shadow: 0 0 0 1px var(--color-white);
+  opacity: 1;
+}
 
-    /* ── CARDS ── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      transition: border-color 0.2s, transform 0.2s;
-    }
-    .card:hover { border-color: var(--accent); }
+/* NYC line colors */
+.nyc-A, .nyc-C, .nyc-E { background: oklch(38% 0.18 255); }
+.nyc-1, .nyc-2, .nyc-3 { background: oklch(48% 0.22 25); }
+.nyc-4, .nyc-5, .nyc-6 { background: oklch(42% 0.18 155); }
+.nyc-N, .nyc-Q, .nyc-R, .nyc-W { background: oklch(70% 0.18 85); color: var(--color-ink); }
+.nyc-B, .nyc-D, .nyc-F, .nyc-M { background: oklch(55% 0.20 45); }
+.nyc-L { background: oklch(48% 0.03 0); }
+.nyc-7 { background: oklch(52% 0.18 315); }
+.nyc-G { background: oklch(52% 0.15 155); }
+.nyc-J, .nyc-Z { background: oklch(48% 0.14 72); }
+.nyc-S { background: oklch(50% 0.02 0); }
 
-    /* ── STATUS GRID ── */
-    .status-grid { display: flex; flex-direction: column; gap: 12px; }
+/* London line colors */
+.tfl-Bakerloo { background: oklch(48% 0.16 50); }
+.tfl-Central { background: oklch(48% 0.22 25); }
+.tfl-Circle { background: oklch(70% 0.18 85); color: var(--color-ink); }
+.tfl-District { background: oklch(42% 0.18 155); }
+.tfl-Hammersmith { background: oklch(58% 0.10 330); }
+.tfl-Jubilee { background: oklch(52% 0.04 230); }
+.tfl-Metropolitan { background: oklch(40% 0.16 340); }
+.tfl-Northern { background: oklch(20% 0.02 0); }
+.tfl-Piccadilly { background: oklch(35% 0.20 265); }
+.tfl-Victoria { background: oklch(50% 0.20 235); }
+.tfl-Waterloo { background: oklch(52% 0.15 195); }
 
-    .line-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s, transform 0.15s;
-      position: relative;
-      overflow: hidden;
-    }
-    .line-card::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      border-radius: var(--radius) 0 0 var(--radius);
-      transition: width 0.2s;
-    }
-    .line-card:hover { background: var(--surface2); transform: translateX(2px); }
-    .line-card:hover::before { width: 6px; }
+/* Saved commutes */
+.commute-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.commute-item {
+  background: var(--color-sidebar-2);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  position: relative;
+}
+.commute-item:hover {
+  border-color: var(--color-accent);
+  background: var(--color-sidebar-3);
+}
+.commute-item.active {
+  border-color: var(--color-accent);
+  background: var(--color-sidebar-3);
+}
+.commute-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-sidebar-ink);
+  margin-bottom: var(--space-1);
+}
+.commute-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.commute-line-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-white);
+}
+.commute-del {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-sidebar-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.commute-del:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-subtle);
+}
 
-    .line-badge {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      font-weight: 800;
-      color: #fff;
-      flex-shrink: 0;
-      letter-spacing: -0.5px;
-    }
+/* Add commute form */
+.add-commute-form {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-sidebar-2);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-2);
+}
+.add-commute-form.open { display: flex; }
+.form-input {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-sidebar-ink);
+  background: var(--color-sidebar-3);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.form-input:focus { outline: none; border-color: var(--color-accent); }
+.form-input::placeholder { color: var(--color-sidebar-muted); }
+.form-row { display: flex; gap: var(--space-2); }
+.form-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-sidebar-muted);
+  margin-bottom: var(--space-1);
+}
 
-    .line-info { flex: 1; min-width: 0; }
-    .line-name {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .line-detail {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
+/* Alert settings */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+}
+.setting-label { font-size: var(--text-sm); color: var(--color-sidebar-ink); }
+.setting-control {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-sidebar-ink);
+  background: var(--color-sidebar-2);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+.setting-control:focus { outline: none; border-color: var(--color-accent); }
 
-    .line-status-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+/* Toggle switch */
+.toggle-wrap { display: flex; align-items: center; gap: var(--space-2); }
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: var(--color-sidebar-border);
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out);
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 2px; top: 2px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--color-sidebar-ink);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.toggle input:checked + .toggle-track { background: var(--color-accent); }
+.toggle input:checked + .toggle-track::after { transform: translateX(16px); }
 
-    .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      border-radius: 20px;
-      padding: 3px 10px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .status-pill.ok { background: rgba(67,217,173,0.12); color: var(--green); border: 1px solid rgba(67,217,173,0.25); }
-    .status-pill.warn { background: rgba(247,201,72,0.12); color: var(--yellow); border: 1px solid rgba(247,201,72,0.25); }
-    .status-pill.alert { background: rgba(255,83,112,0.12); color: var(--red); border: 1px solid rgba(255,83,112,0.25); }
+/* Sidebar buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.btn-primary:hover { transform: translateY(-1px); opacity: 0.9; }
+.btn-primary:active { transform: translateY(0); opacity: 1; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-    .delay-badge {
-      font-size: 22px;
-      font-weight: 800;
-      line-height: 1;
-    }
-    .delay-badge.ok { color: var(--green); }
-    .delay-badge.warn { color: var(--yellow); }
-    .delay-badge.alert { color: var(--red); }
-    .delay-unit { font-size: 11px; color: var(--muted); font-weight: 500; }
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--color-sidebar-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.btn-ghost:hover { color: var(--color-sidebar-ink); border-color: var(--color-sidebar-muted); }
 
-    /* ── SKELETON ── */
-    .skeleton {
-      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 6px;
-    }
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-    .skeleton-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .skel-circle { width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0; }
-    .skel-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-    .skel-line { height: 12px; border-radius: 4px; }
+/* Sidebar footer — Check Now CTA */
+.sidebar-footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-sidebar-border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.check-now-btn {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.check-now-btn:hover { transform: translateY(-1px); opacity: 0.9; }
+.check-now-btn:active { transform: translateY(0); opacity: 1; }
+.check-now-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.last-check {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--color-sidebar-muted);
+  text-align: center;
+}
 
-    /* ── ALERTS PANEL ── */
-    .alerts-panel { display: flex; flex-direction: column; gap: 10px; }
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
 
-    .alert-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-      transition: border-color 0.2s;
-      animation: slideIn 0.3s ease;
-    }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .alert-item:hover { border-color: var(--accent); }
-    .alert-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      flex-shrink: 0;
-    }
-    .alert-icon.warn { background: rgba(247,201,72,0.15); }
-    .alert-icon.alert { background: rgba(255,83,112,0.15); }
-    .alert-icon.info { background: rgba(74,222,128,0.15); }
-    .alert-icon.ok { background: rgba(67,217,173,0.15); }
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-6);
+  flex-shrink: 0;
+  background: var(--color-paper);
+}
+.tab-btn {
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--color-ink); }
+.tab-btn.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
 
-    .alert-body { flex: 1; min-width: 0; }
-    .alert-title { font-size: 13px; font-weight: 600; color: var(--text); }
-    .alert-desc { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
-    .alert-time { font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+/* Demo banner */
+.demo-banner {
+  display: none;
+  padding: var(--space-2) var(--space-6);
+  background: var(--color-warn-subtle);
+  border-bottom: 1px solid var(--color-warn-line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--color-warn);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.demo-banner.show { display: block; }
 
-    /* ── SIDEBAR ── */
-    .sidebar { display: flex; flex-direction: column; gap: 20px; }
+/* Panel content */
+.panel {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+.panel.active { display: block; }
 
-    /* ── MY ROUTES ── */
-    .my-routes-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .my-routes-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .my-routes-title { font-size: 14px; font-weight: 700; color: var(--text); }
+/* ── Live Status panel ── */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
 
-    .route-list { padding: 8px; }
-    .route-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .route-item:hover { background: var(--surface2); }
-    .route-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .route-info { flex: 1; min-width: 0; }
-    .route-name { font-size: 13px; font-weight: 600; color: var(--text); }
-    .route-meta { font-size: 11px; color: var(--muted); }
-    .route-toggle {
-      width: 36px;
-      height: 20px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      cursor: pointer;
-      position: relative;
-      transition: background 0.2s, border-color 0.2s;
-      flex-shrink: 0;
-    }
-    .route-toggle.active { background: var(--accent); border-color: var(--accent); }
-    .route-toggle::after {
-      content: '';
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      background: #fff;
-      border-radius: 50%;
-      top: 2px;
-      left: 2px;
-      transition: transform 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    }
-    .route-toggle.active::after { transform: translateX(16px); }
+.status-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+  animation: card-in 0.22s var(--ease-out) both;
+}
+.status-card:hover {
+  border-color: var(--color-accent-line);
+  border-left-color: var(--color-accent);
+  box-shadow: 0 2px 16px var(--color-shadow-card);
+}
+/* Status-aware left border via :has() */
+.status-card:has(.badge-good) { border-left-color: var(--color-success); }
+.status-card:has(.badge-minor) { border-left-color: var(--color-warn); }
+.status-card:has(.badge-major) { border-left-color: var(--color-danger); }
+.status-card:has(.badge-suspended) { border-left-color: var(--color-neutral); }
 
-    .add-route-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: calc(100% - 16px);
-      margin: 0 8px 8px;
-      padding: 10px;
-      background: transparent;
-      border: 1px dashed var(--border);
-      border-radius: 8px;
-      color: var(--muted);
-      font-size: 13px;
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s, background 0.2s;
-    }
-    .add-route-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(74,222,128,0.06); }
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-    /* ── ADD ROUTE MODAL ── */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(4px);
-      z-index: 200;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+.status-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.line-dot {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-white);
+  flex-shrink: 0;
+}
+.line-info { flex: 1; min-width: 0; }
+.line-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      width: 100%;
-      max-width: 480px;
-      padding: 28px;
-      transform: scale(0.95) translateY(8px);
-      transition: transform 0.2s;
-    }
-    .modal-backdrop.open .modal { transform: scale(1) translateY(0); }
+/* Status badges — pill shape, monospace */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 99px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.badge-good { background: var(--color-badge-good-bg); color: var(--color-success); }
+.badge-minor { background: var(--color-badge-minor-bg); color: var(--color-warn); }
+.badge-major { background: var(--color-badge-major-bg); color: var(--color-danger); }
+.badge-suspended { background: var(--color-badge-sus-bg); color: var(--color-ink-muted); }
 
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .modal-sub {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 24px;
-    }
-    .form-group { margin-bottom: 16px; }
-    .form-label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-    .form-select, .form-input {
-      width: 100%;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-      appearance: none;
-    }
-    .form-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
-    .form-select:focus, .form-input:focus { border-color: var(--accent); }
-    .form-select option { background: var(--surface2); }
+.status-desc {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+.status-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.btn-add-alert {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.btn-add-alert:hover { background: var(--color-accent-bg); }
+.btn-add-alert.added {
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border-color: var(--color-border);
+  cursor: default;
+}
+.delay-mins {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
 
-    .threshold-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .threshold-row .form-input { flex: 1; }
-    .threshold-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+/* ── My Commutes panel ── */
+.commutes-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: var(--space-4);
+  text-align: center;
+}
+.commutes-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.commutes-empty-sub {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  max-width: 280px;
+  line-height: 1.65;
+}
 
-    .modal-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 24px;
-    }
-    .btn {
-      flex: 1;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: opacity 0.2s, transform 0.15s;
-    }
-    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-ghost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.commute-cards { display: flex; flex-direction: column; gap: var(--space-6); }
 
-    /* ── THRESHOLD CARD ── */
-    .threshold-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-    }
-    .threshold-card-title {
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .threshold-card-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
-    .threshold-slider-wrap { display: flex; align-items: center; gap: 12px; }
-    .threshold-value {
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--accent);
-      min-width: 48px;
-      text-align: center;
-    }
-    .threshold-unit { font-size: 13px; color: var(--muted); }
-    input[type="range"] {
-      flex: 1;
-      accent-color: var(--accent);
-      height: 4px;
-    }
+.commute-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+.commute-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.gauge-wrap { flex-shrink: 0; }
+.commute-card-info { flex: 1; }
+.commute-card-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-1);
+}
+.commute-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+}
+.commute-affected-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.affected-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+}
+.affected-line-name { font-weight: 600; color: var(--color-ink); }
+.affected-line-status { color: var(--color-ink-muted); }
+.commute-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.btn-copy-alert {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper);
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.btn-copy-alert:hover { background: var(--color-accent-subtle); }
 
-    /* ── HISTORY ── */
-    .history-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .history-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-    }
-    .history-title { font-size: 14px; font-weight: 700; color: var(--text); }
-    .history-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+/* Health score arc gauge */
+.gauge svg text { font-family: var(--font-body); }
 
-    .history-list { padding: 8px; }
-    .history-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      transition: background 0.15s;
-    }
-    .history-item:hover { background: var(--surface2); }
-    .history-line-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .history-info { flex: 1; }
-    .history-line-name { font-size: 12px; font-weight: 600; color: var(--text); }
-    .history-desc { font-size: 11px; color: var(--muted); }
-    .history-delay { font-size: 13px; font-weight: 700; }
-    .history-delay.warn { color: var(--yellow); }
-    .history-delay.alert { color: var(--red); }
-    .history-delay.ok { color: var(--green); }
-    .history-date { font-size: 10px; color: var(--muted); }
+/* ── Delay History panel ── */
+.history-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-6); }
+.history-section-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-4);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--color-accent);
+}
+.sparkline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+.sparkline-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.sparkline-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.sparkline-label { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.sparkline-stat {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+  margin-top: 4px;
+}
 
-    /* ── TOAST ── */
-    .toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 300;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-    }
-    .toast {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 280px;
-      max-width: 380px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      animation: toastIn 0.3s ease;
-      pointer-events: all;
-    }
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-    .toast.removing { animation: toastOut 0.3s ease forwards; }
-    @keyframes toastOut {
-      to { opacity: 0; transform: translateX(20px); }
-    }
-    .toast-icon { font-size: 18px; flex-shrink: 0; }
-    .toast-body { flex: 1; }
-    .toast-title { font-size: 13px; font-weight: 600; color: var(--text); }
-    .toast-msg { font-size: 12px; color: var(--muted); margin-top: 1px; }
+/* Heatmap */
+.heatmap-table { width: 100%; border-collapse: collapse; }
+.heatmap-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-2) var(--space-1);
+  letter-spacing: 0.06em;
+}
+.heatmap-table td {
+  padding: var(--space-1);
+  text-align: center;
+}
+.hm-cell {
+  width: 28px; height: 28px;
+  border-radius: var(--radius-sm);
+  margin: auto;
+  transition: transform var(--dur-fast) var(--ease-out);
+  cursor: default;
+}
+.hm-cell:hover { transform: scale(1.2); }
+.hm-0 { background: var(--color-hm-0); }
+.hm-1 { background: var(--color-hm-1); }
+.hm-2 { background: var(--color-hm-2); }
+.hm-3 { background: var(--color-hm-3); }
+.hm-4 { background: var(--color-hm-4); }
 
-    /* ── LAST UPDATED ── */
-    .last-updated {
-      font-size: 12px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .last-updated-time { color: var(--text); font-weight: 600; }
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+.stat-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.stat-card-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--color-accent);
+}
+.stat-card-value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.stat-card-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--color-ink-muted);
+  margin-top: var(--space-1);
+}
 
-    /* ── INCIDENT TICKER ── */
-    .ticker-bar {
-      background: rgba(247,201,72,0.08);
-      border: 1px solid rgba(247,201,72,0.2);
-      border-radius: 8px;
-      padding: 10px 16px;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      overflow: hidden;
-    }
-    .ticker-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--yellow);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .ticker-text {
-      font-size: 13px;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+/* Loading skeleton */
+.skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+.skeleton-card {
+  height: 120px;
+  background-image: linear-gradient(90deg,
+    var(--color-paper-2) 0%,
+    var(--color-paper-3) 50%,
+    var(--color-paper-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
 
-    /* ── EMPTY STATE ── */
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-    }
-    .empty-icon { font-size: 40px; margin-bottom: 12px; }
-    .empty-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-    .empty-desc { font-size: 13px; color: var(--muted); }
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px var(--color-shadow);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.warn { background: var(--color-warn); color: var(--color-ink); }
+.toast.error { background: var(--color-danger); }
 
-    /* ── NOTIFICATION SNOOZE ── */
-    .snooze-bar {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 4px;
-    }
-    .snooze-info { flex: 1; }
-    .snooze-title { font-size: 13px; font-weight: 600; color: var(--text); }
-    .snooze-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .snooze-actions { display: flex; gap: 8px; }
-    .snooze-btn {
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--muted);
-      transition: all 0.15s;
-    }
-    .snooze-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .snooze-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+  .app-shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--color-sidebar-border); max-height: 50vh; }
+  .main { overflow: visible; }
+  .panel { overflow: visible; padding: var(--space-4); }
+  .status-grid { grid-template-columns: 1fr; }
+  .nav-refresh-indicator { display: none; }
+  .sparkline-grid { grid-template-columns: 1fr 1fr; }
+}
 
-    /* ── COUNTDOWN ── */
-    .refresh-ring {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      position: relative;
-    }
-    .refresh-ring svg {
-      position: absolute;
-      top: 0; left: 0;
-      transform: rotate(-90deg);
-    }
-    .refresh-ring-icon { font-size: 12px; position: relative; z-index: 1; }
-
-    /* ── UTIL ── */
-    .flex { display: flex; }
-    .items-center { align-items: center; }
-    .gap-8 { gap: 8px; }
-    .mt-4 { margin-top: 4px; }
-    .mt-16 { margin-top: 16px; }
-    .w-full { width: 100%; }
-    .font-bold { font-weight: 700; }
-
-    /* === Travel v2 Design System === */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 800px 500px at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 400px 300px at 90% 90%, rgba(245,158,11,0.08) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    body > * { position: relative; z-index: 1; }
-
-    h1, h2, .title, .app-title { font-family: var(--font-body); font-weight: 700; letter-spacing: -0.02em; }
-    h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); color: var(--text); }
-    h2 { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
-
-    .container, main, .wrapper, .app { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
-
-    .card, .result, .item, .flight, .route, .delay, .alert, .station, .transit, .park, .trail, .ev-station, .transport,
-    [class*="card"], [class*="item"], [class*="flight"], [class*="route"], [class*="result"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      animation: boardSlide 0.35s cubic-bezier(0.4,0,0.2,1) both;
-    }
-    .card:hover, .item:hover, [class*="card"]:hover { background: var(--surface2); }
-
-    .time, .code, .flight-number, .gate, .terminal, .delay-time, .duration, .distance,
-    .iss-time, .coords, .lat, .lon, .pass-time, .co2, .emission, .minutes, .seconds,
-    .countdown, .stat, .number, .metric, pre, code, .mono {
-      font-family: var(--font-mono);
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.04em;
-    }
-
-    .big-time, .big-number, .countdown, .pass-time {
-      font-family: var(--font-mono);
-      font-size: clamp(2rem, 5vw, 3rem);
-      color: var(--accent);
-      font-variant-numeric: tabular-nums;
-    }
-
-    input, select, textarea {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      padding: 0.65rem 1rem;
-      font-family: var(--font-body);
-      font-size: 0.9rem;
-      width: 100%;
-      transition: border-color 0.2s;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
-
-    button, .btn, input[type="submit"], input[type="button"] {
-      background: var(--accent);
-      color: #000;
-      border: none;
-      border-radius: var(--radius);
-      padding: 0.7rem 1.75rem;
-      font-family: var(--font-body);
-      font-weight: 700;
-      font-size: 0.88rem;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: transform 0.15s, filter 0.15s;
-    }
-    button:hover { filter: brightness(1.1); }
-    button:active { transform: scale(0.97); }
-
-    .tag, .badge, .status, .label, .type, .mode, .line, .provider {
-      display: inline-block;
-      background: rgba(245,158,11,0.1);
-      border: 1px solid rgba(245,158,11,0.25);
-      color: var(--accent);
-      border-radius: 4px;
-      padding: 0.15rem 0.6rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-family: var(--font-mono);
-    }
-
-    .on-time, .normal, .open, .available, .active, .lower { color: var(--green); }
-    .delayed, .late, .closed, .disrupted, .higher { color: var(--red); }
-    .caution, .minor-delay, .check { color: var(--orange); }
-
-    .status-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
-    .status-fill { height: 100%; background: var(--accent2); border-radius: 2px; transition: width 0.6s ease; }
-
-    table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; }
-    th { padding: 0.5rem 0.75rem; color: var(--muted); text-align: left; font-family: var(--font-body); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); }
-    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(245,158,11,0.06); font-variant-numeric: tabular-nums; }
-    tr:hover td { background: var(--surface2); }
-
-    @keyframes boardSlide {
-      from { opacity: 0; transform: translateY(-6px); }
-      to { opacity: 1; transform: none; }
-    }
-
-    @keyframes alertBlink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .delayed, .alert-active, .disrupted { animation: alertBlink 1.8s ease infinite; }
-  </style>
+@media (prefers-reduced-motion: reduce) {
+  .status-card { animation: none; }
+  .skeleton-card { animation: none; }
+  .refresh-dot.live { animation: none; }
+}
+</style>
 </head>
 <body>
 
-<header>
-  <div class="header-inner">
-    <a class="logo" href="#" aria-label="Transit Watch home">
-      <div class="logo-icon" aria-hidden="true">🚇</div>
-      <div>
-        <div class="logo-text">Transit Watch</div>
-        <div class="logo-sub">Know before you go</div>
-      </div>
-    </a>
-    <div class="header-actions">
-      <div class="last-updated" id="lastUpdated" aria-live="polite">
-        Updated <span class="last-updated-time" id="lastUpdatedTime">just now</span>
-      </div>
-      <div class="live-badge" aria-label="Live data feed active">
-        <div class="live-dot" aria-hidden="true"></div>
-        Live
-      </div>
-    </div>
+<!-- N9 Nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">Commute<span>Watch</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Transit Delay Notifier</span>
+  <div class="nav-refresh-indicator" id="refresh-indicator" aria-live="polite">
+    <span class="refresh-dot" id="refresh-dot"></span>
+    <span id="refresh-label">Idle</span>
   </div>
-</header>
+  <a href="../index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
 
-<main>
-  <!-- LEFT COLUMN -->
-  <div class="left-col">
-    <!-- Ticker bar -->
-    <div class="ticker-bar" id="tickerBar" role="status" aria-live="polite">
-      <span class="ticker-label">⚡ Alert</span>
-      <span class="ticker-text" id="tickerText">Loading service alerts...</span>
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Settings and commute configuration">
+
+    <!-- City tabs -->
+    <div class="city-tabs" role="tablist" aria-label="City selector">
+      <button class="city-tab active" id="tab-nyc" role="tab" aria-selected="true" data-city="nyc">NYC</button>
+      <button class="city-tab" id="tab-london" role="tab" aria-selected="false" data-city="london">London</button>
+      <button class="city-tab" id="tab-demo" role="tab" aria-selected="false" data-city="demo">Demo</button>
     </div>
 
-    <!-- Line Status -->
-    <div class="section-header">
-      <span class="section-title">Line Status</span>
-      <span class="section-count" id="lineCount">4 lines</span>
-    </div>
+    <div class="sidebar-scroll">
 
-    <div class="status-grid" id="statusGrid" role="list" aria-label="Transit line statuses">
-      <!-- Skeleton loaders -->
-      <div class="skeleton-card" aria-hidden="true">
-        <div class="skeleton skel-circle"></div>
-        <div class="skel-lines">
-          <div class="skeleton skel-line" style="width:60%"></div>
-          <div class="skeleton skel-line" style="width:40%"></div>
+      <!-- Line monitor picker -->
+      <div class="sb-section">
+        <div class="sb-section-label">Monitor Lines</div>
+        <div class="line-grid" id="line-grid" role="group" aria-label="Select lines to monitor">
+          <!-- populated by JS -->
         </div>
       </div>
-      <div class="skeleton-card" aria-hidden="true">
-        <div class="skeleton skel-circle"></div>
-        <div class="skel-lines">
-          <div class="skeleton skel-line" style="width:50%"></div>
-          <div class="skeleton skel-line" style="width:35%"></div>
+
+      <!-- My Commutes -->
+      <div class="sb-section">
+        <div class="sb-section-label">My Commutes</div>
+        <div class="commute-list" id="commute-list" aria-label="Saved commutes">
+          <!-- populated by JS -->
+        </div>
+
+        <!-- Add commute form -->
+        <button class="btn-ghost" id="btn-add-commute" style="width:100%; margin-top:var(--space-2)">+ Add Commute</button>
+        <div class="add-commute-form" id="add-commute-form" aria-label="New commute form">
+          <div>
+            <div class="form-label">Commute name</div>
+            <input type="text" class="form-input" id="new-commute-name" placeholder="e.g. Morning Commute" maxlength="40">
+          </div>
+          <div>
+            <div class="form-label">Lines (select from grid above, then save)</div>
+            <div id="form-selected-lines" style="font-size:var(--text-xs); color:var(--color-ink-muted)">No lines selected</div>
+          </div>
+          <div class="form-row">
+            <button class="btn-primary" id="btn-save-commute" style="flex:1">Save</button>
+            <button class="btn-ghost" id="btn-cancel-commute">Cancel</button>
+          </div>
         </div>
       </div>
-      <div class="skeleton-card" aria-hidden="true">
-        <div class="skeleton skel-circle"></div>
-        <div class="skel-lines">
-          <div class="skeleton skel-line" style="width:55%"></div>
-          <div class="skeleton skel-line" style="width:30%"></div>
+
+      <!-- Alert settings -->
+      <div class="sb-section">
+        <div class="sb-section-label">Alert Settings</div>
+        <div class="setting-row">
+          <label class="setting-label" for="delay-threshold">Min delay (mins)</label>
+          <select class="setting-control" id="delay-threshold" aria-label="Minimum delay threshold">
+            <option value="5">5 min</option>
+            <option value="10" selected>10 min</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Weekdays only</span>
+          <label class="toggle" aria-label="Weekdays only">
+            <input type="checkbox" id="weekdays-only" checked>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <label class="setting-label" for="check-interval">Check every</label>
+          <select class="setting-control" id="check-interval" aria-label="Check interval">
+            <option value="60">1 min</option>
+            <option value="300" selected>5 min</option>
+            <option value="900">15 min</option>
+          </select>
         </div>
       </div>
+
     </div>
 
-    <!-- Service Alerts -->
-    <div class="section-header mt-16">
-      <span class="section-title">Service Alerts</span>
-      <span class="section-count" id="alertCount">0 alerts</span>
+    <!-- Sidebar footer -->
+    <div class="sidebar-footer">
+      <button class="check-now-btn" id="check-now-btn">Check Now</button>
+      <div class="last-check" id="last-check-time">Never checked</div>
     </div>
-    <div class="alerts-panel" id="alertsPanel" role="log" aria-label="Service alerts" aria-live="polite">
-      <!-- populated by JS -->
-    </div>
-  </div>
 
-  <!-- RIGHT SIDEBAR -->
-  <div class="sidebar">
-    <!-- Snooze bar -->
-    <div class="snooze-bar">
-      <div class="snooze-info">
-        <div class="snooze-title">Alert Notifications</div>
-        <div class="snooze-sub" id="snoozeStatus">Active — receiving alerts</div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Transit status and commute information">
+
+    <!-- Tab bar -->
+    <div class="tab-bar" role="tablist" aria-label="Main tabs">
+      <button class="tab-btn active" data-panel="live" role="tab" aria-selected="true">Live Status</button>
+      <button class="tab-btn" data-panel="commutes" role="tab" aria-selected="false">My Commutes</button>
+      <button class="tab-btn" data-panel="history" role="tab" aria-selected="false">Delay History</button>
+    </div>
+
+    <!-- Demo banner -->
+    <div class="demo-banner" id="demo-banner" role="alert">
+      Demo Mode — showing simulated transit data seeded by current hour. Switch to NYC or London for live feeds.
+    </div>
+
+    <!-- Live Status panel -->
+    <div class="panel active" id="panel-live" role="tabpanel" aria-label="Live transit status">
+      <div class="skeleton-grid" id="live-loading">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
       </div>
-      <div class="snooze-actions">
-        <button class="snooze-btn" id="snoozeBtn" onclick="toggleSnooze()" aria-label="Snooze alerts for 1 hour">Snooze 1h</button>
-        <button class="snooze-btn active" id="pauseBtn" onclick="togglePause()" aria-label="Toggle alert pause">Active</button>
-      </div>
+      <div class="status-grid" id="status-grid" style="display:none" aria-live="polite" aria-label="Line status cards"></div>
     </div>
 
-    <!-- My Routes -->
-    <div class="my-routes-card card">
-      <div class="my-routes-header">
-        <span class="my-routes-title">My Routes</span>
-        <span class="section-count" id="routeCount">0 routes</span>
-      </div>
-      <div class="route-list" id="routeList" role="list" aria-label="Monitored routes">
-        <!-- populated by JS -->
-      </div>
-      <button class="add-route-btn" onclick="openModal()" aria-label="Add a new transit route to monitor">
-        + Add Route
-      </button>
+    <!-- My Commutes panel -->
+    <div class="panel" id="panel-commutes" role="tabpanel" aria-label="My commutes">
+      <div class="commute-cards" id="commute-cards" aria-live="polite"></div>
     </div>
 
-    <!-- Alert Threshold -->
-    <div class="threshold-card card">
-      <div class="threshold-card-title">Alert Threshold</div>
-      <div class="threshold-card-sub">Notify me when delay exceeds:</div>
-      <div class="threshold-slider-wrap">
-        <div>
-          <div class="threshold-value" id="thresholdDisplay">5</div>
-          <div class="threshold-unit">min</div>
-        </div>
-        <input type="range" id="thresholdSlider" min="1" max="30" value="5"
-               aria-label="Delay alert threshold in minutes"
-               oninput="updateThreshold(this.value)" />
-      </div>
+    <!-- Delay History panel -->
+    <div class="panel" id="panel-history" role="tabpanel" aria-label="Delay history">
+      <div class="history-grid" id="history-grid"></div>
     </div>
 
-    <!-- Delay History -->
-    <div class="history-card card">
-      <div class="history-header">
-        <div class="history-title">Delay History</div>
-        <div class="history-sub">Last 14 days</div>
-      </div>
-      <div class="history-list" id="historyList" role="list" aria-label="Delay history">
-        <!-- populated by JS -->
-      </div>
-    </div>
-
-    <!-- Refresh countdown -->
-    <div style="text-align:center; padding: 8px 0;">
-      <div class="last-updated" style="justify-content:center; flex-direction:column; gap:4px;">
-        <div>Next update in <span id="countdown" style="color:var(--accent); font-weight:700;">30</span>s</div>
-        <div style="font-size:11px; color:var(--muted);">Data refreshes every 30 seconds</div>
-      </div>
-    </div>
-  </div>
-</main>
-
-<!-- ADD ROUTE MODAL -->
-<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div class="modal">
-    <h2 class="modal-title" id="modalTitle">Add Transit Route</h2>
-    <p class="modal-sub">Configure a route to monitor for delays and alerts.</p>
-
-    <div class="form-group">
-      <label class="form-label" for="selectLine">Transit Line</label>
-      <select class="form-select" id="selectLine" aria-required="true">
-        <option value="">— Choose a line —</option>
-        <option value="red">Red Line — Metro</option>
-        <option value="blue">Blue Line — Metro</option>
-        <option value="green">Green Line — Metro</option>
-        <option value="yellow">Yellow Line — Metro</option>
-        <option value="bus12">Bus 12 — Crosstown</option>
-        <option value="bus47">Bus 47 — Airport Express</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="selectDirection">Direction</label>
-      <select class="form-select" id="selectDirection" aria-required="true">
-        <option value="">— Choose direction —</option>
-        <option value="inbound">Inbound (toward City Center)</option>
-        <option value="outbound">Outbound (away from City Center)</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="inputStop">Boarding Stop</label>
-      <input type="text" class="form-input" id="inputStop" placeholder="e.g. Central Station" aria-required="true" />
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="inputDeparture">My Departure Time</label>
-      <input type="time" class="form-input" id="inputDeparture" value="08:30" aria-required="true" />
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Alert me if delay exceeds</label>
-      <div class="threshold-row">
-        <input type="number" class="form-input" id="routeThreshold" value="5" min="1" max="60" aria-label="Delay threshold in minutes" />
-        <span class="threshold-label">minutes</span>
-      </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()" type="button">Cancel</button>
-      <button class="btn btn-primary" onclick="addRoute()" type="button">Add Route</button>
-    </div>
-  </div>
+  </main>
 </div>
 
-<!-- TOAST CONTAINER -->
-<div class="toast-container" id="toastContainer" aria-live="assertive" aria-atomic="true"></div>
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
-  // ── CONSTANTS ──
-  const LINES = [
-    {
-      id: 'red',
-      name: 'Red Line',
-      type: 'Metro',
-      color: '#e53e3e',
-      stops: 'Central — North Terminal — Airport',
-      direction: 'Northbound',
-      emoji: 'R'
-    },
-    {
-      id: 'blue',
-      name: 'Blue Line',
-      type: 'Metro',
-      color: '#3182ce',
-      stops: 'Harbor — Downtown — Westfield',
-      direction: 'Westbound',
-      emoji: 'B'
-    },
-    {
-      id: 'green',
-      name: 'Green Line',
-      type: 'Metro',
-      color: '#38a169',
-      stops: 'Eastgate — University — Stadium',
-      direction: 'Eastbound',
-      emoji: 'G'
-    },
-    {
-      id: 'yellow',
-      name: 'Yellow Line',
-      type: 'Metro',
-      color: '#d69e2e',
-      stops: 'Riverside — Midtown — Arts District',
-      direction: 'Southbound',
-      emoji: 'Y'
+// ── mulberry32 PRNG ──────────────────────────────────────────
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ── Line definitions ─────────────────────────────────────────
+const NYC_LINES = [
+  { id:'A',code:'A',name:'A Train',color:'nyc-A'},{id:'C',code:'C',name:'C Train',color:'nyc-C'},
+  {id:'E',code:'E',name:'E Train',color:'nyc-E'},{id:'1',code:'1',name:'1 Train',color:'nyc-1'},
+  {id:'2',code:'2',name:'2 Train',color:'nyc-2'},{id:'3',code:'3',name:'3 Train',color:'nyc-3'},
+  {id:'4',code:'4',name:'4 Train',color:'nyc-4'},{id:'5',code:'5',name:'5 Train',color:'nyc-5'},
+  {id:'6',code:'6',name:'6 Train',color:'nyc-6'},{id:'N',code:'N',name:'N Train',color:'nyc-N'},
+  {id:'Q',code:'Q',name:'Q Train',color:'nyc-Q'},{id:'R',code:'R',name:'R Train',color:'nyc-R'},
+  {id:'W',code:'W',name:'W Train',color:'nyc-W'},{id:'B',code:'B',name:'B Train',color:'nyc-B'},
+  {id:'D',code:'D',name:'D Train',color:'nyc-D'},{id:'F',code:'F',name:'F Train',color:'nyc-F'},
+  {id:'M',code:'M',name:'M Train',color:'nyc-M'},{id:'L',code:'L',name:'L Train',color:'nyc-L'},
+  {id:'7',code:'7',name:'7 Train',color:'nyc-7'},{id:'G',code:'G',name:'G Train',color:'nyc-G'},
+  {id:'J',code:'J',name:'J Train',color:'nyc-J'},{id:'Z',code:'Z',name:'Z Train',color:'nyc-Z'},
+  {id:'S',code:'S',name:'S Shuttle',color:'nyc-S'}
+];
+
+const LONDON_LINES = [
+  {id:'bakerloo',code:'BL',name:'Bakerloo',color:'tfl-Bakerloo'},
+  {id:'central',code:'CE',name:'Central',color:'tfl-Central'},
+  {id:'circle',code:'CI',name:'Circle',color:'tfl-Circle'},
+  {id:'district',code:'DI',name:'District',color:'tfl-District'},
+  {id:'hammersmith-city',code:'HC',name:'Hammersmith & City',color:'tfl-Hammersmith'},
+  {id:'jubilee',code:'JU',name:'Jubilee',color:'tfl-Jubilee'},
+  {id:'metropolitan',code:'ME',name:'Metropolitan',color:'tfl-Metropolitan'},
+  {id:'northern',code:'NO',name:'Northern',color:'tfl-Northern'},
+  {id:'piccadilly',code:'PI',name:'Piccadilly',color:'tfl-Piccadilly'},
+  {id:'victoria',code:'VI',name:'Victoria',color:'tfl-Victoria'},
+  {id:'waterloo-city',code:'WC',name:'Waterloo & City',color:'tfl-Waterloo'}
+];
+
+// ── App state ────────────────────────────────────────────────
+const state = {
+  city: 'nyc',
+  selectedLines: new Set(),
+  commutes: [],
+  prefs: { delayThreshold: 10, weekdaysOnly: true, checkInterval: 300 },
+  lineStatuses: {},     // id -> { status, description, delayMins }
+  history: [],          // array of { ts, city, statuses: { id: status } }
+  activePanel: 'live',
+  addingCommute: false,
+  refreshTimer: null,
+  lastCheck: null,
+  isDemo: false,
+};
+
+// ── Persistence ──────────────────────────────────────────────
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('cw_state') || '{}');
+    if (saved.city) state.city = saved.city;
+    if (saved.selectedLines) state.selectedLines = new Set(saved.selectedLines);
+    if (saved.commutes) state.commutes = saved.commutes;
+    if (saved.prefs) Object.assign(state.prefs, saved.prefs);
+    if (saved.history) state.history = saved.history;
+  } catch {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('cw_state', JSON.stringify({
+      city: state.city,
+      selectedLines: [...state.selectedLines],
+      commutes: state.commutes,
+      prefs: state.prefs,
+      history: state.history,
+    }));
+  } catch {}
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function currentLines() {
+  return state.city === 'london' ? LONDON_LINES : NYC_LINES;
+}
+
+function getLineById(id) {
+  return [...NYC_LINES, ...LONDON_LINES].find(l => l.id === id);
+}
+
+function statusBadgeClass(status) {
+  if (status === 'good') return 'badge-good';
+  if (status === 'minor') return 'badge-minor';
+  if (status === 'major' || status === 'part-suspended') return 'badge-major';
+  if (status === 'suspended') return 'badge-suspended';
+  return 'badge-good';
+}
+
+function statusLabel(status) {
+  const map = {
+    good: 'Good Service',
+    minor: 'Minor Delays',
+    major: 'Major Delays',
+    'part-suspended': 'Part Suspended',
+    suspended: 'Suspended',
+  };
+  return map[status] || 'Good Service';
+}
+
+function formatTime(date) {
+  if (!date) return 'Never';
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+// ── Demo data generator ───────────────────────────────────────
+function generateDemoStatuses(lines) {
+  const seed = Math.floor(Date.now() / 3600000); // changes each hour
+  const rng = mulberry32(seed);
+  const statuses = {};
+
+  const statusPool = ['good','good','good','good','minor','minor','major','part-suspended'];
+  const descriptions = {
+    good: 'Service is operating normally.',
+    minor: 'Minor delays due to congestion at select stations.',
+    major: 'Significant delays. Allow extra travel time.',
+    'part-suspended': 'Service suspended between certain stations. Seek alternate routes.',
+    suspended: 'Service is suspended. Please use alternative routes.',
+  };
+
+  for (const line of lines) {
+    const idx = Math.floor(rng() * statusPool.length);
+    const status = statusPool[idx];
+    let delayMins = 0;
+    if (status === 'minor') delayMins = Math.floor(rng() * 8) + 5;
+    if (status === 'major') delayMins = Math.floor(rng() * 20) + 15;
+    if (status === 'part-suspended') delayMins = Math.floor(rng() * 30) + 20;
+    statuses[line.id] = { status, description: descriptions[status], delayMins };
+  }
+  return statuses;
+}
+
+// ── TfL London fetch ──────────────────────────────────────────
+async function fetchLondonStatus() {
+  const url = 'https://api.tfl.gov.uk/line/mode/tube/status';
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`TfL API error: ${res.status}`);
+  const data = await res.json();
+
+  const statuses = {};
+  for (const lineData of data) {
+    const lineId = lineData.id;
+    const lineStatuses = lineData.lineStatuses || [];
+    let topStatus = 'good';
+    let description = 'Service is operating normally.';
+    let delayMins = 0;
+
+    if (lineStatuses.length > 0) {
+      const s = lineStatuses[0];
+      const severity = s.statusSeverity;
+      if (severity === 10) { topStatus = 'good'; }
+      else if (severity >= 6 && severity <= 9) { topStatus = 'minor'; delayMins = 8; }
+      else if (severity >= 3 && severity <= 5) { topStatus = 'major'; delayMins = 20; }
+      else if (severity === 2) { topStatus = 'part-suspended'; delayMins = 30; }
+      else if (severity <= 1) { topStatus = 'suspended'; delayMins = 60; }
+      if (s.reason) description = s.reason;
     }
-  ];
 
-  const INCIDENTS = [
-    'Red Line: Signal fault near North Terminal — expect 8–12 min delays',
-    'Blue Line: All services running normally',
-    'Green Line: Crowding at University Station — boarding delays possible',
-    'Yellow Line: Track maintenance at Midtown — minor disruptions expected',
-    'Red Line: Emergency services at Central Station — 15 min delay',
-    'Blue Line: Mechanical issue on train B204 — 6 min delay on Westbound',
-    'Green Line: Service restored — normal operations',
-    'System-wide: Strike action postponed — services running as scheduled'
-  ];
-
-  const ALERT_TEMPLATES = [
-    { type: 'alert', icon: '🚨', line: 'red',    title: 'Red Line — Major Delay',    desc: 'Signal fault near North Terminal. Expect 8–12 min delays on Northbound services. Use alternate route via Bus 47.' },
-    { type: 'warn',  icon: '⚠️',  line: 'green',  title: 'Green Line — Crowding',     desc: 'Heavy crowding at University Station. Allow extra boarding time. Next clear service in 4 minutes.' },
-    { type: 'warn',  icon: '⚠️',  line: 'blue',   title: 'Blue Line — Minor Delay',   desc: 'Mechanical issue on train B204 causing 6 min delay on Westbound services.' },
-    { type: 'info',  icon: 'ℹ️',  line: 'yellow', title: 'Yellow Line — Maintenance', desc: 'Scheduled track inspection at Midtown tonight 22:00–04:00. Replacement bus service in operation.' },
-    { type: 'ok',    icon: '✅',  line: 'blue',   title: 'Blue Line — Service Restored', desc: 'Signal issue resolved. All services now running on schedule.' },
-    { type: 'alert', icon: '🚨',  line: 'red',    title: 'Red Line — Emergency Stop',  desc: 'Emergency services attending incident at Central Station. Expect 15 min delay. Platform 2 closed.' }
-  ];
-
-  const HISTORY_ENTRIES = [
-    { line: 'red',    color: '#e53e3e', name: 'Red Line',    delay: 12, desc: 'Signal fault',      date: 'Today 07:42',    severity: 'alert' },
-    { line: 'blue',   color: '#3182ce', name: 'Blue Line',   delay:  6, desc: 'Mechanical issue',  date: 'Today 06:55',    severity: 'warn'  },
-    { line: 'green',  color: '#38a169', name: 'Green Line',  delay:  0, desc: 'On time',           date: 'Yesterday 08:12',severity: 'ok'    },
-    { line: 'yellow', color: '#d69e2e', name: 'Yellow Line', delay:  3, desc: 'Minor disruption',  date: 'Yesterday 07:30',severity: 'warn'  },
-    { line: 'red',    color: '#e53e3e', name: 'Red Line',    delay: 18, desc: 'Track maintenance', date: 'May 25 08:01',   severity: 'alert' },
-    { line: 'blue',   color: '#3182ce', name: 'Blue Line',   delay:  0, desc: 'On time',           date: 'May 25 07:55',   severity: 'ok'    }
-  ];
-
-  // ── STATE ──
-  let lineStatuses = {};
-  let myRoutes = [];
-  let alertThreshold = 5;
-  let snoozed = false;
-  let paused = false;
-  let snoozeTimer = null;
-  let countdownVal = 30;
-  let tickerIndex = 0;
-  let activeAlerts = [];
-
-  // ── HELPERS ──
-  function randomDelay(max) {
-    return Math.floor(Math.random() * (max + 1));
+    statuses[lineId] = { status: topStatus, description, delayMins };
   }
+  return statuses;
+}
 
-  function getStatus(delay) {
-    if (delay === 0) return 'ok';
-    if (delay <= 5) return 'warn';
-    return 'alert';
-  }
+// ── NYC MTA fetch (via allorigins proxy) ──────────────────────
+async function fetchNYCStatus() {
+  const targetUrl = encodeURIComponent('http://web.mta.info/status/serviceStatus.txt');
+  const proxyUrl = `https://api.allorigins.win/get?url=${targetUrl}`;
+  const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
+  if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+  const json = await res.json();
+  const xml = json.contents;
 
-  function statusLabel(status) {
-    if (status === 'ok') return 'On Time';
-    if (status === 'warn') return 'Minor Delay';
-    return 'Delayed';
-  }
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'text/xml');
 
-  function fmtTime(date) {
-    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
+  const statuses = {};
 
-  function lineMeta(lineId) {
-    return LINES.find(l => l.id === lineId) || null;
-  }
+  // Parse subway lines from the XML
+  const subwayEl = doc.querySelector('subway');
+  if (!subwayEl) throw new Error('No subway element in MTA XML');
 
-  // ── MOCK DATA REFRESH ──
-  function generateLineStatuses() {
-    const delayRanges = { red: 15, blue: 8, green: 6, yellow: 10 };
-    const next = {};
-    LINES.forEach(line => {
-      const maxDelay = delayRanges[line.id] || 10;
-      const roll = Math.random();
-      let delay;
-      if (roll < 0.35) delay = 0;
-      else if (roll < 0.65) delay = randomDelay(5);
-      else delay = randomDelay(maxDelay);
-      next[line.id] = {
-        delay,
-        status: getStatus(delay),
-        affectedStops: delay > 5 ? [line.stops.split(' — ')[1] || 'Central Station'] : []
-      };
-    });
-    return next;
-  }
+  const lineEls = subwayEl.querySelectorAll('line');
+  for (const lineEl of lineEls) {
+    const nameEl = lineEl.querySelector('name');
+    const statusEl = lineEl.querySelector('status');
+    const textEl = lineEl.querySelector('text');
 
-  function pickAlerts(statuses) {
-    const alerts = [];
-    LINES.forEach(line => {
-      const s = statuses[line.id];
-      if (s.status === 'alert') {
-        const template = ALERT_TEMPLATES.find(a => a.line === line.id && a.type === 'alert');
-        if (template) alerts.push(template);
-      } else if (s.status === 'warn') {
-        const template = ALERT_TEMPLATES.find(a => a.line === line.id && a.type === 'warn');
-        if (template) alerts.push(template);
+    if (!nameEl) continue;
+    const rawName = (nameEl.textContent || '').trim();
+    const rawStatus = (statusEl ? statusEl.textContent : '').trim().toLowerCase();
+    const rawText = textEl ? (textEl.textContent || '').replace(/<[^>]+>/g, '').trim() : '';
+
+    // Map MTA status text to our statuses
+    let status = 'good';
+    let delayMins = 0;
+    if (rawStatus.includes('good service')) { status = 'good'; }
+    else if (rawStatus.includes('delays') || rawStatus.includes('slow')) {
+      status = 'minor'; delayMins = 10;
+      if (rawStatus.includes('major') || rawStatus.includes('severe')) { status = 'major'; delayMins = 25; }
+    } else if (rawStatus.includes('suspended')) { status = 'suspended'; delayMins = 60; }
+    else if (rawStatus.includes('planned work') || rawStatus.includes('service change')) { status = 'minor'; delayMins = 5; }
+
+    // The name field can contain multiple lines e.g. "A,C,E" or just "1"
+    const lineNames = rawName.split(/[\s,/]+/).map(s => s.trim()).filter(Boolean);
+    for (const ln of lineNames) {
+      const found = NYC_LINES.find(l => l.id === ln);
+      if (found) {
+        statuses[found.id] = {
+          status,
+          description: rawText || statusLabel(status),
+          delayMins,
+        };
       }
-    });
-    // Always add an info alert about maintenance
-    const infoAlert = ALERT_TEMPLATES.find(a => a.type === 'info');
-    if (infoAlert && !alerts.includes(infoAlert)) alerts.push(infoAlert);
-    return alerts;
+    }
   }
 
-  // ── RENDER LINE CARDS ──
-  function renderLines(statuses) {
-    const grid = document.getElementById('statusGrid');
-    grid.innerHTML = '';
+  return statuses;
+}
 
-    LINES.forEach(line => {
-      const s = statuses[line.id];
-      const card = document.createElement('div');
-      card.className = 'line-card';
-      card.setAttribute('role', 'listitem');
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('aria-label', `${line.name}: ${statusLabel(s.status)}, ${s.delay} minute delay`);
-      card.style.setProperty('--lc', line.color);
-      card.style.cssText += `--lc:${line.color};`;
-      card.querySelector ? null : null;
+// ── Main fetch orchestrator ───────────────────────────────────
+async function fetchStatus() {
+  const btn = document.getElementById('check-now-btn');
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
 
-      // Left border color via inline style on ::before via CSS var trick
-      card.style.background = `var(--surface)`;
-      card.innerHTML = `
-        <div class="line-badge" style="background:${line.color};" aria-hidden="true">${line.emoji}</div>
-        <div class="line-info">
-          <div class="line-name">${line.name}</div>
-          <div class="line-detail">${line.type} · ${line.stops}</div>
-        </div>
-        <div class="line-status-wrap">
-          <div class="delay-badge ${s.status}" aria-hidden="true">
-            ${s.delay === 0 ? '–' : `+${s.delay}`}
-          </div>
-          <div class="delay-unit" aria-hidden="true">min</div>
-          <div class="status-pill ${s.status}" aria-hidden="true">${statusLabel(s.status)}</div>
-        </div>
-      `;
+  updateRefreshIndicator('loading');
 
-      // Left border via style
-      const beforeStyle = document.createElement('style');
-      beforeStyle.textContent = ``;
-      card.style.borderLeft = `4px solid ${line.color}`;
-      card.style.borderRadius = `var(--radius)`;
+  try {
+    let statuses = {};
+    const lines = currentLines();
+    state.isDemo = (state.city === 'demo');
 
-      // Keyboard navigation
-      card.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          showToast('ℹ️', `${line.name}`, `${statusLabel(s.status)} — ${s.delay > 0 ? s.delay + ' min delay' : 'Running on time'}`, 'info');
+    if (state.city === 'demo') {
+      await new Promise(r => setTimeout(r, 600)); // simulate latency
+      statuses = generateDemoStatuses(NYC_LINES.concat(LONDON_LINES));
+    } else if (state.city === 'london') {
+      try {
+        statuses = await fetchLondonStatus();
+      } catch (err) {
+        console.warn('TfL fetch failed, using demo:', err);
+        toast('Live TfL data unavailable — showing demo data', 'warn');
+        statuses = generateDemoStatuses(lines);
+        state.isDemo = true;
+      }
+    } else {
+      // NYC
+      try {
+        statuses = await fetchNYCStatus();
+        // Fill any missing lines with good service
+        for (const line of NYC_LINES) {
+          if (!statuses[line.id]) {
+            statuses[line.id] = { status: 'good', description: 'Service is operating normally.', delayMins: 0 };
+          }
         }
-      });
-
-      grid.appendChild(card);
-    });
-  }
-
-  // ── RENDER ALERTS ──
-  function renderAlerts(alerts) {
-    const panel = document.getElementById('alertsPanel');
-    panel.innerHTML = '';
-    document.getElementById('alertCount').textContent = `${alerts.length} alert${alerts.length !== 1 ? 's' : ''}`;
-
-    if (alerts.length === 0) {
-      panel.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon" aria-hidden="true">✅</div>
-          <div class="empty-title">All Clear</div>
-          <div class="empty-desc">No active service alerts at this time. All lines running normally.</div>
-        </div>
-      `;
-      return;
+      } catch (err) {
+        console.warn('MTA fetch failed, using demo:', err);
+        toast('Live MTA data unavailable — showing demo data', 'warn');
+        statuses = generateDemoStatuses(lines);
+        state.isDemo = true;
+      }
     }
 
-    alerts.forEach(alert => {
-      const el = document.createElement('div');
-      el.className = `alert-item`;
-      el.setAttribute('role', 'listitem');
-      el.innerHTML = `
-        <div class="alert-icon ${alert.type}" aria-hidden="true">${alert.icon}</div>
-        <div class="alert-body">
-          <div class="alert-title">${alert.title}</div>
-          <div class="alert-desc">${alert.desc}</div>
-          <div class="alert-time">
-            <span aria-hidden="true">🕐</span>
-            <span>${fmtTime(new Date())}</span>
-          </div>
+    state.lineStatuses = statuses;
+    state.lastCheck = new Date();
+
+    // Record history (max 50 entries)
+    state.history.unshift({ ts: Date.now(), city: state.city, statuses: { ...statuses } });
+    if (state.history.length > 50) state.history.length = 50;
+
+    saveState();
+    renderLiveStatus();
+    renderCommutes();
+    renderHistory();
+    updateDemoBanner();
+    updateRefreshIndicator(state.isDemo ? 'demo' : 'live');
+    document.getElementById('last-check-time').textContent = `Updated ${formatTime(state.lastCheck)}`;
+
+  } catch (err) {
+    console.error('Fetch error:', err);
+    toast('Error fetching status data', 'error');
+    updateRefreshIndicator('idle');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Check Now';
+  }
+}
+
+// ── Render: Live Status ───────────────────────────────────────
+function renderLiveStatus() {
+  const grid = document.getElementById('status-grid');
+  const loading = document.getElementById('live-loading');
+  loading.style.display = 'none';
+  grid.style.display = 'grid';
+  grid.innerHTML = '';
+
+  const lines = state.city === 'demo'
+    ? NYC_LINES.slice(0, 12) // demo shows first 12
+    : currentLines();
+
+  for (const line of lines) {
+    const info = state.lineStatuses[line.id] || { status: 'good', description: 'Service is operating normally.', delayMins: 0 };
+    const isMonitored = state.selectedLines.has(line.id);
+
+    const card = document.createElement('div');
+    card.className = 'status-card';
+
+    const badgeClass = statusBadgeClass(info.status);
+    const delayText = info.delayMins > 0 ? `~${info.delayMins} min delay` : 'On time';
+
+    card.innerHTML = `
+      <div class="status-card-header">
+        <div class="line-dot ${line.color}" aria-hidden="true">${esc(line.code)}</div>
+        <div class="line-info">
+          <div class="line-name">${esc(line.name)}</div>
         </div>
-      `;
-      panel.appendChild(el);
-    });
-  }
-
-  // ── RENDER ROUTES ──
-  function renderRoutes() {
-    const list = document.getElementById('routeList');
-    document.getElementById('routeCount').textContent = `${myRoutes.length} route${myRoutes.length !== 1 ? 's' : ''}`;
-
-    if (myRoutes.length === 0) {
-      list.innerHTML = `
-        <div class="empty-state" style="padding:20px 12px;">
-          <div class="empty-icon" aria-hidden="true">🗺️</div>
-          <div class="empty-title">No routes yet</div>
-          <div class="empty-desc">Add your commute route to get proactive delay alerts.</div>
-        </div>
-      `;
-      return;
-    }
-
-    list.innerHTML = '';
-    myRoutes.forEach((route, idx) => {
-      const meta = lineMeta(route.lineId);
-      const color = meta ? meta.color : '#6c63ff';
-      const s = lineStatuses[route.lineId] || { status: 'ok', delay: 0 };
-      const el = document.createElement('div');
-      el.className = 'route-item';
-      el.setAttribute('role', 'listitem');
-      el.innerHTML = `
-        <div class="route-dot" style="background:${color};" aria-hidden="true"></div>
-        <div class="route-info">
-          <div class="route-name">${route.name}</div>
-          <div class="route-meta">${route.stop} · ${route.departure} · Alert >${route.threshold}min</div>
-        </div>
-        <button class="route-toggle ${route.active ? 'active' : ''}"
-                onclick="toggleRoute(${idx})"
-                aria-label="${route.active ? 'Disable' : 'Enable'} alerts for ${route.name}"
-                aria-pressed="${route.active}">
-        </button>
-      `;
-      list.appendChild(el);
-    });
-  }
-
-  // ── RENDER HISTORY ──
-  function renderHistory() {
-    const list = document.getElementById('historyList');
-    list.innerHTML = '';
-    HISTORY_ENTRIES.forEach(entry => {
-      const el = document.createElement('div');
-      el.className = 'history-item';
-      el.setAttribute('role', 'listitem');
-      el.innerHTML = `
-        <div class="history-line-dot" style="background:${entry.color};" aria-hidden="true"></div>
-        <div class="history-info">
-          <div class="history-line-name">${entry.name}</div>
-          <div class="history-desc">${entry.desc}</div>
-        </div>
-        <div style="text-align:right;">
-          <div class="history-delay ${entry.severity}" aria-label="${entry.delay > 0 ? entry.delay + ' minute delay' : 'on time'}">
-            ${entry.delay > 0 ? `+${entry.delay}m` : '✓'}
-          </div>
-          <div class="history-date">${entry.date}</div>
-        </div>
-      `;
-      list.appendChild(el);
-    });
-  }
-
-  // ── TICKER ──
-  function updateTicker() {
-    const el = document.getElementById('tickerText');
-    el.textContent = INCIDENTS[tickerIndex % INCIDENTS.length];
-    tickerIndex++;
-  }
-
-  // ── LAST UPDATED ──
-  function updateTimestamp() {
-    document.getElementById('lastUpdatedTime').textContent = fmtTime(new Date());
-  }
-
-  // ── COUNTDOWN ──
-  function startCountdown() {
-    countdownVal = 30;
-    const tick = () => {
-      document.getElementById('countdown').textContent = countdownVal;
-      if (countdownVal <= 0) {
-        refresh();
-        countdownVal = 30;
-      } else {
-        countdownVal--;
-      }
-      setTimeout(tick, 1000);
-    };
-    tick();
-  }
-
-  // ── REFRESH DATA ──
-  function refresh() {
-    lineStatuses = generateLineStatuses();
-    activeAlerts = pickAlerts(lineStatuses);
-    renderLines(lineStatuses);
-    renderAlerts(activeAlerts);
-    updateTimestamp();
-    updateTicker();
-    checkThresholdAlerts();
-  }
-
-  // ── THRESHOLD ALERTS ──
-  function checkThresholdAlerts() {
-    if (snoozed || paused) return;
-    myRoutes.forEach(route => {
-      if (!route.active) return;
-      const s = lineStatuses[route.lineId];
-      if (s && s.delay >= route.threshold) {
-        showToast('🚨', `Delay Alert: ${route.name}`, `${route.lineId.charAt(0).toUpperCase() + route.lineId.slice(1)} Line delayed ${s.delay} min — exceeds your ${route.threshold}min threshold`, 'alert');
-      }
-    });
-  }
-
-  // ── TOAST ──
-  let toastCount = 0;
-  function showToast(icon, title, msg, type) {
-    const container = document.getElementById('toastContainer');
-    const id = `toast-${++toastCount}`;
-    const el = document.createElement('div');
-    el.className = 'toast';
-    el.id = id;
-    el.setAttribute('role', 'alert');
-    el.innerHTML = `
-      <span class="toast-icon" aria-hidden="true">${icon}</span>
-      <div class="toast-body">
-        <div class="toast-title">${title}</div>
-        <div class="toast-msg">${msg}</div>
+        <span class="status-badge ${badgeClass}">${esc(statusLabel(info.status))}</span>
+      </div>
+      <div class="status-desc">${esc(info.description.slice(0, 140))}${info.description.length > 140 ? '…' : ''}</div>
+      <div class="status-card-footer">
+        <span class="delay-mins">${esc(delayText)}</span>
+        <button class="btn-add-alert ${isMonitored ? 'added' : ''}"
+          data-line-id="${esc(line.id)}"
+          aria-label="${isMonitored ? 'Already monitoring ' + line.name : 'Add ' + line.name + ' to alerts'}"
+        >${isMonitored ? 'Monitored' : '+ Monitor'}</button>
       </div>
     `;
-    container.appendChild(el);
-    setTimeout(() => {
-      const t = document.getElementById(id);
-      if (t) {
-        t.classList.add('removing');
-        setTimeout(() => t && t.remove(), 300);
-      }
-    }, 4000);
-  }
 
-  // ── MODAL ──
-  function openModal() {
-    document.getElementById('modalBackdrop').classList.add('open');
-    document.getElementById('selectLine').focus();
-  }
-
-  function closeModal() {
-    document.getElementById('modalBackdrop').classList.remove('open');
-    document.getElementById('selectLine').value = '';
-    document.getElementById('selectDirection').value = '';
-    document.getElementById('inputStop').value = '';
-    document.getElementById('inputDeparture').value = '08:30';
-    document.getElementById('routeThreshold').value = '5';
-  }
-
-  function addRoute() {
-    const lineVal = document.getElementById('selectLine').value;
-    const dirVal = document.getElementById('selectDirection').value;
-    const stopVal = document.getElementById('inputStop').value.trim();
-    const depVal = document.getElementById('inputDeparture').value;
-    const threshVal = parseInt(document.getElementById('routeThreshold').value, 10) || 5;
-
-    if (!lineVal || !dirVal || !stopVal) {
-      showToast('⚠️', 'Incomplete Form', 'Please fill in all required fields before adding a route.', 'warn');
-      return;
+    const alertBtn = card.querySelector('.btn-add-alert');
+    if (!isMonitored) {
+      alertBtn.addEventListener('click', () => {
+        state.selectedLines.add(line.id);
+        saveState();
+        renderLineGrid();
+        renderLiveStatus(); // re-render to update buttons
+        toast(`${line.name} added to monitor list`, 'success');
+      });
     }
 
-    const meta = LINES.find(l => l.id === lineVal);
-    const routeName = meta ? `${meta.name} — ${dirVal === 'inbound' ? 'Inbound' : 'Outbound'}` : lineVal;
+    grid.appendChild(card);
+  }
+}
 
-    myRoutes.push({
-      lineId: lineVal,
-      name: routeName,
-      stop: stopVal || 'Central Station',
-      departure: depVal,
-      threshold: threshVal,
-      active: true
+// ── Render: My Commutes ───────────────────────────────────────
+function renderCommutes() {
+  const container = document.getElementById('commute-cards');
+  container.innerHTML = '';
+
+  if (!state.commutes.length) {
+    container.innerHTML = `
+      <div class="commutes-empty">
+        <p class="commutes-empty-title">No saved commutes</p>
+        <p class="commutes-empty-sub">Add a commute in the sidebar to track your daily route and get health scores.</p>
+      </div>
+    `;
+    return;
+  }
+
+  for (const commute of state.commutes) {
+    const card = buildCommuteCard(commute);
+    container.appendChild(card);
+  }
+}
+
+function buildCommuteCard(commute) {
+  const card = document.createElement('div');
+  card.className = 'commute-card';
+
+  // Calculate health score
+  let totalDelay = 0;
+  let affectedCount = 0;
+  const lineInfos = [];
+
+  for (const lineId of commute.lines) {
+    const line = getLineById(lineId);
+    if (!line) continue;
+    const info = state.lineStatuses[lineId] || { status: 'good', delayMins: 0 };
+    totalDelay += info.delayMins || 0;
+    if (info.status !== 'good') affectedCount++;
+    lineInfos.push({ line, info });
+  }
+
+  const lineCount = commute.lines.length || 1;
+  const avgDelay = totalDelay / lineCount;
+  const healthScore = Math.max(0, Math.round(100 - (avgDelay * 2.5) - (affectedCount / lineCount * 30)));
+  const healthColor = healthScore >= 75 ? 'var(--color-success)' : healthScore >= 40 ? 'var(--color-warn)' : 'var(--color-danger)';
+
+  const gaugeSvg = buildGaugeSvg(healthScore, healthColor);
+
+  let affectedHtml = lineInfos.map(({ line, info }) => `
+    <div class="affected-line">
+      <div class="commute-line-tag ${line.color}">${esc(line.code)}</div>
+      <span class="affected-line-name">${esc(line.name)}</span>
+      <span class="affected-line-status">— ${esc(statusLabel(info.status))}</span>
+    </div>
+  `).join('');
+
+  if (!affectedHtml) affectedHtml = '<span style="font-size:var(--text-sm);color:var(--color-ink-muted)">No lines assigned</span>';
+
+  card.innerHTML = `
+    <div class="commute-card-header">
+      <div class="gauge-wrap">${gaugeSvg}</div>
+      <div class="commute-card-info">
+        <div class="commute-card-name">${esc(commute.name)}</div>
+        <div class="commute-meta">
+          ${commute.lines.length} line${commute.lines.length !== 1 ? 's' : ''} ·
+          ${avgDelay > 0 ? `~${Math.round(avgDelay)} min avg delay` : 'On time'}
+        </div>
+      </div>
+    </div>
+    <div class="commute-affected-lines">${affectedHtml}</div>
+    <div class="commute-actions">
+      <button class="btn-copy-alert" data-commute-id="${esc(commute.id)}">Copy Alert Text</button>
+    </div>
+  `;
+
+  card.querySelector('.btn-copy-alert').addEventListener('click', () => {
+    copyAlertText(commute, lineInfos, healthScore, Math.round(avgDelay));
+  });
+
+  return card;
+}
+
+function buildGaugeSvg(score, color) {
+  const r = 32;
+  const cx = 44; const cy = 44;
+  const circ = 2 * Math.PI * r;
+  const arc = circ * 0.75;
+  const filled = arc * (score / 100);
+  const offset = circ * 0.125; // start at ~7 o'clock
+
+  return `<svg width="88" height="88" viewBox="0 0 88 88" aria-label="Health score ${score} out of 100" role="img">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--color-border)" stroke-width="6"
+      stroke-dasharray="${arc} ${circ - arc}" stroke-dashoffset="-${offset}" stroke-linecap="round" transform="rotate(135 ${cx} ${cy})"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="6"
+      stroke-dasharray="${filled} ${circ - filled}" stroke-dashoffset="-${offset}" stroke-linecap="round" transform="rotate(135 ${cx} ${cy})" style="transition:stroke-dasharray 0.5s ease"/>
+    <text x="${cx}" y="${cy}" text-anchor="middle" dy="0.35em" font-size="15" font-weight="600" fill="${color}" font-family="var(--font-body)">${score}</text>
+  </svg>`;
+}
+
+function copyAlertText(commute, lineInfos, healthScore, avgDelay) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
+  let lines = lineInfos.map(({ line, info }) => {
+    const s = statusLabel(info.status);
+    const d = info.delayMins > 0 ? ` (~${info.delayMins} min)` : '';
+    return `  ${line.code} ${line.name}: ${s}${d}`;
+  }).join('\n');
+
+  const text = [
+    `CommuteWatch Alert — ${commute.name}`,
+    `${dateStr} at ${timeStr}`,
+    `Health Score: ${healthScore}/100`,
+    avgDelay > 0 ? `Estimated delay: ~${avgDelay} min` : 'No significant delays',
+    '',
+    'Line Status:',
+    lines || '  No lines tracked',
+  ].join('\n');
+
+  navigator.clipboard.writeText(text).then(() => {
+    toast('Alert text copied to clipboard', 'success');
+  }).catch(() => {
+    // Fallback: show text
+    prompt('Copy this alert text:', text);
+  });
+}
+
+// ── Render: History ───────────────────────────────────────────
+function renderHistory() {
+  const container = document.getElementById('history-grid');
+  container.innerHTML = '';
+
+  // Build 7-day history per line from stored history
+  const now = Date.now();
+  const sevenDays = 7 * 24 * 3600 * 1000;
+  const recentHistory = state.history.filter(h => (now - h.ts) < sevenDays && h.city === state.city);
+
+  const lines = state.city === 'demo' ? NYC_LINES.slice(0, 12) : currentLines();
+
+  // Sparkline section
+  const sparkSection = document.createElement('div');
+  sparkSection.innerHTML = `<div class="history-section-title">7-Day Delay Frequency</div>`;
+  const sparkGrid = document.createElement('div');
+  sparkGrid.className = 'sparkline-grid';
+
+  for (const line of lines.slice(0, 12)) {
+    const card = buildSparklineCard(line, recentHistory);
+    sparkGrid.appendChild(card);
+  }
+  sparkSection.appendChild(sparkGrid);
+  container.appendChild(sparkSection);
+
+  // Heatmap section
+  const heatSection = document.createElement('div');
+  heatSection.innerHTML = `<div class="history-section-title">Delay Heatmap — Line × Day</div>`;
+  const heatWrap = buildHeatmap(lines.slice(0, 8), recentHistory);
+  heatSection.appendChild(heatWrap);
+  container.appendChild(heatSection);
+
+  // Stats section
+  const statsSection = document.createElement('div');
+  statsSection.innerHTML = `<div class="history-section-title">Quick Stats</div>`;
+  const statsRow = buildStatsRow(lines, recentHistory);
+  statsSection.appendChild(statsRow);
+  container.appendChild(statsSection);
+}
+
+function getDelaysForLine(lineId, history) {
+  return history.map(h => {
+    const info = h.statuses[lineId];
+    return info ? info.delayMins || 0 : 0;
+  });
+}
+
+function buildSparklineCard(line, history) {
+  const card = document.createElement('div');
+  card.className = 'sparkline-card';
+
+  const delays = getDelaysForLine(line.id, history);
+  const avgDelay = delays.length ? delays.reduce((a,b)=>a+b,0) / delays.length : 0;
+  const maxDelay = Math.max(...delays, 1);
+  const hasData = history.length > 0;
+
+  const svgWidth = 180;
+  const svgHeight = 36;
+
+  let sparkPath = '';
+  if (hasData && delays.length > 1) {
+    const pts = delays.slice(0, 20).map((d, i) => {
+      const x = (i / (delays.slice(0,20).length - 1)) * svgWidth;
+      const y = svgHeight - (d / maxDelay) * (svgHeight - 4) - 2;
+      return `${x},${y}`;
+    });
+    sparkPath = `<polyline points="${pts.join(' ')}" fill="none" stroke="var(--color-accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  } else {
+    // No data — flat line
+    sparkPath = `<line x1="0" y1="${svgHeight/2}" x2="${svgWidth}" y2="${svgHeight/2}" stroke="var(--color-border)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  }
+
+  card.innerHTML = `
+    <div class="sparkline-header">
+      <div class="line-dot ${line.color}" style="width:24px;height:24px;font-size:10px">${esc(line.code)}</div>
+      <span class="sparkline-label">${esc(line.name)}</span>
+    </div>
+    <svg viewBox="0 0 ${svgWidth} ${svgHeight}" width="100%" height="${svgHeight}" aria-hidden="true">${sparkPath}</svg>
+    <div class="sparkline-stat">${hasData ? `Avg delay: ${avgDelay.toFixed(1)} min · ${delays.filter(d=>d>0).length} incidents` : 'No history yet'}</div>
+  `;
+  return card;
+}
+
+function buildHeatmap(lines, history) {
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const wrapper = document.createElement('div');
+  wrapper.style.overflowX = 'auto';
+
+  let headerRow = `<tr><th style="text-align:left;min-width:80px;padding-right:var(--space-2)">Line</th>`;
+  for (const d of days) headerRow += `<th>${d}</th>`;
+  headerRow += '</tr>';
+
+  let bodyRows = '';
+  for (const line of lines) {
+    // Aggregate by day of week
+    const dayCounts = [0,0,0,0,0,0,0];
+    for (const h of history) {
+      const dow = new Date(h.ts).getDay(); // 0=Sun
+      const adj = (dow === 0) ? 6 : dow - 1; // Mon=0
+      const info = h.statuses[line.id];
+      if (info && info.status !== 'good') dayCounts[adj]++;
+    }
+    const maxCount = Math.max(...dayCounts, 1);
+
+    bodyRows += `<tr>
+      <td style="padding:var(--space-1) var(--space-2) var(--space-1) 0">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="line-dot ${line.color}" style="width:20px;height:20px;font-size:9px;flex-shrink:0">${esc(line.code)}</div>
+          <span style="font-size:var(--text-xs);color:var(--color-ink)">${esc(line.name.length > 12 ? line.code : line.name)}</span>
+        </div>
+      </td>`;
+    for (let d = 0; d < 7; d++) {
+      const intensity = Math.min(4, Math.round((dayCounts[d] / maxCount) * 4));
+      bodyRows += `<td><div class="hm-cell hm-${intensity}" title="${days[d]}: ${dayCounts[d]} delay events"></div></td>`;
+    }
+    bodyRows += '</tr>';
+  }
+
+  wrapper.innerHTML = `<table class="heatmap-table"><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table>`;
+  return wrapper;
+}
+
+function buildStatsRow(lines, history) {
+  const row = document.createElement('div');
+  row.className = 'stats-row';
+
+  if (!history.length) {
+    row.innerHTML = `<div class="stat-card"><div class="stat-card-label">No data yet</div><div class="stat-card-value">—</div><div class="stat-card-sub">Run a check to start building history</div></div>`;
+    return row;
+  }
+
+  // Find worst line
+  let worstLine = null; let worstAvg = 0;
+  let bestLine = null; let bestAvg = Infinity;
+  for (const line of lines) {
+    const delays = getDelaysForLine(line.id, history);
+    const avg = delays.reduce((a,b)=>a+b,0) / (delays.length || 1);
+    if (avg > worstAvg) { worstAvg = avg; worstLine = line; }
+    if (avg < bestAvg) { bestAvg = avg; bestLine = line; }
+  }
+
+  // Overall reliability
+  let totalChecks = 0; let delayedChecks = 0;
+  for (const h of history) {
+    for (const line of lines) {
+      totalChecks++;
+      const info = h.statuses[line.id];
+      if (info && info.status !== 'good') delayedChecks++;
+    }
+  }
+  const reliability = totalChecks ? Math.round(((totalChecks - delayedChecks) / totalChecks) * 100) : 100;
+
+  row.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card-label">Reliability</div>
+      <div class="stat-card-value">${reliability}%</div>
+      <div class="stat-card-sub">of checks with good service</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Most Delayed</div>
+      <div class="stat-card-value">${worstLine ? esc(worstLine.code) : '—'}</div>
+      <div class="stat-card-sub">${worstLine ? esc(worstLine.name) + ` · ~${Math.round(worstAvg)} min avg` : 'No data'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Most Reliable</div>
+      <div class="stat-card-value">${bestLine ? esc(bestLine.code) : '—'}</div>
+      <div class="stat-card-sub">${bestLine ? esc(bestLine.name) + ` · ~${Math.round(bestAvg)} min avg` : 'No data'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">History Checks</div>
+      <div class="stat-card-value">${history.length}</div>
+      <div class="stat-card-sub">in the last 7 days</div>
+    </div>
+  `;
+  return row;
+}
+
+// ── Render: Line grid ─────────────────────────────────────────
+function renderLineGrid() {
+  const grid = document.getElementById('line-grid');
+  grid.innerHTML = '';
+  for (const line of currentLines()) {
+    const chip = document.createElement('button');
+    chip.className = `line-chip ${line.color}${state.selectedLines.has(line.id) ? ' selected' : ''}`;
+    chip.textContent = line.code;
+    chip.setAttribute('aria-label', `${state.selectedLines.has(line.id) ? 'Deselect' : 'Select'} ${line.name}`);
+    chip.setAttribute('aria-pressed', String(state.selectedLines.has(line.id)));
+    chip.title = line.name;
+    chip.addEventListener('click', () => {
+      if (state.selectedLines.has(line.id)) {
+        state.selectedLines.delete(line.id);
+      } else {
+        state.selectedLines.add(line.id);
+      }
+      saveState();
+      renderLineGrid();
+      updateFormSelectedLines();
+    });
+    grid.appendChild(chip);
+  }
+}
+
+// ── Render: Commute sidebar list ──────────────────────────────
+function renderCommuteList() {
+  const container = document.getElementById('commute-list');
+  container.innerHTML = '';
+
+  if (!state.commutes.length) {
+    container.innerHTML = '<div style="font-size:var(--text-xs);color:var(--color-ink-muted);padding:var(--space-2) 0">No saved commutes yet.</div>';
+    return;
+  }
+
+  for (const commute of state.commutes) {
+    const item = document.createElement('div');
+    item.className = 'commute-item';
+
+    const chipsHtml = commute.lines.slice(0, 6).map(lineId => {
+      const line = getLineById(lineId);
+      if (!line) return '';
+      return `<div class="commute-line-tag ${line.color}" title="${esc(line.name)}">${esc(line.code)}</div>`;
+    }).join('');
+
+    item.innerHTML = `
+      <div class="commute-name">${esc(commute.name)}</div>
+      <div class="commute-lines">${chipsHtml || '<span style="font-size:10px;color:var(--color-ink-muted)">No lines</span>'}</div>
+      <button class="commute-del" data-id="${esc(commute.id)}" aria-label="Delete ${esc(commute.name)}">×</button>
+    `;
+
+    item.querySelector('.commute-del').addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.commutes = state.commutes.filter(c => c.id !== commute.id);
+      saveState();
+      renderCommuteList();
+      renderCommutes();
+      toast('Commute removed');
     });
 
-    renderRoutes();
-    closeModal();
-    showToast('✅', 'Route Added', `Monitoring ${routeName} departing ${depVal} from ${stopVal}`, 'ok');
+    container.appendChild(item);
   }
+}
 
-  // ── TOGGLE ROUTE ──
-  function toggleRoute(idx) {
-    myRoutes[idx].active = !myRoutes[idx].active;
-    renderRoutes();
-    const r = myRoutes[idx];
-    showToast(
-      r.active ? '🔔' : '🔕',
-      r.active ? 'Alerts Enabled' : 'Alerts Paused',
-      `${r.name} alerts ${r.active ? 'enabled' : 'paused'}`,
-      r.active ? 'ok' : 'warn'
-    );
+// ── Update form selected lines display ────────────────────────
+function updateFormSelectedLines() {
+  const el = document.getElementById('form-selected-lines');
+  const selected = [...state.selectedLines];
+  if (!selected.length) {
+    el.textContent = 'No lines selected';
+    return;
   }
+  const names = selected.map(id => {
+    const l = getLineById(id);
+    return l ? l.code : id;
+  }).join(', ');
+  el.textContent = selected.length + ' selected: ' + names;
+}
 
-  // ── SNOOZE ──
-  function toggleSnooze() {
-    if (snoozeTimer) {
-      clearTimeout(snoozeTimer);
-      snoozeTimer = null;
-    }
-    snoozed = !snoozed;
-    if (snoozed) {
-      document.getElementById('snoozeBtn').classList.add('active');
-      document.getElementById('snoozeStatus').textContent = 'Snoozed for 1 hour';
-      showToast('😴', 'Alerts Snoozed', 'Notifications paused for 1 hour. You can re-enable anytime.', 'info');
-      snoozeTimer = setTimeout(() => {
-        snoozed = false;
-        document.getElementById('snoozeBtn').classList.remove('active');
-        document.getElementById('snoozeStatus').textContent = 'Active — receiving alerts';
-        showToast('🔔', 'Snooze Ended', 'Delay alerts are now active again.', 'ok');
-      }, 3600000);
-    } else {
-      document.getElementById('snoozeBtn').classList.remove('active');
-      updateSnoozeStatus();
-      showToast('🔔', 'Snooze Cancelled', 'Delay alerts re-enabled.', 'ok');
-    }
-  }
+// ── City switch ───────────────────────────────────────────────
+function switchCity(city) {
+  state.city = city;
+  state.selectedLines.clear();
+  saveState();
 
-  function togglePause() {
-    paused = !paused;
-    const btn = document.getElementById('pauseBtn');
-    if (paused) {
-      btn.textContent = 'Paused';
-      btn.classList.remove('active');
-      document.getElementById('snoozeStatus').textContent = 'Paused — no alerts';
-      showToast('🔕', 'Alerts Paused', 'All delay notifications are paused. Toggle to resume.', 'warn');
-    } else {
-      btn.textContent = 'Active';
-      btn.classList.add('active');
-      updateSnoozeStatus();
-      showToast('🔔', 'Alerts Resumed', 'Delay notifications are now active.', 'ok');
-    }
-  }
-
-  function updateSnoozeStatus() {
-    if (!snoozed && !paused) {
-      document.getElementById('snoozeStatus').textContent = 'Active — receiving alerts';
-    }
-  }
-
-  // ── THRESHOLD SLIDER ──
-  function updateThreshold(val) {
-    alertThreshold = parseInt(val, 10);
-    document.getElementById('thresholdDisplay').textContent = val;
-  }
-
-  // ── MODAL CLOSE ON BACKDROP CLICK ──
-  document.getElementById('modalBackdrop').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
+  document.querySelectorAll('.city-tab').forEach(t => {
+    const isActive = t.dataset.city === city;
+    t.classList.toggle('active', isActive);
+    t.setAttribute('aria-selected', String(isActive));
   });
 
-  // ── KEYBOARD ESC ──
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
+  renderLineGrid();
+  updateFormSelectedLines();
+  updateDemoBanner();
+
+  // Reset live panel to loading state
+  document.getElementById('live-loading').style.display = 'grid';
+  document.getElementById('status-grid').style.display = 'none';
+  document.getElementById('status-grid').innerHTML = '';
+  state.lineStatuses = {};
+
+  fetchStatus();
+}
+
+// ── Demo banner ───────────────────────────────────────────────
+function updateDemoBanner() {
+  const banner = document.getElementById('demo-banner');
+  banner.classList.toggle('show', state.isDemo);
+}
+
+// ── Refresh indicator ─────────────────────────────────────────
+function updateRefreshIndicator(mode) {
+  const dot = document.getElementById('refresh-dot');
+  const label = document.getElementById('refresh-label');
+  dot.className = 'refresh-dot';
+  if (mode === 'live') { dot.classList.add('live'); label.textContent = 'Live'; }
+  else if (mode === 'demo') { dot.classList.add('demo'); label.textContent = 'Demo'; }
+  else if (mode === 'loading') { label.textContent = 'Loading…'; }
+  else { label.textContent = 'Idle'; }
+}
+
+// ── Auto-refresh ──────────────────────────────────────────────
+function scheduleRefresh() {
+  if (state.refreshTimer) clearInterval(state.refreshTimer);
+  const interval = state.prefs.checkInterval * 1000;
+  state.refreshTimer = setInterval(() => {
+    // Check weekday-only preference
+    if (state.prefs.weekdaysOnly) {
+      const dow = new Date().getDay();
+      if (dow === 0 || dow === 6) return;
+    }
+    fetchStatus();
+  }, interval);
+}
+
+// ── Panel switching ───────────────────────────────────────────
+function switchPanel(panelId) {
+  state.activePanel = panelId;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const isActive = btn.dataset.panel === panelId;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', String(isActive));
   });
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${panelId}`);
+  });
+}
 
-  // ── INIT ──
-  function init() {
-    // Initial data load
-    lineStatuses = generateLineStatuses();
-    activeAlerts = pickAlerts(lineStatuses);
-    renderLines(lineStatuses);
-    renderAlerts(activeAlerts);
-    renderHistory();
-    renderRoutes();
-    updateTimestamp();
-    updateTicker();
-    startCountdown();
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3400);
+}
 
-    // Ticker rotation
-    setInterval(updateTicker, 7000);
+// ── Event wiring ──────────────────────────────────────────────
+// City tabs
+document.querySelectorAll('.city-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchCity(tab.dataset.city));
+});
 
-    // Welcome toast
-    setTimeout(() => {
-      showToast('🚇', 'Transit Watch Ready', 'Live delay monitoring active. Add routes to get personalized alerts.', 'info');
-    }, 800);
+// Main tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchPanel(btn.dataset.panel));
+});
+
+// Check Now
+document.getElementById('check-now-btn').addEventListener('click', fetchStatus);
+
+// Add commute
+document.getElementById('btn-add-commute').addEventListener('click', () => {
+  state.addingCommute = !state.addingCommute;
+  document.getElementById('add-commute-form').classList.toggle('open', state.addingCommute);
+  if (state.addingCommute) {
+    document.getElementById('new-commute-name').focus();
+    updateFormSelectedLines();
   }
+});
 
-  init();
+document.getElementById('btn-cancel-commute').addEventListener('click', () => {
+  state.addingCommute = false;
+  document.getElementById('add-commute-form').classList.remove('open');
+});
+
+document.getElementById('btn-save-commute').addEventListener('click', () => {
+  const name = document.getElementById('new-commute-name').value.trim();
+  if (!name) { toast('Enter a commute name', 'error'); return; }
+  if (state.commutes.length >= 5) { toast('Maximum 5 commutes saved', 'warn'); return; }
+
+  const commute = {
+    id: Math.random().toString(36).slice(2) + Date.now().toString(36),
+    name,
+    lines: [...state.selectedLines],
+    city: state.city,
+    createdAt: Date.now(),
+  };
+
+  state.commutes.push(commute);
+  saveState();
+  renderCommuteList();
+  renderCommutes();
+
+  document.getElementById('new-commute-name').value = '';
+  state.addingCommute = false;
+  document.getElementById('add-commute-form').classList.remove('open');
+  toast(`"${name}" saved`, 'success');
+});
+
+// Settings
+document.getElementById('delay-threshold').addEventListener('change', e => {
+  state.prefs.delayThreshold = Number(e.target.value);
+  saveState();
+});
+
+document.getElementById('weekdays-only').addEventListener('change', e => {
+  state.prefs.weekdaysOnly = e.target.checked;
+  saveState();
+});
+
+document.getElementById('check-interval').addEventListener('change', e => {
+  state.prefs.checkInterval = Number(e.target.value);
+  saveState();
+  scheduleRefresh();
+  toast('Check interval updated');
+});
+
+// ── Init ──────────────────────────────────────────────────────
+loadState();
+
+// Restore preferences to UI
+document.getElementById('delay-threshold').value = state.prefs.delayThreshold;
+document.getElementById('weekdays-only').checked = state.prefs.weekdaysOnly;
+document.getElementById('check-interval').value = state.prefs.checkInterval;
+
+// Restore city tab
+document.querySelectorAll('.city-tab').forEach(t => {
+  const isActive = t.dataset.city === state.city;
+  t.classList.toggle('active', isActive);
+  t.setAttribute('aria-selected', String(isActive));
+});
+
+renderLineGrid();
+updateFormSelectedLines();
+renderCommuteList();
+renderCommutes();
+renderHistory();
+updateDemoBanner();
+scheduleRefresh();
+
+// Initial fetch
+fetchStatus();
 </script>
 </body>
 </html>

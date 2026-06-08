@@ -1,1310 +1,1611 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Inflation Rate Dashboard</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inflation Rate Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Hallmark · macrostructure: Workbench · theme: Cobalt · nav: N9 */
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg: #080c10;
-      --surface: #0e1318;
-      --surface2: #141a21;
-      --border: rgba(255,255,255,0.08);
-      --accent: #00d4aa;
-      --accent2: #f59e0b;
-      --text: #e6edf3;
-      --muted: #6b7280;
-      --green: #26a69a;
-      --yellow: #f59e0b;
-      --radius: 6px;
-    }
+html { height: 100%; overflow-x: clip; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      min-height: 100vh;
-    }
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
 
-    /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 18px 32px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-    .logo {
-      width: 38px; height: 38px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; flex-shrink: 0;
-    }
-    header h1 { font-size: 20px; font-weight: 700; }
-    header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .header-right {
-      margin-left: auto;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .last-updated { font-size: 12px; color: var(--muted); }
-    .badge {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 11px;
-      color: var(--green);
-      font-weight: 600;
-    }
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
 
-    /* ── Layout ── */
-    .main {
-      max-width: 1320px;
-      margin: 0 auto;
-      padding: 28px 24px;
-      display: grid;
-      gap: 24px;
-    }
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
 
-    /* ── Cards ── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      position: relative;
-      overflow: hidden;
-    }
-    .card-title {
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .7px;
-      color: var(--muted);
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .card-title .icon {
-      width: 22px; height: 22px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px;
-    }
-
-    /* ── Status / Spinner ── */
-    .spinner {
-      display: inline-block;
-      width: 18px; height: 18px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .status-bar {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 14px;
-      color: var(--muted);
-      transition: all .3s;
-    }
-    .status-bar.loading { border-color: var(--accent); color: var(--text); }
-    .status-bar.error { border-color: var(--accent2); color: var(--accent2); }
-    .status-bar.success { border-color: var(--green); color: var(--green); }
-
-    /* ── League Table ── */
-    .league-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    @media (max-width: 700px) { .league-grid { grid-template-columns: 1fr; } }
-
-    .league-table {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .league-label {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .8px;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-    .league-label.high { color: var(--accent2); }
-    .league-label.low { color: var(--green); }
-
-    .league-row {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      transition: border-color .2s, transform .15s;
-    }
-    .league-row:hover { border-color: var(--accent); transform: translateX(3px); }
-    .rank {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      width: 20px;
-      text-align: center;
-    }
-    .country-flag { font-size: 20px; }
-    .country-name { flex: 1; font-size: 14px; font-weight: 500; }
-    .country-rate {
-      font-size: 15px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-    }
-    .rate-high { color: var(--accent2); }
-    .rate-low { color: var(--green); }
-    .rate-mid { color: var(--yellow); }
-
-    /* ── Trend Chart ── */
-    .chart-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 18px;
-      align-items: center;
-    }
-    select {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      outline: none;
-      cursor: pointer;
-      font-family: var(--font);
-      transition: border-color .2s;
-    }
-    select:focus { border-color: var(--accent); }
-
-    .btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 9px 18px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity .2s, transform .15s;
-      font-family: var(--font);
-    }
-    .btn:hover { opacity: .85; transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
-    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-    .btn-outline:hover { border-color: var(--accent); color: var(--accent); opacity: 1; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
-
-    .svg-chart-wrap {
-      width: 100%;
-      overflow: hidden;
-      border-radius: 8px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      padding: 12px 12px 8px;
-    }
-    .svg-chart-wrap svg {
-      width: 100%;
-      display: block;
-    }
-
-    /* ── Comparison ── */
-    .comparison-header {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 18px;
-      align-items: center;
-    }
-    .compare-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .chip {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-size: 13px;
-      font-weight: 500;
-      animation: fadeIn .2s;
-    }
-    @keyframes fadeIn { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
-    .chip-remove {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 16px;
-      line-height: 1;
-      padding: 0 0 0 2px;
-      transition: color .2s;
-    }
-    .chip-remove:hover { color: var(--accent2); }
-
-    .compare-bars {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .compare-bar-row {
-      display: grid;
-      grid-template-columns: 180px 1fr 80px;
-      align-items: center;
-      gap: 12px;
-    }
-    @media (max-width: 600px) { .compare-bar-row { grid-template-columns: 120px 1fr 60px; } }
-    .bar-label { font-size: 14px; font-weight: 500; text-align: right; }
-    .bar-track {
-      height: 28px;
-      background: var(--surface2);
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-    }
-    .bar-fill {
-      height: 100%;
-      border-radius: 6px;
-      transition: width .8s cubic-bezier(.22,.61,.36,1);
-      position: relative;
-      display: flex;
-      align-items: center;
-      padding-left: 10px;
-      font-size: 12px;
-      font-weight: 600;
-      color: rgba(255,255,255,.9);
-    }
-    .bar-val { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-    /* ── Calculators ── */
-    .calc-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    @media (max-width: 800px) { .calc-grid { grid-template-columns: 1fr; } }
-
-    .calc-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-    }
-    .calc-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .calc-emoji { font-size: 18px; }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .field { display: flex; flex-direction: column; gap: 5px; }
-    .field label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-    input[type="number"], input[type="text"] {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 9px 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      outline: none;
-      font-family: var(--font);
-      width: 100%;
-      transition: border-color .2s;
-    }
-    input[type="number"]:focus, input[type="text"]:focus { border-color: var(--accent); }
-
-    .result-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      text-align: center;
-      min-height: 64px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      transition: border-color .3s;
-    }
-    .result-box.has-result { border-color: var(--accent); }
-    .result-number {
-      font-size: 28px;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .result-label { font-size: 12px; color: var(--muted); }
-
-    /* ── Tabs ── */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 4px;
-      margin-bottom: 24px;
-    }
-    .tab-btn {
-      flex: 1;
-      padding: 9px 14px;
-      background: none;
-      border: none;
-      border-radius: 7px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all .2s;
-      font-family: var(--font);
-      white-space: nowrap;
-    }
-    .tab-btn:hover { color: var(--text); }
-    .tab-btn.active {
-      background: var(--accent);
-      color: #fff;
-      font-weight: 600;
-    }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; animation: fadeIn .25s; }
-
-    /* ── Skeleton ── */
-    .skeleton {
-      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s infinite;
-      border-radius: 6px;
-    }
-    @keyframes shimmer { to { background-position: -200% 0; } }
-
-    /* ── Tooltip ── */
-    .tooltip-wrap { position: relative; display: inline-flex; }
-    .tooltip-text {
-      display: none;
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 12px;
-      white-space: nowrap;
-      z-index: 10;
-      pointer-events: none;
-      color: var(--text);
-    }
-    .tooltip-wrap:hover .tooltip-text { display: block; }
-
-    /* ── Empty / Error states ── */
-    .empty-state {
-      text-align: center;
-      padding: 48px 16px;
-      color: var(--muted);
-    }
-    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
-    .empty-state p { font-size: 14px; }
-
-    /* ── Pulse dot ── */
-    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
-    .pulse-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: pulse 2s infinite;
-      display: inline-block;
-    }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--surface); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-
-    /* ── SVG text ── */
-    .svg-axis text { font-family: var(--font); }
-
-/* ── Finance design system v2 ── */
-body { font-family: 'Inter', system-ui, sans-serif; }
-body::before {
-  content: '';
+/* ── N9 Edge-aligned nav ── */
+.nav {
   position: fixed;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(0,212,170,.065) 1px, transparent 1px);
-  background-size: 24px 24px;
-  pointer-events: none;
-  z-index: 0;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 52px;
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
 }
-body::after {
-  content: '';
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--color-accent); }
+
+.nav-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.nav-page-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-back {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.nav-back:hover { color: var(--color-ink); }
+
+/* ── App shell ── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  margin-top: 52px;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-section {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar-section-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* Country search */
+.search-wrap {
+  position: relative;
+}
+
+.input-search {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(52% 0.20 256 / 0.10);
+}
+.input-search::placeholder { color: var(--color-ink-muted); }
+
+.search-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  z-index: 100;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(24% 0.020 258 / 0.12);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.search-dropdown.open { display: block; }
+
+.search-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.search-option:hover { background: var(--color-accent-subtle); color: var(--color-accent); }
+.search-option-flag { font-size: 18px; flex-shrink: 0; }
+.search-option-name { flex: 1; }
+.search-option-iso { font-size: var(--text-xs); color: var(--color-ink-muted); }
+
+.btn-add {
+  margin-top: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.btn-add:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+.btn-add:active { transform: translateY(0); }
+.btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Comparison chips */
+.chips-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 32px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  animation: chip-in 0.18s ease;
+}
+
+@keyframes chip-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.chip-color-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chip-flag { font-size: 16px; flex-shrink: 0; }
+.chip-name { flex: 1; font-weight: 500; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-loading { font-size: var(--text-xs); color: var(--color-ink-muted); flex-shrink: 0; }
+
+.btn-chip-remove {
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.btn-chip-remove:hover { color: var(--color-danger); background: oklch(55% 0.20 25 / 0.08); }
+
+.chips-empty {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-3) 0;
+}
+
+/* Preset groups */
+.preset-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.btn-preset {
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.btn-preset:hover {
+  border-color: var(--color-accent-line);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+/* Date range */
+.range-btns {
+  display: flex;
+  gap: var(--space-1);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+
+.btn-range {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+}
+.btn-range.active {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-weight: 600;
+}
+
+/* Real Return Calculator (sidebar) */
+.real-return-calc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.calc-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.calc-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.input-calc {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-2);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s ease;
+}
+.input-calc:focus { outline: none; border-color: var(--color-accent); }
+
+.real-return-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  min-height: 48px;
+}
+
+.real-return-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  gap: var(--space-2);
+}
+
+.real-return-country { color: var(--color-ink-muted); display: flex; align-items: center; gap: 4px; }
+.real-return-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+.real-return-value.positive { color: var(--color-success); }
+.real-return-value.negative { color: var(--color-danger); }
+
+.real-return-empty { font-size: var(--text-xs); color: var(--color-ink-muted); text-align: center; padding: var(--space-2) 0; }
+
+/* Sidebar scrollable area */
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-paper);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Section labels ── */
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* ── Empty state ── */
+.main-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-4);
+  padding: var(--space-16);
+}
+
+.main-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.main-empty-sub {
+  font-size: var(--text-base);
+  color: var(--color-ink-muted);
+  max-width: 320px;
+  line-height: 1.65;
+}
+
+/* ── Chart area ── */
+.chart-wrap {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  overflow: hidden;
+}
+
+.chart-wrap svg {
+  width: 100%;
+  display: block;
+}
+
+/* ── Stat cards row ── */
+.stat-cards {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  flex: 1;
+  min-width: 160px;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  animation: card-in 0.2s ease;
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.stat-card-flag { font-size: 22px; }
+
+.stat-card-country {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.04em;
+}
+
+.stat-card-rate {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.stat-card-trend {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.stat-card-trend.up   { color: var(--color-danger); }
+.stat-card-trend.down { color: var(--color-success); }
+.stat-card-trend.flat { color: var(--color-ink-muted); }
+
+.stat-card-avg {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+
+.stat-card-color-bar {
+  height: 3px;
+  border-radius: 2px;
+  margin-top: var(--space-1);
+}
+
+/* ── Data table ── */
+.data-table-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead th {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: right;
+  white-space: nowrap;
+}
+.data-table thead th:first-child { text-align: left; }
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s ease;
+}
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: oklch(95% 0.010 95); }
+
+.data-table td {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.data-table td:first-child { text-align: left; font-weight: 500; }
+
+.cell-green  { background: oklch(93% 0.04 155); color: oklch(38% 0.14 155); }
+.cell-amber  { background: oklch(95% 0.06 72);  color: oklch(40% 0.15 72); }
+.cell-orange { background: oklch(93% 0.07 45);  color: oklch(40% 0.18 40); }
+.cell-red    { background: oklch(93% 0.07 25);  color: oklch(40% 0.20 25); }
+.cell-na     { color: var(--color-ink-muted); }
+
+/* ── Report builder ── */
+.report-builder {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.report-builder-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+
+.report-row {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.textarea-report {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color 0.15s ease;
+  line-height: 1.6;
+}
+.textarea-report:focus { outline: none; border-color: var(--color-accent); }
+.textarea-report::placeholder { color: var(--color-ink-muted); }
+
+.report-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.select-report {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 0.15s ease;
+}
+.select-report:focus { outline: none; border-color: var(--color-accent); }
+
+.btn-copy {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.btn-copy:hover { opacity: 0.85; transform: translateY(-1px); }
+.btn-copy:active { transform: translateY(0); }
+
+/* ── Loading spinner ── */
+.spinner-inline {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ── */
+.toast {
   position: fixed;
-  inset: 0;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,.9) 100%);
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px oklch(24% 0.020 258 / 0.20);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none;
-  z-index: 0;
 }
-h1, h2 {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 700;
-  letter-spacing: -.03em;
-  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--color-success); }
+.toast.error { background: var(--color-danger); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  html, body { overflow: auto; height: auto; }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    overflow: visible;
+  }
+  .sidebar-scroll { overflow: visible; }
+
+  .main { overflow: visible; }
+  .main-scroll { overflow: visible; padding: var(--space-4); }
+
+  .stat-cards { flex-direction: column; }
+  .stat-card { min-width: 0; }
+
+  .report-row { grid-template-columns: 1fr; }
 }
-[class*="price"],[class*="value"],[class*="amount"],[class*="rate"],
-[class*="stat"],[class*="metric"],[class*="kpi"],td,code,.number {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  font-variant-numeric: tabular-nums slashed-zero;
-  font-feature-settings: 'tnum' 1, 'zero' 1;
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .chip    { animation: none; }
+  .stat-card { animation: none; }
+  .btn-add:hover, .btn-copy:hover { transform: none; }
+  .toast { transition: opacity 0.15s ease; }
 }
-.card,[class*="card"],[class*="metric-card"],[class*="stat-card"] {
-  border-left: 3px solid var(--accent) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
-}
-table { border-collapse: collapse; width: 100%; }
-thead th {
-  font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--muted); padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
-  text-align: right; white-space: nowrap; position: sticky; top: 0; background: var(--bg);
-}
-thead th:first-child { text-align: left; }
-tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background 120ms; }
-tbody tr:hover { background: rgba(255,255,255,.04); }
-td { padding: 6px 12px; text-align: right; vertical-align: middle; white-space: nowrap; font-size: 13px; }
-td:first-child { text-align: left; color: var(--text); }
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
-@keyframes slideUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
-@keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,170,.5);} 50%{box-shadow:0 0 0 6px rgba(0,212,170,0);} }
-.card,[class*="card"],[class*="result"],[class*="item"] { animation: slideUp .35s ease both; }
-.card:nth-child(2),[class*="item"]:nth-child(2){animation-delay:.05s}
-.card:nth-child(3),[class*="item"]:nth-child(3){animation-delay:.1s}
-.card:nth-child(4){animation-delay:.15s}
-tbody tr { animation: slideUp .2s ease both; }
-tbody tr:nth-child(2){animation-delay:.03s} tbody tr:nth-child(3){animation-delay:.06s}
-button,[class*="btn"] { transition: all .15s; }
-button:hover,[class*="btn"]:hover {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(0,212,170,.15) !important;
-}
-input:focus,select:focus { border-color:var(--accent)!important; box-shadow:0 0 0 2px rgba(0,212,170,.2); }
-[class*="positive"],[class*="gain"],[class*="up"] { color:var(--green)!important; }
-[class*="negative"],[class*="loss"],[class*="down"] { color:#ef5350!important; }
-  </style>
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo" aria-hidden="true">📈</div>
-  <div>
-    <h1>Inflation Rate Dashboard</h1>
-    <p>Real-time CPI data via World Bank API — for financial advisors</p>
-  </div>
-  <div class="header-right">
-    <span class="last-updated" id="lastUpdated">Loading data…</span>
-    <span class="badge"><span class="pulse-dot" style="margin-right:5px"></span>Live</span>
-  </div>
-</header>
+<!-- N9 Edge-aligned nav -->
+<nav class="nav" aria-label="Application navigation">
+  <span class="nav-logo">INFL<span>.</span></span>
+  <span class="nav-sep" aria-hidden="true"></span>
+  <span class="nav-page-label">Inflation Rate Dashboard</span>
+  <a href="index.html" class="nav-back" aria-label="Back to home page">← Home</a>
+</nav>
 
-<main class="main" role="main">
+<div class="app-shell">
 
-  <!-- Status bar -->
-  <div class="status-bar loading" id="statusBar" role="status" aria-live="polite">
-    <span class="spinner" id="statusSpinner"></span>
-    <span id="statusMsg">Fetching inflation data for 24 countries…</span>
-  </div>
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Dashboard controls">
 
-  <!-- Tabs -->
-  <div class="tabs" role="tablist" aria-label="Dashboard sections">
-    <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="league"      onclick="switchTab('league')">🏆 League Table</button>
-    <button class="tab-btn"        role="tab" aria-selected="false" data-tab="trend"       onclick="switchTab('trend')">📊 5-Year Trend</button>
-    <button class="tab-btn"        role="tab" aria-selected="false" data-tab="compare"     onclick="switchTab('compare')">⚖️ Compare</button>
-    <button class="tab-btn"        role="tab" aria-selected="false" data-tab="calculators" onclick="switchTab('calculators')">🧮 Calculators</button>
-  </div>
+    <div class="sidebar-scroll">
 
-  <!-- Tab: League Table -->
-  <div class="tab-panel active" id="tab-league" role="tabpanel">
-    <div class="card">
-      <div class="card-title"><span class="icon">🏆</span>Global Inflation League Table</div>
-      <div id="leagueContent">
-        <div class="league-grid">
-          <div>
-            <div class="league-label high">▲ Highest Inflation</div>
-            <div class="league-table" id="highTable">
-              <div style="height:48px" class="skeleton"></div>
-              <div style="height:48px" class="skeleton"></div>
-              <div style="height:48px" class="skeleton"></div>
-              <div style="height:48px" class="skeleton"></div>
-              <div style="height:48px" class="skeleton"></div>
-            </div>
+      <!-- Country search -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Add Country</div>
+        <div class="search-wrap">
+          <input
+            type="text"
+            class="input-search"
+            id="country-search"
+            placeholder="Search country…"
+            autocomplete="off"
+            aria-label="Search for a country"
+            aria-expanded="false"
+            aria-controls="search-dropdown"
+          >
+          <div class="search-dropdown" id="search-dropdown" role="listbox" aria-label="Country suggestions">
+            <!-- JS populated -->
           </div>
-          <div>
-            <div class="league-label low">▼ Lowest Inflation</div>
-            <div class="league-table" id="lowTable">
-              <div style="height:48px" class="skeleton"></div>
-              <div style="height:48px" class="skeleton"></div>
-              <div style="height:48px" class="skeleton"></div>
-              <div style="height:48px" class="skeleton"></div>
-              <div style="height:48px" class="skeleton"></div>
-            </div>
+        </div>
+        <button class="btn-add" id="btn-add-country" disabled aria-label="Add selected country to comparison">Add to comparison</button>
+      </div>
+
+      <!-- Active comparison -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Comparing (<span id="compare-count">0</span>/5)</div>
+        <div class="chips-list" id="chips-list" aria-label="Countries in comparison" aria-live="polite">
+          <div class="chips-empty" id="chips-empty">No countries yet — search above</div>
+        </div>
+      </div>
+
+      <!-- Preset groups -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Preset Groups</div>
+        <div class="preset-btns">
+          <button class="btn-preset" data-preset="G7" aria-label="Load G7 countries">G7</button>
+          <button class="btn-preset" data-preset="BRICS" aria-label="Load BRICS countries">BRICS</button>
+          <button class="btn-preset" data-preset="EU5" aria-label="Load EU5 countries">EU5</button>
+        </div>
+      </div>
+
+      <!-- Date range -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Date Range</div>
+        <div class="range-btns" role="group" aria-label="Select date range">
+          <button class="btn-range active" data-years="5" aria-pressed="true">5Y</button>
+          <button class="btn-range" data-years="10" aria-pressed="false">10Y</button>
+          <button class="btn-range" data-years="20" aria-pressed="false">20Y</button>
+          <button class="btn-range" data-years="35" aria-pressed="false">1990</button>
+        </div>
+      </div>
+
+      <!-- Real Return Calculator -->
+      <div class="sidebar-section" style="flex: 1;">
+        <div class="sidebar-section-title">Real Return Calculator</div>
+        <div class="real-return-calc">
+          <div class="calc-input-row">
+            <label class="calc-label" for="nominal-return">Nominal return</label>
+            <input type="number" class="input-calc" id="nominal-return" value="7" step="0.1" min="-50" max="100" aria-label="Nominal return percentage" style="width: 72px;">
+            <span class="calc-label">%</span>
+          </div>
+          <div class="real-return-results" id="real-return-results" aria-live="polite">
+            <div class="real-return-empty" id="real-return-empty">Add countries to see real returns</div>
           </div>
         </div>
       </div>
+
+    </div><!-- .sidebar-scroll -->
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main" aria-label="Inflation chart and data">
+
+    <!-- Empty state (shown until first country added) -->
+    <div class="main-empty" id="main-empty">
+      <p class="main-empty-title">No countries selected</p>
+      <p class="main-empty-sub">Search for a country or pick a preset group from the sidebar to start comparing inflation rates.</p>
     </div>
-  </div>
 
-  <!-- Tab: 5-Year Trend -->
-  <div class="tab-panel" id="tab-trend" role="tabpanel">
-    <div class="card">
-      <div class="card-title"><span class="icon">📊</span>5-Year Inflation Trend</div>
-      <div class="chart-controls">
-        <div class="field" style="flex-direction:row;align-items:center;gap:8px">
-          <label for="trendCountry" style="font-size:12px;color:var(--muted);white-space:nowrap">Country:</label>
-          <select id="trendCountry" onchange="renderTrendChart()" aria-label="Select country for trend chart">
-            <option value="">— Loading… —</option>
-          </select>
-        </div>
-      </div>
-      <div class="svg-chart-wrap" id="trendChartWrap">
-        <div class="empty-state"><div class="icon">📊</div><p>Select a country to view trend</p></div>
-      </div>
-      <div id="trendStats" style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap"></div>
-    </div>
-  </div>
+    <!-- Main content (hidden until first country added) -->
+    <div id="main-content" style="display: none;">
+      <div class="main-scroll">
 
-  <!-- Tab: Compare -->
-  <div class="tab-panel" id="tab-compare" role="tabpanel">
-    <div class="card">
-      <div class="card-title"><span class="icon">⚖️</span>Country Comparison</div>
-      <div class="comparison-header">
-        <select id="compareSelect" aria-label="Add country to compare">
-          <option value="">Add a country…</option>
-        </select>
-        <button class="btn btn-sm" onclick="addCompareCountry()" aria-label="Add selected country">+ Add</button>
-        <button class="btn btn-sm btn-outline" onclick="clearCompare()" aria-label="Clear all comparisons">Clear</button>
-      </div>
-      <div class="compare-chips" id="compareChips"></div>
-      <div id="compareBars">
-        <div class="empty-state"><div class="icon">⚖️</div><p>Add countries above to compare inflation rates</p></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tab: Calculators -->
-  <div class="tab-panel" id="tab-calculators" role="tabpanel">
-    <div class="card">
-      <div class="card-title"><span class="icon">🧮</span>Inflation Calculators</div>
-      <div class="calc-grid">
-
-        <!-- Purchasing Power -->
-        <div class="calc-card">
-          <div class="calc-title"><span class="calc-emoji">💰</span>Purchasing Power Calculator</div>
-          <div class="field-group">
-            <div class="field">
-              <label for="ppCountry">Country</label>
-              <select id="ppCountry" aria-label="Country for purchasing power calculation">
-                <option value="">— Loading… —</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="ppAmount">Amount ($)</label>
-              <input type="number" id="ppAmount" value="100" min="1" step="1" aria-label="Starting amount in dollars" />
-            </div>
-            <div class="field">
-              <label for="ppYear">Starting Year</label>
-              <input type="number" id="ppYear" value="2020" min="2000" max="2024" step="1" aria-label="Starting year" />
-            </div>
-          </div>
-          <button class="btn" style="width:100%;margin-bottom:12px" onclick="calcPurchasingPower()" aria-label="Calculate purchasing power">Calculate</button>
-          <div class="result-box" id="ppResult">
-            <div class="result-label">Enter values and click Calculate</div>
+        <!-- Chart -->
+        <div>
+          <div class="section-label">Inflation Rate Over Time</div>
+          <div class="chart-wrap" id="chart-wrap" role="img" aria-label="Multi-country inflation line chart">
+            <!-- SVG chart rendered by JS -->
           </div>
         </div>
 
-        <!-- Real Return -->
-        <div class="calc-card">
-          <div class="calc-title"><span class="calc-emoji">📈</span>Real Return Calculator</div>
-          <div class="field-group">
-            <div class="field">
-              <label for="rrCountry">Country</label>
-              <select id="rrCountry" aria-label="Country for real return calculation">
-                <option value="">— Loading… —</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="nominalReturn">Nominal Return (%)</label>
-              <input type="number" id="nominalReturn" value="7" step="0.1" aria-label="Nominal return percentage" />
-            </div>
-          </div>
-          <button class="btn" style="width:100%;margin-bottom:12px" onclick="calcRealReturn()" aria-label="Calculate real return">Calculate</button>
-          <div class="result-box" id="rrResult">
-            <div class="result-label">Enter values and click Calculate</div>
+        <!-- Stat cards -->
+        <div>
+          <div class="section-label">Latest Annual Inflation</div>
+          <div class="stat-cards" id="stat-cards" aria-live="polite">
+            <!-- JS populated -->
           </div>
         </div>
 
-        <!-- Savings Impact -->
-        <div class="calc-card">
-          <div class="calc-title"><span class="calc-emoji">🏦</span>Savings Erosion Calculator</div>
-          <div class="field-group">
-            <div class="field">
-              <label for="seCountry">Country</label>
-              <select id="seCountry" aria-label="Country for savings erosion calculation">
-                <option value="">— Loading… —</option>
-              </select>
+        <!-- Data table -->
+        <div>
+          <div class="section-label">Year-by-Year Data</div>
+          <div class="data-table-wrap">
+            <div style="overflow-x: auto;">
+              <table class="data-table" id="data-table" aria-label="Inflation rates by year and country">
+                <thead id="table-head"></thead>
+                <tbody id="table-body"></tbody>
+              </table>
             </div>
-            <div class="field">
-              <label for="savingsAmount">Savings Amount ($)</label>
-              <input type="number" id="savingsAmount" value="10000" min="1" step="100" aria-label="Savings amount" />
-            </div>
-            <div class="field">
-              <label for="savingsYears">Years</label>
-              <input type="number" id="savingsYears" value="5" min="1" max="30" step="1" aria-label="Number of years" />
-            </div>
-          </div>
-          <button class="btn" style="width:100%;margin-bottom:12px" onclick="calcSavingsErosion()" aria-label="Calculate savings erosion">Calculate</button>
-          <div class="result-box" id="seResult">
-            <div class="result-label">Enter values and click Calculate</div>
           </div>
         </div>
 
-        <!-- Debt Impact -->
-        <div class="calc-card">
-          <div class="calc-title"><span class="calc-emoji">💳</span>Debt Relief via Inflation</div>
-          <div class="field-group">
-            <div class="field">
-              <label for="diCountry">Country</label>
-              <select id="diCountry" aria-label="Country for debt impact calculation">
-                <option value="">— Loading… —</option>
-              </select>
+        <!-- Client Report Builder -->
+        <div>
+          <div class="section-label">Client Report Builder</div>
+          <div class="report-builder">
+            <div class="report-builder-title">Generate a one-pager</div>
+            <div class="report-row">
+              <div>
+                <label class="field-label" for="report-notes">Talking points</label>
+                <textarea
+                  class="textarea-report"
+                  id="report-notes"
+                  placeholder="Add commentary, key observations, or advice for the client…"
+                  aria-label="Report talking points"
+                ></textarea>
+              </div>
+              <div class="report-controls">
+                <div>
+                  <label class="field-label" for="report-country-select">Focus country</label>
+                  <select class="select-report" id="report-country-select" aria-label="Select focus country for report">
+                    <option value="">All countries</option>
+                  </select>
+                </div>
+                <button class="btn-copy" id="btn-copy-report" aria-label="Copy report as HTML">Copy as HTML</button>
+              </div>
             </div>
-            <div class="field">
-              <label for="debtAmount">Debt Amount ($)</label>
-              <input type="number" id="debtAmount" value="50000" min="1" step="1000" aria-label="Debt amount" />
-            </div>
-            <div class="field">
-              <label for="debtYears">Years</label>
-              <input type="number" id="debtYears" value="10" min="1" max="30" step="1" aria-label="Number of years" />
-            </div>
-          </div>
-          <button class="btn" style="width:100%;margin-bottom:12px" onclick="calcDebtImpact()" aria-label="Calculate debt relief">Calculate</button>
-          <div class="result-box" id="diResult">
-            <div class="result-label">Enter values and click Calculate</div>
           </div>
         </div>
 
-      </div>
-    </div>
-  </div>
+      </div><!-- .main-scroll -->
+    </div><!-- #main-content -->
 
-</main>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
-  // ── Country list (24 countries with ISO2 codes and flags) ──
-  const COUNTRIES = [
-    { iso2: 'US', name: 'United States',    flag: '🇺🇸' },
-    { iso2: 'GB', name: 'United Kingdom',   flag: '🇬🇧' },
-    { iso2: 'DE', name: 'Germany',          flag: '🇩🇪' },
-    { iso2: 'FR', name: 'France',           flag: '🇫🇷' },
-    { iso2: 'JP', name: 'Japan',            flag: '🇯🇵' },
-    { iso2: 'CN', name: 'China',            flag: '🇨🇳' },
-    { iso2: 'BR', name: 'Brazil',           flag: '🇧🇷' },
-    { iso2: 'IN', name: 'India',            flag: '🇮🇳' },
-    { iso2: 'AU', name: 'Australia',        flag: '🇦🇺' },
-    { iso2: 'CA', name: 'Canada',           flag: '🇨🇦' },
-    { iso2: 'MX', name: 'Mexico',           flag: '🇲🇽' },
-    { iso2: 'ZA', name: 'South Africa',     flag: '🇿🇦' },
-    { iso2: 'TR', name: 'Turkey',           flag: '🇹🇷' },
-    { iso2: 'AR', name: 'Argentina',        flag: '🇦🇷' },
-    { iso2: 'NG', name: 'Nigeria',          flag: '🇳🇬' },
-    { iso2: 'EG', name: 'Egypt',            flag: '🇪🇬' },
-    { iso2: 'KR', name: 'South Korea',      flag: '🇰🇷' },
-    { iso2: 'IT', name: 'Italy',            flag: '🇮🇹' },
-    { iso2: 'ES', name: 'Spain',            flag: '🇪🇸' },
-    { iso2: 'NL', name: 'Netherlands',      flag: '🇳🇱' },
-    { iso2: 'SE', name: 'Sweden',           flag: '🇸🇪' },
-    { iso2: 'CH', name: 'Switzerland',      flag: '🇨🇭' },
-    { iso2: 'SG', name: 'Singapore',        flag: '🇸🇬' },
-    { iso2: 'PL', name: 'Poland',           flag: '🇵🇱' },
-  ];
+// ── Country database ─────────────────────────────────────────
+const COUNTRIES = [
+  { iso2: 'US', name: 'United States',    flag: '🇺🇸' },
+  { iso2: 'GB', name: 'United Kingdom',   flag: '🇬🇧' },
+  { iso2: 'DE', name: 'Germany',          flag: '🇩🇪' },
+  { iso2: 'FR', name: 'France',           flag: '🇫🇷' },
+  { iso2: 'JP', name: 'Japan',            flag: '🇯🇵' },
+  { iso2: 'CN', name: 'China',            flag: '🇨🇳' },
+  { iso2: 'IN', name: 'India',            flag: '🇮🇳' },
+  { iso2: 'BR', name: 'Brazil',           flag: '🇧🇷' },
+  { iso2: 'CA', name: 'Canada',           flag: '🇨🇦' },
+  { iso2: 'AU', name: 'Australia',        flag: '🇦🇺' },
+  { iso2: 'IT', name: 'Italy',            flag: '🇮🇹' },
+  { iso2: 'ES', name: 'Spain',            flag: '🇪🇸' },
+  { iso2: 'NL', name: 'Netherlands',      flag: '🇳🇱' },
+  { iso2: 'SE', name: 'Sweden',           flag: '🇸🇪' },
+  { iso2: 'CH', name: 'Switzerland',      flag: '🇨🇭' },
+  { iso2: 'NO', name: 'Norway',           flag: '🇳🇴' },
+  { iso2: 'DK', name: 'Denmark',          flag: '🇩🇰' },
+  { iso2: 'FI', name: 'Finland',          flag: '🇫🇮' },
+  { iso2: 'KR', name: 'South Korea',      flag: '🇰🇷' },
+  { iso2: 'SG', name: 'Singapore',        flag: '🇸🇬' },
+  { iso2: 'MX', name: 'Mexico',           flag: '🇲🇽' },
+  { iso2: 'ZA', name: 'South Africa',     flag: '🇿🇦' },
+  { iso2: 'TR', name: 'Turkey',           flag: '🇹🇷' },
+  { iso2: 'AR', name: 'Argentina',        flag: '🇦🇷' },
+  { iso2: 'RU', name: 'Russia',           flag: '🇷🇺' },
+  { iso2: 'NG', name: 'Nigeria',          flag: '🇳🇬' },
+  { iso2: 'EG', name: 'Egypt',            flag: '🇪🇬' },
+  { iso2: 'PL', name: 'Poland',           flag: '🇵🇱' },
+  { iso2: 'CZ', name: 'Czech Republic',   flag: '🇨🇿' },
+  { iso2: 'HU', name: 'Hungary',          flag: '🇭🇺' },
+  { iso2: 'RO', name: 'Romania',          flag: '🇷🇴' },
+  { iso2: 'GR', name: 'Greece',           flag: '🇬🇷' },
+  { iso2: 'PT', name: 'Portugal',         flag: '🇵🇹' },
+  { iso2: 'AT', name: 'Austria',          flag: '🇦🇹' },
+  { iso2: 'BE', name: 'Belgium',          flag: '🇧🇪' },
+  { iso2: 'ID', name: 'Indonesia',        flag: '🇮🇩' },
+  { iso2: 'TH', name: 'Thailand',         flag: '🇹🇭' },
+  { iso2: 'MY', name: 'Malaysia',         flag: '🇲🇾' },
+  { iso2: 'PH', name: 'Philippines',      flag: '🇵🇭' },
+  { iso2: 'VN', name: 'Vietnam',          flag: '🇻🇳' },
+  { iso2: 'PK', name: 'Pakistan',         flag: '🇵🇰' },
+  { iso2: 'BD', name: 'Bangladesh',       flag: '🇧🇩' },
+  { iso2: 'SA', name: 'Saudi Arabia',     flag: '🇸🇦' },
+  { iso2: 'AE', name: 'UAE',              flag: '🇦🇪' },
+  { iso2: 'IL', name: 'Israel',           flag: '🇮🇱' },
+  { iso2: 'CL', name: 'Chile',            flag: '🇨🇱' },
+  { iso2: 'CO', name: 'Colombia',         flag: '🇨🇴' },
+  { iso2: 'PE', name: 'Peru',             flag: '🇵🇪' },
+  { iso2: 'UY', name: 'Uruguay',          flag: '🇺🇾' },
+  { iso2: 'KE', name: 'Kenya',            flag: '🇰🇪' },
+];
 
-  // ── State ──
-  const state = {
-    data: {},          // { iso2: { name, flag, latest, history: [{year, value}] } }
-    loaded: 0,
-    total: COUNTRIES.length,
-    compareList: [],   // iso2 array
+const PRESETS = {
+  G7:    ['US', 'GB', 'DE', 'FR', 'JP', 'CA', 'IT'],
+  BRICS: ['BR', 'RU', 'IN', 'CN', 'ZA'],
+  EU5:   ['DE', 'FR', 'IT', 'ES', 'NL'],
+};
+
+// Garden-extended line colors (up to 5)
+const LINE_COLORS = [
+  'oklch(52% 0.20 256)',  // accent green
+  'oklch(55% 0.18 260)',  // blue
+  'oklch(60% 0.20 30)',   // orange
+  'oklch(55% 0.20 310)',  // purple
+  'oklch(62% 0.16 72)',   // amber
+];
+const LINE_COLORS_HEX = ['#3d8a60', '#4476bb', '#c96030', '#8a4db0', '#c49530'];
+
+// ── App State ────────────────────────────────────────────────
+const state = {
+  comparison: [],       // array of iso2 codes (max 5)
+  cache: {},            // sessionStorage + memory { "US:5": [{year, value}] }
+  selectedYears: 5,
+  pendingCountry: null, // iso2 selected in dropdown but not yet added
+};
+
+// ── sessionStorage cache ──────────────────────────────────────
+function cacheKey(iso2, years) { return `infl_${iso2}_${years}`; }
+
+function cacheGet(iso2, years) {
+  const k = cacheKey(iso2, years);
+  if (state.cache[k]) return state.cache[k];
+  try {
+    const raw = sessionStorage.getItem(k);
+    if (raw) { state.cache[k] = JSON.parse(raw); return state.cache[k]; }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function cacheSet(iso2, years, data) {
+  const k = cacheKey(iso2, years);
+  state.cache[k] = data;
+  try { sessionStorage.setItem(k, JSON.stringify(data)); } catch { /* ignore */ }
+}
+
+// ── API Fetch ────────────────────────────────────────────────
+async function fetchInflation(iso2, years) {
+  const cached = cacheGet(iso2, years);
+  if (cached) return cached;
+
+  const mrv = Math.min(years + 2, 50); // request a few extra to account for gaps
+  const url = `https://api.worldbank.org/v2/country/${iso2}/indicator/FP.CPI.TOTL.ZG?format=json&mrv=${mrv}&per_page=20`;
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const json = await res.json();
+  const rows = (json[1] || []).filter(r => r.value !== null);
+  const sorted = rows
+    .sort((a, b) => Number(a.date) - Number(b.date))
+    .map(r => ({ year: Number(r.date), value: r.value }));
+
+  // Trim to requested years (most recent N)
+  const trimmed = sorted.slice(-years);
+  cacheSet(iso2, years, trimmed);
+  return trimmed;
+}
+
+// ── Country lookup ────────────────────────────────────────────
+function countryInfo(iso2) {
+  return COUNTRIES.find(c => c.iso2 === iso2) || { iso2, name: iso2, flag: '🌍' };
+}
+
+// ── Search ───────────────────────────────────────────────────
+const searchInput = document.getElementById('country-search');
+const searchDropdown = document.getElementById('search-dropdown');
+const btnAddCountry = document.getElementById('btn-add-country');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  state.pendingCountry = null;
+  btnAddCountry.disabled = true;
+
+  if (!q) {
+    closeDropdown();
+    return;
+  }
+
+  const matches = COUNTRIES.filter(c =>
+    c.name.toLowerCase().includes(q) || c.iso2.toLowerCase().startsWith(q)
+  ).slice(0, 8);
+
+  if (!matches.length) {
+    searchDropdown.innerHTML = `<div class="search-option" style="color:var(--color-ink-muted);cursor:default">No results</div>`;
+    openDropdown();
+    return;
+  }
+
+  searchDropdown.innerHTML = matches.map(c => `
+    <div class="search-option" role="option" tabindex="0" data-iso2="${c.iso2}">
+      <span class="search-option-flag">${c.flag}</span>
+      <span class="search-option-name">${c.name}</span>
+      <span class="search-option-iso">${c.iso2}</span>
+    </div>
+  `).join('');
+  openDropdown();
+  searchInput.setAttribute('aria-expanded', 'true');
+});
+
+searchDropdown.addEventListener('click', e => {
+  const opt = e.target.closest('[data-iso2]');
+  if (!opt) return;
+  selectCountry(opt.dataset.iso2);
+});
+
+searchDropdown.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const opt = document.activeElement.closest('[data-iso2]');
+    if (opt) selectCountry(opt.dataset.iso2);
+  }
+  if (e.key === 'Escape') closeDropdown();
+});
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') {
+    const first = searchDropdown.querySelector('[data-iso2]');
+    if (first) first.focus();
+  }
+  if (e.key === 'Escape') closeDropdown();
+});
+
+document.addEventListener('pointerdown', e => {
+  if (!searchDropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
+}, { passive: true });
+
+function openDropdown() { searchDropdown.classList.add('open'); }
+function closeDropdown() {
+  searchDropdown.classList.remove('open');
+  searchInput.setAttribute('aria-expanded', 'false');
+}
+
+function selectCountry(iso2) {
+  const c = countryInfo(iso2);
+  state.pendingCountry = iso2;
+  searchInput.value = `${c.flag} ${c.name}`;
+  btnAddCountry.disabled = state.comparison.includes(iso2) || state.comparison.length >= 5;
+  closeDropdown();
+}
+
+btnAddCountry.addEventListener('click', () => {
+  if (!state.pendingCountry) return;
+  addCountry(state.pendingCountry);
+  searchInput.value = '';
+  state.pendingCountry = null;
+  btnAddCountry.disabled = true;
+});
+
+// ── Add / Remove Country ──────────────────────────────────────
+async function addCountry(iso2) {
+  if (state.comparison.includes(iso2) || state.comparison.length >= 5) {
+    toast(state.comparison.length >= 5 ? 'Maximum 5 countries' : 'Already added', 'error');
+    return;
+  }
+
+  state.comparison.push(iso2);
+  renderChips();
+  renderCompareCount();
+  showMainContent();
+  renderRealReturn();
+
+  // Mark chip as loading
+  setChipLoading(iso2, true);
+
+  try {
+    await fetchInflation(iso2, state.selectedYears);
+    setChipLoading(iso2, false);
+    render();
+  } catch (err) {
+    setChipLoading(iso2, false);
+    toast(`Failed to load data for ${countryInfo(iso2).name}`, 'error');
+    // Leave in comparison with empty data — render will show gap
+    render();
+  }
+}
+
+function removeCountry(iso2) {
+  state.comparison = state.comparison.filter(c => c !== iso2);
+  renderChips();
+  renderCompareCount();
+  renderRealReturn();
+  if (!state.comparison.length) {
+    document.getElementById('main-empty').style.display = '';
+    document.getElementById('main-content').style.display = 'none';
+  } else {
+    render();
+  }
+}
+
+// ── Presets ───────────────────────────────────────────────────
+document.querySelectorAll('[data-preset]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const group = PRESETS[btn.dataset.preset];
+    if (!group) return;
+    // Replace comparison with preset (cap at 5)
+    state.comparison = [];
+    renderChips();
+    renderCompareCount();
+    group.slice(0, 5).forEach(iso2 => addCountry(iso2));
+  });
+});
+
+// ── Date range ────────────────────────────────────────────────
+document.querySelectorAll('[data-years]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-years]').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    state.selectedYears = Number(btn.dataset.years);
+
+    // Clear cache entries for active countries so we re-fetch
+    // (we keep other caches for performance)
+    state.comparison.forEach(iso2 => {
+      // Only clear if not already cached for this range
+    });
+
+    if (state.comparison.length) {
+      refetchAll();
+    }
+  });
+});
+
+async function refetchAll() {
+  for (const iso2 of state.comparison) {
+    setChipLoading(iso2, true);
+  }
+  await Promise.all(state.comparison.map(iso2 =>
+    fetchInflation(iso2, state.selectedYears)
+      .catch(() => null)
+      .then(() => setChipLoading(iso2, false))
+  ));
+  render();
+}
+
+// ── Render chips ──────────────────────────────────────────────
+function renderChips() {
+  const list = document.getElementById('chips-list');
+  const empty = document.getElementById('chips-empty');
+
+  if (!state.comparison.length) {
+    list.innerHTML = '';
+    list.appendChild(empty);
+    empty.style.display = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  // Rebuild chips preserving loading state
+  const existing = {};
+  list.querySelectorAll('[data-iso2]').forEach(el => {
+    existing[el.dataset.iso2] = el.querySelector('.chip-loading')?.textContent ?? '';
+  });
+
+  list.innerHTML = '';
+  state.comparison.forEach((iso2, idx) => {
+    const c = countryInfo(iso2);
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.dataset.iso2 = iso2;
+    chip.innerHTML = `
+      <span class="chip-color-dot" style="background:${LINE_COLORS_HEX[idx]}"></span>
+      <span class="chip-flag">${c.flag}</span>
+      <span class="chip-name">${c.name}</span>
+      <span class="chip-loading" id="chip-loading-${iso2}"></span>
+      <button class="btn-chip-remove" aria-label="Remove ${c.name}" data-iso2="${iso2}">×</button>
+    `;
+    list.appendChild(chip);
+  });
+
+  list.querySelectorAll('.btn-chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => removeCountry(btn.dataset.iso2));
+  });
+}
+
+function setChipLoading(iso2, loading) {
+  const el = document.getElementById(`chip-loading-${iso2}`);
+  if (!el) return;
+  el.innerHTML = loading ? '<span class="spinner-inline" aria-label="Loading"></span>' : '';
+}
+
+function renderCompareCount() {
+  document.getElementById('compare-count').textContent = state.comparison.length;
+}
+
+function showMainContent() {
+  document.getElementById('main-empty').style.display = 'none';
+  document.getElementById('main-content').style.display = '';
+}
+
+// ── Real Return Calculator ─────────────────────────────────────
+function renderRealReturn() {
+  const nominal = parseFloat(document.getElementById('nominal-return').value) || 0;
+  const resultsEl = document.getElementById('real-return-results');
+  const emptyEl = document.getElementById('real-return-empty');
+
+  if (!state.comparison.length) {
+    resultsEl.innerHTML = '';
+    resultsEl.appendChild(emptyEl);
+    emptyEl.style.display = '';
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+  resultsEl.innerHTML = '';
+
+  state.comparison.forEach((iso2, idx) => {
+    const c = countryInfo(iso2);
+    const data = cacheGet(iso2, state.selectedYears);
+    const latest = data && data.length ? data[data.length - 1].value : null;
+
+    const row = document.createElement('div');
+    row.className = 'real-return-row';
+
+    let valHtml;
+    if (latest === null) {
+      valHtml = `<span class="real-return-value" style="color:var(--color-ink-muted)">—</span>`;
+    } else {
+      // Fisher equation
+      const real = ((1 + nominal / 100) / (1 + latest / 100) - 1) * 100;
+      const cls = real >= 0 ? 'positive' : 'negative';
+      valHtml = `<span class="real-return-value ${cls}">${real >= 0 ? '+' : ''}${real.toFixed(2)}%</span>`;
+    }
+
+    row.innerHTML = `
+      <span class="real-return-country">
+        <span style="width:8px;height:8px;border-radius:50%;background:${LINE_COLORS_HEX[idx]};display:inline-block;flex-shrink:0"></span>
+        ${c.flag} ${c.name}
+      </span>
+      ${valHtml}
+    `;
+    resultsEl.appendChild(row);
+  });
+}
+
+document.getElementById('nominal-return').addEventListener('input', renderRealReturn);
+
+// ── Master Render ─────────────────────────────────────────────
+function render() {
+  renderChart();
+  renderStatCards();
+  renderTable();
+  renderReportCountrySelect();
+  renderRealReturn();
+}
+
+// ── SVG Chart ─────────────────────────────────────────────────
+function renderChart() {
+  const wrap = document.getElementById('chart-wrap');
+
+  // Gather all data
+  const series = state.comparison.map(iso2 => ({
+    iso2,
+    info: countryInfo(iso2),
+    data: cacheGet(iso2, state.selectedYears) || [],
+  }));
+
+  const allPts = series.flatMap(s => s.data.map(p => p.value)).filter(v => v !== null);
+  if (!allPts.length) {
+    wrap.innerHTML = '<div style="height:280px;display:flex;align-items:center;justify-content:center;color:var(--color-ink-muted);font-size:var(--text-sm)">Loading data…</div>';
+    return;
+  }
+
+  // Collect all years
+  const allYears = [...new Set(series.flatMap(s => s.data.map(p => p.year)))].sort((a, b) => a - b);
+
+  const W = 820, H = 280;
+  const PAD = { top: 28, right: 20, bottom: 40, left: 56 };
+  const iW = W - PAD.left - PAD.right;
+  const iH = H - PAD.top - PAD.bottom;
+
+  // Y-axis: fixed gridlines at 0, 2, 5, 10, 20; clip at 20 with dashed indicator
+  const CLIP_MAX = 20;
+  const rawMin = Math.min(0, ...allPts);
+  const rawMax = Math.max(...allPts);
+  const yMin = Math.floor(rawMin - 1);
+  const yMax = Math.min(CLIP_MAX, Math.ceil(rawMax + 1));
+  const yRange = yMax - yMin || 1;
+
+  const xScale = (year) => PAD.left + ((year - allYears[0]) / ((allYears[allYears.length - 1] - allYears[0]) || 1)) * iW;
+  const yScale = (v) => {
+    const clamped = Math.min(CLIP_MAX, v);
+    return PAD.top + iH - ((clamped - yMin) / yRange) * iH;
   };
 
-  // ── Color palette for charts ──
-  const PALETTE = [
-    '#6c63ff','#ff6584','#43d9ad','#f7c948',
-    '#4fc3f7','#ff9800','#e91e63','#69f0ae',
-  ];
+  // Gridlines
+  const GRID_LEVELS = [0, 2, 5, 10, 20].filter(v => v >= yMin && v <= yMax);
+  const gridLines = GRID_LEVELS.map(v => {
+    const y = yScale(v);
+    const isDanger = v >= 20;
+    return `
+      <line x1="${PAD.left}" x2="${PAD.left + iW}" y1="${y}" y2="${y}"
+        stroke="${isDanger ? 'oklch(55% 0.20 25 / 0.3)' : 'oklch(84% 0.010 252)'}"
+        stroke-width="1" stroke-dasharray="${isDanger ? '4,3' : ''}"/>
+      <text x="${PAD.left - 6}" y="${y + 4}" text-anchor="end"
+        font-family="'Plus Jakarta Sans', sans-serif" font-size="10" fill="oklch(44% 0.016 256)"
+        >${v}%</text>
+    `;
+  }).join('');
 
-  // ── Utilities ──
-  function fmt(val, dec = 2) {
-    if (val === null || val === undefined || isNaN(val)) return 'N/A';
-    return `${val >= 0 ? '' : ''}${Number(val).toFixed(dec)}%`;
-  }
+  // Y=0 baseline
+  const y0 = yScale(0);
+  const baselineHtml = (yMin < 0 && 0 <= yMax)
+    ? `<line x1="${PAD.left}" x2="${PAD.left + iW}" y1="${y0}" y2="${y0}" stroke="oklch(44% 0.016 256)" stroke-width="1.5"/>`
+    : '';
 
-  function fmtMoney(val) {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(val);
-  }
+  // X-axis labels (show max 8 labels)
+  const labelStep = Math.max(1, Math.ceil(allYears.length / 8));
+  const xLabels = allYears
+    .filter((_, i) => i % labelStep === 0 || i === allYears.length - 1)
+    .map(yr => `
+      <text x="${xScale(yr)}" y="${H - 12}" text-anchor="middle"
+        font-family="'Plus Jakarta Sans', sans-serif" font-size="10" fill="oklch(44% 0.016 256)">${yr}</text>
+    `).join('');
 
-  function rateColor(v) {
-    if (v === null || isNaN(v)) return 'var(--muted)';
-    if (v > 10) return 'var(--accent2)';
-    if (v < 3)  return 'var(--green)';
-    return 'var(--yellow)';
-  }
+  // Series lines
+  let overflowIndicators = '';
+  const linesHtml = series.map((s, idx) => {
+    if (!s.data.length) return '';
+    const color = LINE_COLORS_HEX[idx];
+    const pts = s.data;
 
-  function rateClass(v) {
-    if (v === null || isNaN(v)) return '';
-    if (v > 10) return 'rate-high';
-    if (v < 3)  return 'rate-low';
-    return 'rate-mid';
-  }
-
-  function countryByIso(iso2) {
-    return COUNTRIES.find(c => c.iso2 === iso2);
-  }
-
-  // ── Tab switching ──
-  function switchTab(name) {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-      const active = b.dataset.tab === name;
-      b.classList.toggle('active', active);
-      b.setAttribute('aria-selected', String(active));
-    });
-    document.querySelectorAll('.tab-panel').forEach(p => {
-      p.classList.toggle('active', p.id === `tab-${name}`);
-    });
-  }
-
-  // ── Fetch one country ──
-  async function fetchCountry(iso2) {
-    const url = `https://api.worldbank.org/v2/country/${iso2}/indicator/FP.CPI.TOTL.ZG?format=json&mrv=6`;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const rows = (json[1] || []).filter(r => r.value !== null);
-      if (!rows.length) return null;
-      const sorted = rows.sort((a, b) => Number(a.date) - Number(b.date));
-      return {
-        latest: sorted[sorted.length - 1].value,
-        latestYear: sorted[sorted.length - 1].date,
-        history: sorted.map(r => ({ year: Number(r.date), value: r.value })),
-      };
-    } catch {
-      return null;
+    // Build segments (gaps for null values)
+    const segments = [];
+    let current = [];
+    for (const pt of pts) {
+      if (pt.value === null) {
+        if (current.length > 1) segments.push([...current]);
+        current = [];
+      } else {
+        current.push(pt);
+      }
     }
-  }
+    if (current.length > 1) segments.push(current);
+    if (current.length === 1) segments.push(current); // single point
 
-  // ── Populate selects ──
-  function populateSelects() {
-    const sorted = Object.entries(state.data)
-      .sort((a, b) => a[1].name.localeCompare(b[1].name));
-
-    const ids = ['trendCountry', 'compareSelect', 'ppCountry', 'rrCountry', 'seCountry', 'diCountry'];
-    ids.forEach(id => {
-      const sel = document.getElementById(id);
-      const prev = sel.value;
-      const placeholder = id === 'compareSelect' ? 'Add a country…' : '— Select country —';
-      sel.innerHTML = `<option value="">${placeholder}</option>` +
-        sorted.map(([iso2, d]) =>
-          `<option value="${iso2}">${d.flag} ${d.name} (${fmt(d.latest)})</option>`
-        ).join('');
-      if (prev && state.data[prev]) sel.value = prev;
-    });
-
-    // Auto-select US for trend
-    const tc = document.getElementById('trendCountry');
-    if (!tc.value && state.data['US']) {
-      tc.value = 'US';
-      renderTrendChart();
-    }
-  }
-
-  // ── League table ──
-  function renderLeague() {
-    const entries = Object.entries(state.data)
-      .filter(([, d]) => d.latest !== null && !isNaN(d.latest))
-      .sort((a, b) => b[1].latest - a[1].latest);
-
-    const top5 = entries.slice(0, 5);
-    const bot5 = [...entries].slice(-5).reverse();
-
-    function row(iso2, d, rank) {
-      return `<div class="league-row" role="button" tabindex="0"
-          onclick="leagueClick('${iso2}')"
-          onkeydown="if(event.key==='Enter')leagueClick('${iso2}')"
-          title="Click to see trend for ${d.name}">
-        <span class="rank">${rank}</span>
-        <span class="country-flag">${d.flag}</span>
-        <span class="country-name">${d.name}</span>
-        <span class="country-rate ${rateClass(d.latest)}">${fmt(d.latest)}</span>
-      </div>`;
+    // Check for overflow
+    const hasOverflow = pts.some(p => p.value > CLIP_MAX);
+    if (hasOverflow) {
+      const overflowPts = pts.filter(p => p.value > CLIP_MAX);
+      overflowPts.forEach(p => {
+        const x = xScale(p.year);
+        const y = PAD.top;
+        overflowIndicators += `
+          <text x="${x}" y="${y - 2}" text-anchor="middle"
+            font-family="'Plus Jakarta Sans', sans-serif" font-size="9" fill="${color}">▲</text>
+          <title>${s.info.name} ${p.year}: ${p.value.toFixed(1)}% (clipped)</title>
+        `;
+      });
     }
 
-    document.getElementById('highTable').innerHTML = top5.map(([iso2, d], i) => row(iso2, d, i + 1)).join('');
-    document.getElementById('lowTable').innerHTML  = bot5.map(([iso2, d], i) => row(iso2, d, i + 1)).join('');
-  }
-
-  function leagueClick(iso2) {
-    switchTab('trend');
-    const tc = document.getElementById('trendCountry');
-    tc.value = iso2;
-    renderTrendChart();
-  }
-
-  // ── SVG Trend Chart ──
-  function renderTrendChart() {
-    const iso2 = document.getElementById('trendCountry').value;
-    const wrap = document.getElementById('trendChartWrap');
-    const statsEl = document.getElementById('trendStats');
-
-    if (!iso2 || !state.data[iso2]) {
-      wrap.innerHTML = `<div class="empty-state"><div class="icon">📊</div><p>Select a country to view its 5-year trend</p></div>`;
-      statsEl.innerHTML = '';
-      return;
-    }
-
-    const d = state.data[iso2];
-    const pts = d.history;
-    if (!pts.length) {
-      wrap.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>No historical data available</p></div>`;
-      statsEl.innerHTML = '';
-      return;
-    }
-
-    const W = 800, H = 260, PAD = { top: 20, right: 20, bottom: 40, left: 54 };
-    const iW = W - PAD.left - PAD.right;
-    const iH = H - PAD.top - PAD.bottom;
-
-    const vals = pts.map(p => p.value);
-    const minV = Math.min(...vals);
-    const maxV = Math.max(...vals);
-    const vRange = maxV - minV || 1;
-
-    const xScale = i => PAD.left + (i / (pts.length - 1 || 1)) * iW;
-    const yScale = v => PAD.top + iH - ((v - minV) / vRange) * iH;
-
-    // Build polyline points
-    const linePoints = pts.map((p, i) => `${xScale(i)},${yScale(p.value)}`).join(' ');
-
-    // Area fill
-    const areaPoints = [
-      `${xScale(0)},${PAD.top + iH}`,
-      ...pts.map((p, i) => `${xScale(i)},${yScale(p.value)}`),
-      `${xScale(pts.length - 1)},${PAD.top + iH}`,
-    ].join(' ');
-
-    // Y-axis ticks
-    const yTicks = 5;
-    const yTickLines = Array.from({ length: yTicks + 1 }, (_, i) => {
-      const v = minV + (vRange * i / yTicks);
-      const y = yScale(v);
-      return `
-        <line x1="${PAD.left}" x2="${PAD.left + iW}" y1="${y}" y2="${y}" stroke="rgba(46,51,80,.6)" stroke-width="1" stroke-dasharray="4,4"/>
-        <text x="${PAD.left - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#8892b0">${v.toFixed(1)}%</text>
-      `;
+    const lineEl = segments.map(seg => {
+      const polyPts = seg.map(p => `${xScale(p.year)},${yScale(p.value)}`).join(' ');
+      return `<polyline points="${polyPts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
     }).join('');
 
-    // X-axis labels
-    const xLabels = pts.map((p, i) => `
-      <text x="${xScale(i)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#8892b0">${p.year}</text>
-    `).join('');
+    // Dots on last point
+    const last = pts.filter(p => p.value !== null).slice(-1)[0];
+    const dotEl = last
+      ? `<circle cx="${xScale(last.year)}" cy="${yScale(last.value)}" r="4" fill="${color}" stroke="oklch(98.5% 0.004 250)" stroke-width="2"><title>${s.info.name} ${last.year}: ${last.value.toFixed(2)}%</title></circle>`
+      : '';
 
-    // Data points with tooltips
-    const circles = pts.map((p, i) => `
-      <circle cx="${xScale(i)}" cy="${yScale(p.value)}" r="5"
-        fill="${rateColor(p.value)}" stroke="var(--surface)" stroke-width="2">
-        <title>${p.year}: ${fmt(p.value)}</title>
-      </circle>
-    `).join('');
+    return lineEl + dotEl;
+  }).join('');
 
-    // Value labels above points
-    const valueLabels = pts.map((p, i) => `
-      <text x="${xScale(i)}" y="${yScale(p.value) - 10}" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="600">${p.value.toFixed(1)}%</text>
-    `).join('');
+  // Legend
+  const legendHtml = series.map((s, idx) => {
+    const color = LINE_COLORS_HEX[idx];
+    return `
+      <g transform="translate(${PAD.left + idx * 130}, ${H - 2})">
+        <rect x="0" y="-8" width="16" height="3" rx="1.5" fill="${color}"/>
+        <text x="20" y="0" font-family="'Plus Jakarta Sans', sans-serif" font-size="10" fill="oklch(44% 0.016 256)">${s.info.flag} ${s.info.name}</text>
+      </g>
+    `;
+  }).join('');
 
-    const uniqueId = `grad-${iso2}`;
-    const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Inflation trend for ${d.name}">
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
+      role="img" aria-label="Multi-country inflation trend chart">
       <defs>
-        <linearGradient id="${uniqueId}" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="#6c63ff" stop-opacity=".35"/>
-          <stop offset="100%" stop-color="#6c63ff" stop-opacity="0"/>
-        </linearGradient>
-        <filter id="glow-${iso2}">
-          <feGaussianBlur stdDeviation="2" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
+        <clipPath id="chart-clip">
+          <rect x="${PAD.left}" y="${PAD.top}" width="${iW}" height="${iH}"/>
+        </clipPath>
       </defs>
-      ${yTickLines}
-      <polygon points="${areaPoints}" fill="url(#${uniqueId})"/>
-      <polyline points="${linePoints}" fill="none" stroke="#6c63ff" stroke-width="2.5" stroke-linejoin="round" filter="url(#glow-${iso2})"/>
-      ${circles}
-      ${valueLabels}
+      ${gridLines}
+      ${baselineHtml}
+      <g clip-path="url(#chart-clip)">
+        ${linesHtml}
+        ${overflowIndicators}
+      </g>
       ${xLabels}
-    </svg>`;
+    </svg>
+  `;
+}
 
-    wrap.innerHTML = svg;
+// ── Stat Cards ────────────────────────────────────────────────
+function renderStatCards() {
+  const container = document.getElementById('stat-cards');
+  container.innerHTML = '';
 
-    // Stats below chart
-    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-    statsEl.innerHTML = `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 18px;display:flex;gap:6px;flex-direction:column">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Avg</div>
-        <div style="font-size:18px;font-weight:700;color:var(--yellow)">${fmt(avg)}</div>
+  state.comparison.forEach((iso2, idx) => {
+    const c = countryInfo(iso2);
+    const data = cacheGet(iso2, state.selectedYears) || [];
+    const color = LINE_COLORS_HEX[idx];
+
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+
+    if (!data.length) {
+      card.innerHTML = `
+        <div class="stat-card-flag">${c.flag}</div>
+        <div class="stat-card-country">${c.name}</div>
+        <div class="stat-card-rate" style="color:var(--color-ink-muted)"><span class="spinner-inline"></span></div>
+        <div class="stat-card-color-bar" style="background:${color}"></div>
+      `;
+      container.appendChild(card);
+      return;
+    }
+
+    const validData = data.filter(p => p.value !== null);
+    const latest = validData.length ? validData[validData.length - 1] : null;
+    const prev = validData.length > 1 ? validData[validData.length - 2] : null;
+    const avg5 = validData.length
+      ? validData.slice(-5).reduce((s, p) => s + p.value, 0) / Math.min(5, validData.length)
+      : null;
+
+    let trendHtml = '';
+    if (latest && prev) {
+      const diff = latest.value - prev.value;
+      const cls = diff > 0.1 ? 'up' : diff < -0.1 ? 'down' : 'flat';
+      const arrow = diff > 0.1 ? '▲' : diff < -0.1 ? '▼' : '→';
+      trendHtml = `<span class="stat-card-trend ${cls}">${arrow} ${Math.abs(diff).toFixed(2)}pp</span>`;
+    }
+
+    let rateColor = 'var(--color-ink)';
+    if (latest) {
+      if (latest.value < 3) rateColor = 'var(--color-success)';
+      else if (latest.value >= 15) rateColor = 'var(--color-danger)';
+      else if (latest.value >= 7) rateColor = 'oklch(60% 0.20 30)';
+      else if (latest.value >= 3) rateColor = 'var(--color-warn)';
+    }
+
+    card.innerHTML = `
+      <div class="stat-card-flag">${c.flag}</div>
+      <div class="stat-card-country">${c.name}</div>
+      <div class="stat-card-rate" style="color:${rateColor}">
+        ${latest ? latest.value.toFixed(2) + '%' : '—'}
+        ${trendHtml}
       </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 18px;display:flex;gap:6px;flex-direction:column">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Peak</div>
-        <div style="font-size:18px;font-weight:700;color:var(--accent2)">${fmt(maxV)}</div>
+      <div class="stat-card-avg">
+        ${latest ? `${latest.year} · ` : ''}5yr avg: ${avg5 !== null ? avg5.toFixed(2) + '%' : '—'}
       </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 18px;display:flex;gap:6px;flex-direction:column">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Trough</div>
-        <div style="font-size:18px;font-weight:700;color:var(--green)">${fmt(minV)}</div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 18px;display:flex;gap:6px;flex-direction:column">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Latest (${d.latestYear})</div>
-        <div style="font-size:18px;font-weight:700;color:${rateColor(d.latest)}">${fmt(d.latest)}</div>
-      </div>
+      <div class="stat-card-color-bar" style="background:${color}"></div>
     `;
-  }
+    container.appendChild(card);
+  });
+}
 
-  // ── Compare ──
-  function addCompareCountry() {
-    const sel = document.getElementById('compareSelect');
-    const iso2 = sel.value;
-    if (!iso2) return;
-    if (state.compareList.includes(iso2)) {
-      showNotice('Country already in comparison');
-      return;
-    }
-    if (state.compareList.length >= 8) {
-      showNotice('Maximum 8 countries');
-      return;
-    }
-    state.compareList.push(iso2);
-    sel.value = '';
-    renderCompare();
-  }
+// ── Data Table ────────────────────────────────────────────────
+function renderTable() {
+  const head = document.getElementById('table-head');
+  const body = document.getElementById('table-body');
 
-  function removeCompareCountry(iso2) {
-    state.compareList = state.compareList.filter(c => c !== iso2);
-    renderCompare();
-  }
+  if (!state.comparison.length) { head.innerHTML = ''; body.innerHTML = ''; return; }
 
-  function clearCompare() {
-    state.compareList = [];
-    renderCompare();
-  }
+  const series = state.comparison.map(iso2 => ({
+    iso2,
+    info: countryInfo(iso2),
+    data: cacheGet(iso2, state.selectedYears) || [],
+    byYear: Object.fromEntries((cacheGet(iso2, state.selectedYears) || []).map(p => [p.year, p.value])),
+  }));
 
-  function renderCompare() {
-    const chipsEl = document.getElementById('compareChips');
-    const barsEl = document.getElementById('compareBars');
+  const allYears = [...new Set(series.flatMap(s => s.data.map(p => p.year)))].sort((a, b) => b - a);
 
-    if (!state.compareList.length) {
-      chipsEl.innerHTML = '';
-      barsEl.innerHTML = `<div class="empty-state"><div class="icon">⚖️</div><p>Add countries above to compare inflation rates</p></div>`;
-      return;
-    }
+  head.innerHTML = `<tr>
+    <th>Year</th>
+    ${series.map((s, idx) => `<th style="color:${LINE_COLORS_HEX[idx]}">${s.info.flag} ${s.info.name}</th>`).join('')}
+  </tr>`;
 
-    // Chips
-    chipsEl.innerHTML = state.compareList.map((iso2, idx) => {
-      const d = state.data[iso2];
-      if (!d) return '';
-      return `<div class="chip" style="border-color:${PALETTE[idx % PALETTE.length]}40">
-        <span>${d.flag}</span>
-        <span>${d.name}</span>
-        <button class="chip-remove" onclick="removeCompareCountry('${iso2}')" aria-label="Remove ${d.name}">&times;</button>
-      </div>`;
+  body.innerHTML = allYears.map(yr => {
+    const cells = series.map(s => {
+      const v = s.byYear[yr];
+      if (v === undefined || v === null) return `<td class="cell-na">—</td>`;
+      let cls = '';
+      if (v < 3) cls = 'cell-green';
+      else if (v < 7) cls = 'cell-amber';
+      else if (v < 15) cls = 'cell-orange';
+      else cls = 'cell-red';
+      return `<td class="${cls}">${v.toFixed(2)}%</td>`;
     }).join('');
+    return `<tr><td>${yr}</td>${cells}</tr>`;
+  }).join('');
+}
 
-    // Find max for bar scale
-    const maxRate = Math.max(...state.compareList.map(iso2 => {
-      const v = state.data[iso2]?.latest;
-      return (v !== null && !isNaN(v)) ? Math.abs(v) : 0;
-    }));
+// ── Report Builder ─────────────────────────────────────────────
+function renderReportCountrySelect() {
+  const sel = document.getElementById('report-country-select');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">All countries</option>' +
+    state.comparison.map(iso2 => {
+      const c = countryInfo(iso2);
+      return `<option value="${iso2}">${c.flag} ${c.name}</option>`;
+    }).join('');
+  if (prev && state.comparison.includes(prev)) sel.value = prev;
+}
 
-    // Bars
-    barsEl.innerHTML = `<div class="compare-bars">` +
-      state.compareList.map((iso2, idx) => {
-        const d = state.data[iso2];
-        if (!d) return '';
-        const rate = d.latest;
-        const pct = maxRate > 0 ? (Math.abs(rate) / maxRate) * 100 : 0;
-        const color = PALETTE[idx % PALETTE.length];
-        return `<div class="compare-bar-row">
-          <div class="bar-label">${d.flag} ${d.name}</div>
-          <div class="bar-track">
-            <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color}cc,${color})">
-              ${pct > 20 ? `<span>${fmt(rate)}</span>` : ''}
-            </div>
-          </div>
-          <div class="bar-val" style="color:${rateColor(rate)}">${fmt(rate)}</div>
-        </div>`;
-      }).join('') +
-    `</div>`;
-  }
+document.getElementById('btn-copy-report').addEventListener('click', () => {
+  const notes = document.getElementById('report-notes').value.trim();
+  const focusIso = document.getElementById('report-country-select').value;
+  const nowStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  // ── Purchasing Power ──
-  function calcPurchasingPower() {
-    const iso2 = document.getElementById('ppCountry').value;
-    const amount = parseFloat(document.getElementById('ppAmount').value);
-    const startYear = parseInt(document.getElementById('ppYear').value, 10);
-    const el = document.getElementById('ppResult');
+  const subjects = focusIso
+    ? state.comparison.filter(i => i === focusIso)
+    : state.comparison;
 
-    if (!iso2 || isNaN(amount) || isNaN(startYear)) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">Please fill all fields</div>`;
-      return;
-    }
+  const statsHtml = subjects.map((iso2, idx) => {
+    const c = countryInfo(iso2);
+    const data = cacheGet(iso2, state.selectedYears) || [];
+    const valid = data.filter(p => p.value !== null);
+    const latest = valid.length ? valid[valid.length - 1] : null;
+    const avg5 = valid.length
+      ? valid.slice(-5).reduce((s, p) => s + p.value, 0) / Math.min(5, valid.length)
+      : null;
+    const prev = valid.length > 1 ? valid[valid.length - 2] : null;
+    const trend = latest && prev ? (latest.value > prev.value ? 'Rising' : latest.value < prev.value ? 'Falling' : 'Stable') : '';
 
-    const d = state.data[iso2];
-    if (!d) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No data for selected country</div>`;
-      return;
-    }
+    return `
+      <div style="border:1px solid #e0e0e0;border-radius:8px;padding:16px 20px;display:flex;flex-direction:column;gap:4px;">
+        <div style="font-size:24px;">${c.flag}</div>
+        <div style="font-size:16px;font-weight:600;color:#111;">${c.name}</div>
+        <div style="font-size:28px;font-weight:700;color:${latest && latest.value < 3 ? '#2d7a4f' : latest && latest.value >= 15 ? '#c0392b' : '#c98a1a'};font-variant-numeric:tabular-nums;">${latest ? latest.value.toFixed(2) + '%' : 'N/A'}</div>
+        <div style="font-size:12px;color:#666;">${latest ? `${latest.year} annual CPI inflation` : ''}</div>
+        <div style="font-size:12px;color:#888;">5yr avg: ${avg5 !== null ? avg5.toFixed(2) + '%' : 'N/A'} · Trend: ${trend}</div>
+      </div>`;
+  }).join('');
 
-    // Get inflation data from startYear onwards
-    const relevant = d.history.filter(h => h.year >= startYear);
-    if (!relevant.length) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No data from ${startYear}</div>`;
-      return;
-    }
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Inflation Report — ${nowStr}</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:32px 24px;color:#111;background:#fff;}
+  h1{font-size:24px;font-weight:700;margin-bottom:4px;color:#111;}
+  .date{font-size:13px;color:#888;margin-bottom:24px;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:24px 0;}
+  .notes{background:#f8f8f8;border-radius:8px;padding:16px 20px;font-size:14px;line-height:1.7;color:#333;}
+  .footer{margin-top:32px;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:16px;}
+</style></head>
+<body>
+<h1>Inflation Rate Report</h1>
+<div class="date">${nowStr} · World Bank CPI data (FP.CPI.TOTL.ZG)</div>
+<div class="stats">${statsHtml}</div>
+${notes ? `<div class="notes"><strong>Analyst Notes</strong><br><br>${notes.replace(/\n/g, '<br>')}</div>` : ''}
+<div class="footer">Source: World Bank Open Data · Generated by Inflation Rate Dashboard</div>
+</body></html>`;
 
-    // Compound inflation: value = amount * product((1 + rate/100) for each year)
-    let current = amount;
-    relevant.forEach(h => { current *= (1 + h.value / 100); });
+  navigator.clipboard.writeText(html)
+    .then(() => toast('Report HTML copied to clipboard', 'success'))
+    .catch(() => toast('Copy failed — try again', 'error'));
+});
 
-    const pctChange = ((current - amount) / amount) * 100;
-    el.classList.add('has-result');
-    el.innerHTML = `
-      <div class="result-number">${fmtMoney(current)}</div>
-      <div class="result-label">${fmtMoney(amount)} in ${startYear} = ${fmtMoney(current)} today in ${d.name}</div>
-      <div style="font-size:12px;color:${current > amount ? 'var(--accent2)' : 'var(--green)'}">
-        ${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(1)}% purchasing power change
-      </div>
-    `;
-  }
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
+}
 
-  // ── Real Return ──
-  function calcRealReturn() {
-    const iso2 = document.getElementById('rrCountry').value;
-    const nominal = parseFloat(document.getElementById('nominalReturn').value);
-    const el = document.getElementById('rrResult');
-
-    if (!iso2 || isNaN(nominal)) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">Please fill all fields</div>`;
-      return;
-    }
-
-    const d = state.data[iso2];
-    if (!d || d.latest === null) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No inflation data available</div>`;
-      return;
-    }
-
-    // Fisher equation: real = (1+nominal/100)/(1+inflation/100) - 1
-    const real = ((1 + nominal / 100) / (1 + d.latest / 100) - 1) * 100;
-    el.classList.add('has-result');
-    el.innerHTML = `
-      <div class="result-number" style="background:linear-gradient(135deg,${real >= 0 ? 'var(--green),var(--accent)' : 'var(--accent2),var(--yellow)'});-webkit-background-clip:text;background-clip:text">${real.toFixed(2)}%</div>
-      <div class="result-label">Real return in ${d.name} (${d.latestYear})</div>
-      <div style="font-size:12px;color:var(--muted)">${fmt(nominal)} nominal − ${fmt(d.latest)} inflation = ${fmt(real)} real</div>
-    `;
-  }
-
-  // ── Savings Erosion ──
-  function calcSavingsErosion() {
-    const iso2 = document.getElementById('seCountry').value;
-    const amount = parseFloat(document.getElementById('savingsAmount').value);
-    const years = parseInt(document.getElementById('savingsYears').value, 10);
-    const el = document.getElementById('seResult');
-
-    if (!iso2 || isNaN(amount) || isNaN(years)) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">Please fill all fields</div>`;
-      return;
-    }
-
-    const d = state.data[iso2];
-    if (!d || d.latest === null) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No inflation data available</div>`;
-      return;
-    }
-
-    const eroded = amount / Math.pow(1 + d.latest / 100, years);
-    const lost = amount - eroded;
-    el.classList.add('has-result');
-    el.innerHTML = `
-      <div class="result-number">${fmtMoney(eroded)}</div>
-      <div class="result-label">Real value of ${fmtMoney(amount)} after ${years} years at ${fmt(d.latest)} inflation</div>
-      <div style="font-size:12px;color:var(--accent2)">Purchasing power lost: ${fmtMoney(lost)}</div>
-    `;
-  }
-
-  // ── Debt Impact ──
-  function calcDebtImpact() {
-    const iso2 = document.getElementById('diCountry').value;
-    const debt = parseFloat(document.getElementById('debtAmount').value);
-    const years = parseInt(document.getElementById('debtYears').value, 10);
-    const el = document.getElementById('diResult');
-
-    if (!iso2 || isNaN(debt) || isNaN(years)) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">Please fill all fields</div>`;
-      return;
-    }
-
-    const d = state.data[iso2];
-    if (!d || d.latest === null) {
-      el.innerHTML = `<div class="result-label" style="color:var(--accent2)">No inflation data available</div>`;
-      return;
-    }
-
-    // Real value of debt decreases with inflation
-    const realDebt = debt / Math.pow(1 + d.latest / 100, years);
-    const relief = debt - realDebt;
-    const pct = (relief / debt) * 100;
-    el.classList.add('has-result');
-    el.innerHTML = `
-      <div class="result-number" style="background:linear-gradient(135deg,var(--green),var(--accent));-webkit-background-clip:text;background-clip:text">${fmtMoney(realDebt)}</div>
-      <div class="result-label">Real value of ${fmtMoney(debt)} debt after ${years} years</div>
-      <div style="font-size:12px;color:var(--green)">Inflation relief: ${fmtMoney(relief)} (${pct.toFixed(1)}% reduction)</div>
-    `;
-  }
-
-  // ── Notice toast ──
-  function showNotice(msg) {
-    const el = document.getElementById('statusBar');
-    const prev = el.className;
-    el.className = 'status-bar error';
-    document.getElementById('statusSpinner').style.display = 'none';
-    document.getElementById('statusMsg').textContent = msg;
-    setTimeout(() => {
-      if (state.loaded >= state.total) {
-        el.className = 'status-bar success';
-        document.getElementById('statusMsg').textContent = `All ${state.loaded} countries loaded`;
-      }
-    }, 2500);
-  }
-
-  // ── Status update ──
-  function updateStatus() {
-    const el = document.getElementById('statusBar');
-    const spinner = document.getElementById('statusSpinner');
-    const msg = document.getElementById('statusMsg');
-
-    if (state.loaded < state.total) {
-      el.className = 'status-bar loading';
-      spinner.style.display = '';
-      msg.textContent = `Fetching data… ${state.loaded}/${state.total} countries loaded`;
-    } else {
-      el.className = 'status-bar success';
-      spinner.style.display = 'none';
-      const successful = Object.values(state.data).filter(d => d.latest !== null).length;
-      msg.textContent = `${successful} countries loaded — World Bank CPI data (annual)`;
-      document.getElementById('lastUpdated').textContent = `Data as of ${new Date().toLocaleDateString()}`;
-    }
-  }
-
-  // ── Main data load ──
-  async function loadAll() {
-    // Fetch all countries in parallel with concurrency limit
-    const CONCURRENCY = 6;
-    const queue = [...COUNTRIES];
-    const workers = Array.from({ length: CONCURRENCY }, async () => {
-      while (queue.length) {
-        const country = queue.shift();
-        if (!country) break;
-        const result = await fetchCountry(country.iso2);
-        state.data[country.iso2] = {
-          name: country.name,
-          flag: country.flag,
-          latest: result ? result.latest : null,
-          latestYear: result ? result.latestYear : null,
-          history: result ? result.history : [],
-        };
-        state.loaded++;
-        updateStatus();
-
-        // Progressive rendering — update UI as data arrives
-        if (state.loaded % 3 === 0 || state.loaded === state.total) {
-          renderLeague();
-          populateSelects();
-          renderCompare();
-        }
-      }
-    });
-
-    await Promise.all(workers);
-    renderLeague();
-    populateSelects();
-    renderCompare();
-    renderTrendChart();
-  }
-
-  // ── Boot ──
-  loadAll();
+// ── Init ──────────────────────────────────────────────────────
+// Nothing to auto-load — user picks countries or a preset
 </script>
 </body>
 </html>
