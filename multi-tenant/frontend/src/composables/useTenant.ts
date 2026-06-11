@@ -25,13 +25,14 @@ export function useTenant() {
   const isLoading = computed(() => store.isLoading)
   const isResolved = computed(() => store.isResolved)
   const error = computed(() => store.error)
+  const errorType = computed(() => store.errorType)
 
   async function resolve() {
     if (store.isResolved) return
 
     const slug = resolveSlug()
     if (!slug) {
-      store.setError('No tenant slug found in subdomain')
+      store.setError('No tenant slug found in subdomain or localStorage', 'NO_SLUG')
       return
     }
 
@@ -40,12 +41,20 @@ export function useTenant() {
       const config = await tenantService.getPublicConfig(slug)
       store.setTenant(config)
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Failed to load tenant'
-      store.setError(msg)
+      const isNetworkError =
+        e instanceof TypeError ||
+        (e instanceof Error && (e.message.includes('Network') || e.message.includes('ERR_CONNECTION')))
+
+      if (isNetworkError) {
+        store.setError('Cannot reach backend server', 'BACKEND_DOWN')
+      } else {
+        const msg = e instanceof Error ? e.message : 'Tenant not found'
+        store.setError(msg, 'TENANT_NOT_FOUND')
+      }
     } finally {
       store.setLoading(false)
     }
   }
 
-  return { tenant, tenantSlug, isLoading, isResolved, error, resolve }
+  return { tenant, tenantSlug, isLoading, isResolved, error, errorType, resolve }
 }

@@ -14,6 +14,7 @@ vi.mock('src/stores/tenant-store', () => ({
     isResolved: false,
     tenant: null,
     error: null,
+    errorType: null,
     setTenant: vi.fn(),
     setLoading: vi.fn(),
     setError: vi.fn(),
@@ -31,11 +32,12 @@ describe('useTenant', () => {
       isResolved: false,
       tenant: null,
       error: null,
+      errorType: null,
       setTenant: vi.fn(),
       setLoading: vi.fn(),
       setError: vi.fn(),
-    }
-    vi.mocked(useTenantStore).mockReturnValue(mockStore as ReturnType<typeof useTenantStore>)
+    } as unknown as ReturnType<typeof useTenantStore>
+    vi.mocked(useTenantStore).mockReturnValue(mockStore)
 
     localStorage.clear()
   })
@@ -72,7 +74,7 @@ describe('useTenant', () => {
 
     await resolve()
 
-    expect(mockStore.setError).toHaveBeenCalledWith(expect.any(String))
+    expect(mockStore.setError).toHaveBeenCalledWith(expect.any(String), expect.any(String))
   })
 
   it('resolve() does NOT call getPublicConfig again when store.isResolved is true', async () => {
