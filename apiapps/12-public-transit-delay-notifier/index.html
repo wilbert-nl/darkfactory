@@ -898,6 +898,74 @@ button { font-family: var(--font-body); }
 .toast.warn { background: var(--color-warn); color: var(--color-ink); }
 .toast.error { background: var(--color-danger); }
 
+/* ── Notification config ── */
+.notify-channels {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+}
+.notify-chip {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+.notify-chip:hover { color: var(--color-ink); border-color: var(--color-border-2); }
+.notify-chip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.notify-chip.active { color: var(--color-accent); border-color: var(--color-accent-line); background: var(--color-accent-subtle); }
+.notify-chip.pro-locked { color: var(--color-ink-muted); cursor: not-allowed; opacity: 0.6; }
+.pro-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  background: var(--color-warn-subtle);
+  color: var(--color-warn);
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--color-warn-line);
+  flex-shrink: 0;
+}
+.plan-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+.plan-strip strong { color: var(--color-ink); font-weight: 600; }
+.plan-upgrade-link {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.plan-upgrade-link:hover { opacity: 0.8; }
+.plan-upgrade-link:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: 2px; }
+.notify-email-row { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-2); }
+.notify-email-row .form-label { margin-bottom: 0; }
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   html, body { overflow-x: clip; height: auto; }
@@ -1000,6 +1068,10 @@ button { font-family: var(--font-body); }
       <div class="cfg-section">
         <div class="cfg-section-label">Alert Settings</div>
         <div class="setting-row">
+          <label class="setting-label" for="departure-time">Departure time</label>
+          <input type="time" class="setting-control" id="departure-time" value="08:30" aria-label="Scheduled departure time">
+        </div>
+        <div class="setting-row">
           <label class="setting-label" for="delay-threshold">Min delay (mins)</label>
           <select class="setting-control" id="delay-threshold" aria-label="Minimum delay threshold">
             <option value="5">5 min</option>
@@ -1025,12 +1097,39 @@ button { font-family: var(--font-body); }
         </div>
       </div>
 
+      <!-- Notification config -->
+      <div class="cfg-section">
+        <div class="cfg-section-label">Notifications</div>
+        <div class="setting-row" style="margin-bottom:var(--space-2)">
+          <span class="setting-label">Alert via</span>
+        </div>
+        <div class="notify-channels">
+          <button class="notify-chip active" id="notify-email-btn" aria-pressed="true" aria-label="Email notifications">Email</button>
+          <button class="notify-chip pro-locked" id="notify-sms-btn" aria-pressed="false" aria-label="SMS notifications (Pro plan required)" title="Upgrade to Pro for SMS alerts">SMS <span class="pro-badge">PRO</span></button>
+        </div>
+        <div class="notify-email-row" id="notify-email-row">
+          <div class="form-label">Email address</div>
+          <input type="email" class="form-input" id="notify-email-input" placeholder="you@example.com" autocomplete="email" aria-label="Notification email address">
+        </div>
+        <div class="setting-row" style="margin-top:var(--space-3)">
+          <span class="setting-label">Pause alerts</span>
+          <label class="toggle" aria-label="Pause all alerts">
+            <input type="checkbox" id="alerts-paused">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
     </div>
 
     <!-- Left footer -->
     <div class="left-footer">
       <button class="check-now-btn" id="check-now-btn">Check Now</button>
       <div class="last-check" id="last-check-time">Never checked</div>
+      <div class="plan-strip" id="plan-strip">
+        <span><strong id="plan-name">Free Plan</strong> &mdash; 1 route, email only</span>
+        <button class="plan-upgrade-link" id="plan-upgrade-btn" aria-label="Upgrade to Pro for SMS and 5 routes">Upgrade $5/mo</button>
+      </div>
     </div>
 
   </aside>
@@ -1157,7 +1256,16 @@ const state = {
   city: 'nyc',
   selectedLines: new Set(),
   commutes: [],
-  prefs: { delayThreshold: 10, weekdaysOnly: true, checkInterval: 300 },
+  prefs: {
+    delayThreshold: 10,
+    weekdaysOnly: true,
+    checkInterval: 300,
+    departureTime: '08:30',
+    notifyChannel: 'email', // 'email' | 'sms'
+    notifyEmail: '',
+    alertsPaused: false,
+    plan: 'free', // 'free' | 'pro'
+  },
   lineStatuses: {},     // id -> { status, description, delayMins }
   history: [],          // array of { ts, city, statuses: { id: status } }
   activePanel: 'live',
@@ -1360,7 +1468,6 @@ async function fetchStatus() {
       try {
         statuses = await fetchLondonStatus();
       } catch (err) {
-        console.warn('TfL fetch failed, using demo:', err);
         toast('Live TfL data unavailable — showing demo data', 'warn');
         statuses = generateDemoStatuses(lines);
         state.isDemo = true;
@@ -1376,7 +1483,6 @@ async function fetchStatus() {
           }
         }
       } catch (err) {
-        console.warn('MTA fetch failed, using demo:', err);
         toast('Live MTA data unavailable — showing demo data', 'warn');
         statuses = generateDemoStatuses(lines);
         state.isDemo = true;
@@ -1386,9 +1492,9 @@ async function fetchStatus() {
     state.lineStatuses = statuses;
     state.lastCheck = new Date();
 
-    // Record history (max 50 entries)
+    // Record history (max 100 entries spanning 14 days)
     state.history.unshift({ ts: Date.now(), city: state.city, statuses: { ...statuses } });
-    if (state.history.length > 50) state.history.length = 50;
+    if (state.history.length > 100) state.history.length = 100;
 
     saveState();
     renderLiveStatus();
@@ -1399,8 +1505,7 @@ async function fetchStatus() {
     document.getElementById('last-check-time').textContent = `Updated ${formatTime(state.lastCheck)}`;
 
   } catch (err) {
-    console.error('Fetch error:', err);
-    toast('Error fetching status data', 'error');
+    toast('Error fetching status data — please try again', 'error');
     updateRefreshIndicator('idle');
   } finally {
     btn.disabled = false;
@@ -1594,16 +1699,16 @@ function renderHistory() {
   const container = document.getElementById('history-grid');
   container.innerHTML = '';
 
-  // Build 7-day history per line from stored history
+  // Build 14-day history per line from stored history
   const now = Date.now();
-  const sevenDays = 7 * 24 * 3600 * 1000;
-  const recentHistory = state.history.filter(h => (now - h.ts) < sevenDays && h.city === state.city);
+  const fourteenDays = 14 * 24 * 3600 * 1000;
+  const recentHistory = state.history.filter(h => (now - h.ts) < fourteenDays && h.city === state.city);
 
   const lines = state.city === 'demo' ? NYC_LINES.slice(0, 12) : currentLines();
 
   // Sparkline section
   const sparkSection = document.createElement('div');
-  sparkSection.innerHTML = `<div class="history-section-title">7-Day Delay Frequency</div>`;
+  sparkSection.innerHTML = `<div class="history-section-title">14-Day Delay Frequency</div>`;
   const sparkGrid = document.createElement('div');
   sparkGrid.className = 'sparkline-grid';
 
@@ -1760,7 +1865,7 @@ function buildStatsRow(lines, history) {
     <div class="stat-card">
       <div class="stat-card-label">History Checks</div>
       <div class="stat-card-value">${history.length}</div>
-      <div class="stat-card-sub">in the last 7 days</div>
+      <div class="stat-card-sub">in the last 14 days</div>
     </div>
   `;
   return row;
@@ -1995,6 +2100,51 @@ document.getElementById('check-interval').addEventListener('change', e => {
   toast('Check interval updated');
 });
 
+document.getElementById('departure-time').addEventListener('change', e => {
+  state.prefs.departureTime = e.target.value;
+  saveState();
+});
+
+document.getElementById('notify-email-input').addEventListener('change', e => {
+  state.prefs.notifyEmail = e.target.value.trim();
+  saveState();
+});
+
+document.getElementById('alerts-paused').addEventListener('change', e => {
+  state.prefs.alertsPaused = e.target.checked;
+  saveState();
+  toast(e.target.checked ? 'Alerts paused' : 'Alerts resumed', e.target.checked ? 'warn' : 'success');
+});
+
+// Notification channel chips
+document.getElementById('notify-email-btn').addEventListener('click', () => {
+  state.prefs.notifyChannel = 'email';
+  saveState();
+  document.getElementById('notify-email-btn').classList.add('active');
+  document.getElementById('notify-email-btn').setAttribute('aria-pressed', 'true');
+  document.getElementById('notify-sms-btn').classList.remove('active');
+  document.getElementById('notify-sms-btn').setAttribute('aria-pressed', 'false');
+  document.getElementById('notify-email-row').style.display = '';
+});
+
+document.getElementById('notify-sms-btn').addEventListener('click', () => {
+  if (state.prefs.plan !== 'pro') {
+    toast('SMS alerts require the Pro plan ($5/mo)', 'warn');
+    return;
+  }
+  state.prefs.notifyChannel = 'sms';
+  saveState();
+  document.getElementById('notify-sms-btn').classList.add('active');
+  document.getElementById('notify-sms-btn').setAttribute('aria-pressed', 'true');
+  document.getElementById('notify-email-btn').classList.remove('active');
+  document.getElementById('notify-email-btn').setAttribute('aria-pressed', 'false');
+  document.getElementById('notify-email-row').style.display = 'none';
+});
+
+document.getElementById('plan-upgrade-btn').addEventListener('click', () => {
+  toast('Pro plan signup coming soon — stay tuned!', '');
+});
+
 // ── Init ──────────────────────────────────────────────────────
 loadState();
 
@@ -2002,6 +2152,34 @@ loadState();
 document.getElementById('delay-threshold').value = state.prefs.delayThreshold;
 document.getElementById('weekdays-only').checked = state.prefs.weekdaysOnly;
 document.getElementById('check-interval').value = state.prefs.checkInterval;
+document.getElementById('departure-time').value = state.prefs.departureTime || '08:30';
+document.getElementById('notify-email-input').value = state.prefs.notifyEmail || '';
+document.getElementById('alerts-paused').checked = !!state.prefs.alertsPaused;
+
+// Restore notification channel UI
+(function() {
+  const ch = state.prefs.notifyChannel || 'email';
+  const emailBtn = document.getElementById('notify-email-btn');
+  const smsBtn = document.getElementById('notify-sms-btn');
+  if (ch === 'sms' && state.prefs.plan === 'pro') {
+    smsBtn.classList.add('active');
+    smsBtn.setAttribute('aria-pressed', 'true');
+    emailBtn.classList.remove('active');
+    emailBtn.setAttribute('aria-pressed', 'false');
+    document.getElementById('notify-email-row').style.display = 'none';
+  } else {
+    emailBtn.classList.add('active');
+    emailBtn.setAttribute('aria-pressed', 'true');
+    smsBtn.setAttribute('aria-pressed', 'false');
+  }
+  // Plan strip
+  if (state.prefs.plan === 'pro') {
+    document.getElementById('plan-name').textContent = 'Pro Plan';
+    document.getElementById('plan-strip').querySelector('span').innerHTML = '<strong id="plan-name">Pro Plan</strong> &mdash; 5 routes, email &amp; SMS';
+    document.getElementById('plan-upgrade-btn').style.display = 'none';
+    smsBtn.classList.remove('pro-locked');
+  }
+})();
 
 // Restore city tab
 document.querySelectorAll('.city-tab').forEach(t => {

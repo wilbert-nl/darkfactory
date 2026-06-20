@@ -793,6 +793,101 @@ button { cursor: pointer; font-family: var(--font-body); }
 .modal-close:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .modal-close:active { opacity: 0.7; }
 
+/* ── CSV import button ── */
+.menu-actions { display: flex; gap: var(--space-2); }
+.menu-actions .btn-add-menu { flex: 1; }
+.btn-csv {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.btn-csv:hover { border-color: var(--color-accent-line); color: var(--color-accent); }
+.btn-csv:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn-csv:active { opacity: 0.75; }
+
+/* ── QR nav button ── */
+.btn-qr-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 5px var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-line);
+  background: var(--color-accent-subtle);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-qr-nav:hover { background: oklch(20% 0.07 36); border-color: var(--color-accent); }
+.btn-qr-nav:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn-qr-nav:active { opacity: 0.75; }
+
+/* ── QR modal content ── */
+.qr-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+}
+.qr-img-wrap {
+  width: 200px; height: 200px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-paper-2);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.qr-img-wrap img { width: 200px; height: 200px; display: block; }
+.qr-url {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  word-break: break-all;
+  text-align: center;
+  max-width: 320px;
+  line-height: 1.5;
+}
+.qr-hint {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.65;
+  text-align: center;
+}
+.qr-error { font-size: var(--text-sm); color: var(--color-danger); text-align: center; }
+
+/* ── Guest banner ── */
+.guest-banner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent-subtle);
+  border-bottom: 1px solid var(--color-accent-line);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+body.guest-mode .guest-banner { display: flex; }
+body.guest-mode .nav-center { display: none !important; }
+body.guest-mode .nav-back-btn { visibility: hidden; }
+body.guest-mode .btn-qr-nav { display: none !important; }
+body.guest-mode .js-hide-guest { display: none !important; }
+
 /* ── Print ── */
 @media print {
   .nav, .hero-zone, .page-divider, .controls-zone, .settings-zone, .non-printable, .matrix-section { display: none !important; }
@@ -844,10 +939,16 @@ button { cursor: pointer; font-family: var(--font-body); }
     <a href="#overview" class="nav-link">Overview</a>
     <a href="#settings" class="nav-link">Settings</a>
   </div>
-  <div class="nav-back-btn">
+  <div class="nav-back-btn" style="gap:var(--space-2)">
+    <button class="btn-qr-nav" id="btn-open-qr" aria-label="Generate guest QR code">QR Guest Mode</button>
     <a href="../index.html" aria-label="Back to all apps">← All Apps</a>
   </div>
 </nav>
+
+<!-- Guest mode banner (shown when ?guest=1) -->
+<div class="guest-banner" id="guest-banner" aria-live="polite">
+  Guest Mode — Scan to pair your meal
+</div>
 
 <!-- Page scroll wrapper (JS uses scrollTop on this element) -->
 <div id="main-scroll" class="page-scroll">
@@ -966,14 +1067,18 @@ button { cursor: pointer; font-family: var(--font-body); }
   <div class="page-divider" aria-hidden="true"></div>
 
   <!-- Settings zone — My Menu -->
-  <section class="settings-zone" id="settings" aria-label="My menu inventory">
+  <section class="settings-zone js-hide-guest" id="settings" aria-label="My menu inventory">
     <div class="settings-head">
       <h2 class="settings-title">My Menu</h2>
       <span class="menu-counter" id="menu-count">0 / 30</span>
     </div>
     <p class="settings-sub">Add your venue's current drinks to surface "On your menu" badges in pairing results.</p>
     <div class="menu-list" id="menu-list" aria-label="Venue inventory"></div>
-    <button class="btn-add-menu" id="btn-add-menu" aria-label="Add drink to menu">+ Add to my menu</button>
+    <div class="menu-actions">
+      <button class="btn-add-menu" id="btn-add-menu" aria-label="Add drink to menu">+ Add to my menu</button>
+      <button class="btn-csv" id="btn-import-csv" aria-label="Import drinks from CSV file">Import CSV</button>
+      <input type="file" id="csv-file-input" accept=".csv,text/csv" style="display:none" aria-hidden="true">
+    </div>
   </section>
 
   <div class="page-divider" aria-hidden="true"></div>
@@ -1048,6 +1153,24 @@ button { cursor: pointer; font-family: var(--font-body); }
 
   <div style="height: var(--space-16)"></div>
 
+</div>
+
+<!-- QR Code modal -->
+<div class="modal-overlay" id="qr-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="qr-modal-h">
+  <div class="modal" id="qr-modal-body">
+    <div class="modal-title-row">
+      <h2 class="modal-h" id="qr-modal-h">Guest QR Code</h2>
+      <button class="modal-close" id="qr-modal-close" aria-label="Close">✕</button>
+    </div>
+    <p class="qr-hint">Guests scan this code to open a self-serve pairing interface at the table — no staff needed.</p>
+    <div class="qr-modal-body">
+      <div class="qr-img-wrap" id="qr-img-wrap">
+        <img id="qr-img" src="" alt="QR code for guest pairing mode" loading="lazy">
+      </div>
+      <p class="qr-url" id="qr-url"></p>
+    </div>
+    <p style="font-size:var(--text-xs);color:var(--color-ink-muted);text-align:center">Share this link or display the QR code at each table for guests to pair their meal independently.</p>
+  </div>
 </div>
 
 <!-- Add to menu modal -->
@@ -1739,7 +1862,7 @@ document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+// Escape key is handled in the QR section below to cover both modals
 
 document.getElementById('modal-save').addEventListener('click', () => {
   const name = document.getElementById('modal-name').value.trim();
@@ -1837,12 +1960,122 @@ function toast(msg, type = '') {
 }
 
 /* ══════════════════════════════════════════════
+   CSV MENU IMPORT
+══════════════════════════════════════════════ */
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (!lines.length) return [];
+  // Detect delimiter: comma or semicolon
+  const delim = lines[0].includes(';') ? ';' : ',';
+  const rows = lines.map(l => l.split(delim).map(cell => cell.trim().replace(/^["']|["']$/g, '')));
+  // Skip header row if first cell looks like a label (contains non-drink words)
+  const headerKeywords = /^(name|drink|item|beverage|style|type|price|cost)/i;
+  const startIdx = headerKeywords.test(rows[0]?.[0] ?? '') ? 1 : 0;
+  const imported = [];
+  for (let i = startIdx; i < rows.length; i++) {
+    const [name, style, price] = rows[i];
+    if (!name) continue;
+    imported.push({ name, style: style || '', price: price || '', notes: '' });
+  }
+  return imported;
+}
+
+document.getElementById('btn-import-csv').addEventListener('click', () => {
+  document.getElementById('csv-file-input').click();
+});
+
+document.getElementById('csv-file-input').addEventListener('change', e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
+    toast('Please select a .csv file.', 'error');
+    e.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const imported = parseCSV(evt.target.result);
+      if (!imported.length) { toast('No valid rows found in CSV.', 'error'); return; }
+      let added = 0;
+      let skipped = 0;
+      for (const item of imported) {
+        if (myMenu.length >= 30) { skipped += imported.length - added - skipped; break; }
+        const exists = myMenu.some(m => m.name.toLowerCase() === item.name.toLowerCase());
+        if (exists) { skipped++; continue; }
+        myMenu.push(item);
+        added++;
+      }
+      saveMenu();
+      renderMenuList();
+      const msg = skipped
+        ? `Imported ${added} drink${added !== 1 ? 's' : ''}. ${skipped} skipped (duplicate or menu full).`
+        : `Imported ${added} drink${added !== 1 ? 's' : ''} from CSV.`;
+      toast(msg, 'success');
+    } catch {
+      toast('Could not parse CSV. Check the file format.', 'error');
+    } finally {
+      e.target.value = '';
+    }
+  };
+  reader.onerror = () => { toast('Failed to read file.', 'error'); e.target.value = ''; };
+  reader.readAsText(file);
+});
+
+/* ══════════════════════════════════════════════
+   QR CODE GUEST MODE
+══════════════════════════════════════════════ */
+function getGuestURL() {
+  const base = window.location.href.split('?')[0].split('#')[0];
+  return base + '?guest=1';
+}
+
+function openQRModal() {
+  const guestURL = getGuestURL();
+  const encoded = encodeURIComponent(guestURL);
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&color=000000&bgcolor=ffffff&data=${encoded}`;
+  const img = document.getElementById('qr-img');
+  img.src = qrSrc;
+  img.onerror = () => {
+    document.getElementById('qr-img-wrap').innerHTML = '<p class="qr-error">QR image failed to load. Check internet connection.</p>';
+  };
+  document.getElementById('qr-url').textContent = guestURL;
+  document.getElementById('qr-modal-overlay').classList.add('open');
+}
+
+function closeQRModal() {
+  document.getElementById('qr-modal-overlay').classList.remove('open');
+}
+
+document.getElementById('btn-open-qr').addEventListener('click', openQRModal);
+document.getElementById('qr-modal-close').addEventListener('click', closeQRModal);
+document.getElementById('qr-modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('qr-modal-overlay')) closeQRModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeQRModal(); } });
+
+/* ══════════════════════════════════════════════
+   GUEST MODE INIT (URL param: ?guest=1)
+══════════════════════════════════════════════ */
+function initGuestMode() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('guest') !== '1') return;
+  document.body.classList.add('guest-mode');
+  // Hide the dividers flanking the settings zone
+  const allDividers = document.querySelectorAll('.page-divider');
+  // The settings zone is between the 2nd and 3rd dividers (0-indexed: 1 and 2)
+  if (allDividers[1]) allDividers[1].style.display = 'none';
+  if (allDividers[2]) allDividers[2].style.display = 'none';
+}
+
+/* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
 loadMenu();
 populateDrinkStyles();
 populateFoodChips();
 renderMenuList();
+initGuestMode();
 </script>
 
 <script>

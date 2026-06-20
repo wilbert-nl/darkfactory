@@ -879,6 +879,84 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.4;
 }
 
+/* ── Department breakdown ── */
+.dept-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dept-section-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+}
+
+.dept-add-row {
+  display: grid;
+  grid-template-columns: 1fr 72px 1fr auto;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.dept-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+.dept-table th {
+  background: var(--color-paper-2);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.dept-table th.right { text-align: right; }
+.dept-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+.dept-table td.right { text-align: right; font-variant-numeric: tabular-nums; }
+.dept-table tbody tr:last-child td { border-bottom: none; }
+.dept-table tfoot td {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-paper-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border-top: 1px solid var(--color-border);
+}
+.dept-table tfoot td.right { text-align: right; font-variant-numeric: tabular-nums; }
+
+.dept-empty {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  text-align: center;
+  padding: var(--space-3) 0;
+  line-height: 1.6;
+}
+
+.btn-dept-remove {
+  background: transparent;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: color 0.12s var(--ease-out);
+}
+.btn-dept-remove:hover { color: var(--color-danger); }
+.btn-dept-remove:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
 /* ── Scope 3 block ── */
 .scope-block {
   background: var(--color-paper);
@@ -964,6 +1042,7 @@ a { color: inherit; text-decoration: none; }
 
   .stats-strip { grid-template-columns: 1fr 1fr; }
   .team-inputs-row { grid-template-columns: 1fr 1fr; }
+  .dept-add-row { grid-template-columns: 1fr 1fr; }
   .team-results-grid { grid-template-columns: 1fr; }
   .chart-legend { display: none; }
 }
@@ -975,6 +1054,7 @@ a { color: inherit; text-decoration: none; }
   .location-row { grid-template-columns: 1fr; }
   .stats-strip { grid-template-columns: 1fr; }
   .team-inputs-row { grid-template-columns: 1fr; }
+  .dept-add-row { grid-template-columns: 1fr; }
   .distance-row { flex-wrap: wrap; }
 }
 
@@ -1264,6 +1344,32 @@ a { color: inherit; text-decoration: none; }
                 <span class="team-result-label">Reduction vs all-car baseline</span>
               </div>
             </div>
+
+            <!-- Department breakdown -->
+            <div class="dept-section">
+              <span class="dept-section-label">Department Breakdown</span>
+              <div class="dept-add-row">
+                <div class="field">
+                  <label class="field-label" for="dept-name">Department</label>
+                  <input type="text" class="input-sm" id="dept-name" placeholder="e.g. Engineering" maxlength="60">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="dept-employees">Count</label>
+                  <input type="number" class="input-sm" id="dept-employees" min="1" value="10">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="dept-mode">Mode</label>
+                  <select class="input-sm" id="dept-mode" aria-label="Department transport mode"></select>
+                </div>
+                <div class="field">
+                  <label class="field-label" style="visibility:hidden" aria-hidden="true">Add</label>
+                  <button class="btn-ghost" id="btn-add-dept" aria-label="Add department to breakdown">Add</button>
+                </div>
+              </div>
+              <div id="dept-breakdown-wrap">
+                <p class="dept-empty">Add departments above to aggregate emissions by mode and department.</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1271,7 +1377,10 @@ a { color: inherit; text-decoration: none; }
         <div class="scope-block">
           <div class="block-head">
             <span class="block-title">Scope 3 ESG Report Block</span>
-            <button class="btn-copy" id="btn-copy-scope" aria-label="Copy ESG report text">Copy text</button>
+            <div style="display:flex;gap:var(--space-2);align-items:center;flex-shrink:0">
+              <button class="btn-copy" id="btn-export-csv" aria-label="Export commute emissions as CSV file">Export CSV</button>
+              <button class="btn-copy" id="btn-copy-scope" aria-label="Copy ESG report text">Copy text</button>
+            </div>
           </div>
           <div class="scope-block-body">
             <pre class="scope-output" id="scope-output"><span class="scope-placeholder">Calculate a journey to generate your Scope 3 reporting block (GRI 305-3 / CSRD basis).</span></pre>
@@ -1335,6 +1444,7 @@ let state = {
 
 let geocodeTimers = { origin: null, dest: null };
 let toastTimer = null;
+let departments = []; // [{ name, employees, modeId }]
 
 /* ── Helpers ── */
 const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1368,7 +1478,12 @@ function haversine(lat1, lon1, lat2, lon2) {
 /* ── Nominatim geocoding ── */
 async function geocode(query) {
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5`;
-  const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+  const res = await fetch(url, {
+    headers: {
+      'Accept-Language': 'en',
+      'User-Agent': 'GreenRoute-CO2-Comparison/1.0 (public transport emissions tool)',
+    },
+  });
   if (!res.ok) throw new Error('Geocoding request failed');
   return await res.json();
 }
@@ -1546,11 +1661,11 @@ function renderChart() {
   const barAreaW = 700 - trackX - valW - paddingRight;
 
   function barColor(co2) {
-    if (co2 === 0) return 'oklch(55% 0.14 155)';
+    if (co2 === 0) return 'var(--color-success)';
     const pct = co2 / maxCo2;
-    if (pct < 0.25) return 'oklch(55% 0.14 155)';
-    if (pct < 0.55) return 'oklch(62% 0.15 72)';
-    return 'oklch(55% 0.20 25)';
+    if (pct < 0.25) return 'var(--color-success)';
+    if (pct < 0.55) return 'var(--color-warn)';
+    return 'var(--color-danger)';
   }
 
   let svgContent = '';
@@ -1558,25 +1673,25 @@ function renderChart() {
   r.forEach((mode, i) => {
     const y = paddingTop + i * (rowH + gapH);
     const barW = maxCo2 > 0 ? (mode.co2Trip / maxCo2) * barAreaW : 0;
-    const color = mode.isBaseline ? 'oklch(52% 0.14 155)' : barColor(mode.co2Trip);
+    const color = mode.isBaseline ? 'var(--color-accent)' : barColor(mode.co2Trip);
     const labelY = y + rowH / 2 + 5;
-    const baselineStroke = mode.isBaseline ? `stroke="oklch(52% 0.14 155)" stroke-width="1.5"` : '';
+    const baselineStroke = mode.isBaseline ? `style="stroke: var(--color-accent); stroke-width: 1.5"` : '';
 
     svgContent += `
       <g class="bar-group">
         <text x="${paddingLeft + labelW - 8}" y="${labelY}"
           font-size="11" font-family="Plus Jakarta Sans, system-ui, sans-serif"
-          fill="oklch(18% 0.04 155)" text-anchor="end"
+          style="fill: var(--color-ink)" text-anchor="end"
           dominant-baseline="auto">
           ${mode.icon} ${mode.label.length > 22 ? mode.label.slice(0, 22) + '…' : mode.label}
         </text>
         <rect x="${trackX}" y="${y}" width="${barAreaW}" height="${rowH}"
-          rx="4" fill="oklch(93% 0.012 95)" ${baselineStroke}/>
+          rx="4" style="fill: var(--color-paper-2)" ${baselineStroke}/>
         <rect x="${trackX}" y="${y}" width="${Math.max(barW, mode.co2Trip > 0 ? 2 : 0)}" height="${rowH}"
-          rx="4" fill="${color}" opacity="0.9"/>
+          rx="4" style="fill: ${color}" opacity="0.9"/>
         <text x="${trackX + barAreaW + 6}" y="${labelY}"
           font-size="11" font-family="Plus Jakarta Sans, system-ui, sans-serif"
-          fill="oklch(46% 0.03 155)" dominant-baseline="auto" font-variant-numeric="tabular-nums">
+          style="fill: var(--color-ink-muted)" dominant-baseline="auto" font-variant-numeric="tabular-nums">
           ${mode.co2Trip === 0 ? '0 g' : fmtNum(mode.co2Trip) + ' g'}
         </text>
       </g>`;
@@ -1635,6 +1750,226 @@ function renderTeamModeSelect() {
     .sort((a, b) => a.co2Trip - b.co2Trip)
     .map(m => `<option value="${m.id}" ${m.id === current ? 'selected' : ''}>${m.icon} ${m.label}</option>`)
     .join('');
+  // Also refresh dept mode dropdown
+  renderDeptModeSelect();
+}
+
+/* ── Department mode select ── */
+function renderDeptModeSelect() {
+  const sel = document.getElementById('dept-mode');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = state.results
+    .sort((a, b) => a.co2Trip - b.co2Trip)
+    .map(m => `<option value="${m.id}" ${m.id === current ? 'selected' : ''}>${m.icon} ${m.label}</option>`)
+    .join('');
+}
+
+/* ── Add department ── */
+function addDepartment() {
+  if (!state.results.length) {
+    toast('Calculate a journey first.', 'error');
+    return;
+  }
+  const name = document.getElementById('dept-name').value.trim();
+  const count = parseInt(document.getElementById('dept-employees').value) || 0;
+  const modeId = document.getElementById('dept-mode').value;
+  if (!name) { toast('Enter a department name.', 'error'); return; }
+  if (count < 1) { toast('Enter a valid employee count.', 'error'); return; }
+  departments.push({ name, employees: count, modeId });
+  document.getElementById('dept-name').value = '';
+  renderDeptTable();
+  toast(`${name} added to breakdown`);
+}
+
+/* ── Render department table ── */
+function renderDeptTable() {
+  const wrap = document.getElementById('dept-breakdown-wrap');
+  if (!departments.length) {
+    wrap.innerHTML = '<p class="dept-empty">Add departments above to aggregate emissions by mode and department.</p>';
+    return;
+  }
+  let totalCo2Annual = 0;
+  let totalEmp = 0;
+  const rows = departments.map((d, i) => {
+    const mode = state.results.find(m => m.id === d.modeId);
+    if (!mode) return '';
+    const annual = mode.co2Annual * d.employees;
+    totalCo2Annual += annual;
+    totalEmp += d.employees;
+    const tonnes = annual / 1_000_000;
+    return `<tr>
+      <td>${esc(d.name)}</td>
+      <td>${esc(mode.icon + ' ' + mode.label)}</td>
+      <td class="right">${fmtNum(d.employees)}</td>
+      <td class="right">${fmtCO2(annual)}</td>
+      <td class="right">${tonnes.toFixed(2)} t</td>
+      <td><button class="btn-dept-remove" data-dept-idx="${i}" aria-label="Remove ${esc(d.name)}">×</button></td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table class="dept-table" aria-label="Department emissions breakdown">
+    <thead>
+      <tr>
+        <th>Department</th>
+        <th>Mode</th>
+        <th class="right">Employees</th>
+        <th class="right">Annual CO2</th>
+        <th class="right">Tonnes CO2e</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total</td>
+        <td class="right">${fmtNum(totalEmp)}</td>
+        <td class="right">${fmtCO2(totalCo2Annual)}</td>
+        <td class="right">${(totalCo2Annual / 1_000_000).toFixed(2)} t</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>`;
+  wrap.querySelectorAll('.btn-dept-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      departments.splice(parseInt(btn.dataset.deptIdx), 1);
+      renderDeptTable();
+    });
+  });
+}
+
+/* ── CSV Export ── */
+function exportCSV() {
+  if (!state.results.length) {
+    toast('Calculate a journey first.', 'error');
+    return;
+  }
+  const workplace = document.getElementById('sb-workplace').value.trim() || 'workplace';
+  const employees = parseInt(document.getElementById('sb-employees').value) || 1;
+  const tripType = state.roundTrip ? 'round trip' : 'one-way';
+  const annualTrips = (state.roundTrip ? 2 : 1) * state.days * state.weeks;
+  const today = new Date().toISOString().split('T')[0];
+  const baselineCo2Trip = state.results.find(m => m.id === 'car-petrol')?.co2Trip || 1;
+
+  const headers = [
+    'Transport Mode',
+    'Category',
+    'Factor gCO2e/km',
+    'Distance km',
+    'Trip Type',
+    'CO2 per Trip gCO2e',
+    'Annual CO2 per Employee gCO2e',
+    `Annual CO2 ${employees} employees gCO2e`,
+    'Annual CO2 Tonnes',
+    'Saving vs Car Petrol g/trip',
+    'Est Cost per Trip GBP',
+    'Rating',
+  ];
+
+  const sorted = [...state.results].sort((a, b) => a.co2Trip - b.co2Trip);
+  const csvRows = sorted.map(m => {
+    const annualTotal = m.co2Annual * employees;
+    const pct = m.co2Trip / baselineCo2Trip;
+    const rating = m.co2Trip === 0 ? 'Zero' : pct < 0.25 ? 'Low' : pct < 0.65 ? 'Medium' : 'High';
+    return [
+      `"${m.label}"`,
+      m.category,
+      m.factor,
+      state.distKm,
+      tripType,
+      Math.round(m.co2Trip),
+      Math.round(m.co2Annual),
+      Math.round(annualTotal),
+      (annualTotal / 1_000_000).toFixed(4),
+      Math.round(m.savingVsCar),
+      m.costTrip.toFixed(2),
+      rating,
+    ].join(',');
+  });
+
+  const deptSection = departments.length
+    ? [
+        '',
+        '# Department Breakdown',
+        'Department,Mode,Employees,Annual CO2 gCO2e,Tonnes CO2e',
+        ...departments.map(d => {
+          const mode = state.results.find(m => m.id === d.modeId);
+          if (!mode) return '';
+          const annual = mode.co2Annual * d.employees;
+          return `"${d.name}","${mode.label}",${d.employees},${Math.round(annual)},${(annual / 1_000_000).toFixed(4)}`;
+        }).filter(Boolean),
+      ]
+    : [];
+
+  const csv = [
+    `# GreenRoute Scope 3 Commute Emissions — ${workplace} — ${today}`,
+    `# Journey: ${state.distKm} km ${tripType} | ${state.days} days/week x ${state.weeks} weeks = ${annualTrips} trips/yr | ${employees} employees`,
+    `# Emission factors: DEFRA 2023 | Standard: GRI 305-3 / CSRD Category 7`,
+    '',
+    headers.join(','),
+    ...csvRows,
+    ...deptSection,
+  ].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `greenroute-co2-${today}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('CSV exported', 'success');
+}
+
+/* ── Settings persistence ── */
+function persistSettings() {
+  try {
+    localStorage.setItem('greenroute_settings', JSON.stringify({
+      days: state.days,
+      weeks: state.weeks,
+      annual: state.annual,
+      roundTrip: state.roundTrip,
+      employees: state.employees,
+      workplace: document.getElementById('sb-workplace').value,
+    }));
+  } catch { /* storage unavailable */ }
+}
+
+function restoreSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('greenroute_settings') || '{}');
+    if (saved.days) {
+      state.days = saved.days;
+      document.getElementById('sb-days').value = saved.days;
+      document.getElementById('sb-days-val').textContent = saved.days;
+    }
+    if (saved.weeks) {
+      state.weeks = saved.weeks;
+      document.getElementById('sb-weeks').value = saved.weeks;
+      document.getElementById('sb-weeks-val').textContent = saved.weeks;
+    }
+    if (saved.annual !== undefined) {
+      state.annual = saved.annual;
+      document.getElementById('sb-annual').checked = saved.annual;
+    }
+    if (saved.roundTrip !== undefined) {
+      state.roundTrip = saved.roundTrip;
+      if (saved.roundTrip) {
+        document.getElementById('tb-roundtrip').classList.add('active');
+        document.getElementById('tb-roundtrip').setAttribute('aria-pressed', 'true');
+        document.getElementById('tb-oneway').classList.remove('active');
+        document.getElementById('tb-oneway').setAttribute('aria-pressed', 'false');
+      }
+    }
+    if (saved.employees) {
+      state.employees = saved.employees;
+      document.getElementById('sb-employees').value = saved.employees;
+    }
+    if (saved.workplace) {
+      document.getElementById('sb-workplace').value = saved.workplace;
+    }
+  } catch { /* ignore */ }
 }
 
 /* ── Team calculation ── */
@@ -1812,7 +2147,9 @@ function syncSidebar() {
     }));
     renderTable();
     renderScope3();
+    if (departments.length) renderDeptTable();
   }
+  persistSettings();
 }
 
 /* ── Event wiring ── */
@@ -1835,6 +2172,9 @@ document.getElementById('btn-copy-scope').addEventListener('click', () => {
   );
 });
 
+document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
+document.getElementById('btn-add-dept').addEventListener('click', addDepartment);
+
 // Toggle: one-way / round-trip
 document.getElementById('tb-oneway').addEventListener('click', () => {
   state.roundTrip = false;
@@ -1843,6 +2183,7 @@ document.getElementById('tb-oneway').addEventListener('click', () => {
   document.getElementById('tb-roundtrip').classList.remove('active');
   document.getElementById('tb-roundtrip').setAttribute('aria-pressed', 'false');
   syncSidebar();
+  persistSettings();
   if (state.distKm) calculate();
 });
 
@@ -1853,6 +2194,7 @@ document.getElementById('tb-roundtrip').addEventListener('click', () => {
   document.getElementById('tb-oneway').classList.remove('active');
   document.getElementById('tb-oneway').setAttribute('aria-pressed', 'false');
   syncSidebar();
+  persistSettings();
   if (state.distKm) calculate();
 });
 
@@ -1892,6 +2234,7 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('empty-state').classList.remove('hidden');
 
 /* ── Init ── */
+restoreSettings();
 renderProfiles();
 </script>
 </body>

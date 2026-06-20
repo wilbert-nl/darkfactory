@@ -688,7 +688,7 @@ a { color: inherit; text-decoration: none; }
       </div>
       <div class="metric">
         <span class="metric-label">Formats</span>
-        <span class="metric-value">4</span>
+        <span class="metric-value">6</span>
       </div>
     </div>
   </section>
@@ -732,11 +732,14 @@ a { color: inherit; text-decoration: none; }
         <button class="export-tab" id="etab-tailwind" role="tab" aria-selected="false" data-fmt="tailwind">Tailwind</button>
         <button class="export-tab" id="etab-scss" role="tab" aria-selected="false" data-fmt="scss">SCSS</button>
         <button class="export-tab" id="etab-json" role="tab" aria-selected="false" data-fmt="json">JSON</button>
+        <button class="export-tab" id="etab-figma" role="tab" aria-selected="false" data-fmt="figma">Figma</button>
+        <button class="export-tab" id="etab-png" role="tab" aria-selected="false" data-fmt="png">PNG</button>
       </div>
       <div class="export-body">
         <pre class="export-code" id="export-code" tabindex="0" aria-label="Export code">Generate a palette to see export code.</pre>
         <div class="export-actions">
           <button class="btn-copy-export" id="btn-copy-export" aria-label="Copy export code">⎘ Copy code</button>
+          <button class="btn-copy-export" id="btn-download-png" style="display:none" aria-label="Download PNG swatch sheet">↓ Download PNG</button>
           <button class="btn-save-palette" id="btn-save-palette" aria-label="Save palette to library">↓ Save palette</button>
         </div>
       </div>
@@ -937,19 +940,19 @@ let currentExportFmt = 'css';
 
 /* ─────────────────────────────────────────────
    Colormind API
-   NOTE: HTTP-only endpoint — works from file:// origins.
-   From HTTPS origins browsers block mixed content.
+   Direct HTTP endpoint is used first. On HTTPS deployments
+   the browser blocks HTTP mixed content, so we fall back to
+   a CORS proxy (corsproxy.io) transparently.
    ───────────────────────────────────────────── */
 const COLORMIND_API = 'http://colormind.io/api/';
 const COLORMIND_LIST = 'http://colormind.io/list/';
+const CORS_PROXY = 'https://corsproxy.io/?';
 
 async function fetchModels() {
   const sel = document.getElementById('model-select');
-  try {
-    const res = await fetch(COLORMIND_LIST, { signal: AbortSignal.timeout(6000) });
-    if (!res.ok) throw new Error('list fetch failed');
-    const data = await res.json();
-    const models = data.result || ['default'];
+  const hardcoded = ['default', 'ui', 'metroui'];
+
+  const populate = models => {
     sel.innerHTML = '';
     models.forEach(m => {
       const opt = document.createElement('option');
@@ -958,26 +961,42 @@ async function fetchModels() {
       if (m === 'default') opt.selected = true;
       sel.appendChild(opt);
     });
+  };
+
+  try {
+    let res;
+    try {
+      res = await fetch(COLORMIND_LIST, { signal: AbortSignal.timeout(6000) });
+    } catch {
+      // Mixed-content blocked (HTTPS page → HTTP API) — retry via proxy
+      res = await fetch(CORS_PROXY + encodeURIComponent(COLORMIND_LIST), {
+        signal: AbortSignal.timeout(8000),
+      });
+    }
+    if (!res.ok) throw new Error('list fetch failed');
+    const data = await res.json();
+    populate(data.result || hardcoded);
   } catch {
-    // Fall back to known models if fetch fails (likely blocked by browser)
-    ['default', 'ui', 'metroui'].forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m;
-      opt.textContent = m.charAt(0).toUpperCase() + m.slice(1);
-      if (m === 'default') opt.selected = true;
-      sel.appendChild(opt);
-    });
+    populate(hardcoded);
   }
 }
 
 async function callColormind(model, inputSeeds) {
   // inputSeeds: array of 5 items, each either [R,G,B] or "N"
   const body = JSON.stringify({ model, input: inputSeeds });
-  const res = await fetch(COLORMIND_API, {
-    method: 'POST',
-    body,
-    signal: AbortSignal.timeout(10000),
-  });
+  const opts = { method: 'POST', body, signal: AbortSignal.timeout(10000) };
+
+  let res;
+  try {
+    res = await fetch(COLORMIND_API, opts);
+  } catch {
+    // Mixed-content blocked (HTTPS page → HTTP API) — retry via proxy
+    res = await fetch(CORS_PROXY + encodeURIComponent(COLORMIND_API), {
+      method: 'POST',
+      body,
+      signal: AbortSignal.timeout(12000),
+    });
+  }
   if (!res.ok) throw new Error(`Colormind error ${res.status}`);
   const data = await res.json();
   if (!data.result || !Array.isArray(data.result)) throw new Error('Bad response');
@@ -1271,11 +1290,88 @@ function buildExport(fmt) {
     return JSON.stringify({ palette: obj }, null, 2);
   }
 
+  if (fmt === 'figma') {
+    // Figma Tokens format — compatible with Figma Tokens / Style Dictionary plugins
+    const tokens = {};
+    entries.forEach(c => {
+      tokens[`brand-${c.i}`] = {
+        value: c.hex,
+        type: 'color',
+        description: `rgb(${c.r}, ${c.g}, ${c.b}) · hsl(${c.h}, ${c.s}%, ${c.l}%)`,
+      };
+    });
+    return JSON.stringify({ colors: tokens }, null, 2);
+  }
+
+  if (fmt === 'png') {
+    return 'Click "Download PNG" below to export a swatch sheet image.';
+  }
+
   return '';
 }
 
 function updateExport() {
   document.getElementById('export-code').textContent = buildExport(currentExportFmt);
+}
+
+/* ─────────────────────────────────────────────
+   PNG Swatch Export — Canvas-based download
+   ───────────────────────────────────────────── */
+function downloadPNG() {
+  if (!currentPalette.length) { toast('Generate a palette first', 'error'); return; }
+
+  const COLS = currentPalette.length;
+  const SWATCH_W = 120;
+  const SWATCH_H = 120;
+  const LABEL_H = 56;
+  const PAD = 8;
+  const W = COLS * SWATCH_W;
+  const H = SWATCH_H + LABEL_H;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#111111';
+  ctx.fillRect(0, 0, W, H);
+
+  currentPalette.forEach((hex, i) => {
+    const x = i * SWATCH_W;
+
+    // Swatch block
+    ctx.fillStyle = hex;
+    ctx.fillRect(x, 0, SWATCH_W, SWATCH_H);
+
+    // Thin separator
+    if (i < COLS - 1) {
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(x + SWATCH_W - 1, 0, 1, SWATCH_H);
+    }
+
+    // Label area
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(x, SWATCH_H, SWATCH_W, LABEL_H);
+
+    // Hex label
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(hex.toUpperCase(), x + SWATCH_W / 2, SWATCH_H + PAD);
+
+    // Color name
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '9px monospace';
+    ctx.fillText(colorName(hex), x + SWATCH_W / 2, SWATCH_H + PAD + 18);
+  });
+
+  const link = document.createElement('a');
+  link.download = 'palette.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('PNG downloaded', 'success');
 }
 
 /* ─────────────────────────────────────────────
@@ -1431,9 +1527,15 @@ document.querySelectorAll('.export-tab').forEach(tab => {
       t.classList.toggle('active', t === tab);
       t.setAttribute('aria-selected', t === tab);
     });
+    const isPng = currentExportFmt === 'png';
+    document.getElementById('btn-copy-export').style.display = isPng ? 'none' : '';
+    document.getElementById('btn-download-png').style.display = isPng ? '' : 'none';
     updateExport();
   });
 });
+
+// Download PNG
+document.getElementById('btn-download-png').addEventListener('click', downloadPNG);
 
 // Copy export
 document.getElementById('btn-copy-export').addEventListener('click', () => {

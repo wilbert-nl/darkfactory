@@ -873,6 +873,88 @@ select.input-sm {
 .toast.success { background: var(--color-success); }
 .toast.error { background: var(--color-danger); }
 
+/* ── Loading spinner ── */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-state {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) 0;
+  font-size: var(--text-sm); color: var(--color-ink-muted);
+}
+
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn-ghost:disabled   { opacity: 0.45; cursor: not-allowed; }
+.btn-geo:disabled     { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Integration notice ── */
+.integration-notice {
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+  margin-bottom: var(--space-3);
+}
+.integration-notice strong { color: var(--color-accent); font-weight: 600; }
+
+/* ── Notification settings ── */
+.notify-row {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.notify-toggle {
+  width: 14px; height: 14px;
+  accent-color: var(--color-accent); cursor: pointer; flex-shrink: 0;
+}
+.notify-label {
+  font-size: var(--text-xs); font-weight: 600;
+  color: var(--color-ink); cursor: pointer;
+}
+
+/* ── Refresh countdown ── */
+.refresh-countdown {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Trigger history ── */
+.history-list {
+  display: flex; flex-direction: column;
+  max-height: 280px; overflow-y: auto;
+}
+.history-item {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+}
+.history-item:last-child { border-bottom: none; }
+.history-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 3px;
+}
+.history-dot.activated   { background: var(--color-success); }
+.history-dot.deactivated { background: var(--color-border-2); }
+.history-meta  { color: var(--color-ink-muted); margin-top: 2px; }
+.history-campaign { font-weight: 600; color: var(--color-ink); }
+.history-time  { margin-left: auto; color: var(--color-ink-muted); white-space: nowrap; padding-left: var(--space-3); }
+.history-empty {
+  padding: var(--space-6); text-align: center;
+  font-size: var(--text-sm); color: var(--color-ink-muted); line-height: 1.65;
+}
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   html, body { overflow-x: clip; }
@@ -929,6 +1011,7 @@ select.input-sm {
   </div>
   <span class="nav-breadcrumb">Ad Campaign Manager</span>
   <div class="nav-right">
+    <span class="refresh-countdown" id="refreshCountdown" style="display:none" aria-live="polite"></span>
     <span class="nav-status-label" id="navStatusLabel">No data</span>
     <span class="nav-status-dot" id="navStatusDot" aria-label="Data status indicator" role="status"></span>
   </div>
@@ -1077,6 +1160,33 @@ select.input-sm {
         </div>
       </div>
 
+      <!-- Notifications & Integration -->
+      <div class="config-section">
+        <span class="section-label">Notifications &amp; Integration</span>
+        <div class="integration-notice">
+          <strong>Simulation mode.</strong> Campaign activation is evaluated locally against live weather.
+          Connect ad platform APIs (Google Ads / Meta) and notification channels for production automation.
+        </div>
+
+        <div class="form-field">
+          <div class="notify-row">
+            <input type="checkbox" class="notify-toggle" id="notifyEmail" aria-label="Enable email alerts">
+            <label for="notifyEmail" class="notify-label">Email alerts on trigger</label>
+          </div>
+          <input type="email" class="input-sm" id="notifyEmailAddr" placeholder="you@example.com" style="display:none" aria-label="Email address for alerts">
+        </div>
+
+        <div class="form-field">
+          <div class="notify-row">
+            <input type="checkbox" class="notify-toggle" id="notifySlack" aria-label="Enable Slack webhook">
+            <label for="notifySlack" class="notify-label">Slack webhook on trigger</label>
+          </div>
+          <input type="url" class="input-sm" id="notifySlackUrl" placeholder="https://hooks.slack.com/…" style="display:none" aria-label="Slack webhook URL">
+        </div>
+
+        <button class="btn-ghost" id="btnSaveNotify" style="width:100%;font-size:var(--text-xs)">Save notification settings</button>
+      </div>
+
       <!-- Saved Campaigns -->
       <div class="config-section" style="flex:1;min-height:0">
         <span class="section-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -1157,6 +1267,17 @@ select.input-sm {
       </div>
       <div id="simContent">
         <div class="sim-no-selection">Click any campaign card above to see a simulated 30-day activation log for this location's climate.</div>
+      </div>
+    </div>
+
+    <!-- Trigger History -->
+    <div class="panel" id="historyPanel">
+      <div class="panel-head">
+        <span class="panel-title">Trigger History</span>
+        <span class="panel-meta" id="historyMeta">Last 20 events</span>
+      </div>
+      <div id="historyContent">
+        <div class="history-empty">No trigger events recorded yet. Load weather data to begin monitoring.</div>
       </div>
     </div>
 
@@ -1370,9 +1491,22 @@ document.getElementById('btnGeo').addEventListener('click', () => {
   );
 });
 
+// ── Loading state helpers ─────────────────────────────────────────────────────
+function setWeatherLoading(loading) {
+  const saveBtn = document.getElementById('btnSave');
+  if (loading) {
+    document.getElementById('weatherDisplay').innerHTML =
+      '<div class="loading-state"><span class="spinner" aria-hidden="true"></span>Loading weather…</div>';
+    if (saveBtn) saveBtn.disabled = true;
+  } else {
+    if (saveBtn) saveBtn.disabled = false;
+  }
+}
+
 // ── Weather fetch ─────────────────────────────────────────────────────────────
 async function fetchWeather() {
   if (!state.location) return;
+  setWeatherLoading(true);
   const { lat, lon } = state.location;
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation_probability,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=7&current=temperature_2m,weathercode,precipitation_probability`;
@@ -1402,9 +1536,15 @@ async function fetchWeather() {
     state.hourlyForecast = data.hourly;
 
     renderAll();
+    detectStatusChanges();
+    scheduleRefresh();
     toast(`Weather loaded for ${state.location.name}`, 'success');
   } catch (e) {
+    document.getElementById('weatherDisplay').innerHTML =
+      `<div class="weather-empty" style="color:var(--color-danger)">Failed to load weather: ${esc(String(e.message))}. Check your connection and try again.</div>`;
     toast(`Failed to load weather: ${e.message}`, 'error');
+  } finally {
+    setWeatherLoading(false);
   }
 }
 
@@ -1474,6 +1614,7 @@ function renderAll() {
   renderActiveCampaigns();
   renderForecastTable();
   renderSimulation();
+  renderTriggerHistory();
   renderAdPreview();
 }
 
@@ -1894,8 +2035,154 @@ function toast(msg, type = '') {
   toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
 }
 
+// ── Trigger History ───────────────────────────────────────────────────────────
+const MAX_HISTORY = 20;
+
+const dbHistory = {
+  get: () => { try { return JSON.parse(localStorage.getItem('wa_history') || '[]'); } catch { return []; } },
+  save: (list) => { try { localStorage.setItem('wa_history', JSON.stringify(list.slice(0, MAX_HISTORY))); } catch {} },
+};
+
+let triggerHistory = dbHistory.get();
+let campaignStatusMap = {};
+
+function logTriggerEvent(campaign, action, weather, location) {
+  const entry = {
+    id: uid(),
+    ts: new Date().toISOString(),
+    campaignId: campaign.id,
+    campaignName: campaign.name,
+    action,
+    location: location?.name ?? '—',
+    temp: weather?.temp != null ? weather.temp.toFixed(1) : null,
+    code: weather?.code ?? null,
+  };
+  triggerHistory.unshift(entry);
+  if (triggerHistory.length > MAX_HISTORY) triggerHistory = triggerHistory.slice(0, MAX_HISTORY);
+  dbHistory.save(triggerHistory);
+  renderTriggerHistory();
+}
+
+function detectStatusChanges() {
+  if (!state.weather) return;
+  const dp = { temp: state.weather.temp, code: state.weather.code, precipProb: state.weather.precipProb };
+  state.campaigns.filter(c => !c.paused).forEach(c => {
+    const { allMet } = evalCampaign(c, dp);
+    const prev = campaignStatusMap[c.id];
+    if (prev !== undefined && prev !== allMet) {
+      logTriggerEvent(c, allMet ? 'activated' : 'deactivated', state.weather, state.location);
+    }
+    campaignStatusMap[c.id] = allMet;
+  });
+}
+
+function renderTriggerHistory() {
+  const content = document.getElementById('historyContent');
+  const meta = document.getElementById('historyMeta');
+  if (!content) return;
+
+  if (!triggerHistory.length) {
+    content.innerHTML = '<div class="history-empty">No trigger events recorded yet.<br>Load weather data to begin monitoring.</div>';
+    if (meta) meta.textContent = 'Last 20 events';
+    return;
+  }
+
+  if (meta) meta.textContent = `${triggerHistory.length} event${triggerHistory.length !== 1 ? 's' : ''}`;
+
+  content.innerHTML = `<div class="history-list">${triggerHistory.map(e => {
+    const d = new Date(e.ts);
+    const timeStr = d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    const weatherStr = e.temp != null ? `${e.temp}°C, ${wmoLabel(e.code)}` : '';
+    const actionLabel = e.action === 'activated' ? '↑ Activated' : '↓ Deactivated';
+    return `<div class="history-item">
+      <span class="history-dot ${e.action}" aria-hidden="true"></span>
+      <div>
+        <div><span class="history-campaign">${esc(e.campaignName)}</span></div>
+        <div class="history-meta">${actionLabel} · ${esc(e.location)}${weatherStr ? ' · ' + esc(weatherStr) : ''}</div>
+      </div>
+      <span class="history-time">${dateStr} ${timeStr}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ── Notification settings ─────────────────────────────────────────────────────
+const dbNotify = {
+  get: () => { try { return JSON.parse(localStorage.getItem('wa_notify') || 'null'); } catch { return null; } },
+  save: (s) => { try { localStorage.setItem('wa_notify', JSON.stringify(s)); } catch {} },
+};
+
+(function initNotifySettings() {
+  const saved = dbNotify.get();
+  if (!saved) return;
+  const emailCb    = document.getElementById('notifyEmail');
+  const emailInput = document.getElementById('notifyEmailAddr');
+  const slackCb    = document.getElementById('notifySlack');
+  const slackInput = document.getElementById('notifySlackUrl');
+  if (saved.email) { emailCb.checked = true; emailInput.style.display = ''; emailInput.value = saved.emailAddr || ''; }
+  if (saved.slack) { slackCb.checked = true; slackInput.style.display = ''; slackInput.value = saved.slackUrl || ''; }
+})();
+
+document.getElementById('notifyEmail').addEventListener('change', function () {
+  document.getElementById('notifyEmailAddr').style.display = this.checked ? '' : 'none';
+});
+document.getElementById('notifySlack').addEventListener('change', function () {
+  document.getElementById('notifySlackUrl').style.display = this.checked ? '' : 'none';
+});
+
+document.getElementById('btnSaveNotify').addEventListener('click', function () {
+  const emailCb    = document.getElementById('notifyEmail');
+  const emailAddr  = document.getElementById('notifyEmailAddr').value.trim();
+  const slackCb    = document.getElementById('notifySlack');
+  const slackUrl   = document.getElementById('notifySlackUrl').value.trim();
+
+  if (emailCb.checked && !emailAddr) {
+    toast('Enter an email address for alerts', 'error');
+    document.getElementById('notifyEmailAddr').focus();
+    return;
+  }
+  if (slackCb.checked && !slackUrl) {
+    toast('Enter a Slack webhook URL', 'error');
+    document.getElementById('notifySlackUrl').focus();
+    return;
+  }
+
+  dbNotify.save({ email: emailCb.checked, emailAddr, slack: slackCb.checked, slackUrl });
+  toast('Notification settings saved', 'success');
+});
+
+// ── Auto-refresh polling (hourly) ─────────────────────────────────────────────
+const REFRESH_INTERVAL_MS = 60 * 60 * 1000;
+let refreshAt = null;
+let refreshTimer = null;
+let countdownTimer = null;
+
+function scheduleRefresh() {
+  clearTimeout(refreshTimer);
+  clearInterval(countdownTimer);
+  if (!state.location) return;
+
+  refreshAt = Date.now() + REFRESH_INTERVAL_MS;
+  const countdownEl = document.getElementById('refreshCountdown');
+  if (countdownEl) countdownEl.style.display = '';
+
+  countdownTimer = setInterval(() => {
+    const remaining = refreshAt - Date.now();
+    if (remaining <= 0) { clearInterval(countdownTimer); return; }
+    const m = Math.floor(remaining / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+    if (countdownEl) countdownEl.textContent = `Refresh in ${m}:${String(s).padStart(2, '0')}`;
+  }, 1000);
+
+  refreshTimer = setTimeout(async () => {
+    clearInterval(countdownTimer);
+    await fetchWeather();
+  }, REFRESH_INTERVAL_MS);
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderAll();
+renderTriggerHistory();
 </script>
 
 <script>

@@ -3,12 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vinum — Wine Reference Tool</title>
+<title>Vinum — Wine Label Scanner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css">
 <style>
+/* Local token extension — neg border not in tokens.css */
+:root { --color-neg-line: oklch(32% 0.10 26); }
+
 /* Hallmark · macrostructure: Split-Screen · nav: N12 */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,7 +30,7 @@ img, svg { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
 :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
-/* ── N12 Banner + retract nav ── */
+/* ── N12 Banner ── */
 .nav {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -46,6 +49,7 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: 500;
+  font-style: normal;
   letter-spacing: -0.02em;
   color: var(--color-ink);
   flex-shrink: 0;
@@ -54,14 +58,11 @@ a { color: inherit; text-decoration: none; }
 .nav-breadcrumb {
   font-size: var(--text-sm);
   color: var(--color-ink-muted);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   flex: 1;
   overflow: hidden;
   white-space: nowrap;
 }
-.nav-breadcrumb::before { content: '/'; opacity: 0.35; margin-right: var(--space-1); }
+.nav-breadcrumb::before { content: '/ '; opacity: 0.35; }
 .nav-status {
   display: flex;
   align-items: center;
@@ -74,9 +75,6 @@ a { color: inherit; text-decoration: none; }
 .nav-back {
   font-size: var(--text-sm);
   color: var(--color-ink-muted);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   flex-shrink: 0;
   transition: color 0.15s var(--ease-out);
 }
@@ -91,7 +89,7 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
-/* ── Panel eyebrow labels ── */
+/* ── Panel eyebrow ── */
 .panel-eyebrow {
   padding: var(--space-2) var(--space-4);
   font-size: var(--text-xs);
@@ -102,10 +100,6 @@ a { color: inherit; text-decoration: none; }
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
-.panel-eyebrow--right {
-  background: var(--color-paper);
-  border-left: none;
-}
 
 /* ── Sidebar ── */
 .sidebar {
@@ -115,7 +109,6 @@ a { color: inherit; text-decoration: none; }
   flex-direction: column;
   overflow: hidden;
 }
-
 .sidebar-tabs {
   display: flex;
   border-bottom: 1px solid var(--color-border);
@@ -141,26 +134,113 @@ a { color: inherit; text-decoration: none; }
 .sidebar-panel { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
 .sidebar-panel.active { display: flex; }
 
-/* Search panel */
-.search-block {
+/* Scan panel */
+.scan-block {
   padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  flex-shrink: 0;
+  gap: var(--space-4);
 }
-
 .field-label {
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
-  border-left: 2px solid var(--color-accent); padding-left: var(--space-2);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
   color: var(--color-ink-muted);
   display: block;
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
 }
 
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--color-border-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-paper-3);
+}
+.drop-zone:hover,
+.drop-zone.drag-over { border-color: var(--color-accent); background: var(--color-accent-subtle); }
+.drop-zone-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-1);
+}
+.drop-zone-icon svg { width: 20px; height: 20px; stroke: var(--color-accent); fill: none; stroke-width: 1.5; }
+.drop-zone-title { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.drop-zone-sub   { font-size: var(--text-xs); color: var(--color-ink-muted); }
+#label-file-input { display: none; }
+
+/* Label preview */
+.label-preview { display: none; flex-direction: column; gap: var(--space-3); }
+.label-preview.visible { display: flex; }
+.label-preview-img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-paper-3);
+}
+.label-preview-actions { display: flex; gap: var(--space-2); }
+
+/* Buttons */
+.btn-primary {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn-primary:hover:not(:disabled) { background: var(--color-accent-hover); }
+.btn-primary:active:not(:disabled) { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ghost {
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-ghost:hover { color: var(--color-ink); border-color: var(--color-border-2); }
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+.divider::before,
+.divider::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
+
+/* Search row */
 .input-search {
   width: 100%;
   font-family: var(--font-body);
@@ -175,96 +255,49 @@ a { color: inherit; text-decoration: none; }
 .input-search:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px oklch(52% 0.14 68 / 0.10);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
 .input-search::placeholder { color: var(--color-ink-muted); }
+.search-row { display: flex; gap: var(--space-2); }
+.search-row .input-search { flex: 1; min-width: 0; }
 
-/* Filter chips */
-.filter-group { display: flex; flex-direction: column; gap: var(--space-2); }
-.chips-row { display: flex; flex-wrap: wrap; gap: var(--space-1); }
-.chip {
-  padding: 3px var(--space-3);
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: 500;
+/* OCR progress */
+.ocr-progress {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-paper-3);
   border: 1px solid var(--color-border);
-  border-radius: 20px;
-  background: var(--color-paper);
-  color: var(--color-ink-muted);
-  cursor: pointer;
-  transition: all 0.12s var(--ease-out);
-  white-space: nowrap;
-}
-.chip:hover { border-color: var(--color-accent-line); color: var(--color-accent); background: var(--color-accent-subtle); }
-.chip.active { background: var(--color-accent); color: var(--color-paper); border-color: var(--color-accent); }
-
-/* Vintage range */
-.vintage-block {
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-.vintage-range-row { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
-.vintage-range-row input[type="range"] {
-  flex: 1;
-  accent-color: var(--color-accent);
-  cursor: pointer;
-}
-.vintage-range-row span { font-size: var(--text-xs); font-variant-numeric: tabular-nums; color: var(--color-ink-muted); white-space: nowrap; min-width: 36px; text-align: center; }
-
-/* Food pairing panel */
-.pairing-block {
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-.pairing-results { padding: var(--space-2) 0; flex: 1; overflow-y: auto; }
-.pairing-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  cursor: pointer;
-  transition: background 0.12s;
-  border-left: 2px solid transparent;
-}
-.pairing-item:hover { background: oklch(89% 0.012 78); }
-.pairing-item.active { background: oklch(89% 0.012 78); border-left-color: var(--color-accent); }
-.pairing-score {
+  border-radius: var(--radius-md);
   font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--color-accent);
-  background: var(--color-accent-subtle);
-  border-radius: var(--radius-sm);
-  padding: 2px 6px;
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-muted);
 }
-.pairing-name { font-size: var(--text-sm); font-weight: 500; color: var(--color-ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pairing-region { font-size: var(--text-xs); color: var(--color-ink-muted); }
+.ocr-progress.visible { display: flex; }
+.ocr-bar-track { height: 4px; background: var(--color-paper-2); border-radius: 99px; overflow: hidden; }
+.ocr-bar-fill  { height: 100%; background: var(--color-accent); border-radius: 99px; transition: width 0.2s; width: 0%; }
 
-/* Cellar panel */
-.cellar-panel-inner { padding: var(--space-2) 0; flex: 1; overflow-y: auto; }
-.cellar-empty {
+/* History panel */
+.history-panel-inner { padding: var(--space-2) 0; flex: 1; overflow-y: auto; }
+.history-empty {
   padding: var(--space-8) var(--space-4);
   text-align: center;
   font-size: var(--text-sm);
   color: var(--color-ink-muted);
   line-height: 1.7;
 }
-.cellar-item {
+.history-item {
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   border-left: 2px solid transparent;
   transition: background 0.12s, border-color 0.12s;
 }
-.cellar-item:last-child { border-bottom: none; }
-.cellar-item:hover { background: oklch(89% 0.012 78); }
-.cellar-item.active { background: oklch(89% 0.012 78); border-left-color: var(--color-accent); }
-.cellar-item-name { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
-.cellar-item-meta { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 2px; }
-.cellar-item-note { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: var(--space-1); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-item:last-child { border-bottom: none; }
+.history-item:hover  { background: var(--color-accent-subtle); border-left-color: var(--color-accent-dim); }
+.history-item.active { background: var(--color-accent-subtle); border-left-color: var(--color-accent); }
+.history-item-name { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.history-item-meta { font-size: var(--text-xs); color: var(--color-ink-muted); margin-top: 2px; }
 
 /* ── Main panel ── */
 .main {
@@ -274,8 +307,85 @@ a { color: inherit; text-decoration: none; }
   background: var(--color-paper);
 }
 
-/* Main tabs */
-.main-tabs {
+/* Empty state */
+.main-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  text-align: center;
+}
+.main-empty-icon {
+  width: 72px; height: 72px;
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.main-empty-icon svg { width: 36px; height: 36px; stroke: var(--color-accent); fill: none; stroke-width: 1.5; }
+.main-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  font-style: normal;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+.main-empty-sub { font-size: var(--text-sm); color: var(--color-ink-muted); max-width: 340px; line-height: 1.7; }
+
+/* Loading state */
+.main-loading {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+}
+.main-loading.visible { display: flex; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--color-border-2);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-label { font-size: var(--text-sm); color: var(--color-ink-muted); }
+
+/* Error state */
+.main-error {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  text-align: center;
+}
+.main-error.visible { display: flex; }
+.error-icon {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--color-neg-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.error-icon svg { width: 24px; height: 24px; stroke: var(--color-neg); fill: none; stroke-width: 2; }
+.error-title { font-size: var(--text-lg); font-weight: 600; font-style: normal; color: var(--color-ink); }
+.error-message { font-size: var(--text-sm); color: var(--color-ink-muted); max-width: 300px; line-height: 1.6; }
+
+/* ── Result panel ── */
+.result-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.result-panel.visible { display: flex; }
+
+.result-tabs {
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--color-border);
@@ -284,7 +394,7 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
   height: 44px;
 }
-.main-tab {
+.result-tab {
   padding: var(--space-2) var(--space-3);
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -296,114 +406,12 @@ a { color: inherit; text-decoration: none; }
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: color 0.15s, border-color 0.15s;
-}
-.main-tab:hover { color: var(--color-ink); }
-.main-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
-.result-count { margin-left: auto; font-size: var(--text-xs); color: var(--color-ink-muted); }
-
-/* Grid view */
-.main-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-6);
-}
-
-.wine-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-4);
-}
-
-/* Wine card */
-.wine-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  background: var(--color-paper);
-  cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  animation: card-in 0.2s var(--ease-out);
-}
-.wine-card:hover {
-  border-color: var(--color-accent-line);
-  box-shadow: 0 4px 20px oklch(52% 0.14 68 / 0.10);
-  transform: translateY(-1px);
-}
-.wine-card.selected {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px oklch(52% 0.14 68 / 0.12);
-}
-
-@keyframes card-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
-.card-name {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--color-ink);
-  line-height: 1.2;
-}
-.card-producer { font-size: var(--text-sm); color: var(--color-ink-muted); margin-top: 2px; }
-.card-badges { display: flex; flex-wrap: wrap; gap: var(--space-1); align-items: flex-start; flex-shrink: 0; }
-.badge {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 2px 7px;
-  border-radius: 20px;
   white-space: nowrap;
 }
-.badge-style-red      { background: oklch(18% 0.08 15);  color: oklch(72% 0.14 15);  border: 1px solid oklch(32% 0.10 15); }
-.badge-style-white    { background: oklch(18% 0.06 90);  color: oklch(75% 0.10 90);  border: 1px solid oklch(30% 0.08 90); }
-.badge-style-rosé     { background: oklch(18% 0.08 350); color: oklch(72% 0.12 350); border: 1px solid oklch(30% 0.10 350); }
-.badge-style-sparkling{ background: oklch(18% 0.05 220); color: oklch(68% 0.08 220); border: 1px solid oklch(30% 0.06 220); }
-.badge-style-dessert  { background: oklch(18% 0.08 70);  color: oklch(72% 0.12 70);  border: 1px solid oklch(30% 0.10 70); }
-.badge-price-entry    { background: var(--color-paper-2); color: var(--color-ink-muted); border: 1px solid var(--color-border); }
-.badge-price-mid      { background: oklch(18% 0.06 155); color: oklch(65% 0.14 155); border: 1px solid oklch(30% 0.10 155); }
-.badge-price-premium  { background: oklch(18% 0.07 68);  color: oklch(68% 0.14 68);  border: 1px solid oklch(30% 0.10 68); }
-.badge-price-luxury   { background: oklch(18% 0.08 50);  color: oklch(72% 0.14 50);  border: 1px solid oklch(30% 0.10 50); }
+.result-tab:hover  { color: var(--color-ink); }
+.result-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
 
-.card-region { display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-xs); color: var(--color-ink-muted); }
-.card-grape { font-size: var(--text-xs); color: var(--color-ink-muted); font-style: italic; }
-.card-notes { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-1); }
-.note-chip {
-  font-size: 10px;
-  padding: 1px 6px;
-  background: var(--color-paper-2);
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  color: var(--color-ink-muted);
-}
-
-/* Empty state */
-.grid-empty {
-  grid-column: 1 / -1;
-  padding: var(--space-16);
-  text-align: center;
-  color: var(--color-ink-muted);
-  font-size: var(--text-sm);
-  line-height: 1.7;
-}
-.grid-empty-title { font-family: var(--font-display); font-size: var(--text-2xl); color: var(--color-ink); font-weight: 400; letter-spacing: -0.02em; margin-bottom: var(--space-2); }
-
-/* ── Detail panel ── */
-#detail-panel {
-  display: none;
-  flex: 1;
-  flex-direction: column;
-  overflow: hidden;
-}
-#detail-panel.visible { display: flex; }
-
-.detail-scroll {
+.result-scroll {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-6) var(--space-8);
@@ -412,53 +420,65 @@ a { color: inherit; text-decoration: none; }
   gap: var(--space-6);
 }
 
-.detail-header { display: flex; gap: var(--space-6); align-items: flex-start; }
-.detail-name-block { flex: 1; min-width: 0; }
+/* Detail */
 .detail-name {
   font-family: var(--font-display);
   font-size: var(--text-3xl);
   font-weight: 400;
+  font-style: normal;
   letter-spacing: -0.03em;
   color: var(--color-ink);
   line-height: 1.1;
 }
-.detail-producer { font-size: var(--text-lg); color: var(--color-ink-muted); margin-top: var(--space-1); }
+.detail-brand  { font-size: var(--text-lg); color: var(--color-ink-muted); margin-top: var(--space-1); }
 .detail-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+
+/* Badges */
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.badge-verified  { background: oklch(18% 0.07 155); color: oklch(65% 0.14 155); border: 1px solid oklch(30% 0.10 155); }
+.badge-manual    { background: var(--color-paper-3); color: var(--color-ink-muted); border: 1px solid var(--color-border); }
+.badge-red       { background: oklch(18% 0.08 15);  color: oklch(72% 0.14 15);  border: 1px solid oklch(32% 0.10 15); }
+.badge-white     { background: oklch(18% 0.06 90);  color: oklch(75% 0.10 90);  border: 1px solid oklch(30% 0.08 90); }
+.badge-rosé      { background: oklch(18% 0.08 350); color: oklch(72% 0.12 350); border: 1px solid oklch(30% 0.10 350); }
+.badge-sparkling { background: oklch(18% 0.05 220); color: oklch(68% 0.08 220); border: 1px solid oklch(30% 0.06 220); }
+.badge-dessert   { background: oklch(18% 0.08 70);  color: oklch(72% 0.12 70);  border: 1px solid oklch(30% 0.10 70); }
+.badge-allergen  { background: var(--color-neg-bg); color: var(--color-neg); border: 1px solid var(--color-neg-line); }
+
+/* Meta grid */
 .detail-meta-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-4);
   background: var(--color-paper-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
 }
-.detail-meta-item { display: flex; flex-direction: column; gap: 3px; }
-.detail-meta-label { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.04em; color: var(--color-ink-muted); }
-.detail-meta-value { font-size: var(--text-sm); font-weight: 500; color: var(--color-ink); }
+.meta-item { display: flex; flex-direction: column; gap: 3px; }
+.meta-label { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.04em; color: var(--color-ink-muted); text-transform: uppercase; }
+.meta-value { font-size: var(--text-sm); font-weight: 500; color: var(--color-ink); }
 
-/* Tasting profile bars */
-.profile-section { display: flex; flex-direction: column; gap: var(--space-3); }
-.section-title { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.04em; border-left: 2px solid var(--color-accent); padding-left: var(--space-2); color: var(--color-ink-muted); margin-bottom: var(--space-1); }
-.profile-bar-row { display: flex; align-items: center; gap: var(--space-3); }
-.profile-bar-label { font-size: var(--text-sm); color: var(--color-ink); width: 72px; flex-shrink: 0; }
-.profile-bar-track {
-  flex: 1;
-  height: 6px;
-  background: var(--color-paper-2);
-  border: 1px solid var(--color-border);
-  border-radius: 99px;
-  overflow: hidden;
+/* Section title */
+.section-title {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-3);
+  display: block;
 }
-.profile-bar-fill {
-  height: 100%;
-  background: var(--color-accent);
-  border-radius: 99px;
-  transition: width 0.4s var(--ease-out);
-}
-.profile-bar-val { font-size: var(--text-xs); color: var(--color-ink-muted); width: 24px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 
-/* Notes chips */
+/* Flavor chips */
 .flavor-notes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .flavor-chip {
   padding: var(--space-1) var(--space-3);
@@ -470,7 +490,7 @@ a { color: inherit; text-decoration: none; }
   font-weight: 500;
 }
 
-/* Food pairings */
+/* Pairings */
 .pairing-list { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .pairing-tag {
   padding: var(--space-1) var(--space-3);
@@ -481,21 +501,16 @@ a { color: inherit; text-decoration: none; }
   color: var(--color-ink);
 }
 
-/* Serving info */
-.serving-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-4);
+/* Ingredients / sommelier */
+.ingredients-text {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  line-height: 1.7;
   background: var(--color-paper-2);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: var(--space-4);
 }
-.serving-item { display: flex; flex-direction: column; gap: var(--space-1); }
-.serving-label { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.04em; color: var(--color-ink-muted); }
-.serving-value { font-size: var(--text-sm); color: var(--color-ink); }
-
-/* Sommelier notes */
 .sommelier-notes {
   background: var(--color-paper-2);
   border: 1px solid var(--color-border);
@@ -505,81 +520,58 @@ a { color: inherit; text-decoration: none; }
   font-size: var(--text-sm);
   color: var(--color-ink);
   line-height: 1.75;
-  font-style: italic;
+  font-style: normal;
 }
 
-/* Cellar action row */
-.cellar-action {
+/* Allergen flags */
+.allergen-grid { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.allergen-flag {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-8);
-  border-top: 1px solid var(--color-border);
-  flex-shrink: 0;
-  background: var(--color-paper);
-}
-.btn-cellar {
-  padding: var(--space-3) var(--space-6);
-  background: var(--color-accent);
-  color: var(--color-paper);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.btn-cellar:hover { transform: translateY(-1px); box-shadow: 0 4px 12px oklch(52% 0.14 68 / 0.28); }
-.btn-cellar:active { transform: translateY(0); box-shadow: none; }
-.btn-cellar.in-cellar { background: var(--color-paper-2); color: var(--color-accent); border: 1px solid var(--color-accent-line); }
-.input-note {
-  flex: 1;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  color: var(--color-ink);
-  background: var(--color-paper);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  resize: none;
-  transition: border-color 0.15s;
-  height: 44px;
-}
-.input-note:focus { outline: none; border-color: var(--color-accent); }
-.input-note::placeholder { color: var(--color-ink-muted); }
-
-/* Books section */
-.books-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
-.book-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  background: var(--color-paper-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.book-title { font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); line-height: 1.3; }
-.book-author { font-size: var(--text-xs); color: var(--color-ink-muted); }
-.book-year { font-size: var(--text-xs); color: var(--color-ink-muted); }
-.books-loading { font-size: var(--text-sm); color: var(--color-ink-muted); padding: var(--space-4); }
-
-/* Grid back button */
-.btn-back {
-  display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--color-ink-muted);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: var(--space-2) 0;
-  transition: color 0.15s;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 20px;
+  font-size: var(--text-xs);
+  font-weight: 600;
 }
-.btn-back:hover { color: var(--color-ink); }
+.allergen-flag.present { background: var(--color-neg-bg); color: var(--color-neg); border: 1px solid var(--color-neg-line); }
+.allergen-flag.absent  { background: var(--color-paper-2); color: var(--color-ink-muted); border: 1px solid var(--color-border); }
+.allergen-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* Share card */
+.share-card {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+.share-card-info { flex: 1; min-width: 0; }
+.share-card-name {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  font-style: normal;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-1);
+}
+.share-card-brand  { font-size: var(--text-sm); color: var(--color-ink-muted); margin-bottom: var(--space-3); }
+.share-card-facts  { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-3); }
+.share-card-fact   { font-size: var(--text-xs); color: var(--color-ink-muted); }
+.share-card-fact strong { color: var(--color-ink); }
+.share-card-allergens { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.share-card-allergen  {
+  font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 20px;
+  background: var(--color-neg-bg); color: var(--color-neg); border: 1px solid var(--color-neg-line);
+}
+.share-qr { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+.share-qr img { width: 100px; height: 100px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: white; }
+.share-qr-label { font-size: var(--text-xs); color: var(--color-ink-muted); text-align: center; }
+.share-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 
 /* Toast */
 .toast {
@@ -593,36 +585,39 @@ a { color: inherit; text-decoration: none; }
   font-weight: 500;
   padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px oklch(20% 0.010 62 / 0.20);
+  box-shadow: 0 8px 24px var(--color-shadow);
   opacity: 0;
   transform: translateY(6px);
   transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
   pointer-events: none;
 }
-.toast.show { opacity: 1; transform: translateY(0); }
+.toast.show    { opacity: 1; transform: translateY(0); }
 .toast.success { background: var(--color-success); }
+.toast.error   { background: var(--color-danger); }
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
   html, body { overflow: auto; height: auto; }
   .app-shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
-  .sidebar { border-right: none; border-bottom: 1px solid var(--color-border); max-height: 50vh; }
-  .main { overflow: visible; }
-  #detail-panel.visible { overflow: visible; }
-  .detail-scroll { overflow: visible; padding: var(--space-4); }
-  .detail-meta-grid { grid-template-columns: repeat(2, 1fr); }
-  .serving-grid { grid-template-columns: 1fr 1fr; }
-  .wine-grid { grid-template-columns: 1fr; }
-  .books-grid { grid-template-columns: 1fr; }
-  .cellar-action { flex-direction: column; padding: var(--space-4); }
-  .main-scroll { overflow: visible; }
-  .main-tabs { padding: 0 var(--space-4); }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--color-border); max-height: 55vh; }
+  .main { overflow: visible; min-height: 60vh; }
+  .result-panel { overflow: visible; }
+  .result-panel.visible { overflow: visible; }
+  .result-scroll { overflow: visible; padding: var(--space-4); }
+  .detail-meta-grid { grid-template-columns: 1fr 1fr; }
+  .result-tabs { padding: 0 var(--space-4); }
+  .share-card { flex-direction: column; }
+  .share-actions .btn-primary,
+  .share-actions .btn-ghost { flex: 1 1 100%; text-align: center; }
+}
+
+@media (max-width: 414px) {
+  .detail-meta-grid { grid-template-columns: 1fr 1fr; }
+  .result-scroll { padding: var(--space-3); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wine-card { animation: none; }
-  .btn-cellar:hover { transform: none; box-shadow: none; }
-  .toast { transition: opacity 0.15s; transform: translateY(0); }
+  .spinner { animation: none; }
 }
 </style>
 </head>
@@ -630,151 +625,113 @@ a { color: inherit; text-decoration: none; }
 
 <nav class="nav" id="main-nav" aria-label="Application navigation">
   <span class="nav-logo">VINUM<span>.</span></span>
-  <span class="nav-breadcrumb">Wine Reference Tool</span>
+  <span class="nav-breadcrumb">Wine Label Scanner</span>
   <span class="nav-status"><span class="nav-dot" aria-hidden="true"></span>Ready</span>
   <a href="../index.html" class="nav-back" aria-label="Back to all apps">← All Apps</a>
 </nav>
 
 <div class="app-shell">
 
-  <!-- Sidebar — Configure panel -->
-  <aside class="sidebar" aria-label="Wine filters and tools">
-    <div class="panel-eyebrow">Configure</div>
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Scanner controls">
+    <div class="panel-eyebrow">Scanner</div>
 
     <div class="sidebar-tabs" role="tablist">
-      <button class="sidebar-tab active" role="tab" data-stab="search">Search</button>
-      <button class="sidebar-tab" role="tab" data-stab="pairing">Pairing</button>
-      <button class="sidebar-tab" role="tab" data-stab="cellar">Cellar</button>
+      <button class="sidebar-tab active" role="tab" data-stab="scan" aria-selected="true">Scan Label</button>
+      <button class="sidebar-tab" role="tab" data-stab="history" aria-selected="false">History</button>
     </div>
 
-    <!-- Search / Filter panel -->
-    <div class="sidebar-panel active" id="stab-search">
-      <div class="search-block">
+    <!-- Scan panel -->
+    <div class="sidebar-panel active" id="stab-scan">
+      <div class="scan-block">
+
         <div>
-          <label class="field-label" for="wine-search">Search wines</label>
-          <input type="search" id="wine-search" class="input-search" placeholder="Producer, wine, region, grape…" autocomplete="off" aria-label="Search wines">
+          <span class="field-label">Upload a label photo</span>
+          <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload wine label image — click or drag an image here">
+            <div class="drop-zone-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="drop-zone-title">Drop label image here</div>
+            <div class="drop-zone-sub">or click to browse — JPG, PNG, WEBP</div>
+          </div>
+          <input type="file" id="label-file-input" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Choose label image file">
         </div>
 
-        <div class="filter-group">
-          <span class="field-label">Country</span>
-          <div class="chips-row" id="country-chips">
-            <button class="chip active" data-filter="country" data-val="all">All</button>
-            <button class="chip" data-filter="country" data-val="France">France</button>
-            <button class="chip" data-filter="country" data-val="Italy">Italy</button>
-            <button class="chip" data-filter="country" data-val="Spain">Spain</button>
-            <button class="chip" data-filter="country" data-val="Germany">Germany</button>
-            <button class="chip" data-filter="country" data-val="Austria">Austria</button>
-            <button class="chip" data-filter="country" data-val="USA">USA</button>
-            <button class="chip" data-filter="country" data-val="Argentina">Argentina</button>
-            <button class="chip" data-filter="country" data-val="Chile">Chile</button>
-            <button class="chip" data-filter="country" data-val="Australia">Australia</button>
-            <button class="chip" data-filter="country" data-val="New Zealand">NZ</button>
-            <button class="chip" data-filter="country" data-val="South Africa">S. Africa</button>
+        <!-- Preview -->
+        <div class="label-preview" id="label-preview">
+          <img class="label-preview-img" id="label-preview-img" alt="Uploaded wine label preview">
+          <div class="label-preview-actions">
+            <button class="btn-primary" id="btn-scan-ocr">Scan Label</button>
+            <button class="btn-ghost" id="btn-clear-label">Clear</button>
           </div>
         </div>
 
-        <div class="filter-group">
-          <span class="field-label">Style</span>
-          <div class="chips-row" id="style-chips">
-            <button class="chip active" data-filter="style" data-val="all">All</button>
-            <button class="chip" data-filter="style" data-val="red">Red</button>
-            <button class="chip" data-filter="style" data-val="white">White</button>
-            <button class="chip" data-filter="style" data-val="rosé">Rosé</button>
-            <button class="chip" data-filter="style" data-val="sparkling">Sparkling</button>
-            <button class="chip" data-filter="style" data-val="dessert">Dessert</button>
+        <!-- OCR progress -->
+        <div class="ocr-progress" id="ocr-progress" aria-live="polite" aria-label="OCR scanning progress">
+          <div id="ocr-status-text">Reading label text…</div>
+          <div class="ocr-bar-track"><div class="ocr-bar-fill" id="ocr-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div>
+        </div>
+
+        <div class="divider">or search by name</div>
+
+        <div>
+          <span class="field-label">Wine name or producer</span>
+          <div class="search-row">
+            <input type="search" id="manual-search" class="input-search" placeholder="e.g. Château Margaux 2015" autocomplete="off" aria-label="Search wine by name, producer, or vintage">
+            <button class="btn-primary" id="btn-manual-search" aria-label="Search wine">Go</button>
           </div>
         </div>
 
-        <div class="filter-group">
-          <span class="field-label">Body</span>
-          <div class="chips-row" id="body-chips">
-            <button class="chip active" data-filter="body" data-val="all">All</button>
-            <button class="chip" data-filter="body" data-val="light">Light</button>
-            <button class="chip" data-filter="body" data-val="medium">Medium</button>
-            <button class="chip" data-filter="body" data-val="full">Full</button>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <span class="field-label">Price tier</span>
-          <div class="chips-row" id="price-chips">
-            <button class="chip active" data-filter="price" data-val="all">All</button>
-            <button class="chip" data-filter="price" data-val="entry">Entry</button>
-            <button class="chip" data-filter="price" data-val="mid">Mid</button>
-            <button class="chip" data-filter="price" data-val="premium">Premium</button>
-            <button class="chip" data-filter="price" data-val="luxury">Luxury</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="vintage-block">
-        <label class="field-label">Vintage range</label>
-        <div class="vintage-range-row">
-          <span id="vintage-from-val">1990</span>
-          <input type="range" id="vintage-from" min="1985" max="2023" value="1990" aria-label="Vintage from year">
-          <span>–</span>
-          <input type="range" id="vintage-to" min="1985" max="2023" value="2023" aria-label="Vintage to year">
-          <span id="vintage-to-val">2023</span>
-        </div>
       </div>
     </div>
 
-    <!-- Pairing panel -->
-    <div class="sidebar-panel" id="stab-pairing">
-      <div class="pairing-block">
-        <label class="field-label" for="dish-input">Find wines by dish</label>
-        <input type="text" id="dish-input" class="input-search" placeholder="e.g. roast lamb, sushi, truffle…" autocomplete="off" aria-label="Enter a dish to find pairing wines">
-      </div>
-      <div class="pairing-results" id="pairing-results">
-        <div class="cellar-empty">Type a dish above to find matching wines</div>
-      </div>
-    </div>
-
-    <!-- Cellar panel -->
-    <div class="sidebar-panel" id="stab-cellar">
-      <div class="cellar-panel-inner" id="cellar-list">
-        <div class="cellar-empty">Your cellar is empty.<br>Add wines from the detail view.</div>
+    <!-- History panel -->
+    <div class="sidebar-panel" id="stab-history">
+      <div class="history-panel-inner" id="history-list" aria-label="Scan history" aria-live="polite">
+        <div class="history-empty" id="history-empty">No scans yet.<br>Scan a label to get started.</div>
       </div>
     </div>
 
   </aside>
 
-  <!-- Main panel — Results panel -->
-  <main class="main" aria-label="Wine reference main view">
-    <div class="panel-eyebrow panel-eyebrow--right">Results</div>
+  <!-- Main panel -->
+  <main class="main" aria-label="Wine information">
 
-    <div class="main-tabs">
-      <button class="main-tab active" data-mtab="grid">Wine List</button>
-      <button class="main-tab" data-mtab="books">Reference Books</button>
-      <span class="result-count" id="result-count" aria-live="polite"></span>
+    <!-- Empty state -->
+    <div class="main-empty" id="main-empty">
+      <div class="main-empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <h1 class="main-empty-title">Scan a wine label</h1>
+      <p class="main-empty-sub">Upload a label photo or type a wine name. The scanner extracts producer and vintage via OCR, looks up Open Food Facts, then surfaces tasting notes, allergen flags, and a guest-shareable card.</p>
     </div>
 
-    <!-- Wine grid -->
-    <div class="main-scroll" id="mtab-grid">
-      <div class="wine-grid" id="wine-grid" role="list" aria-label="Wine results"></div>
+    <!-- Loading state -->
+    <div class="main-loading" id="main-loading" aria-live="polite" aria-label="Loading">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="loading-label" id="loading-label">Looking up wine data…</div>
     </div>
 
-    <!-- Detail panel (replaces grid on click) -->
-    <div id="detail-panel" role="region" aria-label="Wine detail">
-      <div class="detail-scroll" id="detail-scroll">
-        <!-- populated by JS -->
+    <!-- Error state -->
+    <div class="main-error" id="main-error" role="alert" aria-live="assertive">
+      <div class="error-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       </div>
-      <div class="cellar-action">
-        <button class="btn-cellar" id="btn-cellar-toggle">＋ Add to Cellar</button>
-        <textarea class="input-note" id="cellar-note" placeholder="Add a tasting note…" rows="1" aria-label="Cellar note for this wine"></textarea>
-      </div>
+      <div class="error-title" id="error-title">Lookup failed</div>
+      <p class="error-message" id="error-message">Could not find wine data. Try searching by name instead.</p>
+      <button class="btn-ghost" id="btn-error-retry" style="margin-top:var(--space-2)">Try again</button>
     </div>
 
-    <!-- Books panel -->
-    <div class="main-scroll" id="mtab-books" style="display:none;">
-      <div style="margin-bottom: var(--space-4);">
-        <label class="field-label" for="books-query">Search wine books</label>
-        <div style="display:flex; gap: var(--space-2); margin-top: var(--space-1);">
-          <input type="text" id="books-query" class="input-search" placeholder="e.g. Burgundy, natural wine, terroir…" style="flex:1;" aria-label="Search wine books">
-          <button id="books-search-btn" style="padding: var(--space-2) var(--space-4); background: var(--color-accent); color: var(--color-paper); border: none; border-radius: var(--radius-md); font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600; cursor: pointer; flex-shrink: 0;">Search</button>
-        </div>
+    <!-- Result panel -->
+    <div class="result-panel" id="result-panel" role="region" aria-label="Wine scan result">
+      <div class="result-tabs" role="tablist">
+        <button class="result-tab active" role="tab" data-rtab="detail" aria-selected="true">Wine Info</button>
+        <button class="result-tab" role="tab" data-rtab="allergens" aria-selected="false">Allergens</button>
+        <button class="result-tab" role="tab" data-rtab="share" aria-selected="false">Share Card</button>
       </div>
-      <div id="books-results"><p class="books-loading">Search for wine books using the Open Library.</p></div>
+      <div class="result-scroll" id="rtab-detail" role="tabpanel" aria-labelledby="tab-detail"></div>
+      <div class="result-scroll" id="rtab-allergens" role="tabpanel" aria-labelledby="tab-allergens" style="display:none;"></div>
+      <div class="result-scroll" id="rtab-share" role="tabpanel" aria-labelledby="tab-share" style="display:none;"></div>
     </div>
 
   </main>
@@ -783,562 +740,636 @@ a { color: inherit; text-decoration: none; }
 <div class="toast" id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
 <script>
-// ── Wine Database ─────────────────────────────────────────────
-const WINES = [
-  // FRANCE — Bordeaux
-  { id:'w1', name:'Château Margaux', producer:'Château Margaux', region:'Margaux, Bordeaux', country:'France', flag:'🇫🇷', grapes:['Cabernet Sauvignon','Merlot','Petit Verdot'], style:'red', vintageFrom:1995, vintageTo:2020, abv:13.0, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cassis','violet','cedar','leather','tobacco'], pairings:['lamb','beef','duck','venison','aged cheese'], servingTemp:18, glass:'Bordeaux', decanting:'2h+', priceTier:'luxury' },
-  { id:'w2', name:'Château Pétrus', producer:'Pomerol Estate', region:'Pomerol, Bordeaux', country:'France', flag:'🇫🇷', grapes:['Merlot'], style:'red', vintageFrom:2000, vintageTo:2019, abv:14.0, body:'full', tannin:4, acidity:3, sweetness:1, notes:['plum','chocolate','truffle','iron','spice'], pairings:['beef','lamb','truffle','foie gras'], servingTemp:18, glass:'Bordeaux', decanting:'2h+', priceTier:'luxury' },
-  { id:'w3', name:'Château Lynch-Bages', producer:'Château Lynch-Bages', region:'Pauillac, Bordeaux', country:'France', flag:'🇫🇷', grapes:['Cabernet Sauvignon','Merlot','Cabernet Franc'], style:'red', vintageFrom:1990, vintageTo:2020, abv:13.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackcurrant','cedar','graphite','mint','tobacco'], pairings:['beef','lamb','duck','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1.5h', priceTier:'premium' },
-  { id:'w4', name:'Château Pichon Longueville Comtesse', producer:'Pichon Comtesse', region:'Pauillac, Bordeaux', country:'France', flag:'🇫🇷', grapes:['Cabernet Sauvignon','Merlot'], style:'red', vintageFrom:1995, vintageTo:2020, abv:13.0, body:'full', tannin:3, acidity:3, sweetness:1, notes:['cassis','plum','vanilla','cedar','floral'], pairings:['beef','lamb','venison','aged cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  // FRANCE — Burgundy
-  { id:'w5', name:'Romanée-Conti', producer:'Domaine de la Romanée-Conti', region:'Vosne-Romanée, Côte de Nuits', country:'France', flag:'🇫🇷', grapes:['Pinot Noir'], style:'red', vintageFrom:2005, vintageTo:2020, abv:13.0, body:'medium', tannin:3, acidity:4, sweetness:1, notes:['rose','cherry','violet','spice','earth','truffle'], pairings:['duck','quail','truffle','aged Burgundy cheese'], servingTemp:16, glass:'Burgundy', decanting:'30min', priceTier:'luxury' },
-  { id:'w6', name:'Gevrey-Chambertin Vieilles Vignes', producer:'Rossignol-Trapet', region:'Gevrey-Chambertin, Côte de Nuits', country:'France', flag:'🇫🇷', grapes:['Pinot Noir'], style:'red', vintageFrom:2010, vintageTo:2022, abv:13.0, body:'medium', tannin:3, acidity:4, sweetness:1, notes:['cherry','raspberry','earth','spice','violet'], pairings:['duck','rabbit','mushrooms','soft cheese'], servingTemp:16, glass:'Burgundy', decanting:'30min', priceTier:'premium' },
-  { id:'w7', name:'Meursault Les Perrières', producer:'Domaine Lafon', region:'Meursault, Côte de Beaune', country:'France', flag:'🇫🇷', grapes:['Chardonnay'], style:'white', vintageFrom:2012, vintageTo:2022, abv:13.5, body:'full', tannin:1, acidity:4, sweetness:1, notes:['hazelnut','butter','brioche','mineral','lemon curd'], pairings:['lobster','scallops','chicken','soft cheese'], servingTemp:13, glass:'White Burgundy', decanting:'15min', priceTier:'luxury' },
-  { id:'w8', name:'Puligny-Montrachet Premier Cru', producer:'Louis Jadot', region:'Puligny-Montrachet, Côte de Beaune', country:'France', flag:'🇫🇷', grapes:['Chardonnay'], style:'white', vintageFrom:2015, vintageTo:2022, abv:13.0, body:'full', tannin:1, acidity:4, sweetness:1, notes:['green apple','citrus','almond','flint','white flowers'], pairings:['fish','shellfish','veal','soft cheese'], servingTemp:12, glass:'White Burgundy', decanting:'none', priceTier:'premium' },
-  // FRANCE — Rhône
-  { id:'w9', name:'Hermitage La Chapelle', producer:'Paul Jaboulet Aîné', region:'Hermitage, Northern Rhône', country:'France', flag:'🇫🇷', grapes:['Syrah'], style:'red', vintageFrom:1998, vintageTo:2018, abv:13.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackberry','olive','pepper','bacon','leather'], pairings:['beef','game','lamb','hard cheese'], servingTemp:18, glass:'Bordeaux', decanting:'2h', priceTier:'premium' },
-  { id:'w10', name:'Château Rayas Châteauneuf-du-Pape', producer:'Château Rayas', region:'Châteauneuf-du-Pape, Southern Rhône', country:'France', flag:'🇫🇷', grapes:['Grenache'], style:'red', vintageFrom:2000, vintageTo:2019, abv:14.5, body:'full', tannin:3, acidity:3, sweetness:2, notes:['raspberry','orange peel','herbes de Provence','kirsch','earth'], pairings:['lamb','venison','tapenade','hard cheese'], servingTemp:17, glass:'Burgundy', decanting:'1h', priceTier:'luxury' },
-  // FRANCE — Loire
-  { id:'w11', name:'Sancerre Blanc', producer:'Henri Bourgeois', region:'Sancerre, Loire Valley', country:'France', flag:'🇫🇷', grapes:['Sauvignon Blanc'], style:'white', vintageFrom:2018, vintageTo:2023, abv:13.0, body:'light', tannin:1, acidity:5, sweetness:1, notes:['grapefruit','gooseberry','flint','grass','herb'], pairings:['oysters','goat cheese','fish','salads'], servingTemp:10, glass:'Sauvignon', decanting:'none', priceTier:'mid' },
-  { id:'w12', name:'Muscadet Sèvre et Maine sur lie', producer:'Domaine de la Pépière', region:'Muscadet, Loire Valley', country:'France', flag:'🇫🇷', grapes:['Melon de Bourgogne'], style:'white', vintageFrom:2018, vintageTo:2023, abv:12.0, body:'light', tannin:1, acidity:4, sweetness:1, notes:['lemon','apple','yeast','mineral','saline'], pairings:['oysters','mussels','fish','shellfish'], servingTemp:9, glass:'White wine', decanting:'none', priceTier:'entry' },
-  // FRANCE — Alsace
-  { id:'w13', name:'Riesling Grand Cru Brand', producer:'Zind-Humbrecht', region:'Alsace', country:'France', flag:'🇫🇷', grapes:['Riesling'], style:'white', vintageFrom:2012, vintageTo:2020, abv:12.5, body:'medium', tannin:1, acidity:5, sweetness:2, notes:['petrol','lime','apricot','slate','ginger'], pairings:['Asian food','pork','fish','spicy dishes'], servingTemp:11, glass:'Riesling', decanting:'none', priceTier:'premium' },
-  { id:'w14', name:'Gewurztraminer Vendanges Tardives', producer:'Trimbach', region:'Alsace', country:'France', flag:'🇫🇷', grapes:['Gewurztraminer'], style:'dessert', vintageFrom:2010, vintageTo:2018, abv:12.0, body:'full', tannin:1, acidity:3, sweetness:5, notes:['lychee','rose','spice','ginger','honey'], pairings:['foie gras','blue cheese','desserts','Asian spice'], servingTemp:10, glass:'White wine', decanting:'none', priceTier:'premium' },
-  // FRANCE — Champagne
-  { id:'w15', name:'Dom Pérignon Vintage', producer:'Moët & Chandon', region:'Champagne', country:'France', flag:'🇫🇷', grapes:['Chardonnay','Pinot Noir'], style:'sparkling', vintageFrom:2006, vintageTo:2015, abv:12.5, body:'medium', tannin:1, acidity:4, sweetness:2, notes:['brioche','citrus','almond','white peach','mineral'], pairings:['oysters','caviar','lobster','sushi'], servingTemp:9, glass:'Champagne flute', decanting:'none', priceTier:'luxury' },
-  { id:'w16', name:'Krug Grande Cuvée', producer:'Krug', region:'Champagne', country:'France', flag:'🇫🇷', grapes:['Pinot Noir','Chardonnay','Pinot Meunier'], style:'sparkling', vintageFrom:2008, vintageTo:2018, abv:12.0, body:'full', tannin:1, acidity:4, sweetness:2, notes:['toast','hazelnut','dried fruit','honey','ginger'], pairings:['truffle','foie gras','aged cheese','lobster'], servingTemp:10, glass:'Champagne flute', decanting:'none', priceTier:'luxury' },
-  { id:'w17', name:'Billecart-Salmon Blanc de Blancs', producer:'Billecart-Salmon', region:'Champagne', country:'France', flag:'🇫🇷', grapes:['Chardonnay'], style:'sparkling', vintageFrom:2012, vintageTo:2020, abv:12.0, body:'light', tannin:1, acidity:5, sweetness:1, notes:['green apple','lemon','chalk','floral','brioche'], pairings:['oysters','fish','sushi','light starters'], servingTemp:8, glass:'Champagne flute', decanting:'none', priceTier:'premium' },
-  // ITALY — Piedmont
-  { id:'w18', name:'Barolo Cannubi', producer:'Bartolo Mascarello', region:'Barolo, Piedmont', country:'Italy', flag:'🇮🇹', grapes:['Nebbiolo'], style:'red', vintageFrom:2005, vintageTo:2019, abv:14.0, body:'full', tannin:5, acidity:5, sweetness:1, notes:['tar','rose','cherry','tobacco','leather','earth'], pairings:['beef','game','truffle','aged cheese','mushroom risotto'], servingTemp:18, glass:'Burgundy', decanting:'3h', priceTier:'luxury' },
-  { id:'w19', name:'Barbaresco Asili', producer:'Bruno Giacosa', region:'Barbaresco, Piedmont', country:'Italy', flag:'🇮🇹', grapes:['Nebbiolo'], style:'red', vintageFrom:2008, vintageTo:2019, abv:13.5, body:'full', tannin:5, acidity:5, sweetness:1, notes:['rose','cherry','tobacco','orange peel','spice'], pairings:['truffle','mushroom','beef','game'], servingTemp:18, glass:'Burgundy', decanting:'2h', priceTier:'premium' },
-  { id:'w20', name:'Barolo Brunate', producer:'Elio Altare', region:'Barolo, Piedmont', country:'Italy', flag:'🇮🇹', grapes:['Nebbiolo'], style:'red', vintageFrom:2012, vintageTo:2020, abv:14.0, body:'full', tannin:4, acidity:4, sweetness:1, notes:['violet','cherry','licorice','vanilla','spice'], pairings:['beef','lamb','truffle pasta','aged cheese'], servingTemp:18, glass:'Burgundy', decanting:'1h', priceTier:'premium' },
-  // ITALY — Tuscany
-  { id:'w21', name:'Sassicaia', producer:'Tenuta San Guido', region:'Bolgheri, Tuscany', country:'Italy', flag:'🇮🇹', grapes:['Cabernet Sauvignon','Cabernet Franc'], style:'red', vintageFrom:2005, vintageTo:2020, abv:13.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cassis','cedar','tobacco','graphite','dark cherry'], pairings:['beef','lamb','venison','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1.5h', priceTier:'luxury' },
-  { id:'w22', name:'Ornellaia', producer:'Tenuta dell\'Ornellaia', region:'Bolgheri, Tuscany', country:'Italy', flag:'🇮🇹', grapes:['Cabernet Sauvignon','Merlot','Cabernet Franc'], style:'red', vintageFrom:2010, vintageTo:2020, abv:14.0, body:'full', tannin:4, acidity:3, sweetness:1, notes:['plum','mocha','tobacco','graphite','violet'], pairings:['beef','lamb','truffle','aged cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'luxury' },
-  { id:'w23', name:'Brunello di Montalcino', producer:'Biondi-Santi', region:'Montalcino, Tuscany', country:'Italy', flag:'🇮🇹', grapes:['Sangiovese Grosso'], style:'red', vintageFrom:2004, vintageTo:2016, abv:13.5, body:'full', tannin:5, acidity:5, sweetness:1, notes:['cherry','leather','tobacco','iron','spice','dried rose'], pairings:['wild boar','game','bistecca','aged Pecorino'], servingTemp:18, glass:'Bordeaux', decanting:'2h+', priceTier:'luxury' },
-  { id:'w24', name:'Chianti Classico Gran Selezione', producer:'Castello di Brolio', region:'Chianti Classico, Tuscany', country:'Italy', flag:'🇮🇹', grapes:['Sangiovese'], style:'red', vintageFrom:2013, vintageTo:2021, abv:14.0, body:'medium', tannin:3, acidity:4, sweetness:1, notes:['sour cherry','herb','leather','spice','tomato leaf'], pairings:['pasta','pizza','pork','chicken','Pecorino'], servingTemp:17, glass:'Bordeaux', decanting:'45min', priceTier:'mid' },
-  // ITALY — Veneto
-  { id:'w25', name:'Amarone della Valpolicella Classico', producer:'Dal Forno Romano', region:'Valpolicella, Veneto', country:'Italy', flag:'🇮🇹', grapes:['Corvina','Rondinella','Molinara'], style:'red', vintageFrom:2008, vintageTo:2017, abv:16.0, body:'full', tannin:5, acidity:3, sweetness:2, notes:['dried cherry','chocolate','coffee','fig','tobacco'], pairings:['braised beef','game','aged cheese','dark chocolate'], servingTemp:18, glass:'Bordeaux', decanting:'3h', priceTier:'luxury' },
-  { id:'w26', name:'Soave Classico', producer:'Pieropan', region:'Soave, Veneto', country:'Italy', flag:'🇮🇹', grapes:['Garganega'], style:'white', vintageFrom:2018, vintageTo:2023, abv:12.5, body:'light', tannin:1, acidity:4, sweetness:1, notes:['almond','peach','lemon','mineral','floral'], pairings:['fish','shellfish','risotto','light pasta'], servingTemp:10, glass:'White wine', decanting:'none', priceTier:'entry' },
-  // SPAIN — Rioja
-  { id:'w27', name:'La Rioja Alta Gran Reserva 904', producer:'La Rioja Alta', region:'Rioja Alta', country:'Spain', flag:'🇪🇸', grapes:['Tempranillo','Graciano'], style:'red', vintageFrom:2005, vintageTo:2016, abv:13.5, body:'medium', tannin:3, acidity:4, sweetness:1, notes:['cherry','vanilla','coconut','leather','spice'], pairings:['lamb','pork','roast chicken','aged Manchego'], servingTemp:17, glass:'Bordeaux', decanting:'45min', priceTier:'premium' },
-  { id:'w28', name:'Vega Sicilia Único', producer:'Vega Sicilia', region:'Ribera del Duero', country:'Spain', flag:'🇪🇸', grapes:['Tempranillo','Cabernet Sauvignon'], style:'red', vintageFrom:1999, vintageTo:2015, abv:13.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cassis','plum','cedar','leather','tobacco'], pairings:['beef','lamb','game','hard cheese'], servingTemp:18, glass:'Bordeaux', decanting:'2h', priceTier:'luxury' },
-  { id:'w29', name:'Muga Prado Enea Gran Reserva', producer:'Bodegas Muga', region:'Rioja Alta', country:'Spain', flag:'🇪🇸', grapes:['Tempranillo','Garnacha','Mazuelo'], style:'red', vintageFrom:2007, vintageTo:2016, abv:13.5, body:'medium', tannin:3, acidity:3, sweetness:1, notes:['dried cherry','vanilla','dill','toast','leather'], pairings:['lamb','pork','game','aged cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  // SPAIN — Galicia
-  { id:'w30', name:'Albariño Pazo de Señorans', producer:'Pazo de Señorans', region:'Rías Baixas, Galicia', country:'Spain', flag:'🇪🇸', grapes:['Albariño'], style:'white', vintageFrom:2019, vintageTo:2023, abv:13.0, body:'light', tannin:1, acidity:5, sweetness:1, notes:['peach','apricot','citrus','mineral','floral'], pairings:['seafood','octopus','fish','shellfish'], servingTemp:10, glass:'White wine', decanting:'none', priceTier:'mid' },
-  // GERMANY
-  { id:'w31', name:'Scharzhofberger Riesling Spätlese', producer:'Egon Müller', region:'Mosel', country:'Germany', flag:'🇩🇪', grapes:['Riesling'], style:'white', vintageFrom:2012, vintageTo:2021, abv:8.5, body:'light', tannin:1, acidity:5, sweetness:3, notes:['slate','lime','apricot','peach blossom','honey'], pairings:['Asian food','pork','fish','spicy dishes','light desserts'], servingTemp:9, glass:'Riesling', decanting:'none', priceTier:'luxury' },
-  { id:'w32', name:'Forster Jesuitengarten Riesling Auslese', producer:'Bassermann-Jordan', region:'Pfalz', country:'Germany', flag:'🇩🇪', grapes:['Riesling'], style:'white', vintageFrom:2015, vintageTo:2022, abv:9.0, body:'light', tannin:1, acidity:5, sweetness:4, notes:['peach','apricot','lime','mineral','white flowers'], pairings:['foie gras','blue cheese','light desserts','Asian food'], servingTemp:9, glass:'Riesling', decanting:'none', priceTier:'premium' },
-  // AUSTRIA
-  { id:'w33', name:'Grüner Veltliner Smaragd Dürnsteiner Hollerin', producer:'F.X. Pichler', region:'Wachau', country:'Austria', flag:'🇦🇹', grapes:['Grüner Veltliner'], style:'white', vintageFrom:2016, vintageTo:2022, abv:13.5, body:'full', tannin:1, acidity:4, sweetness:1, notes:['white pepper','grapefruit','herbs','mineral','stone fruit'], pairings:['fish','asparagus','schnitzel','sushi'], servingTemp:11, glass:'White wine', decanting:'none', priceTier:'premium' },
-  { id:'w34', name:'Blaufränkisch Ried Mariental', producer:'Moric', region:'Burgenland', country:'Austria', flag:'🇦🇹', grapes:['Blaufränkisch'], style:'red', vintageFrom:2015, vintageTo:2021, abv:13.0, body:'medium', tannin:3, acidity:4, sweetness:1, notes:['cherry','dark berry','pepper','spice','earth'], pairings:['pork','duck','mushroom','hard cheese'], servingTemp:17, glass:'Burgundy', decanting:'30min', priceTier:'mid' },
-  // USA — Napa
-  { id:'w35', name:'Opus One', producer:'Opus One Winery', region:'Napa Valley, California', country:'USA', flag:'🇺🇸', grapes:['Cabernet Sauvignon','Cabernet Franc','Merlot'], style:'red', vintageFrom:2010, vintageTo:2021, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cassis','blackberry','cedar','dark chocolate','violet'], pairings:['beef','lamb','venison','hard cheese'], servingTemp:18, glass:'Bordeaux', decanting:'1.5h', priceTier:'luxury' },
-  { id:'w36', name:'Screaming Eagle Cabernet Sauvignon', producer:'Screaming Eagle', region:'Oakville, Napa Valley', country:'USA', flag:'🇺🇸', grapes:['Cabernet Sauvignon'], style:'red', vintageFrom:2005, vintageTo:2021, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackcurrant','blueberry','graphite','cedar','vanilla'], pairings:['beef','lamb','truffle','aged cheese'], servingTemp:18, glass:'Bordeaux', decanting:'1h', priceTier:'luxury' },
-  { id:'w37', name:'Stag\'s Leap Wine Cellars Cask 23', producer:"Stag's Leap Wine Cellars", region:'Stags Leap District, Napa', country:'USA', flag:'🇺🇸', grapes:['Cabernet Sauvignon'], style:'red', vintageFrom:2010, vintageTo:2020, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cherry','cassis','chocolate','vanilla','cedar'], pairings:['beef','lamb','hard cheese'], servingTemp:18, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  { id:'w38', name:'Far Niente Chardonnay', producer:'Far Niente', region:'Napa Valley, California', country:'USA', flag:'🇺🇸', grapes:['Chardonnay'], style:'white', vintageFrom:2018, vintageTo:2022, abv:14.0, body:'full', tannin:1, acidity:3, sweetness:1, notes:['pear','apple','butter','vanilla','hazelnut'], pairings:['lobster','crab','chicken','soft cheese'], servingTemp:12, glass:'White wine', decanting:'none', priceTier:'premium' },
-  // USA — Sonoma
-  { id:'w39', name:'Williams Selyem Rochioli Riverblock Pinot Noir', producer:'Williams Selyem', region:'Russian River Valley, Sonoma', country:'USA', flag:'🇺🇸', grapes:['Pinot Noir'], style:'red', vintageFrom:2015, vintageTo:2022, abv:13.5, body:'medium', tannin:2, acidity:4, sweetness:1, notes:['strawberry','raspberry','cola','spice','earth'], pairings:['salmon','duck','mushroom','soft cheese'], servingTemp:16, glass:'Burgundy', decanting:'20min', priceTier:'premium' },
-  // USA — Oregon
-  { id:'w40', name:'Eyrie Vineyards Pinot Noir Reserve', producer:'Eyrie Vineyards', region:'Dundee Hills, Willamette Valley', country:'USA', flag:'🇺🇸', grapes:['Pinot Noir'], style:'red', vintageFrom:2014, vintageTo:2021, abv:13.0, body:'light', tannin:2, acidity:4, sweetness:1, notes:['cherry','raspberry','earth','mushroom','spice'], pairings:['salmon','duck','mushroom','soft cheese'], servingTemp:16, glass:'Burgundy', decanting:'none', priceTier:'mid' },
-  { id:'w41', name:'Domaine Drouhin Laurène Pinot Noir', producer:'Domaine Drouhin Oregon', region:'Willamette Valley, Oregon', country:'USA', flag:'🇺🇸', grapes:['Pinot Noir'], style:'red', vintageFrom:2012, vintageTo:2022, abv:13.5, body:'medium', tannin:2, acidity:4, sweetness:1, notes:['cherry','raspberry','violet','spice','silk'], pairings:['duck','salmon','mushroom','soft cheese'], servingTemp:16, glass:'Burgundy', decanting:'30min', priceTier:'premium' },
-  // USA — Washington
-  { id:'w42', name:'Quilceda Creek Cabernet Sauvignon', producer:'Quilceda Creek', region:'Columbia Valley, Washington', country:'USA', flag:'🇺🇸', grapes:['Cabernet Sauvignon'], style:'red', vintageFrom:2010, vintageTo:2020, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackcurrant','blueberry','cedar','tobacco','dark chocolate'], pairings:['beef','lamb','hard cheese'], servingTemp:18, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  // ARGENTINA
-  { id:'w43', name:'Achaval Ferrer Malbec Finca Altamira', producer:'Achaval Ferrer', region:'Luján de Cuyo, Mendoza', country:'Argentina', flag:'🇦🇷', grapes:['Malbec'], style:'red', vintageFrom:2014, vintageTo:2021, abv:14.5, body:'full', tannin:3, acidity:3, sweetness:1, notes:['plum','violets','chocolate','leather','spice'], pairings:['beef','lamb','BBQ','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'45min', priceTier:'premium' },
-  { id:'w44', name:'Catena Zapata Adrianna Vineyard Malbec', producer:'Bodega Catena Zapata', region:'Gualtallary, Mendoza', country:'Argentina', flag:'🇦🇷', grapes:['Malbec'], style:'red', vintageFrom:2012, vintageTo:2021, abv:14.0, body:'full', tannin:4, acidity:4, sweetness:1, notes:['blueberry','violet','mineral','spice','dark fruit'], pairings:['beef','lamb','game','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'luxury' },
-  { id:'w45', name:'Zuccardi Valle de Uco Malbec', producer:'Familia Zuccardi', region:'Valle de Uco, Mendoza', country:'Argentina', flag:'🇦🇷', grapes:['Malbec'], style:'red', vintageFrom:2016, vintageTo:2022, abv:13.5, body:'full', tannin:3, acidity:4, sweetness:1, notes:['plum','dark berry','mineral','spice','herbal'], pairings:['beef','pork','BBQ','pizza'], servingTemp:17, glass:'Bordeaux', decanting:'30min', priceTier:'mid' },
-  // CHILE
-  { id:'w46', name:'Almaviva', producer:'Almaviva Winery', region:'Puente Alto, Maipo Valley', country:'Chile', flag:'🇨🇱', grapes:['Cabernet Sauvignon','Carmenère','Cabernet Franc'], style:'red', vintageFrom:2010, vintageTo:2021, abv:14.0, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cassis','plum','cedar','herbs','tobacco'], pairings:['beef','lamb','venison','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  { id:'w47', name:'Lapostolle Clos Apalta', producer:'Lapostolle', region:'Colchagua Valley', country:'Chile', flag:'🇨🇱', grapes:['Carmenère','Merlot','Cabernet Sauvignon'], style:'red', vintageFrom:2012, vintageTo:2021, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackberry','plum','chocolate','herbs','leather'], pairings:['beef','lamb','game','aged cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  // AUSTRALIA
-  { id:'w48', name:'Penfolds Grange', producer:'Penfolds', region:'South Australia (multi-region)', country:'Australia', flag:'🇦🇺', grapes:['Shiraz','Cabernet Sauvignon'], style:'red', vintageFrom:2000, vintageTo:2019, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackberry','dark chocolate','leather','coffee','pepper'], pairings:['beef','lamb','game','hard cheese'], servingTemp:18, glass:'Bordeaux', decanting:'2h', priceTier:'luxury' },
-  { id:'w49', name:'Henschke Hill of Grace', producer:'Henschke', region:'Eden Valley, South Australia', country:'Australia', flag:'🇦🇺', grapes:['Shiraz'], style:'red', vintageFrom:2005, vintageTo:2018, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackberry','plum','pepper','earth','chocolate'], pairings:['beef','lamb','venison','hard cheese'], servingTemp:18, glass:'Bordeaux', decanting:'2h', priceTier:'luxury' },
-  { id:'w50', name:'Leeuwin Estate Art Series Chardonnay', producer:'Leeuwin Estate', region:'Margaret River, Western Australia', country:'Australia', flag:'🇦🇺', grapes:['Chardonnay'], style:'white', vintageFrom:2015, vintageTo:2022, abv:13.5, body:'full', tannin:1, acidity:4, sweetness:1, notes:['citrus','stone fruit','toasted oak','cream','mineral'], pairings:['lobster','crab','chicken','soft cheese'], servingTemp:12, glass:'White wine', decanting:'none', priceTier:'premium' },
-  // NEW ZEALAND
-  { id:'w51', name:'Cloudy Bay Sauvignon Blanc', producer:'Cloudy Bay', region:'Marlborough, South Island', country:'New Zealand', flag:'🇳🇿', grapes:['Sauvignon Blanc'], style:'white', vintageFrom:2020, vintageTo:2023, abv:13.0, body:'light', tannin:1, acidity:5, sweetness:1, notes:['passion fruit','grapefruit','grassy','tropical','mineral'], pairings:['shellfish','fish','goat cheese','salads'], servingTemp:10, glass:'Sauvignon', decanting:'none', priceTier:'mid' },
-  { id:'w52', name:'Felton Road Pinot Noir Block 5', producer:'Felton Road', region:'Central Otago, South Island', country:'New Zealand', flag:'🇳🇿', grapes:['Pinot Noir'], style:'red', vintageFrom:2015, vintageTo:2022, abv:14.0, body:'medium', tannin:2, acidity:4, sweetness:1, notes:['cherry','plum','earth','thyme','spice'], pairings:['duck','salmon','lamb','soft cheese'], servingTemp:16, glass:'Burgundy', decanting:'30min', priceTier:'premium' },
-  // SOUTH AFRICA
-  { id:'w53', name:'Kanonkop Paul Sauer', producer:'Kanonkop Estate', region:'Stellenbosch', country:'South Africa', flag:'🇿🇦', grapes:['Cabernet Sauvignon','Cabernet Franc','Merlot'], style:'red', vintageFrom:2010, vintageTo:2020, abv:14.0, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cassis','plum','cedar','tobacco','dark cherry'], pairings:['beef','lamb','game','aged cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  { id:'w54', name:'Eben Sadie Columella', producer:'Sadie Family Wines', region:'Swartland', country:'South Africa', flag:'🇿🇦', grapes:['Syrah','Mourvèdre'], style:'red', vintageFrom:2012, vintageTo:2021, abv:14.0, body:'full', tannin:4, acidity:4, sweetness:1, notes:['olive','pepper','dark berry','earth','herbal'], pairings:['lamb','game','hard cheese','roasted vegetables'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  { id:'w55', name:'Hamilton Russell Pinot Noir', producer:'Hamilton Russell Vineyards', region:'Walker Bay, Hemel-en-Aarde', country:'South Africa', flag:'🇿🇦', grapes:['Pinot Noir'], style:'red', vintageFrom:2016, vintageTo:2022, abv:13.5, body:'medium', tannin:2, acidity:4, sweetness:1, notes:['cherry','earth','spice','violet','cola'], pairings:['duck','salmon','mushroom','soft cheese'], servingTemp:16, glass:'Burgundy', decanting:'20min', priceTier:'mid' },
-  // ADDITIONAL
-  { id:'w56', name:'Château d\'Yquem', producer:'Château d\'Yquem', region:'Sauternes, Bordeaux', country:'France', flag:'🇫🇷', grapes:['Sémillon','Sauvignon Blanc'], style:'dessert', vintageFrom:2001, vintageTo:2015, abv:13.5, body:'full', tannin:1, acidity:4, sweetness:5, notes:['honey','apricot','botrytis','vanilla','caramel'], pairings:['foie gras','blue cheese','desserts','custard'], servingTemp:11, glass:'White wine', decanting:'none', priceTier:'luxury' },
-  { id:'w57', name:'Pingus', producer:'Dominio de Pingus', region:'Ribera del Duero', country:'Spain', flag:'🇪🇸', grapes:['Tempranillo'], style:'red', vintageFrom:2005, vintageTo:2020, abv:14.5, body:'full', tannin:5, acidity:4, sweetness:1, notes:['blackberry','plum','chocolate','tobacco','earth'], pairings:['beef','lamb','game','aged cheese'], servingTemp:18, glass:'Bordeaux', decanting:'2h', priceTier:'luxury' },
-  { id:'w58', name:'Gaja Barbaresco', producer:'Angelo Gaja', region:'Barbaresco, Piedmont', country:'Italy', flag:'🇮🇹', grapes:['Nebbiolo'], style:'red', vintageFrom:2008, vintageTo:2019, abv:13.5, body:'full', tannin:5, acidity:5, sweetness:1, notes:['rose','cherry','tobacco','leather','licorice'], pairings:['truffle','beef','game','aged cheese'], servingTemp:18, glass:'Burgundy', decanting:'2h', priceTier:'luxury' },
-  { id:'w59', name:'Tignanello', producer:'Marchesi Antinori', region:'Chianti Classico, Tuscany', country:'Italy', flag:'🇮🇹', grapes:['Sangiovese','Cabernet Sauvignon'], style:'red', vintageFrom:2012, vintageTo:2021, abv:14.0, body:'full', tannin:4, acidity:4, sweetness:1, notes:['cherry','cassis','cedar','leather','spice'], pairings:['beef','lamb','game','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  { id:'w60', name:'Groth Cabernet Sauvignon Reserve', producer:'Groth Vineyards', region:'Oakville, Napa Valley', country:'USA', flag:'🇺🇸', grapes:['Cabernet Sauvignon'], style:'red', vintageFrom:2014, vintageTo:2021, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cassis','dark cherry','cedar','vanilla','tobacco'], pairings:['beef','lamb','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  { id:'w61', name:'Côte-Rôtie La Mouline', producer:'E. Guigal', region:'Côte-Rôtie, Northern Rhône', country:'France', flag:'🇫🇷', grapes:['Syrah','Viognier'], style:'red', vintageFrom:2005, vintageTo:2018, abv:13.0, body:'full', tannin:4, acidity:3, sweetness:1, notes:['violet','olive','pepper','smoke','dark berry'], pairings:['lamb','game','beef','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'luxury' },
-  { id:'w62', name:'Penfolds Bin 389 Cabernet Shiraz', producer:'Penfolds', region:'South Australia (multi-region)', country:'Australia', flag:'🇦🇺', grapes:['Cabernet Sauvignon','Shiraz'], style:'red', vintageFrom:2016, vintageTo:2022, abv:14.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackcurrant','plum','chocolate','spice','mocha'], pairings:['beef','BBQ','lamb','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'mid' },
-  { id:'w63', name:'Rioja Reserva', producer:'CVNE Imperial', region:'Rioja Alta', country:'Spain', flag:'🇪🇸', grapes:['Tempranillo','Graciano','Mazuelo'], style:'red', vintageFrom:2014, vintageTo:2020, abv:13.5, body:'medium', tannin:3, acidity:3, sweetness:1, notes:['cherry','vanilla','spice','leather','tobacco'], pairings:['lamb','pork','roast chicken','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'30min', priceTier:'mid' },
-  { id:'w64', name:'Prosecco di Valdobbiadene Superiore', producer:'Nino Franco', region:'Conegliano Valdobbiadene, Veneto', country:'Italy', flag:'🇮🇹', grapes:['Glera'], style:'sparkling', vintageFrom:2021, vintageTo:2023, abv:11.0, body:'light', tannin:1, acidity:4, sweetness:2, notes:['green apple','pear','white flowers','peach','cream'], pairings:['aperitivo','prosciutto','light starters','fruit'], servingTemp:8, glass:'Champagne flute', decanting:'none', priceTier:'entry' },
-  { id:'w65', name:'Cava Gran Reserva', producer:'Gramona', region:'Penedès, Catalonia', country:'Spain', flag:'🇪🇸', grapes:['Macabeo','Xarel-lo','Parellada'], style:'sparkling', vintageFrom:2018, vintageTo:2021, abv:11.5, body:'light', tannin:1, acidity:4, sweetness:1, notes:['green apple','citrus','bread','almond','mineral'], pairings:['tapas','seafood','jamón','light cheese'], servingTemp:8, glass:'Champagne flute', decanting:'none', priceTier:'entry' },
-  { id:'w66', name:'Condrieu', producer:'Georges Vernay', region:'Condrieu, Northern Rhône', country:'France', flag:'🇫🇷', grapes:['Viognier'], style:'white', vintageFrom:2018, vintageTo:2022, abv:13.5, body:'full', tannin:1, acidity:3, sweetness:1, notes:['apricot','peach blossom','white flowers','spice','honey'], pairings:['lobster','crab','pork','soft cheese'], servingTemp:11, glass:'White wine', decanting:'none', priceTier:'premium' },
-  { id:'w67', name:'Grüner Veltliner Federspiel', producer:'Schloss Gobelsburg', region:'Kamptal, Austria', country:'Austria', flag:'🇦🇹', grapes:['Grüner Veltliner'], style:'white', vintageFrom:2020, vintageTo:2023, abv:12.5, body:'light', tannin:1, acidity:4, sweetness:1, notes:['white pepper','lemon','herb','stone fruit','mineral'], pairings:['salads','fish','asparagus','light pasta'], servingTemp:10, glass:'White wine', decanting:'none', priceTier:'entry' },
-  { id:'w68', name:'Château Musar', producer:'Château Musar', region:'Bekaa Valley', country:'Lebanon', flag:'🇱🇧', grapes:['Cabernet Sauvignon','Cinsault','Carignan'], style:'red', vintageFrom:2000, vintageTo:2016, abv:14.0, body:'full', tannin:3, acidity:4, sweetness:1, notes:['dried fruit','leather','spice','earth','tobacco'], pairings:['lamb','mezze','hard cheese','game'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'mid' },
-  { id:'w69', name:'Penfolds Bin 51 Riesling', producer:'Penfolds', region:'Eden Valley, South Australia', country:'Australia', flag:'🇦🇺', grapes:['Riesling'], style:'white', vintageFrom:2019, vintageTo:2023, abv:12.0, body:'light', tannin:1, acidity:5, sweetness:2, notes:['lime','lemon','toast','mineral','petrol'], pairings:['Asian food','fish','shellfish','spicy dishes'], servingTemp:9, glass:'Riesling', decanting:'none', priceTier:'mid' },
-  { id:'w70', name:'Errazuriz Don Maximiano', producer:'Errazuriz', region:'Aconcagua Valley', country:'Chile', flag:'🇨🇱', grapes:['Cabernet Sauvignon','Carmenère'], style:'red', vintageFrom:2012, vintageTo:2021, abv:14.0, body:'full', tannin:4, acidity:3, sweetness:1, notes:['cassis','plum','herb','cedar','tobacco'], pairings:['beef','lamb','venison','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'45min', priceTier:'premium' },
-  { id:'w71', name:'Two Paddocks Pinot Noir', producer:'Two Paddocks', region:'Central Otago, South Island', country:'New Zealand', flag:'🇳🇿', grapes:['Pinot Noir'], style:'red', vintageFrom:2017, vintageTo:2022, abv:14.0, body:'medium', tannin:2, acidity:4, sweetness:1, notes:['cherry','plum','spice','floral','silky'], pairings:['duck','salmon','mushroom','soft cheese'], servingTemp:16, glass:'Burgundy', decanting:'20min', priceTier:'mid' },
-  { id:'w72', name:'Mullineux Syrah', producer:'Mullineux Family Wines', region:'Swartland', country:'South Africa', flag:'🇿🇦', grapes:['Syrah'], style:'red', vintageFrom:2016, vintageTo:2022, abv:13.5, body:'full', tannin:3, acidity:4, sweetness:1, notes:['olive','pepper','violet','dark berry','savory'], pairings:['lamb','game','beef','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'30min', priceTier:'mid' },
-  { id:'w73', name:'Dunn Vineyards Howell Mountain Cabernet', producer:'Dunn Vineyards', region:'Howell Mountain, Napa Valley', country:'USA', flag:'🇺🇸', grapes:['Cabernet Sauvignon'], style:'red', vintageFrom:2010, vintageTo:2020, abv:14.0, body:'full', tannin:5, acidity:3, sweetness:1, notes:['cassis','blackberry','cedar','tobacco','mineral'], pairings:['beef','lamb','hard cheese'], servingTemp:18, glass:'Bordeaux', decanting:'2h', priceTier:'premium' },
-  { id:'w74', name:'Produttori del Barbaresco Muncagota', producer:'Produttori del Barbaresco', region:'Barbaresco, Piedmont', country:'Italy', flag:'🇮🇹', grapes:['Nebbiolo'], style:'red', vintageFrom:2013, vintageTo:2020, abv:13.5, body:'full', tannin:4, acidity:5, sweetness:1, notes:['rose','cherry','earth','leather','tar'], pairings:['truffle','mushroom','beef','aged cheese'], servingTemp:17, glass:'Burgundy', decanting:'1.5h', priceTier:'mid' },
-  { id:'w75', name:'Dönnhoff Norheimer Kirschheck Riesling Spätlese', producer:'Dönnhoff', region:'Nahe', country:'Germany', flag:'🇩🇪', grapes:['Riesling'], style:'white', vintageFrom:2016, vintageTo:2022, abv:9.5, body:'light', tannin:1, acidity:5, sweetness:3, notes:['peach','apricot','lime','slate','honey'], pairings:['Asian food','fish','pork','spicy dishes'], servingTemp:9, glass:'Riesling', decanting:'none', priceTier:'mid' },
-  { id:'w76', name:'Château La Nerthe Châteauneuf Blanc', producer:'Château La Nerthe', region:'Châteauneuf-du-Pape', country:'France', flag:'🇫🇷', grapes:['Grenache Blanc','Clairette','Roussanne'], style:'white', vintageFrom:2017, vintageTo:2022, abv:14.0, body:'full', tannin:1, acidity:3, sweetness:1, notes:['white peach','almond','honey','herbal','mineral'], pairings:['fish','shellfish','chicken','soft cheese'], servingTemp:12, glass:'White wine', decanting:'none', priceTier:'premium' },
-  { id:'w77', name:'Clos Mogador', producer:'René Barbier', region:'Priorat, Catalonia', country:'Spain', flag:'🇪🇸', grapes:['Garnacha','Cariñena','Syrah'], style:'red', vintageFrom:2010, vintageTo:2020, abv:14.5, body:'full', tannin:4, acidity:4, sweetness:1, notes:['dark berry','mineral','slate','herbal','spice'], pairings:['lamb','game','beef','hard cheese'], servingTemp:17, glass:'Bordeaux', decanting:'1h', priceTier:'premium' },
-  { id:'w78', name:'Torbreck The Laird Shiraz', producer:'Torbreck Vintners', region:'Barossa Valley, South Australia', country:'Australia', flag:'🇦🇺', grapes:['Shiraz'], style:'red', vintageFrom:2008, vintageTo:2016, abv:15.5, body:'full', tannin:5, acidity:3, sweetness:2, notes:['blackberry','mocha','pepper','dark chocolate','vanilla'], pairings:['BBQ','beef','game','dark chocolate'], servingTemp:18, glass:'Bordeaux', decanting:'2h+', priceTier:'luxury' },
-  { id:'w79', name:'Didier Dagueneau Pouilly-Fumé Silex', producer:'Didier Dagueneau', region:'Pouilly-Fumé, Loire Valley', country:'France', flag:'🇫🇷', grapes:['Sauvignon Blanc'], style:'white', vintageFrom:2015, vintageTo:2021, abv:13.0, body:'medium', tannin:1, acidity:5, sweetness:1, notes:['flint','gunsmoke','citrus','herb','mineral'], pairings:['oysters','goat cheese','fish','shellfish'], servingTemp:11, glass:'Sauvignon', decanting:'none', priceTier:'premium' },
-  { id:'w80', name:'Château Pichon Baron', producer:'Château Pichon Baron', region:'Pauillac, Bordeaux', country:'France', flag:'🇫🇷', grapes:['Cabernet Sauvignon','Merlot'], style:'red', vintageFrom:2010, vintageTo:2020, abv:13.5, body:'full', tannin:4, acidity:3, sweetness:1, notes:['blackcurrant','cedar','tobacco','graphite','plum'], pairings:['beef','lamb','hard cheese','venison'], servingTemp:17, glass:'Bordeaux', decanting:'1.5h', priceTier:'premium' },
-];
+'use strict';
 
-// ── State ──────────────────────────────────────────────────────
-const filters = { country:'all', style:'all', body:'all', price:'all' };
-let searchQuery = '';
-let vintageFrom = 1990;
-let vintageTo   = 2023;
-let selectedWine = null;
-let currentMainTab = 'grid';
+// ── State ────────────────────────────────────────────────────
+let currentResult = null;
+let currentResultTab = 'detail';
+let pendingFile = null;
+let errorRetryFn = null;
 
-const cellar = (() => {
-  const KEY = 'vinum_cellar';
+// ── Scan History (localStorage) ──────────────────────────────
+const scanHistory = (() => {
+  const KEY = 'vinum_scan_history_v2';
   const get = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
-  const save = (list) => localStorage.setItem(KEY, JSON.stringify(list));
+  const save = list => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {} };
   return {
     get,
-    add(wineId, note) {
-      const list = get().filter(e => e.id !== wineId);
-      list.push({ id: wineId, note, addedAt: new Date().toISOString() });
-      if (list.length > 20) list.splice(0, list.length - 20);
+    add(result) {
+      const list = get().filter(e => e.id !== result.id);
+      list.unshift({ ...result, scannedAt: new Date().toISOString() });
+      if (list.length > 20) list.length = 20;
       save(list);
     },
-    remove(wineId) { save(get().filter(e => e.id !== wineId)); },
-    has(wineId)   { return get().some(e => e.id === wineId); },
-    getNote(wineId){ const e = get().find(e => e.id === wineId); return e?.note || ''; },
   };
 })();
 
-// ── Filter + Search ───────────────────────────────────────────
-function filterWines() {
-  return WINES.filter(w => {
-    if (filters.country !== 'all' && w.country !== filters.country) return false;
-    if (filters.style !== 'all' && w.style !== filters.style) return false;
-    if (filters.body !== 'all' && w.body !== filters.body) return false;
-    if (filters.price !== 'all' && w.priceTier !== filters.price) return false;
-    if (w.vintageFrom > vintageTo || w.vintageTo < vintageFrom) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        w.name.toLowerCase().includes(q) ||
-        w.producer.toLowerCase().includes(q) ||
-        w.region.toLowerCase().includes(q) ||
-        w.country.toLowerCase().includes(q) ||
-        w.grapes.some(g => g.toLowerCase().includes(q)) ||
-        w.notes.some(n => n.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
-}
-
-// ── Style badge helper ────────────────────────────────────────
-const styleBadgeClass = s => ({ red:'badge-style-red', white:'badge-style-white', 'rosé':'badge-style-rosé', sparkling:'badge-style-sparkling', dessert:'badge-style-dessert' }[s] || 'badge-style-red');
-const priceBadgeClass = p => ({ entry:'badge-price-entry', mid:'badge-price-mid', premium:'badge-price-premium', luxury:'badge-price-luxury' }[p] || 'badge-price-entry');
-const priceLabel = p => ({ entry:'Entry', mid:'Mid', premium:'Premium', luxury:'Luxury' }[p] || p);
-const styleLabel = s => s.charAt(0).toUpperCase() + s.slice(1);
-
-// Food pairing emojis
-const pairingEmoji = dish => {
-  const d = dish.toLowerCase();
-  if (d.includes('beef') || d.includes('steak') || d.includes('lamb') || d.includes('venison') || d.includes('game') || d.includes('meat')) return '🥩';
-  if (d.includes('fish') || d.includes('salmon') || d.includes('tuna') || d.includes('shellfish') || d.includes('seafood') || d.includes('oyster') || d.includes('lobster') || d.includes('crab') || d.includes('mussel') || d.includes('scallop')) return '🐟';
-  if (d.includes('pasta') || d.includes('pizza') || d.includes('risotto') || d.includes('noodle')) return '🍝';
-  if (d.includes('cheese')) return '🧀';
-  if (d.includes('chocolate') || d.includes('dessert') || d.includes('cake') || d.includes('sweet')) return '🍫';
-  if (d.includes('duck') || d.includes('chicken') || d.includes('quail') || d.includes('poultry')) return '🍗';
-  if (d.includes('truffle') || d.includes('mushroom')) return '🍄';
-  if (d.includes('sushi') || d.includes('asian') || d.includes('spicy')) return '🍱';
-  if (d.includes('salad') || d.includes('vegetable') || d.includes('asparagus')) return '🥗';
-  if (d.includes('foie') || d.includes('pork') || d.includes('ham') || d.includes('prosciutto')) return '🥓';
-  return '🍽️';
-};
-
-const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-
-// ── Render wine grid ──────────────────────────────────────────
-function renderGrid() {
-  const wines = filterWines();
-  const grid = document.getElementById('wine-grid');
-  const countEl = document.getElementById('result-count');
-  countEl.textContent = `${wines.length} wine${wines.length !== 1 ? 's' : ''}`;
-
-  if (!wines.length) {
-    grid.innerHTML = '<div class="grid-empty"><p class="grid-empty-title">No wines found</p><p>Try adjusting your filters or search query.</p></div>';
-    return;
-  }
-
-  grid.innerHTML = wines.map(w => `
-    <article class="wine-card${selectedWine?.id === w.id ? ' selected' : ''}" role="listitem" tabindex="0" data-id="${w.id}" aria-label="${esc(w.name)} — ${esc(w.region)}">
-      <div class="card-top">
-        <div>
-          <div class="card-name">${esc(w.name)}</div>
-          <div class="card-producer">${esc(w.producer)}</div>
-        </div>
-        <div class="card-badges">
-          <span class="badge ${styleBadgeClass(w.style)}">${styleLabel(w.style)}</span>
-          <span class="badge ${priceBadgeClass(w.priceTier)}">${priceLabel(w.priceTier)}</span>
-        </div>
-      </div>
-      <div class="card-region">${w.flag} ${esc(w.region)}</div>
-      <div class="card-grape">${esc(w.grapes.join(', '))}</div>
-      <div class="card-notes">${w.notes.slice(0,3).map(n => `<span class="note-chip">${esc(n)}</span>`).join('')}</div>
-    </article>
-  `).join('');
-
-  grid.querySelectorAll('.wine-card').forEach(card => {
-    card.addEventListener('click', () => openDetail(card.dataset.id));
-    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openDetail(card.dataset.id); });
-  });
-}
-
-// ── Sommelier note generator ───────────────────────────────────
-function sommelierNote(w) {
-  const bodyDesc = { light:'light-bodied and elegant', medium:'medium-bodied and balanced', full:'full-bodied and powerful' }[w.body] || 'well-structured';
-  const acidDesc = w.acidity >= 4 ? 'vibrant acidity' : w.acidity === 3 ? 'balanced acidity' : 'soft acidity';
-  const tanninDesc = w.tannin >= 4 ? 'firm, grippy tannins' : w.tannin === 3 ? 'polished tannins' : w.tannin <= 1 ? 'no significant tannin' : 'soft tannins';
-  const notes3 = w.notes.slice(0,3).join(', ');
-  const pairing1 = w.pairings[0];
-  const decNote = w.decanting !== 'none' ? ` Decanting for ${w.decanting} will open up the aromatics.` : ' Best enjoyed without decanting to preserve freshness.';
-  return `${w.name} is a ${bodyDesc} ${w.style} wine from ${w.region}, ${w.country}. On the palate you\'ll find ${notes3}, underpinned by ${acidDesc}${w.style === 'red' ? ' and ' + tanninDesc : ''}.${decNote} An excellent match for ${pairing1}.`;
-}
-
-// ── Glass recommendation ──────────────────────────────────────
-function glassRec(w) {
-  if (w.style === 'sparkling') return 'Champagne flute or coupe';
-  if (w.style === 'white' || w.style === 'rosé' || w.style === 'dessert') return 'White wine glass (tulip shaped)';
-  if (w.body === 'full') return 'Large Bordeaux glass';
-  return 'Burgundy bowl';
-}
-
-// ── Open detail ───────────────────────────────────────────────
-function openDetail(id) {
-  const w = WINES.find(w => w.id === id);
-  if (!w) return;
-  selectedWine = w;
-
-  // Switch main view
-  document.getElementById('mtab-grid').style.display = 'none';
-  document.getElementById('mtab-books').style.display = 'none';
-  document.getElementById('detail-panel').classList.add('visible');
-
-  const inCellar = cellar.has(w.id);
-  const cellarNote = cellar.getNote(w.id);
-  document.getElementById('cellar-note').value = cellarNote;
-  updateCellarButton(inCellar);
-
-  const bars = [
-    { label:'Body',      val: w.body === 'full' ? 5 : w.body === 'medium' ? 3 : 1.5 },
-    { label:'Tannin',    val: w.tannin },
-    { label:'Acidity',   val: w.acidity },
-    { label:'Sweetness', val: w.sweetness },
-  ];
-
-  document.getElementById('detail-scroll').innerHTML = `
-    <div>
-      <button class="btn-back" id="btn-back-detail">← Back to list</button>
-    </div>
-    <div class="detail-header">
-      <div class="detail-name-block">
-        <h1 class="detail-name">${esc(w.name)}</h1>
-        <div class="detail-producer">${esc(w.producer)}</div>
-        <div class="detail-badges">
-          <span class="badge ${styleBadgeClass(w.style)}">${styleLabel(w.style)}</span>
-          <span class="badge ${priceBadgeClass(w.priceTier)}">${priceLabel(w.priceTier)}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="detail-meta-grid">
-      <div class="detail-meta-item">
-        <span class="detail-meta-label">Region</span>
-        <span class="detail-meta-value">${w.flag} ${esc(w.region)}</span>
-      </div>
-      <div class="detail-meta-item">
-        <span class="detail-meta-label">Grape(s)</span>
-        <span class="detail-meta-value">${esc(w.grapes.join(', '))}</span>
-      </div>
-      <div class="detail-meta-item">
-        <span class="detail-meta-label">Vintage</span>
-        <span class="detail-meta-value">${w.vintageFrom}–${w.vintageTo}</span>
-      </div>
-      <div class="detail-meta-item">
-        <span class="detail-meta-label">ABV</span>
-        <span class="detail-meta-value">${w.abv}%</span>
-      </div>
-    </div>
-
-    <div class="profile-section">
-      <span class="section-title">Tasting Profile</span>
-      ${bars.map(b => `
-        <div class="profile-bar-row">
-          <span class="profile-bar-label">${b.label}</span>
-          <div class="profile-bar-track"><div class="profile-bar-fill" style="width:${(b.val/5)*100}%"></div></div>
-          <span class="profile-bar-val">${b.val}/5</span>
-        </div>
-      `).join('')}
-    </div>
-
-    <div>
-      <span class="section-title">Flavor Notes</span>
-      <div class="flavor-notes" style="margin-top:var(--space-2);">
-        ${w.notes.map(n => `<span class="flavor-chip">${esc(n)}</span>`).join('')}
-      </div>
-    </div>
-
-    <div>
-      <span class="section-title">Food Pairings</span>
-      <div class="pairing-list" style="margin-top:var(--space-2);">
-        ${w.pairings.map(p => `<span class="pairing-tag">${pairingEmoji(p)} ${esc(p)}</span>`).join('')}
-      </div>
-    </div>
-
-    <div class="serving-grid">
-      <div class="serving-item">
-        <span class="serving-label">Serving temp</span>
-        <span class="serving-value">${w.servingTemp}°C</span>
-      </div>
-      <div class="serving-item">
-        <span class="serving-label">Glass</span>
-        <span class="serving-value">${esc(glassRec(w))}</span>
-      </div>
-      <div class="serving-item">
-        <span class="serving-label">Decanting</span>
-        <span class="serving-value">${esc(w.decanting)}</span>
-      </div>
-    </div>
-
-    <div>
-      <span class="section-title">Sommelier Notes</span>
-      <p class="sommelier-notes" style="margin-top:var(--space-2);">${sommelierNote(w)}</p>
-    </div>
-  `;
-
-  document.getElementById('btn-back-detail').addEventListener('click', closeDetail);
-  renderGrid(); // refresh card selection highlight
-}
-
-function closeDetail() {
-  selectedWine = null;
-  document.getElementById('detail-panel').classList.remove('visible');
-  if (currentMainTab === 'grid') {
-    document.getElementById('mtab-grid').style.display = '';
-  } else {
-    document.getElementById('mtab-books').style.display = '';
-  }
-  renderGrid();
-}
-
-// ── Cellar ────────────────────────────────────────────────────
-function updateCellarButton(inCellar) {
-  const btn = document.getElementById('btn-cellar-toggle');
-  btn.textContent = inCellar ? '✓ In Cellar' : '＋ Add to Cellar';
-  btn.className = 'btn-cellar' + (inCellar ? ' in-cellar' : '');
-}
-
-document.getElementById('btn-cellar-toggle').addEventListener('click', () => {
-  if (!selectedWine) return;
-  const note = document.getElementById('cellar-note').value.trim();
-  if (cellar.has(selectedWine.id)) {
-    cellar.remove(selectedWine.id);
-    updateCellarButton(false);
-    toast('Removed from cellar');
-  } else {
-    cellar.add(selectedWine.id, note);
-    updateCellarButton(true);
-    toast('Added to cellar', 'success');
-  }
-  renderCellar();
-});
-
-function renderCellar() {
-  const entries = cellar.get();
-  const container = document.getElementById('cellar-list');
-  if (!entries.length) {
-    container.innerHTML = '<div class="cellar-empty">Your cellar is empty.<br>Add wines from the detail view.</div>';
-    return;
-  }
-  container.innerHTML = entries.map(e => {
-    const w = WINES.find(w => w.id === e.id);
-    if (!w) return '';
-    return `
-      <div class="cellar-item${selectedWine?.id === w.id ? ' active' : ''}" data-id="${w.id}" tabindex="0" role="button" aria-label="${esc(w.name)}">
-        <div class="cellar-item-name">${esc(w.name)}</div>
-        <div class="cellar-item-meta">${w.flag} ${esc(w.region)} · <span class="badge ${styleBadgeClass(w.style)}">${styleLabel(w.style)}</span></div>
-        ${e.note ? `<div class="cellar-item-note">${esc(e.note)}</div>` : ''}
-      </div>`;
-  }).join('');
-  container.querySelectorAll('.cellar-item').forEach(el => {
-    el.addEventListener('click', () => {
-      openDetail(el.dataset.id);
-      // Switch to search tab so grid shows
-      switchSidebarTab('search');
-    });
-    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') el.click(); });
-  });
-}
-
-// ── Food pairing finder ───────────────────────────────────────
-function renderPairingResults(dish) {
-  const container = document.getElementById('pairing-results');
-  if (!dish.trim()) {
-    container.innerHTML = '<div class="cellar-empty">Type a dish above to find matching wines</div>';
-    return;
-  }
-  const q = dish.toLowerCase();
-  const scored = WINES.map(w => {
-    const score = w.pairings.filter(p => p.toLowerCase().split(/\s+/).some(word => q.includes(word)) || q.split(/\s+/).some(word => p.toLowerCase().includes(word))).length;
-    return { w, score };
-  }).filter(({ score }) => score > 0).sort((a, b) => b.score - a.score);
-
-  if (!scored.length) {
-    container.innerHTML = `<div class="cellar-empty">No direct matches for "${esc(dish)}".<br>Try a more general term.</div>`;
-    return;
-  }
-  container.innerHTML = scored.slice(0, 15).map(({ w, score }) => `
-    <div class="pairing-item${selectedWine?.id === w.id ? ' active' : ''}" data-id="${w.id}" tabindex="0" role="button" aria-label="${esc(w.name)}">
-      <span class="pairing-score">${score}</span>
-      <div>
-        <div class="pairing-name">${esc(w.name)}</div>
-        <div class="pairing-region">${w.flag} ${esc(w.region)}</div>
-      </div>
-    </div>
-  `).join('');
-  container.querySelectorAll('.pairing-item').forEach(el => {
-    el.addEventListener('click', () => openDetail(el.dataset.id));
-    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') el.click(); });
-  });
-}
-
-// ── Open Library books ────────────────────────────────────────
-async function searchBooks(query) {
-  const container = document.getElementById('books-results');
-  container.innerHTML = '<p class="books-loading">Searching Open Library…</p>';
-  try {
-    const url = `https://openlibrary.org/search.json?subject=wine&q=${encodeURIComponent(query)}&limit=8&fields=key,title,author_name,first_publish_year`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const docs = data.docs || [];
-    if (!docs.length) {
-      container.innerHTML = '<p class="books-loading">No books found. Try a different query.</p>';
-      return;
-    }
-    container.innerHTML = `<div class="books-grid">${docs.map(d => `
-      <a class="book-card" href="https://openlibrary.org${d.key}" target="_blank" rel="noopener" aria-label="${esc(d.title)}">
-        <div class="book-title">${esc(d.title)}</div>
-        ${d.author_name ? `<div class="book-author">by ${esc(d.author_name.join(', '))}</div>` : ''}
-        ${d.first_publish_year ? `<div class="book-year">First published: ${d.first_publish_year}</div>` : ''}
-      </a>`).join('')}</div>`;
-  } catch (err) {
-    container.innerHTML = `<p class="books-loading">Error fetching books: ${esc(err.message)}</p>`;
-  }
-}
-
-// ── Tab switching ─────────────────────────────────────────────
-function switchSidebarTab(name) {
-  document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.toggle('active', t.dataset.stab === name));
-  document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.toggle('active', p.id === 'stab-' + name));
-}
-
-function switchMainTab(name) {
-  currentMainTab = name;
-  document.querySelectorAll('.main-tab').forEach(t => t.classList.toggle('active', t.dataset.mtab === name));
-  document.getElementById('detail-panel').classList.remove('visible');
-  document.getElementById('mtab-grid').style.display   = name === 'grid'  ? '' : 'none';
-  document.getElementById('mtab-books').style.display  = name === 'books' ? '' : 'none';
-  if (name === 'grid') renderGrid();
-}
-
-// ── Toast ─────────────────────────────────────────────────────
+// ── Toast ────────────────────────────────────────────────────
 let toastTimer;
-function toast(msg, type = '') {
+function toast(msg, type) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.className = 'toast show' + (type ? ' ' + type : '');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
 }
 
-// ── Event wiring ──────────────────────────────────────────────
+// ── UI state ─────────────────────────────────────────────────
+function showState(state) {
+  document.getElementById('main-empty').style.display   = state === 'empty'   ? '' : 'none';
+  document.getElementById('main-loading').classList.toggle('visible', state === 'loading');
+  document.getElementById('main-error').classList.toggle('visible',   state === 'error');
+  document.getElementById('result-panel').classList.toggle('visible', state === 'result');
+}
+
+function setLoadingLabel(text) {
+  document.getElementById('loading-label').textContent = text;
+}
+
+// ── HTML escape ───────────────────────────────────────────────
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ── Allergen definitions ──────────────────────────────────────
+const ALLERGENS = [
+  { key:'sulfites',   label:'Sulfites',         keywords:['sulfit','sulfite','sulphite','so2','e220','e221','e222','e223','e224','e225','e226','e227','e228'] },
+  { key:'milk',       label:'Milk / Casein',     keywords:['milk','casein','lactose','dairy','lait','caséine'] },
+  { key:'eggs',       label:'Eggs / Albumin',    keywords:['egg ','albumin','oeuf','albumine'] },
+  { key:'isinglass',  label:'Isinglass (fish)',  keywords:['isinglass','colle de poisson'] },
+  { key:'gelatin',    label:'Gelatin',           keywords:['gelatin','gélatine'] },
+  { key:'gluten',     label:'Gluten',            keywords:['gluten','wheat','barley'] },
+];
+
+function parseAllergens(product) {
+  const src = [
+    product.allergens || '',
+    (product.allergens_tags || []).join(' '),
+    product.ingredients_text || '',
+    (product.additives_tags || []).join(' '),
+  ].join(' ').toLowerCase();
+  return ALLERGENS.map(a => ({ ...a, present: a.keywords.some(k => src.includes(k)) }));
+}
+
+// ── Infer wine style from OFF categories ──────────────────────
+function inferStyle(product) {
+  const cat = (product.categories || '').toLowerCase();
+  if (/sparkling|champagne|prosecco|cava|crémant|cremant|sekt/.test(cat)) return 'sparkling';
+  if (/ros[eé]/.test(cat)) return 'rosé';
+  if (/white wine|vin blanc|vino blanco|weisswein/.test(cat)) return 'white';
+  if (/red wine|vin rouge|vino tinto|rotwein/.test(cat)) return 'red';
+  if (/dessert|sauternes|sweet wine|port|sherry|late harvest/.test(cat)) return 'dessert';
+  return null;
+}
+
+// ── Style-derived tasting notes + pairings ────────────────────
+const NOTES_MAP = {
+  red:      ['dark cherry', 'cassis', 'oak', 'spice', 'earthy tannins'],
+  white:    ['citrus', 'stone fruit', 'mineral', 'crisp acidity', 'floral'],
+  rosé:     ['red berries', 'watermelon', 'floral', 'dry finish'],
+  sparkling:['brioche', 'citrus', 'green apple', 'fine bubbles', 'mineral'],
+  dessert:  ['honey', 'apricot', 'vanilla', 'botrytis', 'rich sweetness'],
+  default:  ['complex', 'balanced', 'layered', 'elegant'],
+};
+const PAIRINGS_MAP = {
+  red:      ['Grilled red meats', 'Aged cheese', 'Lamb', 'Mushroom risotto', 'Venison'],
+  white:    ['Seafood', 'White fish', 'Chicken', 'Soft cheeses', 'Salads'],
+  rosé:     ['Charcuterie', 'Light pasta', 'Grilled fish', 'Summer salads'],
+  sparkling:['Oysters', 'Caviar', 'Light starters', 'Sushi', 'Aperitivo'],
+  dessert:  ['Blue cheese', 'Foie gras', 'Fruit tarts', 'Dark chocolate'],
+  default:  ['Versatile food pairing — check producer recommendations'],
+};
+
+// ── Build result object ───────────────────────────────────────
+function buildResult(product, query) {
+  const style = inferStyle(product) || 'default';
+  const allergens = parseAllergens(product);
+  const additives = (product.additives_tags || []).map(t => t.replace(/^en:/,'').toUpperCase());
+  const vintageMatch = (query + ' ' + (product.product_name || '')).match(/\b(19|20)\d{2}\b/);
+
+  return {
+    id: product._id || product.id || ('result-' + Date.now()),
+    name: product.product_name || query,
+    brand: product.brands || '—',
+    quantity: product.quantity || '—',
+    categories: product.categories || '—',
+    origins: product.origins || product.countries_tags?.[0]?.replace('en:','') || '—',
+    style,
+    vintage: vintageMatch ? vintageMatch[0] : '—',
+    allergens,
+    additives,
+    notes: NOTES_MAP[style] || NOTES_MAP.default,
+    pairings: PAIRINGS_MAP[style] || PAIRINGS_MAP.default,
+    ingredients: product.ingredients_text || '',
+    labels: product.labels || '',
+    verified: true,
+    query,
+  };
+}
+
+function buildFallbackResult(query) {
+  const vintageMatch = query.match(/\b(19|20)\d{2}\b/);
+  return {
+    id: 'manual-' + Date.now(),
+    name: query,
+    brand: '—',
+    quantity: '—',
+    categories: 'Wine',
+    origins: '—',
+    style: 'default',
+    vintage: vintageMatch ? vintageMatch[0] : '—',
+    allergens: ALLERGENS.map(a => ({ ...a, present: false })),
+    additives: [],
+    notes: NOTES_MAP.default,
+    pairings: PAIRINGS_MAP.default,
+    ingredients: '',
+    labels: '',
+    verified: false,
+    query,
+  };
+}
+
+// ── Open Food Facts lookup ────────────────────────────────────
+async function searchOFF(query) {
+  const params = new URLSearchParams({
+    search_terms: query,
+    search_simple: '1',
+    action: 'process',
+    json: '1',
+    page_size: '5',
+    fields: 'product_name,brands,quantity,categories,allergens,allergens_tags,additives_tags,ingredients_text,labels,origins,countries_tags,_id',
+  });
+  const res = await fetch('https://world.openfoodfacts.org/cgi/search.pl?' + params);
+  if (!res.ok) throw new Error('Open Food Facts returned HTTP ' + res.status);
+  const data = await res.json();
+  return (data.products || []).filter(p => p.product_name);
+}
+
+async function lookupWine(query) {
+  showState('loading');
+  setLoadingLabel('Searching Open Food Facts…');
+  errorRetryFn = () => lookupWine(query);
+
+  try {
+    const products = await searchOFF(query);
+
+    if (!products.length) {
+      const result = buildFallbackResult(query);
+      currentResult = result;
+      scanHistory.add(result);
+      renderResult(result);
+      renderHistory();
+      showState('result');
+      toast('No Open Food Facts record found — showing style-based data');
+      return;
+    }
+
+    const result = buildResult(products[0], query);
+    currentResult = result;
+    scanHistory.add(result);
+    renderResult(result);
+    renderHistory();
+    showState('result');
+    toast('Wine data loaded', 'success');
+  } catch (err) {
+    showState('error');
+    document.getElementById('error-title').textContent = 'Lookup failed';
+    document.getElementById('error-message').textContent = err.message + '. Check your connection and try again.';
+  }
+}
+
+// ── Lazy-load Tesseract.js ────────────────────────────────────
+let tesseractLoaded = false;
+async function loadTesseract() {
+  if (tesseractLoaded || window.Tesseract) { tesseractLoaded = true; return; }
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/tesseract.js@4/dist/tesseract.min.js';
+    s.onload = () => { tesseractLoaded = true; resolve(); };
+    s.onerror = () => reject(new Error('Failed to load OCR engine. Check your connection.'));
+    document.head.appendChild(s);
+  });
+}
+
+// ── OCR ───────────────────────────────────────────────────────
+async function runOCR(file) {
+  const progress = document.getElementById('ocr-progress');
+  const bar = document.getElementById('ocr-bar');
+  const statusText = document.getElementById('ocr-status-text');
+  const scanBtn = document.getElementById('btn-scan-ocr');
+
+  progress.classList.add('visible');
+  scanBtn.disabled = true;
+  bar.style.width = '0%';
+  bar.setAttribute('aria-valuenow', '0');
+
+  try {
+    setLoadingLabel('Loading OCR engine…');
+    await loadTesseract();
+
+    const result = await Tesseract.recognize(file, 'eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const pct = Math.round((m.progress || 0) * 100);
+          bar.style.width = pct + '%';
+          bar.setAttribute('aria-valuenow', String(pct));
+          statusText.textContent = 'Reading label text… ' + pct + '%';
+        } else if (m.status) {
+          statusText.textContent = m.status.charAt(0).toUpperCase() + m.status.slice(1) + '…';
+        }
+      },
+    });
+
+    const raw = (result.data && result.data.text) ? result.data.text : '';
+    const query = cleanOCRText(raw);
+
+    if (!query) {
+      throw new Error('Could not read text from this image. Try a clearer photo or use manual search below.');
+    }
+
+    progress.classList.remove('visible');
+    scanBtn.disabled = false;
+    toast('Text extracted — looking up wine data…');
+    await lookupWine(query);
+  } catch (err) {
+    progress.classList.remove('visible');
+    scanBtn.disabled = false;
+    showState('error');
+    document.getElementById('error-title').textContent = 'OCR failed';
+    document.getElementById('error-message').textContent = err.message || 'Could not extract text from image.';
+    errorRetryFn = null;
+  }
+}
+
+function cleanOCRText(raw) {
+  const lines = raw.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 3 && /[a-zA-ZÀ-ÖØ-öø-ÿ]{3,}/.test(l) && !/^\d+$/.test(l));
+  return lines.slice(0, 3).join(' ').slice(0, 120).trim();
+}
+
+// ── Sommelier note ────────────────────────────────────────────
+function buildSommelierNote(r) {
+  const styleDesc = {
+    red:      'a structured red wine with complex fruit character and firm tannins',
+    white:    'a crisp, aromatic white wine with vibrant acidity and elegant minerality',
+    rosé:     'a delicate rosé with fresh berry character and a clean, dry finish',
+    sparkling:'an effervescent wine with fine bubbles, fresh citrus, and celebratory character',
+    dessert:  'a luscious dessert wine with concentrated sweetness balanced by refreshing acidity',
+    default:  'a wine with characteristic depth and balance from its origin',
+  }[r.style] || 'an expressive wine';
+
+  const vintage = r.vintage !== '—' ? ' (' + r.vintage + ')' : '';
+  const origin = r.origins !== '—' ? ' from ' + r.origins.split(',')[0].trim() : '';
+  const pairStr = r.pairings.slice(0, 2).join(' and ').toLowerCase();
+  const noteStr = r.notes.slice(0, 3).join(', ');
+  const sulfiteFlag = r.allergens.find(a => a.key === 'sulfites' && a.present);
+
+  return r.name + vintage + ' is ' + styleDesc + origin + '. Expect notes of ' + noteStr + ' on the palate. Ideal for pairing with ' + pairStr + '. ' + (sulfiteFlag ? 'Contains sulfites — advise guests with sulfite sensitivity.' : 'No major allergens detected in available product data.');
+}
+
+// ── Render result ─────────────────────────────────────────────
+function renderResult(r) {
+  switchResultTab('detail');
+  const presentAllergens = r.allergens.filter(a => a.present);
+
+  // Wine Info tab
+  document.getElementById('rtab-detail').innerHTML = `
+    <div>
+      <h1 class="detail-name">${esc(r.name)}</h1>
+      <div class="detail-brand">${esc(r.brand)}</div>
+      <div class="detail-badges">
+        ${r.verified ? '<span class="badge badge-verified">Verified</span>' : '<span class="badge badge-manual">No record found</span>'}
+        ${r.style !== 'default' ? `<span class="badge badge-${r.style === 'rosé' ? 'rosé' : r.style}">${r.style.charAt(0).toUpperCase() + r.style.slice(1)}</span>` : ''}
+        ${presentAllergens.length ? `<span class="badge badge-allergen">Contains allergens</span>` : ''}
+      </div>
+    </div>
+
+    <div class="detail-meta-grid">
+      <div class="meta-item">
+        <span class="meta-label">Vintage</span>
+        <span class="meta-value">${esc(r.vintage)}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Origin</span>
+        <span class="meta-value">${esc(r.origins.split(',')[0].trim())}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Quantity</span>
+        <span class="meta-value">${esc(r.quantity)}</span>
+      </div>
+    </div>
+
+    <div>
+      <span class="section-title">Tasting Notes</span>
+      <div class="flavor-notes">${r.notes.map(n => `<span class="flavor-chip">${esc(n)}</span>`).join('')}</div>
+      ${!r.verified ? `<p style="font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:var(--space-2);">Notes inferred from wine style — no exact product record found in Open Food Facts.</p>` : ''}
+    </div>
+
+    <div>
+      <span class="section-title">Food Pairings</span>
+      <div class="pairing-list">${r.pairings.map(p => `<span class="pairing-tag">${esc(p)}</span>`).join('')}</div>
+    </div>
+
+    ${r.ingredients ? `<div>
+      <span class="section-title">Ingredients</span>
+      <div class="ingredients-text">${esc(r.ingredients)}</div>
+    </div>` : ''}
+
+    <div>
+      <span class="section-title">Sommelier Notes</span>
+      <p class="sommelier-notes">${esc(buildSommelierNote(r))}</p>
+    </div>
+  `;
+
+  // Allergens tab
+  document.getElementById('rtab-allergens').innerHTML = `
+    <div>
+      <span class="section-title">Allergen Flags</span>
+      <div class="allergen-grid">
+        ${r.allergens.map(a => `
+          <div class="allergen-flag ${a.present ? 'present' : 'absent'}">
+            <span class="allergen-dot" aria-hidden="true"></span>
+            ${esc(a.label)}
+          </div>`).join('')}
+      </div>
+      <p style="font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:var(--space-4);line-height:1.6;">
+        Allergen data sourced from Open Food Facts product records. Always verify against the physical label before advising guests.
+      </p>
+    </div>
+
+    ${r.additives.length ? `<div>
+      <span class="section-title">Additives</span>
+      <div class="allergen-grid">
+        ${r.additives.map(a => `<div class="allergen-flag present"><span class="allergen-dot" aria-hidden="true"></span>${esc(a)}</div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${r.ingredients
+      ? `<div>
+           <span class="section-title">Full Ingredients</span>
+           <div class="ingredients-text">${esc(r.ingredients)}</div>
+         </div>`
+      : `<p style="font-size:var(--text-sm);color:var(--color-ink-muted);padding:var(--space-2) 0;">Ingredient list not available for this product in Open Food Facts.</p>`}
+  `;
+
+  // Share tab
+  renderShareTab(r);
+}
+
+// ── Render share tab ──────────────────────────────────────────
+function renderShareTab(r) {
+  const presentAllergens = r.allergens.filter(a => a.present);
+  const allergenStr = presentAllergens.length ? presentAllergens.map(a => a.label).join(', ') : 'None detected';
+  const shareText = [
+    r.name + (r.vintage !== '—' ? ' ' + r.vintage : ''),
+    r.brand !== '—' ? r.brand : '',
+    'Style: ' + (r.style !== 'default' ? r.style : 'Wine'),
+    'Origin: ' + r.origins.split(',')[0].trim(),
+    'Pairings: ' + r.pairings.slice(0, 3).join(', '),
+    'Allergens: ' + allergenStr,
+    'Tasting: ' + r.notes.slice(0, 3).join(', '),
+  ].filter(Boolean).join(' | ');
+
+  const qrData = encodeURIComponent(shareText.slice(0, 300));
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + qrData + '&bgcolor=ffffff&color=111111&margin=4';
+
+  document.getElementById('rtab-share').innerHTML = `
+    <div>
+      <span class="section-title">Guest Share Card</span>
+      <div class="share-card">
+        <div class="share-card-info">
+          <div class="share-card-name">${esc(r.name)}</div>
+          <div class="share-card-brand">${esc(r.brand)}</div>
+          <div class="share-card-facts">
+            <div class="share-card-fact"><strong>Vintage:</strong> ${esc(r.vintage)}</div>
+            <div class="share-card-fact"><strong>Style:</strong> ${r.style !== 'default' ? r.style.charAt(0).toUpperCase() + r.style.slice(1) : '—'}</div>
+            <div class="share-card-fact"><strong>Origin:</strong> ${esc(r.origins.split(',')[0].trim())}</div>
+            <div class="share-card-fact"><strong>Pairs with:</strong> ${esc(r.pairings.slice(0, 3).join(', '))}</div>
+            <div class="share-card-fact"><strong>Notes:</strong> ${esc(r.notes.slice(0, 3).join(', '))}</div>
+          </div>
+          ${presentAllergens.length
+            ? `<div>
+                <div style="font-size:var(--text-xs);font-weight:600;color:var(--color-neg);margin-bottom:var(--space-1);">Contains:</div>
+                <div class="share-card-allergens">
+                  ${presentAllergens.map(a => `<span class="share-card-allergen">${esc(a.label)}</span>`).join('')}
+                </div>
+              </div>`
+            : `<div style="font-size:var(--text-xs);color:var(--color-ink-muted);">No major allergens detected</div>`}
+        </div>
+        <div class="share-qr">
+          <img src="${esc(qrUrl)}" alt="QR code encoding wine information for guest sharing" loading="lazy" width="100" height="100">
+          <div class="share-qr-label">Scan for<br>wine info</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="share-actions">
+      <button class="btn-primary" id="btn-copy-card">Copy Card Text</button>
+      <button class="btn-ghost"    id="btn-print-card">Print Card</button>
+      <button class="btn-ghost"    id="btn-copy-qr-link">Copy QR Link</button>
+    </div>
+
+    <p style="font-size:var(--text-xs);color:var(--color-ink-muted);line-height:1.6;">
+      The QR code encodes wine name, vintage, pairings, and allergen flags — scan it with any phone camera for instant offline sharing with guests.
+    </p>
+  `;
+
+  document.getElementById('btn-copy-card').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      toast('Card text copied', 'success');
+    } catch {
+      toast('Copy unavailable — select text manually');
+    }
+  });
+
+  document.getElementById('btn-print-card').addEventListener('click', () => {
+    const win = window.open('', '_blank');
+    if (!win) { toast('Pop-up blocked — allow pop-ups and try again', 'error'); return; }
+    const allergenHtml = presentAllergens.length
+      ? presentAllergens.map(a => `<span style="display:inline-block;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;font-size:11px;margin:2px;">${a.label}</span>`).join('')
+      : 'None detected';
+    win.document.write(`<!DOCTYPE html><html><head><title>${r.name}</title>
+<style>body{font-family:Georgia,serif;padding:40px;max-width:480px;color:#111;}h1{font-size:26px;margin:0 0 4px;}
+.sub{color:#666;font-size:14px;margin-bottom:18px;}.row{font-size:13px;margin:5px 0;}
+.qr{margin-top:20px;}.note{font-size:11px;color:#999;margin-top:18px;border-top:1px solid #eee;padding-top:12px;}
+</style></head><body>
+<h1>${esc(r.name)}</h1>
+<div class="sub">${esc(r.brand)}</div>
+<div class="row"><strong>Vintage:</strong> ${esc(r.vintage)}</div>
+<div class="row"><strong>Style:</strong> ${r.style !== 'default' ? r.style : '—'}</div>
+<div class="row"><strong>Origin:</strong> ${esc(r.origins.split(',')[0].trim())}</div>
+<div class="row"><strong>Food pairings:</strong> ${esc(r.pairings.slice(0,3).join(', '))}</div>
+<div class="row"><strong>Tasting notes:</strong> ${esc(r.notes.slice(0,3).join(', '))}</div>
+<div class="row"><strong>Allergens:</strong> ${allergenHtml}</div>
+<div class="qr"><img src="${qrUrl}" width="120" height="120" alt="QR"></div>
+<div class="note">Data from Open Food Facts. Verify allergens on the physical label before serving.</div>
+</body></html>`);
+    win.document.close();
+    setTimeout(() => { try { win.print(); } catch {} }, 300);
+  });
+
+  document.getElementById('btn-copy-qr-link').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(qrUrl);
+      toast('QR image link copied', 'success');
+    } catch {
+      toast('Copy unavailable');
+    }
+  });
+}
+
+// ── Render history ────────────────────────────────────────────
+function renderHistory() {
+  const entries = scanHistory.get();
+  const container = document.getElementById('history-list');
+  const emptyEl = document.getElementById('history-empty');
+
+  // Remove old items (keep empty placeholder)
+  container.querySelectorAll('.history-item').forEach(el => el.remove());
+
+  if (!entries.length) {
+    emptyEl.style.display = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  entries.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'history-item' + (currentResult && currentResult.id === r.id ? ' active' : '');
+    div.setAttribute('tabindex', '0');
+    div.setAttribute('role', 'button');
+    div.setAttribute('aria-label', 'Load ' + r.name);
+    div.innerHTML = `
+      <div class="history-item-name">${esc(r.name)}</div>
+      <div class="history-item-meta">${esc(r.brand !== '—' ? r.brand : r.query)} · ${r.style !== 'default' ? r.style : 'wine'}${r.vintage !== '—' ? ' · ' + r.vintage : ''}</div>
+    `;
+    div.addEventListener('click', () => {
+      currentResult = r;
+      renderResult(r);
+      showState('result');
+      renderHistory();
+    });
+    div.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); div.click(); } });
+    container.appendChild(div);
+  });
+}
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchResultTab(name) {
+  currentResultTab = name;
+  document.querySelectorAll('.result-tab').forEach(t => {
+    const active = t.dataset.rtab === name;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.getElementById('rtab-detail').style.display    = name === 'detail'    ? '' : 'none';
+  document.getElementById('rtab-allergens').style.display = name === 'allergens' ? '' : 'none';
+  document.getElementById('rtab-share').style.display     = name === 'share'     ? '' : 'none';
+}
+
+function switchSidebarTab(name) {
+  document.querySelectorAll('.sidebar-tab').forEach(t => {
+    const active = t.dataset.stab === name;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('.sidebar-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'stab-' + name);
+  });
+}
+
+// ── Drop zone + file handling ─────────────────────────────────
+const dropZone   = document.getElementById('drop-zone');
+const fileInput  = document.getElementById('label-file-input');
+const previewEl  = document.getElementById('label-preview');
+const previewImg = document.getElementById('label-preview-img');
+
+function handleFile(file) {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    toast('Please upload a JPG, PNG, or WEBP image', 'error');
+    return;
+  }
+  if (file.size > 15 * 1024 * 1024) {
+    toast('File too large — please use an image under 15 MB', 'error');
+    return;
+  }
+  pendingFile = file;
+  const url = URL.createObjectURL(file);
+  previewImg.onload = () => URL.revokeObjectURL(url);
+  previewImg.src = url;
+  previewEl.classList.add('visible');
+  dropZone.style.display = 'none';
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', e => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over'); });
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer && e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  fileInput.value = '';
+});
+
+document.getElementById('btn-scan-ocr').addEventListener('click', async () => {
+  if (!pendingFile) { toast('No image loaded'); return; }
+  await runOCR(pendingFile);
+});
+
+document.getElementById('btn-clear-label').addEventListener('click', () => {
+  pendingFile = null;
+  previewImg.removeAttribute('src');
+  previewEl.classList.remove('visible');
+  dropZone.style.display = '';
+  document.getElementById('ocr-progress').classList.remove('visible');
+});
+
+// ── Manual search ─────────────────────────────────────────────
+async function doManualSearch() {
+  const q = document.getElementById('manual-search').value.trim();
+  if (!q) {
+    toast('Please enter a wine name or producer');
+    document.getElementById('manual-search').focus();
+    return;
+  }
+  await lookupWine(q);
+}
+
+document.getElementById('btn-manual-search').addEventListener('click', doManualSearch);
+document.getElementById('manual-search').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doManualSearch();
+});
+
+// ── Result tab clicks ─────────────────────────────────────────
+document.querySelectorAll('.result-tab').forEach(t => {
+  t.addEventListener('click', () => switchResultTab(t.dataset.rtab));
+});
+
+// ── Sidebar tab clicks ────────────────────────────────────────
 document.querySelectorAll('.sidebar-tab').forEach(t => {
   t.addEventListener('click', () => switchSidebarTab(t.dataset.stab));
 });
 
-document.querySelectorAll('.main-tab').forEach(t => {
-  t.addEventListener('click', () => switchMainTab(t.dataset.mtab));
+// ── Error retry ───────────────────────────────────────────────
+document.getElementById('btn-error-retry').addEventListener('click', () => {
+  if (errorRetryFn) errorRetryFn();
+  else showState('empty');
 });
 
-document.getElementById('wine-search').addEventListener('input', e => {
-  searchQuery = e.target.value;
-  if (selectedWine) closeDetail();
-  renderGrid();
-});
-
-document.querySelectorAll('.chip[data-filter]').forEach(chip => {
-  chip.addEventListener('click', () => {
-    const group = chip.dataset.filter;
-    // deactivate siblings
-    document.querySelectorAll(`.chip[data-filter="${group}"]`).forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    filters[group] = chip.dataset.val;
-    if (selectedWine) closeDetail();
-    renderGrid();
-  });
-});
-
-const vintageFromInput = document.getElementById('vintage-from');
-const vintageToInput   = document.getElementById('vintage-to');
-const vintageFromVal   = document.getElementById('vintage-from-val');
-const vintageToVal     = document.getElementById('vintage-to-val');
-
-vintageFromInput.addEventListener('input', () => {
-  vintageFrom = parseInt(vintageFromInput.value);
-  if (vintageFrom > vintageTo) { vintageTo = vintageFrom; vintageToInput.value = vintageTo; }
-  vintageFromVal.textContent = vintageFrom;
-  vintageToVal.textContent = vintageTo;
-  if (selectedWine) closeDetail();
-  renderGrid();
-});
-
-vintageToInput.addEventListener('input', () => {
-  vintageTo = parseInt(vintageToInput.value);
-  if (vintageTo < vintageFrom) { vintageFrom = vintageTo; vintageFromInput.value = vintageFrom; }
-  vintageFromVal.textContent = vintageFrom;
-  vintageToVal.textContent = vintageTo;
-  if (selectedWine) closeDetail();
-  renderGrid();
-});
-
-let dishTimer;
-document.getElementById('dish-input').addEventListener('input', e => {
-  clearTimeout(dishTimer);
-  dishTimer = setTimeout(() => renderPairingResults(e.target.value), 200);
-});
-
-document.getElementById('books-search-btn').addEventListener('click', () => {
-  const q = document.getElementById('books-query').value.trim() || 'wine';
-  searchBooks(q);
-});
-document.getElementById('books-query').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('books-search-btn').click();
-});
-
-// ── Init ──────────────────────────────────────────────────────
-renderGrid();
-renderCellar();
-
-// ── N12 banner retract on scroll ──────────────────────────────
+// ── N12 retract on scroll ─────────────────────────────────────
 window.addEventListener('scroll', () => {
   document.getElementById('main-nav').classList.toggle('is-retracted', window.scrollY > 80);
 }, { passive: true });
+
+// ── Init ──────────────────────────────────────────────────────
+showState('empty');
+renderHistory();
 </script>
 </body>
 </html>

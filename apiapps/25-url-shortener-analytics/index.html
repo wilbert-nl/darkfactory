@@ -348,6 +348,7 @@ a { color: inherit; text-decoration: none; }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-btn-hover); }
 .btn-primary:focus-visible { border-radius: var(--radius-md); }
 .btn-primary:active { transform: translateY(0); box-shadow: none; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* ── Quick stats grid ── */
 .quick-stats {
@@ -837,6 +838,15 @@ a { color: inherit; text-decoration: none; }
     <!-- Input card — cols 1–5 -->
     <div class="card bento-input" aria-label="Create and filter links">
 
+      <!-- Rebrandly API Key -->
+      <div class="card-section">
+        <span class="card-section-label">Rebrandly API Key</span>
+        <div class="field-group" style="margin-bottom:0">
+          <input type="password" class="input-field" id="api-key-input" placeholder="Paste your API key (optional)" aria-label="Rebrandly API key" autocomplete="off">
+          <p style="font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:var(--space-1)">With a key, links are created via Rebrandly. Without, links are stored locally only.</p>
+        </div>
+      </div>
+
       <!-- Domain -->
       <div class="card-section">
         <span class="card-section-label">Your Domain</span>
@@ -863,6 +873,19 @@ a { color: inherit; text-decoration: none; }
         <div class="field-group">
           <label class="field-label" for="label-input">Label</label>
           <input type="text" class="input-field" id="label-input" placeholder="e.g. Summer sale CTA" maxlength="80" aria-label="Label or description">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="expiry-input">Expiry date <span style="font-weight:400">(optional)</span></label>
+          <input type="date" class="input-field" id="expiry-input" aria-label="Link expiry date">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;margin-bottom:0">
+            <input type="checkbox" id="pw-enable" style="accent-color:var(--color-accent);cursor:pointer">
+            Password protect
+          </label>
+          <input type="password" class="input-field" id="pw-input" placeholder="Set a password" style="margin-top:var(--space-2);display:none" aria-label="Link password" autocomplete="new-password">
         </div>
 
         <div class="field-group">
@@ -1119,7 +1142,12 @@ function renderLinks() {
           <button class="btn-copy-inline" data-copy="${esc(shortUrl)}" aria-label="Copy short URL" title="Copy short URL">⧉</button>
         </div>
         <div class="label-cell">
-          <div class="link-label">${esc(link.label || '(unlabeled)')}</div>
+          <div class="link-label" style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap">
+            <span>${esc(link.label || '(unlabeled)')}</span>
+            ${link.password ? `<span style="font-size:10px;padding:1px var(--space-2);border-radius:99px;background:var(--color-warn);color:var(--color-paper);font-weight:600;white-space:nowrap">Locked</span>` : ''}
+            ${link.expiresAt && new Date(link.expiresAt) < new Date() ? `<span style="font-size:10px;padding:1px var(--space-2);border-radius:99px;background:var(--color-danger);color:var(--color-paper);font-weight:600;white-space:nowrap">Expired</span>` : ''}
+            ${link.expiresAt && new Date(link.expiresAt) >= new Date() ? `<span style="font-size:10px;color:var(--color-ink-muted);white-space:nowrap">exp ${fmtDate(link.expiresAt)}</span>` : ''}
+          </div>
           <div class="link-url-orig" title="${esc(link.originalUrl)}">${esc(link.originalUrl)}</div>
         </div>
         <span><span class="campaign-badge badge-${(link.campaign||'').toLowerCase()}">${esc(link.campaign)}</span></span>
@@ -1262,7 +1290,16 @@ function renderDetail(link) {
             width="120" height="120"
             alt="QR code for ${esc(shortUrl)}"
             loading="lazy"
+            id="qr-img-${link.id}"
+            onerror="this.style.display='none';var e=document.getElementById('qr-err-${link.id}');if(e)e.style.display='flex';"
           >
+          <div
+            id="qr-err-${link.id}"
+            style="display:none;width:120px;height:120px;border:1px solid var(--color-border);border-radius:var(--radius-md);align-items:center;justify-content:center;font-size:var(--text-xs);color:var(--color-ink-muted);text-align:center;padding:var(--space-3);flex-direction:column;gap:var(--space-2)"
+          >
+            <span style="font-size:1.5rem;line-height:1">&#9888;</span>
+            QR unavailable<br><span style="color:var(--color-ink-muted)">Check connection</span>
+          </div>
           <span class="qr-label">Scan to open<br>${esc(shortUrl)}</span>
         </div>
       </div>
@@ -1360,11 +1397,12 @@ function buildDonutSvg(link) {
   for (const c of link.clickLog) { if (c.referrer in counts) counts[c.referrer]++; }
   const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
 
+  // Use CSS token variables — applied via style="" so var() resolves correctly in SVG
   const colors = {
-    direct: 'oklch(52% 0.20 256)',
-    social: 'oklch(50% 0.18 260)',
-    email:  'oklch(50% 0.15 72)',
-    search: 'oklch(55% 0.20 25)',
+    direct: 'var(--color-accent)',
+    social: 'var(--badge-social-fg)',
+    email:  'var(--badge-email-fg)',
+    search: 'var(--color-danger)',
   };
 
   const R = 36, cx = 60, cy = 48, strokeW = 14;
@@ -1380,7 +1418,7 @@ function buildDonutSvg(link) {
     const gap = circumference - dash;
     arcs += `<circle cx="${cx}" cy="${cy}" r="${R}"
       fill="none"
-      stroke="${colors[key]}"
+      style="stroke:${colors[key]}"
       stroke-width="${strokeW}"
       stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"
       stroke-dashoffset="${(-offset * circumference / (2 * Math.PI * R)).toFixed(2)}"
@@ -1389,7 +1427,7 @@ function buildDonutSvg(link) {
     offset += pct * circumference;
 
     const pctLabel = total > 1 || count > 0 ? Math.round(pct * 100) + '%' : '0%';
-    legend += `<rect x="110" y="${y}" width="8" height="8" rx="2" fill="${colors[key]}"/>
+    legend += `<rect x="110" y="${y}" width="8" height="8" rx="2" style="fill:${colors[key]}"/>
       <text x="122" y="${y + 7}" fill="var(--color-ink)" font-size="10" font-family="inherit">${key} ${esc(pctLabel)} (${count})</text>`;
     y += 16;
   }
@@ -1460,42 +1498,112 @@ function renderQuickStats() {
   document.getElementById('qs-avg-clicks').textContent = avg;
 }
 
+// ── API key helpers ──────────────────────────────────────────────
+const apiKeyInput = document.getElementById('api-key-input');
+apiKeyInput.value = localStorage.getItem('linkspark_apikey') || '';
+apiKeyInput.addEventListener('change', () => {
+  localStorage.setItem('linkspark_apikey', apiKeyInput.value.trim());
+});
+function getApiKey() { return (document.getElementById('api-key-input').value || '').trim(); }
+
+// ── Password checkbox toggle ─────────────────────────────────────
+document.getElementById('pw-enable').addEventListener('change', function () {
+  const pwInput = document.getElementById('pw-input');
+  pwInput.style.display = this.checked ? 'block' : 'none';
+  if (!this.checked) pwInput.value = '';
+});
+
 // ── Create link ──────────────────────────────────────────────────
-document.getElementById('btn-create').addEventListener('click', () => {
+document.getElementById('btn-create').addEventListener('click', async () => {
   const rawUrl = document.getElementById('url-input').value.trim();
   if (!rawUrl) { toast('Please enter a URL', 'error'); return; }
   let url = rawUrl;
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
-  const alias = document.getElementById('alias-input').value.trim();
-  const code = alias || uid();
-  const label = document.getElementById('label-input').value.trim();
+  // Validate URL structure
+  try { new URL(url); } catch { toast('Please enter a valid URL', 'error'); return; }
 
-  // Check duplicate code
-  if (links.find(l => l.code === code)) {
-    toast('That alias is already in use', 'error'); return;
+  const alias    = document.getElementById('alias-input').value.trim();
+  const label    = document.getElementById('label-input').value.trim();
+  const expiryVal = document.getElementById('expiry-input').value;
+  const pwEnabled = document.getElementById('pw-enable').checked;
+  const pw        = pwEnabled ? document.getElementById('pw-input').value.trim() : '';
+  const apiKey    = getApiKey();
+  const domain    = db.domain.get();
+
+  const btn = document.getElementById('btn-create');
+  btn.disabled = true;
+  const origLabel = btn.textContent;
+  btn.textContent = apiKey ? 'Creating via Rebrandly…' : 'Creating…';
+
+  try {
+    let code;
+    let rebrandlyId = null;
+
+    if (apiKey) {
+      // Call Rebrandly API
+      const payload = { destination: url, domain: { fullName: domain } };
+      if (alias) payload.slashtag = alias;
+      if (label) payload.title   = label;
+
+      const res = await fetch('https://api.rebrandly.com/v1/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: apiKey },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Rebrandly returned ${res.status}`);
+      }
+
+      const data = await res.json();
+      code        = data.slashtag;
+      rebrandlyId = data.id;
+    } else {
+      code = alias || uid();
+    }
+
+    // Guard duplicate (local)
+    if (links.find(l => l.code === code)) {
+      toast('That alias is already in use', 'error');
+      return;
+    }
+
+    const link = {
+      id: Math.random().toString(36).slice(2) + Date.now().toString(36),
+      originalUrl: url,
+      code,
+      campaign: createCampaign,
+      label,
+      createdAt: new Date().toISOString(),
+      clickLog: [],
+      ...(expiryVal   ? { expiresAt: new Date(expiryVal).toISOString() } : {}),
+      ...(pw          ? { password: pw }                                  : {}),
+      ...(rebrandlyId ? { rebrandlyId }                                   : {}),
+    };
+
+    links.unshift(link);
+    db.links.save(links);
+
+    // Reset form
+    document.getElementById('url-input').value   = '';
+    document.getElementById('alias-input').value  = '';
+    document.getElementById('label-input').value  = '';
+    document.getElementById('expiry-input').value = '';
+    const pwEl = document.getElementById('pw-input');
+    document.getElementById('pw-enable').checked = false;
+    pwEl.style.display = 'none';
+    pwEl.value = '';
+
+    renderLinks();
+    toast(rebrandlyId ? 'Short link created via Rebrandly!' : 'Short link created!', 'success');
+  } catch (err) {
+    toast(err.message || 'Failed to create link', 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = origLabel;
   }
-
-  const link = {
-    id: Math.random().toString(36).slice(2) + Date.now().toString(36),
-    originalUrl: url,
-    code,
-    campaign: createCampaign,
-    label,
-    createdAt: new Date().toISOString(),
-    clickLog: [],
-  };
-
-  links.unshift(link);
-  db.links.save(links);
-
-  // Reset form
-  document.getElementById('url-input').value = '';
-  document.getElementById('alias-input').value = '';
-  document.getElementById('label-input').value = '';
-
-  renderLinks();
-  toast('Short link created!', 'success');
 });
 
 // ── Campaign chips (create form) ─────────────────────────────────

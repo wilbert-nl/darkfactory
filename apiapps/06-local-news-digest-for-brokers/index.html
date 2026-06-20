@@ -829,6 +829,72 @@ a { color: inherit; text-decoration: none; }
 .toast.success { background: var(--color-success); }
 .toast.error   { background: var(--color-danger); }
 
+/* ── Breaking-news alert banner ── */
+.alert-banner {
+  background: var(--color-warn-subtle);
+  border: 1px solid var(--color-warn-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.alert-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.alert-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-warn);
+  flex-shrink: 0;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.alert-title {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-style: normal;
+  color: var(--color-warn);
+}
+.alert-msg {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  flex: 1;
+}
+.alert-dismiss {
+  background: none;
+  border: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  margin-left: auto;
+  transition: color 0.12s;
+}
+.alert-dismiss:hover { color: var(--color-warn); }
+.alert-dismiss:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.alert-articles { display: flex; flex-direction: column; gap: var(--space-1); }
+.alert-article-link {
+  font-size: var(--text-xs);
+  color: var(--color-warn);
+  font-weight: 500;
+  text-decoration: underline;
+  padding-left: var(--space-3);
+}
+.alert-article-link:hover { opacity: 0.8; }
+
+/* Priority keyword chips */
+.chip-priority {
+  background: var(--color-warn-subtle);
+  border-color: var(--color-warn-line);
+  color: var(--color-warn);
+}
+.chip-priority .chip-remove { color: var(--color-warn); }
+
 /* ── Mobile ── */
 @media (max-width: 640px) {
   html, body { overflow-x: clip; }
@@ -928,6 +994,16 @@ a { color: inherit; text-decoration: none; }
         </div>
       </div>
 
+      <!-- Priority / Breaking keywords -->
+      <div class="controls-field">
+        <span class="controls-field-label">Priority / Breaking Keywords</span>
+        <div class="input-row">
+          <input type="text" class="input-text" id="priority-kw-input" placeholder="e.g. foreclosure, eviction…" aria-label="Priority keyword to add" maxlength="40">
+          <button class="btn-icon" id="btn-add-priority-kw" aria-label="Add priority keyword">+</button>
+        </div>
+        <div class="keyword-chips" id="priority-kw-chips" aria-label="Priority keywords"></div>
+      </div>
+
       <!-- Categories -->
       <div class="controls-field">
         <span class="controls-field-label">Feed Categories</span>
@@ -950,7 +1026,7 @@ a { color: inherit; text-decoration: none; }
           <label class="feed-item">
             <input type="checkbox" id="feed-construction" checked aria-label="Construction feed">
             <span class="feed-item-label">Construction &amp; Zoning</span>
-            <span class="feed-badge">Demo</span>
+            <span class="feed-badge">RSS</span>
           </label>
         </div>
       </div>
@@ -1003,6 +1079,17 @@ a { color: inherit; text-decoration: none; }
     <div class="loading-bar" id="loading-bar" aria-live="polite">
       <div class="spinner" aria-hidden="true"></div>
       <span id="loading-msg">Fetching feeds…</span>
+    </div>
+
+    <!-- Breaking news alert banner -->
+    <div class="alert-banner" id="alert-banner" style="display:none;" role="alert" aria-live="assertive">
+      <div class="alert-banner-inner">
+        <span class="alert-dot" aria-hidden="true"></span>
+        <strong class="alert-title">Breaking News</strong>
+        <span class="alert-msg" id="alert-msg"></span>
+        <button class="alert-dismiss" id="alert-dismiss" aria-label="Dismiss alert">×</button>
+      </div>
+      <div class="alert-articles" id="alert-articles"></div>
     </div>
 
     <!-- Tabs -->
@@ -1068,6 +1155,7 @@ a { color: inherit; text-decoration: none; }
           <div class="digest-actions">
             <button class="btn-primary" id="btn-copy-text">Copy as Text</button>
             <button class="btn-primary" id="btn-copy-html">Copy as HTML</button>
+            <button class="btn-primary" id="btn-send-email" title="Opens your default email client">Send via Email</button>
             <button class="btn-ghost" id="btn-export-save" style="color:var(--color-accent);">Export &amp; Save</button>
           </div>
         </div>
@@ -1101,7 +1189,7 @@ const FEEDS = {
   },
   construction: {
     name: 'Construction & Zoning',
-    url: null, // demo only
+    url: 'https://www.constructiondive.com/feeds/news/',
     badge: 'construction',
   },
 };
@@ -1223,6 +1311,7 @@ let state = {
   maxArticles: store.get('lp_max_articles', 10),
   digestFreq: store.get('lp_digest_freq', 'daily'),
   savedArticles: store.get('lp_saved_articles', []),
+  priorityKeywords: store.get('lp_priority_keywords', []),
   digestArticles: [], // current fetch results (not persisted)
 };
 
@@ -1236,6 +1325,7 @@ function saveState() {
   store.set('lp_max_articles',    state.maxArticles);
   store.set('lp_digest_freq',     state.digestFreq);
   store.set('lp_saved_articles',  state.savedArticles);
+  store.set('lp_priority_keywords', state.priorityKeywords);
 }
 
 // ── Location ───────────────────────────────────────────────────
@@ -1336,6 +1426,46 @@ function addKeyword() {
 btnAddKw.addEventListener('click', addKeyword);
 keywordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addKeyword(); });
 renderKeywords();
+
+// ── Priority Keywords ──────────────────────────────────────────
+const priorityKwInput = document.getElementById('priority-kw-input');
+const btnAddPriorityKw = document.getElementById('btn-add-priority-kw');
+const priorityKwChips = document.getElementById('priority-kw-chips');
+
+function renderPriorityKeywords() {
+  priorityKwChips.innerHTML = '';
+  for (const kw of state.priorityKeywords) {
+    const chip = document.createElement('span');
+    chip.className = 'chip chip-priority';
+    chip.innerHTML = `${esc(kw)}<button class="chip-remove" aria-label="Remove priority keyword ${esc(kw)}">×</button>`;
+    chip.querySelector('.chip-remove').addEventListener('click', () => {
+      state.priorityKeywords = state.priorityKeywords.filter(k => k !== kw);
+      saveState();
+      renderPriorityKeywords();
+    });
+    priorityKwChips.appendChild(chip);
+  }
+}
+
+function addPriorityKeyword() {
+  const kw = priorityKwInput.value.trim().toLowerCase();
+  if (!kw) return;
+  if (state.priorityKeywords.includes(kw)) { toast('Priority keyword already added', 'error'); return; }
+  if (state.priorityKeywords.length >= 10) { toast('Maximum 10 priority keywords', 'error'); return; }
+  state.priorityKeywords.push(kw);
+  saveState();
+  renderPriorityKeywords();
+  priorityKwInput.value = '';
+  priorityKwInput.focus();
+  // Request notification permission on first priority keyword
+  if (state.priorityKeywords.length === 1 && 'Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+btnAddPriorityKw.addEventListener('click', addPriorityKeyword);
+priorityKwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addPriorityKeyword(); });
+renderPriorityKeywords();
 
 // ── Feed category checkboxes ───────────────────────────────────
 ['realestate', 'business', 'government', 'construction'].forEach(cat => {
@@ -1481,14 +1611,32 @@ function parseRSS(xmlText, category, feedName) {
   }
 }
 
-// ── Fetch a single RSS via allorigins.win ──────────────────────
+// ── Fetch a single RSS with proxy fallback cascade ─────────────
 async function fetchFeed(feedUrl, category, feedName) {
-  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
-  const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  const contents = data.contents || '';
-  return parseRSS(contents, category, feedName);
+  // Try allorigins.win first (JSON wrapper), then corsproxy.io (raw)
+  const proxies = [
+    {
+      build: (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+      extract: async (res) => { const d = await res.json(); return d.contents || ''; },
+    },
+    {
+      build: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      extract: async (res) => res.text(),
+    },
+  ];
+
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy.build(feedUrl), { signal: AbortSignal.timeout(9000) });
+      if (!res.ok) continue;
+      const contents = await proxy.extract(res);
+      const articles = parseRSS(contents, category, feedName);
+      if (articles.length > 0) return articles;
+    } catch {
+      // try next proxy
+    }
+  }
+  throw new Error('All proxies failed');
 }
 
 // ── Demo articles filtered by selected categories ──────────────
@@ -1506,6 +1654,48 @@ function scoreArticle(article, keywords) {
   }
   return score;
 }
+
+// ── Breaking news alert ────────────────────────────────────────
+function checkBreakingNews(articles) {
+  const alertBanner   = document.getElementById('alert-banner');
+  const alertMsg      = document.getElementById('alert-msg');
+  const alertArticles = document.getElementById('alert-articles');
+
+  if (!state.priorityKeywords.length) {
+    alertBanner.style.display = 'none';
+    return;
+  }
+
+  const matching = articles.filter(a => {
+    const text = `${a.title} ${a.excerpt}`.toLowerCase();
+    return state.priorityKeywords.some(kw => text.includes(kw));
+  });
+
+  if (!matching.length) {
+    alertBanner.style.display = 'none';
+    return;
+  }
+
+  alertMsg.textContent = `${matching.length} article${matching.length !== 1 ? 's' : ''} match your priority keywords`;
+  alertArticles.innerHTML = matching.slice(0, 3).map(a =>
+    `<a href="${esc(a.url)}" target="_blank" rel="noopener" class="alert-article-link">${esc(a.title)}</a>`
+  ).join('');
+  alertBanner.style.display = '';
+
+  // Browser notification if permission granted
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('LocalPulse — Breaking News', {
+        body: matching[0].title,
+        tag: 'localpulse-breaking',
+      });
+    } catch {}
+  }
+}
+
+document.getElementById('alert-dismiss').addEventListener('click', () => {
+  document.getElementById('alert-banner').style.display = 'none';
+});
 
 // ── Main fetch logic ───────────────────────────────────────────
 const btnFetch = document.getElementById('btn-fetch');
@@ -1599,6 +1789,7 @@ async function runFetch() {
 
   state.digestArticles = limited;
   renderDigestArticles(limited);
+  checkBreakingNews(limited);
 
   // Update badge
   const badge = document.getElementById('digest-count-badge');
@@ -1988,6 +2179,21 @@ document.getElementById('btn-export-save').addEventListener('click', () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('Digest exported as .txt', 'success');
+});
+
+document.getElementById('btn-send-email').addEventListener('click', () => {
+  const text = document.getElementById('digest-preview').textContent;
+  if (!text.trim()) { toast('Build a preview first', 'error'); return; }
+  const subject = document.getElementById('digest-subject').value.trim() || 'Your local news digest';
+  // mailto: body is limited by OS/browser — truncate gracefully
+  const bodySnippet = text.length > 7500 ? text.slice(0, 7500) + '\n\n[Digest truncated — use "Copy as Text" for full version]' : text;
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodySnippet)}`;
+  try {
+    window.open(mailto, '_self');
+    toast('Opening email client…', 'success');
+  } catch {
+    toast('Could not open email client — use Copy as Text instead', 'error');
+  }
 });
 
 // ── Tab switching ──────────────────────────────────────────────

@@ -723,6 +723,53 @@ hr.divider {
   .price-card        { transition: none; }
   .btn-primary:hover { transform: none; }
   .toast             { transition: opacity 0.15s ease; transform: translateY(0); }
+  .spin-icon         { animation: none; opacity: 0.5; }
+}
+
+/* ── Loading state ── */
+.price-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8) 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  grid-column: 1 / -1;
+}
+.spin-icon {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: spin-anim 0.75s linear infinite;
+}
+@keyframes spin-anim { to { transform: rotate(360deg); } }
+
+/* ── Alert io row ── */
+.alert-io-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+.import-area {
+  margin-top: var(--space-3);
+}
+.import-area-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ── Notify note ── */
+.notify-note {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-2);
+  line-height: 1.5;
 }
 </style>
 </head>
@@ -798,13 +845,27 @@ hr.divider {
         <option value="3600000">1 hour</option>
       </select>
     </div>
+
+    <hr class="divider">
+    <div class="field-row">
+      <label class="field-label" for="metalsApiKey">Metals API Key <span style="font-weight:400;color:var(--color-ink-muted)">(optional — metalpriceapi.com)</span></label>
+      <input class="field-input" type="password" id="metalsApiKey" placeholder="Paste key for live XPT/XPD data" autocomplete="off" spellcheck="false" aria-label="Metals API key for live platinum and palladium prices">
+    </div>
+    <div class="field-row" style="margin-top:var(--space-3)">
+      <label class="field-label" for="notifyEmail">Alert email <span style="font-weight:400;color:var(--color-ink-muted)">(optional — opens mail client on trigger)</span></label>
+      <input class="field-input" type="email" id="notifyEmail" placeholder="you@example.com" aria-label="Email address for alert notifications">
+      <p class="notify-note">When an alert triggers, your default email client opens with a pre-filled message. For automated SMS/email delivery, a server-side integration is required.</p>
+    </div>
   </section>
 
   <!-- ── Live Prices ── -->
   <section class="doc-section" aria-label="Current metal prices" aria-live="polite">
     <h2 class="section-title">Live Prices</h2>
     <div class="price-grid" id="priceGrid">
-      <!-- populated by JS -->
+      <div class="price-loading" id="priceLoading" aria-live="polite">
+        <div class="spin-icon" aria-hidden="true"></div>
+        Fetching live prices…
+      </div>
     </div>
   </section>
 
@@ -843,7 +904,7 @@ hr.divider {
       Price Alerts
       <span class="alert-count" id="alertCount">(0/5)</span>
     </h2>
-    <p class="section-desc">Set a target price — you'll see a notification here when it's crossed.</p>
+    <p class="section-desc">Set a target price — you'll see an in-app notification when it's crossed. Add an alert email in Settings to also open a pre-filled email on trigger.</p>
 
     <div class="field-row" style="margin-bottom:var(--space-3)">
       <label class="field-label" for="alertMetal">Metal</label>
@@ -878,6 +939,18 @@ hr.divider {
 
     <div class="alert-list" id="alertList" aria-live="polite" aria-label="Active alerts">
       <!-- populated by JS -->
+    </div>
+
+    <div class="alert-io-row">
+      <button class="btn-ghost-sm" id="btnExportAlerts" aria-label="Export alerts as JSON to clipboard">Export Alerts</button>
+      <button class="btn-ghost-sm" id="btnImportAlerts" aria-label="Toggle import alerts panel">Import Alerts</button>
+    </div>
+    <div class="import-area" id="importArea" style="display:none">
+      <textarea class="field-input" id="importText" rows="4" placeholder='Paste exported alerts JSON here…' style="font-size:var(--text-xs);font-family:var(--font-mono);resize:vertical" aria-label="Paste alerts JSON to import"></textarea>
+      <div class="import-area-actions">
+        <button class="btn-primary" id="btnImportConfirm" style="flex:1">Import</button>
+        <button class="btn-ghost-sm" id="btnImportCancel">Cancel</button>
+      </div>
     </div>
   </section>
 
@@ -1000,7 +1073,7 @@ hr.divider {
 
   <!-- Footer -->
   <footer class="doc-footer">
-    Prices sourced from Yahoo Finance (GC=F, SI=F) via public API · Metals API · FX via open.er-api.com · For reference only, not financial advice.
+    Prices from Yahoo Finance (GC=F, SI=F, PL=F, PA=F) · Optional: Metals API (metalpriceapi.com) for XPT/XPD · FX via open.er-api.com · For reference only, not financial advice.
   </footer>
 
 </main>
@@ -1026,10 +1099,10 @@ const METALS = [
 ];
 
 const METAL_CHART_COLORS = {
-  gold:      'oklch(72% 0.18 80)',
-  silver:    'oklch(55% 0.03 240)',
-  platinum:  'oklch(50% 0.04 255)',
-  palladium: 'oklch(55% 0.09 295)',
+  gold:      'var(--color-metal-gold)',
+  silver:    'var(--color-metal-silver)',
+  platinum:  'var(--color-metal-plat)',
+  palladium: 'var(--color-metal-pall)',
 };
 
 const PURITY_LABELS = {
@@ -1301,7 +1374,7 @@ function buildSparkline(data, cls) {
   const yScale = p => H - ((p - min) / range) * H;
   const points = prices.map((p, i) => `${i * xStep},${yScale(p)}`).join(' ');
   const color = METAL_CHART_COLORS[cls] || 'var(--color-accent)';
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="32" aria-hidden="true"><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="32" aria-hidden="true"><polyline points="${points}" fill="none" style="stroke:${color};stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round"/></svg>`;
 }
 
 // ── Render 3-month chart ───────────────────────────────────────────────────
@@ -1412,13 +1485,13 @@ function renderMainChart() {
       ` L${xScale(lastIdx)},${PAD.top + ph} L${xScale(firstIdx)},${PAD.top + ph} Z`;
 
     const gradId = `grad-${key}`;
-    linesHtml += `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.15"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>`;
+    linesHtml += `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:${color};stop-opacity:0.15"/><stop offset="100%" style="stop-color:${color};stop-opacity:0"/></linearGradient></defs>`;
     linesHtml += `<path d="${areaPath}" fill="url(#${gradId})"/>`;
-    linesHtml += `<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    linesHtml += `<polyline points="${pts.join(' ')}" fill="none" style="stroke:${color};stroke-width:2;stroke-linejoin:round;stroke-linecap:round"/>`;
 
     // End dot
     const lastPt = pts[pts.length - 1].split(',');
-    linesHtml += `<circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="4" fill="${color}"/>`;
+    linesHtml += `<circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="4" style="fill:${color}"/>`;
   });
 
   svg.innerHTML = yAxisHtml + xAxisHtml + linesHtml;

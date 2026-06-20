@@ -481,6 +481,7 @@ button { font-family: var(--font-body); cursor: pointer; }
 .cap-mid     { background: var(--color-cap-mid-bg);     border-color: var(--color-cap-mid-border); color: var(--color-cap-mid-text); }
 .cap-arena   { background: var(--color-cap-arena-bg);   border-color: var(--color-cap-arena-border); color: var(--color-cap-arena-text); }
 .cap-stadium { background: var(--color-cap-stad-bg);    border-color: var(--color-cap-stad-border); color: var(--color-danger); }
+.badge-new   { background: var(--color-cap-stad-bg);    border-color: var(--color-cap-stad-border); color: var(--color-warn); }
 .days-pill { font-size: var(--text-xs); color: var(--color-ink-muted); background: var(--color-paper-2); border: 1px solid var(--color-border); border-radius: 99px; padding: 1px var(--space-2); }
 .days-pill.soon { color: var(--color-warn); border-color: var(--color-soon-border); background: var(--color-soon-bg); }
 .days-pill.past { color: var(--color-ink-muted); opacity: 0.6; }
@@ -716,8 +717,24 @@ button { font-family: var(--font-body); cursor: pointer; }
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 .refreshing { animation: spin 0.8s linear infinite; display: inline-block; }
+
+/* ── History log ── */
+.history-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  gap: var(--space-3);
+}
+.history-entry-name { font-weight: 600; color: var(--color-ink); flex: 1; min-width: 0; }
+.history-entry-meta { font-size: var(--text-xs); color: var(--color-ink-muted); white-space: nowrap; }
+.history-count-badge { font-size: var(--text-xs); font-weight: 700; background: var(--color-accent-subtle); border: 1px solid var(--color-accent-line); color: var(--color-accent); border-radius: 99px; padding: 1px 8px; flex-shrink: 0; }
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
@@ -799,7 +816,7 @@ button { font-family: var(--font-body); cursor: pointer; }
             id="artist-search"
             placeholder="Artist name…"
             autocomplete="off"
-            aria-label="Search for artist on MusicBrainz"
+            aria-label="Search for artist on Bandsintown"
           >
           <button class="btn-icon" id="btn-search" aria-label="Search">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -853,11 +870,11 @@ button { font-family: var(--font-body); cursor: pointer; }
         <input type="text" id="manual-city" placeholder="City, Country" aria-label="City and country">
         <div class="manual-form-row">
           <input type="date" id="manual-date" aria-label="Event date">
-          <input type="number" id="manual-capacity" placeholder="Capacity est." min="0" aria-label="Capacity estimate">
+          <input type="number" id="manual-capacity" placeholder="Capacity est." min="0" max="2000000" step="1" aria-label="Capacity estimate">
         </div>
         <div class="refresh-row">
           <button class="btn-sm btn-primary-sm" id="btn-add-manual" style="flex:1">+ Add Date</button>
-          <button class="btn-sm btn-secondary-sm" id="btn-refresh-all" title="Refresh MusicBrainz events">↻ Refresh All</button>
+          <button class="btn-sm btn-secondary-sm" id="btn-refresh-all" title="Refresh Bandsintown events" style="display:inline-flex;align-items:center;gap:var(--space-1);"><span id="refresh-btn-icon" aria-hidden="true">↻</span><span id="refresh-btn-text">Refresh All</span></button>
         </div>
       </div>
     </div>
@@ -874,6 +891,7 @@ button { font-family: var(--font-body); cursor: pointer; }
       <button class="tab-btn active" role="tab" aria-selected="true"  data-tab="calendar">Tour Calendar</button>
       <button class="tab-btn"        role="tab" aria-selected="false" data-tab="pipeline">Opportunity Pipeline</button>
       <button class="tab-btn"        role="tab" aria-selected="false" data-tab="alerts">Alert Generator</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" data-tab="history">History Log</button>
     </div>
 
     <!-- Tab: Tour Calendar -->
@@ -892,7 +910,7 @@ button { font-family: var(--font-body); cursor: pointer; }
             <path d="M4 18h40M16 4v8M32 4v8M12 28h4M22 28h4M32 28h4M12 36h4M22 36h4"/>
           </svg>
           <p class="empty-title">No tour dates yet</p>
-          <p class="empty-sub">Add artists to your watchlist to pull tour dates from MusicBrainz, or add dates manually.</p>
+          <p class="empty-sub">Add artists to your watchlist to pull tour dates from Bandsintown, or add dates manually.</p>
         </div>
         <div id="calendar-months"></div>
       </div>
@@ -941,7 +959,7 @@ button { font-family: var(--font-body); cursor: pointer; }
     <!-- Tab: Alert Generator -->
     <div class="tab-panel" id="tab-alerts" role="tabpanel" aria-label="Alert generator">
       <div class="alert-toolbar">
-        <span class="calendar-count">Select events below to generate alert templates</span>
+        <span class="calendar-count">Select events to generate copy-paste alert templates <span style="font-weight:400;color:var(--color-ink-muted)">(live sending requires Resend + Twilio backend)</span></span>
         <button class="btn-sm btn-secondary-sm" id="btn-select-all" style="margin-left: auto;">Select All</button>
         <button class="btn-sm btn-secondary-sm" id="btn-clear-selection">Clear</button>
       </div>
@@ -993,6 +1011,25 @@ button { font-family: var(--font-body); cursor: pointer; }
       </div>
     </div>
 
+    <!-- Tab: History Log -->
+    <div class="tab-panel" id="tab-history" role="tabpanel" aria-label="Event history log">
+      <div class="calendar-toolbar">
+        <span class="calendar-count" id="history-count"><strong>0</strong> log entries</span>
+        <button class="btn-sm btn-secondary-sm" id="btn-clear-history" style="margin-left:auto;">Clear History</button>
+      </div>
+      <div class="calendar-scroll">
+        <div class="calendar-empty" id="history-empty">
+          <svg class="empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <rect x="8" y="4" width="32" height="40" rx="3"/>
+            <path d="M16 14h16M16 22h16M16 30h10"/>
+          </svg>
+          <p class="empty-title">No history yet</p>
+          <p class="empty-sub">Detection log entries appear here each time Bandsintown is polled for new tour dates.</p>
+        </div>
+        <div id="history-entries"></div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -1019,8 +1056,9 @@ const fmtMonthYear = d => { const dt = new Date(d); if (isNaN(dt)) return '?'; r
 const daysUntil = d => { const dt = new Date(d); const now = new Date(); now.setHours(0,0,0,0); return Math.ceil((dt-now)/86400000); };
 const initials = name => name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
 
-const MB_UA = 'TourPulse/1.0 (ticketresell@example.com)';
-const MB_BASE = 'https://musicbrainz.org/ws/2';
+// Bandsintown API — configure your app_id at https://artists.bandsintown.com/
+const BIT_APP_ID = 'tourpulse_demo';
+const BIT_BASE = 'https://rest.bandsintown.com';
 
 /* ── Capacity estimation from venue name ── */
 function estimateCapacity(venueName) {
@@ -1085,6 +1123,10 @@ const store = {
     get: () => { try { return JSON.parse(localStorage.getItem('tp_markup') || '{}'); } catch { return {}; } },
     save: v => localStorage.setItem('tp_markup', JSON.stringify(v)),
   },
+  history: {
+    get: () => { try { return JSON.parse(localStorage.getItem('tp_history') || '[]'); } catch { return []; } },
+    save: v => localStorage.setItem('tp_history', JSON.stringify(v)),
+  },
 };
 
 /* ── App State ── */
@@ -1092,6 +1134,7 @@ let watchlist = store.watchlist.get();
 let events = store.events.get();
 let pipeline = store.pipeline.get();   // eventId -> stage ('new'|'research'|'bid'|'acquired')
 let markup = store.markup.get();       // eventId -> markup %
+let historyLog = store.history.get();  // detection log entries
 let geoFilter = 'All';
 let capFilter = 'All';
 let sortMode = 'date'; // 'date' | 'score'
@@ -1106,34 +1149,34 @@ function seedDemoData() {
   const addDays = d => { const dt = new Date(now); dt.setDate(dt.getDate() + d); return dt.toISOString().slice(0,10); };
 
   watchlist = [
-    { id: 'ts-mbid', name: 'Taylor Swift', mbid: 'fake-ts-mbid', lastChecked: new Date().toISOString(), eventCount: 8 },
-    { id: 'cp-mbid', name: 'Coldplay', mbid: 'fake-cp-mbid', lastChecked: new Date().toISOString(), eventCount: 6 },
-    { id: 'bb-mbid', name: 'Bad Bunny', mbid: 'fake-bb-mbid', lastChecked: new Date().toISOString(), eventCount: 5 },
+    { id: 'ts-demo', name: 'Taylor Swift', isDemo: true, lastChecked: new Date().toISOString(), eventCount: 8 },
+    { id: 'cp-demo', name: 'Coldplay', isDemo: true, lastChecked: new Date().toISOString(), eventCount: 6 },
+    { id: 'bb-demo', name: 'Bad Bunny', isDemo: true, lastChecked: new Date().toISOString(), eventCount: 5 },
   ];
 
   events = [
     // Taylor Swift
-    { id: uid(), artistId: 'ts-mbid', artistName: 'Taylor Swift', venue: 'MetLife Stadium', city: 'East Rutherford', country: 'US', date: addDays(18), source: 'demo', isNew: true },
-    { id: uid(), artistId: 'ts-mbid', artistName: 'Taylor Swift', venue: 'Gillette Stadium', city: 'Foxborough', country: 'US', date: addDays(32), source: 'demo', isNew: true },
-    { id: uid(), artistId: 'ts-mbid', artistName: 'Taylor Swift', venue: 'Wembley Stadium', city: 'London', country: 'UK', date: addDays(55), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'ts-mbid', artistName: 'Taylor Swift', venue: 'Allianz Arena', city: 'Munich', country: 'Germany', date: addDays(72), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'ts-mbid', artistName: 'Taylor Swift', venue: 'SoFi Stadium', city: 'Inglewood', country: 'US', date: addDays(90), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'ts-mbid', artistName: 'Taylor Swift', venue: 'Rogers Centre', city: 'Toronto', country: 'Canada', date: addDays(110), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'ts-mbid', artistName: 'Taylor Swift', venue: 'Olympic Stadium', city: 'Berlin', country: 'Germany', date: addDays(130), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'ts-mbid', artistName: 'Taylor Swift', venue: 'Madison Square Garden', city: 'New York', country: 'US', date: addDays(145), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'ts-demo', artistName: 'Taylor Swift', venue: 'MetLife Stadium', city: 'East Rutherford', country: 'US', date: addDays(18), source: 'demo', isNew: true },
+    { id: uid(), artistId: 'ts-demo', artistName: 'Taylor Swift', venue: 'Gillette Stadium', city: 'Foxborough', country: 'US', date: addDays(32), source: 'demo', isNew: true },
+    { id: uid(), artistId: 'ts-demo', artistName: 'Taylor Swift', venue: 'Wembley Stadium', city: 'London', country: 'UK', date: addDays(55), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'ts-demo', artistName: 'Taylor Swift', venue: 'Allianz Arena', city: 'Munich', country: 'Germany', date: addDays(72), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'ts-demo', artistName: 'Taylor Swift', venue: 'SoFi Stadium', city: 'Inglewood', country: 'US', date: addDays(90), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'ts-demo', artistName: 'Taylor Swift', venue: 'Rogers Centre', city: 'Toronto', country: 'Canada', date: addDays(110), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'ts-demo', artistName: 'Taylor Swift', venue: 'Olympic Stadium', city: 'Berlin', country: 'Germany', date: addDays(130), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'ts-demo', artistName: 'Taylor Swift', venue: 'Madison Square Garden', city: 'New York', country: 'US', date: addDays(145), source: 'demo', isNew: false },
     // Coldplay
-    { id: uid(), artistId: 'cp-mbid', artistName: 'Coldplay', venue: 'Rose Bowl', city: 'Pasadena', country: 'US', date: addDays(14), source: 'demo', isNew: true },
-    { id: uid(), artistId: 'cp-mbid', artistName: 'Coldplay', venue: 'O2 Arena', city: 'London', country: 'UK', date: addDays(40), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'cp-mbid', artistName: 'Coldplay', venue: 'United Center', city: 'Chicago', country: 'US', date: addDays(58), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'cp-mbid', artistName: 'Coldplay', venue: 'The Fillmore', city: 'San Francisco', country: 'US', date: addDays(75), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'cp-mbid', artistName: 'Coldplay', venue: 'Singapore Indoor Stadium', city: 'Singapore', country: 'Singapore', date: addDays(95), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'cp-mbid', artistName: 'Coldplay', venue: 'Palacio de los Deportes', city: 'Mexico City', country: 'Mexico', date: addDays(120), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'cp-demo', artistName: 'Coldplay', venue: 'Rose Bowl', city: 'Pasadena', country: 'US', date: addDays(14), source: 'demo', isNew: true },
+    { id: uid(), artistId: 'cp-demo', artistName: 'Coldplay', venue: 'O2 Arena', city: 'London', country: 'UK', date: addDays(40), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'cp-demo', artistName: 'Coldplay', venue: 'United Center', city: 'Chicago', country: 'US', date: addDays(58), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'cp-demo', artistName: 'Coldplay', venue: 'The Fillmore', city: 'San Francisco', country: 'US', date: addDays(75), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'cp-demo', artistName: 'Coldplay', venue: 'Singapore Indoor Stadium', city: 'Singapore', country: 'Singapore', date: addDays(95), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'cp-demo', artistName: 'Coldplay', venue: 'Palacio de los Deportes', city: 'Mexico City', country: 'Mexico', date: addDays(120), source: 'demo', isNew: false },
     // Bad Bunny
-    { id: uid(), artistId: 'bb-mbid', artistName: 'Bad Bunny', venue: 'Estadio Azteca', city: 'Mexico City', country: 'Mexico', date: addDays(22), source: 'demo', isNew: true },
-    { id: uid(), artistId: 'bb-mbid', artistName: 'Bad Bunny', venue: 'Barclays Center', city: 'Brooklyn', country: 'US', date: addDays(45), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'bb-mbid', artistName: 'Bad Bunny', venue: 'Kia Forum', city: 'Inglewood', country: 'US', date: addDays(68), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'bb-mbid', artistName: 'Bad Bunny', venue: 'Coliseo de Puerto Rico', city: 'San Juan', country: 'Puerto Rico', date: addDays(88), source: 'demo', isNew: false },
-    { id: uid(), artistId: 'bb-mbid', artistName: 'Bad Bunny', venue: 'Foro Sol', city: 'Mexico City', country: 'Mexico', date: addDays(105), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'bb-demo', artistName: 'Bad Bunny', venue: 'Estadio Azteca', city: 'Mexico City', country: 'Mexico', date: addDays(22), source: 'demo', isNew: true },
+    { id: uid(), artistId: 'bb-demo', artistName: 'Bad Bunny', venue: 'Barclays Center', city: 'Brooklyn', country: 'US', date: addDays(45), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'bb-demo', artistName: 'Bad Bunny', venue: 'Kia Forum', city: 'Inglewood', country: 'US', date: addDays(68), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'bb-demo', artistName: 'Bad Bunny', venue: 'Coliseo de Puerto Rico', city: 'San Juan', country: 'Puerto Rico', date: addDays(88), source: 'demo', isNew: false },
+    { id: uid(), artistId: 'bb-demo', artistName: 'Bad Bunny', venue: 'Foro Sol', city: 'Mexico City', country: 'Mexico', date: addDays(105), source: 'demo', isNew: false },
   ];
 
   // Seed some pipeline items
@@ -1314,7 +1357,7 @@ function renderEventCard(ev) {
         <span class="capacity-badge ${capClass(cap.tier)}">${esc(cap.label)}</span>
         <span class="${daysPillClass}">${esc(daysPillText)}</span>
         <span class="score-badge ${scoreClass(score)}">${esc(scoreLabel(score))}</span>
-        ${ev.isNew ? '<span class="capacity-badge cap-small" style="background:oklch(93% 0.025 25);border-color:oklch(80% 0.08 25);color:var(--color-danger);">New</span>' : ''}
+        ${ev.isNew ? '<span class="capacity-badge badge-new">New</span>' : ''}
       </div>
     </div>
     <div class="event-actions">
@@ -1537,39 +1580,67 @@ function copyEventAlert(eventId) {
   navigator.clipboard.writeText(text).then(() => toast('Alert copied!', 'success')).catch(() => toast('Copy failed', 'error'));
 }
 
-/* ── MusicBrainz API ── */
-async function searchArtistsMB(query) {
-  const url = `${MB_BASE}/artist/?query=artist:${encodeURIComponent(query)}&fmt=json&limit=8`;
-  const res = await fetch(url, { headers: { 'User-Agent': MB_UA, 'Accept': 'application/json' } });
-  if (!res.ok) throw new Error(`MusicBrainz error ${res.status}`);
-  const data = await res.json();
-  return data.artists || [];
+/* ── Bandsintown API ── */
+async function lookupArtistBIT(name) {
+  const url = `${BIT_BASE}/artists/${encodeURIComponent(name)}?app_id=${BIT_APP_ID}`;
+  const res = await fetch(url);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Bandsintown error ${res.status}`);
+  return await res.json();
 }
 
-async function fetchArtistEventsMB(mbid) {
-  const url = `${MB_BASE}/event/?artist=${encodeURIComponent(mbid)}&fmt=json&limit=25`;
-  const res = await fetch(url, { headers: { 'User-Agent': MB_UA, 'Accept': 'application/json' } });
-  if (!res.ok) throw new Error(`MusicBrainz error ${res.status}`);
+async function fetchArtistEventsBIT(artistName) {
+  const url = `${BIT_BASE}/artists/${encodeURIComponent(artistName)}/events?app_id=${BIT_APP_ID}&date=upcoming`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Bandsintown error ${res.status}`);
   const data = await res.json();
-  return data.events || [];
+  return Array.isArray(data) ? data : [];
 }
 
-function mbEventToEvent(mbEv, artist) {
-  const relations = mbEv.relations || [];
-  const placeRel = relations.find(r => r['target-type'] === 'place');
-  const place = placeRel?.place || {};
+function bitEventToEvent(bitEv, artist) {
+  const v = bitEv.venue || {};
   return {
     id: uid(),
     artistId: artist.id,
     artistName: artist.name,
-    venue: place.name || mbEv.name || 'Venue TBA',
-    city: place.area?.name || '',
-    country: place['iso-3166-1-codes']?.[0] || place.area?.['iso-3166-1-codes']?.[0] || '',
-    date: mbEv['life-span']?.begin || mbEv.time || '',
-    source: 'musicbrainz',
+    venue: v.name || 'Venue TBA',
+    city: v.city || '',
+    country: v.country || '',
+    date: bitEv.datetime ? bitEv.datetime.slice(0, 10) : '',
+    source: 'bandsintown',
     isNew: true,
-    mbid: mbEv.id,
+    ticketUrl: bitEv.offers?.[0]?.url || bitEv.url || '',
+    bitId: String(bitEv.id || ''),
   };
+}
+
+/* ── History log ── */
+function logHistory(artistId, artistName, eventCount) {
+  historyLog.unshift({ artistId, artistName, eventCount, checkedAt: new Date().toISOString() });
+  historyLog = historyLog.slice(0, 200);
+  store.history.save(historyLog);
+}
+
+function renderHistory() {
+  const empty = document.getElementById('history-empty');
+  const entries = document.getElementById('history-entries');
+  const countEl = document.getElementById('history-count');
+  countEl.innerHTML = `<strong>${historyLog.length}</strong> log entr${historyLog.length !== 1 ? 'ies' : 'y'}`;
+  if (!historyLog.length) {
+    empty.style.display = '';
+    entries.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+  entries.innerHTML = historyLog.map(h => {
+    const dt = new Date(h.checkedAt);
+    const timeStr = isNaN(dt) ? '—' : dt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return `<div class="history-entry">
+      <span class="history-entry-name">${esc(h.artistName)}</span>
+      <span class="history-entry-meta">${esc(timeStr)}</span>
+      <span class="history-count-badge">${h.eventCount} show${h.eventCount !== 1 ? 's' : ''}</span>
+    </div>`;
+  }).join('');
 }
 
 /* ── Search flow ── */
@@ -1588,25 +1659,26 @@ function hideSearchResults() {
 
 async function doSearch() {
   const q = searchInput.value.trim();
-  if (!q) return;
+  if (q.length < 2) return;
   searchBtn.disabled = true;
-  showSearchResults('<div class="search-message"><span class="spinner"></span> Searching MusicBrainz…</div>');
+  showSearchResults('<div class="search-message"><span class="spinner"></span> Looking up on Bandsintown…</div>');
 
   try {
-    const artists = await searchArtistsMB(q);
-    if (!artists.length) {
-      showSearchResults('<div class="search-message">No artists found.</div>');
+    const artist = await lookupArtistBIT(q);
+    if (!artist || !artist.name) {
+      showSearchResults(`<div class="search-message">Artist not found on Bandsintown. Check the spelling or try the exact stage name.</div>`);
       return;
     }
-    const html = artists.map(a => `
-      <div class="search-result-item" data-mb-id="${esc(a.id)}" data-mb-name="${esc(a.name)}" tabindex="0" role="option">
-        <span class="search-result-name">${esc(a.name)}</span>
-        <span class="search-result-meta">${esc(a['sort-name'] || '')}${a['life-span']?.begin ? ' · est. ' + a['life-span'].begin.slice(0,4) : ''}</span>
-      </div>`).join('');
+    const followers = artist.tracker_count ? ` · ${Number(artist.tracker_count).toLocaleString()} followers` : '';
+    const html = `
+      <div class="search-result-item" data-bit-name="${esc(artist.name)}" tabindex="0" role="option">
+        <span class="search-result-name">${esc(artist.name)}</span>
+        <span class="search-result-meta">Found on Bandsintown${esc(followers)}</span>
+      </div>`;
     showSearchResults(html);
 
     searchResults.querySelectorAll('.search-result-item').forEach(item => {
-      const add = () => addArtistToWatchlist(item.dataset.mbId, item.dataset.mbName);
+      const add = () => addArtistToWatchlist(item.dataset.bitName);
       item.addEventListener('click', add);
       item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); add(); } });
     });
@@ -1618,35 +1690,42 @@ async function doSearch() {
 }
 
 searchBtn.addEventListener('click', doSearch);
-searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(searchTimeout); doSearch(); } });
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { hideSearchResults(); return; }
+  searchTimeout = setTimeout(doSearch, 480);
+});
 document.addEventListener('pointerdown', e => {
   if (!searchResults.contains(e.target) && e.target !== searchInput && e.target !== searchBtn) hideSearchResults();
 }, { passive: true });
 
-async function addArtistToWatchlist(mbid, name) {
+async function addArtistToWatchlist(name) {
   hideSearchResults();
-  if (watchlist.length >= 20) { toast('Watchlist full (20 max)', 'warn'); return; }
-  if (watchlist.find(a => a.mbid === mbid)) { toast(`${name} already in watchlist`, 'warn'); return; }
+  if (watchlist.length >= 50) { toast('Plan limit reached (50 artists) — upgrade to the $99/mo plan for unlimited tracking', 'warn'); return; }
+  if (watchlist.find(a => a.name.toLowerCase() === name.toLowerCase())) { toast(`${name} is already in your watchlist`, 'warn'); return; }
 
   const artistId = uid();
-  const artist = { id: artistId, name, mbid, lastChecked: new Date().toISOString(), eventCount: 0 };
+  const artist = { id: artistId, name, lastChecked: new Date().toISOString(), eventCount: 0 };
   watchlist.push(artist);
   store.watchlist.save(watchlist);
   renderWatchlist();
-  toast(`Added ${name} — fetching tour dates…`);
+  toast(`Added ${name} — fetching tour dates from Bandsintown…`);
 
   try {
-    const mbEvents = await fetchArtistEventsMB(mbid);
-    const newEvents = mbEvents.map(e => mbEventToEvent(e, artist)).filter(e => e.date);
+    const bitEvents = await fetchArtistEventsBIT(name);
+    const newEvents = bitEvents.map(e => bitEventToEvent(e, artist)).filter(e => e.date);
     events.push(...newEvents);
     artist.eventCount = newEvents.length;
     artist.lastChecked = new Date().toISOString();
+    logHistory(artistId, name, newEvents.length);
     store.events.save(events);
     store.watchlist.save(watchlist);
     renderAll();
-    toast(`${name}: ${newEvents.length} tour date${newEvents.length !== 1 ? 's' : ''} loaded`, 'success');
+    toast(`${name}: ${newEvents.length} upcoming show${newEvents.length !== 1 ? 's' : ''} found`, 'success');
   } catch (err) {
-    toast(`Loaded ${name} — could not fetch events (${err.message})`, 'warn');
+    toast(`Added ${name} — could not fetch events: ${err.message}`, 'warn');
     renderAll();
   }
   searchInput.value = '';
@@ -1658,31 +1737,39 @@ document.getElementById('btn-refresh-all').addEventListener('click', async () =>
   if (!watchlist.length) { toast('No artists in watchlist', 'warn'); return; }
   isRefreshing = true;
   const btn = document.getElementById('btn-refresh-all');
-  btn.textContent = '↻ Refreshing…';
+  const refreshIcon = document.getElementById('refresh-btn-icon');
+  const refreshText = document.getElementById('refresh-btn-text');
+  refreshIcon.className = 'spinner';
+  refreshText.textContent = 'Refreshing…';
   btn.disabled = true;
 
-  // Remove existing MB events
-  events = events.filter(e => e.source !== 'musicbrainz');
+  // Remove existing Bandsintown events (keep demo and manual)
+  events = events.filter(e => e.source === 'demo' || e.source === 'manual');
 
+  let refreshErrors = 0;
   for (const artist of watchlist) {
-    if (!artist.mbid || artist.mbid.startsWith('fake-')) continue; // skip demo artists
+    if (artist.isDemo) continue; // skip demo seed artists
     try {
-      const mbEvents = await fetchArtistEventsMB(artist.mbid);
-      const newEvents = mbEvents.map(e => mbEventToEvent(e, artist)).filter(e => e.date);
+      const bitEvents = await fetchArtistEventsBIT(artist.name);
+      const newEvents = bitEvents.map(e => bitEventToEvent(e, artist)).filter(e => e.date);
       events.push(...newEvents);
       artist.eventCount = newEvents.length;
       artist.lastChecked = new Date().toISOString();
-    } catch {
-      // skip failed artist
+      logHistory(artist.id, artist.name, newEvents.length);
+    } catch (err) {
+      refreshErrors++;
+      toast(`Could not refresh ${artist.name}: ${err.message}`, 'warn');
     }
   }
 
   store.events.save(events);
   store.watchlist.save(watchlist);
   renderAll();
-  toast('Refresh complete', 'success');
+  if (refreshErrors === 0) toast('Refresh complete', 'success');
   isRefreshing = false;
-  btn.textContent = '↻ Refresh All';
+  refreshIcon.className = '';
+  refreshIcon.textContent = '↻';
+  refreshText.textContent = 'Refresh All';
   btn.disabled = false;
 });
 
@@ -1816,6 +1903,17 @@ function toast(msg, type = '') {
   toastTimer = setTimeout(() => { el.className = 'toast'; }, 3200);
 }
 
+/* ── Clear history ── */
+document.getElementById('btn-clear-history').addEventListener('click', () => {
+  if (!historyLog.length) return;
+  if (confirm('Clear all detection history?')) {
+    historyLog = [];
+    store.history.save(historyLog);
+    renderHistory();
+    toast('History cleared');
+  }
+});
+
 /* ── Render all ── */
 function renderAll() {
   renderWatchlist();
@@ -1823,6 +1921,7 @@ function renderAll() {
   renderPipeline();
   renderAlertEvents();
   generateAlerts();
+  renderHistory();
 }
 
 /* ── Init ── */

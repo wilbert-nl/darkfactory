@@ -1187,13 +1187,27 @@ function setNavStatus(label, online = true) {
   dot.className = online ? 'nav-dot' : 'nav-dot offline';
 }
 
+// ── CSS token reader (resolves design tokens for SVG rendering) ──
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || name;
+}
+
 // ── Fetch with cache ─────────────────────────────────────────────
 async function fetchJSON(url, cacheKey) {
   if (cacheKey) {
     const cached = cache.get(cacheKey);
     if (cached) return cached;
   }
-  const res = await fetch(url);
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (networkErr) {
+    // Covers CORS preflight failures, DNS failures, and offline state
+    const msg = networkErr instanceof TypeError
+      ? 'Network or CORS error — the API may be blocking requests from this origin'
+      : networkErr.message;
+    throw new Error(msg);
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (cacheKey) cache.set(cacheKey, data);
@@ -1207,7 +1221,6 @@ async function loadCurrencies() {
     state.currencies = data;
     populateCurrencyDropdowns();
   } catch (e) {
-    console.error('Failed to load currencies:', e);
     // Fallback minimal list
     state.currencies = {
       USD:'US Dollar', EUR:'Euro', GBP:'British Pound', JPY:'Japanese Yen',
@@ -1456,10 +1469,17 @@ function renderChart(points, base, quote) {
   const last  = { x: xOf(points.length - 1), y: yOf(points[points.length - 1].rate) };
   const areaD = d + ` L ${last.x},${padT + gH} L ${first.x},${padT + gH} Z`;
 
+  // Resolve design tokens for SVG attributes (CSS vars not supported in SVG attributes)
+  const chartAccent  = cssVar('--color-accent');
+  const chartDanger  = cssVar('--color-danger');
+  const chartBorder  = cssVar('--color-border');
+  const chartMuted   = cssVar('--color-ink-muted');
+  const chartFont    = "'Space Grotesk', 'Inter', sans-serif";
+
   // Y-axis labels
-  const yLabels = [lo, (lo + hi) / 2, hi].map((r, i) => {
+  const yLabels = [lo, (lo + hi) / 2, hi].map((r) => {
     const y = yOf(r);
-    return `<text x="${padL - 6}" y="${y + 4}" font-size="9" fill="oklch(44% 0.016 256)" text-anchor="end" font-family="'Plus Jakarta Sans',sans-serif">${fmtRate(r, 4)}</text>`;
+    return `<text x="${padL - 6}" y="${y + 4}" font-size="9" fill="${chartMuted}" text-anchor="end" font-family="${chartFont}">${fmtRate(r, 4)}</text>`;
   });
 
   // X-axis: show a few date labels
@@ -1468,7 +1488,7 @@ function renderChart(points, base, quote) {
     const p = points[i];
     const x = xOf(i);
     const label = p.date.slice(5); // MM-DD
-    return `<text x="${x}" y="${H - 4}" font-size="9" fill="oklch(44% 0.016 256)" text-anchor="middle" font-family="'Plus Jakarta Sans',sans-serif">${esc(label)}</text>`;
+    return `<text x="${x}" y="${H - 4}" font-size="9" fill="${chartMuted}" text-anchor="middle" font-family="${chartFont}">${esc(label)}</text>`;
   });
 
   // Current rate change vs oldest point
@@ -1488,15 +1508,15 @@ function renderChart(points, base, quote) {
   <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <defs>
       <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="oklch(52% 0.20 256)" stop-opacity="0.18"/>
-        <stop offset="100%" stop-color="oklch(52% 0.20 256)" stop-opacity="0"/>
+        <stop offset="0%" stop-color="${chartAccent}" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="${chartAccent}" stop-opacity="0"/>
       </linearGradient>
       <clipPath id="chartClip"><rect x="${padL}" y="${padT}" width="${gW}" height="${gH}"/></clipPath>
     </defs>
     <!-- Grid lines -->
-    <line x1="${padL}" y1="${yOf(lo)}" x2="${padL + gW}" y2="${yOf(lo)}" stroke="oklch(84% 0.010 252)" stroke-width="1"/>
-    <line x1="${padL}" y1="${yOf((lo+hi)/2)}" x2="${padL + gW}" y2="${yOf((lo+hi)/2)}" stroke="oklch(84% 0.010 252)" stroke-width="1" stroke-dasharray="3,3"/>
-    <line x1="${padL}" y1="${yOf(hi)}" x2="${padL + gW}" y2="${yOf(hi)}" stroke="oklch(84% 0.010 252)" stroke-width="1"/>
+    <line x1="${padL}" y1="${yOf(lo)}" x2="${padL + gW}" y2="${yOf(lo)}" stroke="${chartBorder}" stroke-width="1"/>
+    <line x1="${padL}" y1="${yOf((lo+hi)/2)}" x2="${padL + gW}" y2="${yOf((lo+hi)/2)}" stroke="${chartBorder}" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="${padL}" y1="${yOf(hi)}" x2="${padL + gW}" y2="${yOf(hi)}" stroke="${chartBorder}" stroke-width="1"/>
     <!-- Y labels -->
     ${yLabels.join('')}
     <!-- X labels -->
@@ -1504,16 +1524,16 @@ function renderChart(points, base, quote) {
     <!-- Area -->
     <path d="${esc(areaD)}" fill="url(#chartGrad)" clip-path="url(#chartClip)"/>
     <!-- Line -->
-    <path d="${esc(d)}" fill="none" stroke="oklch(52% 0.20 256)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#chartClip)"/>
+    <path d="${esc(d)}" fill="none" stroke="${chartAccent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#chartClip)"/>
     <!-- Min marker -->
-    <circle cx="${xOf(minIdx)}" cy="${yOf(minR)}" r="3.5" fill="oklch(55% 0.20 25)" clip-path="url(#chartClip)"/>
-    <text x="${xOf(minIdx) + 5}" y="${yOf(minR) - 4}" font-size="9" fill="oklch(55% 0.20 25)" font-family="'Plus Jakarta Sans',sans-serif">min ${fmtRate(minR, 4)}</text>
+    <circle cx="${xOf(minIdx)}" cy="${yOf(minR)}" r="3.5" fill="${chartDanger}" clip-path="url(#chartClip)"/>
+    <text x="${xOf(minIdx) + 5}" y="${yOf(minR) - 4}" font-size="9" fill="${chartDanger}" font-family="${chartFont}">min ${fmtRate(minR, 4)}</text>
     <!-- Max marker -->
-    <circle cx="${xOf(maxIdx)}" cy="${yOf(maxR)}" r="3.5" fill="oklch(52% 0.20 256)" clip-path="url(#chartClip)"/>
-    <text x="${xOf(maxIdx) + 5}" y="${yOf(maxR) - 4}" font-size="9" fill="oklch(52% 0.20 256)" font-family="'Plus Jakarta Sans',sans-serif">max ${fmtRate(maxR, 4)}</text>
+    <circle cx="${xOf(maxIdx)}" cy="${yOf(maxR)}" r="3.5" fill="${chartAccent}" clip-path="url(#chartClip)"/>
+    <text x="${xOf(maxIdx) + 5}" y="${yOf(maxR) - 4}" font-size="9" fill="${chartAccent}" font-family="${chartFont}">max ${fmtRate(maxR, 4)}</text>
     <!-- Last point dot -->
-    <circle cx="${last.x}" cy="${last.y}" r="4" fill="oklch(52% 0.20 256)" clip-path="url(#chartClip)"/>
-    <circle cx="${last.x}" cy="${last.y}" r="7" fill="oklch(52% 0.20 256)" fill-opacity="0.2" clip-path="url(#chartClip)"/>
+    <circle cx="${last.x}" cy="${last.y}" r="4" fill="${chartAccent}" clip-path="url(#chartClip)"/>
+    <circle cx="${last.x}" cy="${last.y}" r="7" fill="${chartAccent}" fill-opacity="0.2" clip-path="url(#chartClip)"/>
   </svg>`;
 }
 
@@ -1680,7 +1700,7 @@ function renderAlerts() {
         <div class="alert-pair">${esc(a.base)}/${esc(a.quote)}</div>
         <div class="alert-detail">${esc(a.direction)} ${fmtRate(a.threshold, 4)} · now ${esc(currentRateStr)}</div>
       </div>
-      <span class="alert-badge ${a.triggered ? 'triggered' : 'active'}">${a.triggered ? '✓ Hit' : 'Active'}</span>
+      <span class="alert-badge ${a.triggered ? 'triggered' : 'active'}">${a.triggered ? 'Hit' : 'Active'}</span>
       <button class="btn-remove-alert" data-id="${a.id}" aria-label="Remove alert for ${a.base}/${a.quote}">×</button>`;
 
     list.appendChild(item);
@@ -1721,7 +1741,7 @@ function checkAlerts() {
     if (fired) {
       a.triggered = true;
       anyFired = true;
-      toast(`🔔 Alert triggered: ${a.base}/${a.quote} is ${a.direction} ${fmtRate(a.threshold, 4)} (now ${fmtRate(rate, 4)})`, 'success');
+      toast(`Alert triggered: ${a.base}/${a.quote} is ${a.direction} ${fmtRate(a.threshold, 4)} (now ${fmtRate(rate, 4)})`, 'success');
     }
   }
 
@@ -1774,11 +1794,11 @@ function renderSparklineSVG(values) {
   }
 
   const first = values[0], last = values[values.length - 1];
-  const trend = last >= first ? 'oklch(52% 0.20 256)' : 'oklch(55% 0.20 25)';
+  const trendColor = last >= first ? cssVar('--color-accent') : cssVar('--color-danger');
 
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="${esc(d)}" fill="none" stroke="${trend}" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="${xOf(values.length-1)}" cy="${yOf(last)}" r="2.5" fill="${trend}"/>
+    <path d="${esc(d)}" fill="none" stroke="${trendColor}" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="${xOf(values.length-1)}" cy="${yOf(last)}" r="2.5" fill="${trendColor}"/>
   </svg>`;
 }
 
@@ -1891,8 +1911,8 @@ async function init() {
 
   await fetchRates();
 
-  // Re-fetch every 60 seconds
-  setInterval(fetchRates, 60_000);
+  // Re-fetch every hour (free-tier interval per spec — hourly checks)
+  setInterval(fetchRates, 3_600_000);
 }
 
 init();

@@ -844,6 +844,109 @@ button { cursor: pointer; font-family: var(--font-body); }
   .reading-list-panel { transition: none; }
   .btn-primary:hover { transform: none; }
 }
+
+/* ── Camera scan button ── */
+.btn-camera {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-muted);
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.btn-camera:hover { color: var(--color-accent); border-color: var(--color-accent-line); background: var(--color-accent-subtle); }
+.btn-camera:active { opacity: 0.8; }
+.btn-camera:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn-camera svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* ── Condition rating ── */
+.condition-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+.condition-btn {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-paper-2);
+  color: var(--color-ink-muted);
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+  text-align: center;
+}
+.condition-btn:hover { border-color: var(--color-accent-line); color: var(--color-ink); }
+.condition-btn:active { opacity: 0.8; }
+.condition-btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.condition-btn.active {
+  background: var(--color-accent);
+  color: var(--color-paper);
+  border-color: var(--color-accent);
+}
+
+/* ── Category select ── */
+.category-select {
+  width: 100%;
+  cursor: pointer;
+}
+
+/* ── Inventory card ── */
+.inventory-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 10px);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Export CSV button ── */
+.btn-export-csv {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s;
+}
+.btn-export-csv:hover { color: var(--color-accent); border-color: var(--color-accent-line); }
+.btn-export-csv:active { opacity: 0.8; }
+.btn-export-csv:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── RL item metadata chips ── */
+.rl-item-meta {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+.rl-meta-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--color-paper-3);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+.rl-meta-chip.cond-like-new { color: var(--color-success); border-color: var(--color-success); }
+.rl-meta-chip.cond-good { color: var(--color-accent); border-color: var(--color-accent-line); }
+.rl-meta-chip.cond-fair { color: var(--color-warn); border-color: oklch(60% 0.16 75 / 0.4); }
+.rl-meta-chip.cond-poor { color: var(--color-danger); border-color: oklch(54% 0.20 26 / 0.4); }
 </style>
 </head>
 <body>
@@ -862,8 +965,8 @@ button { cursor: pointer; font-family: var(--font-body); }
 
     <div class="sidebar-header">
       <span class="sidebar-app-name">ISBN Book Lookup</span>
-      <button class="btn-rl-trigger" id="nav-rl-btn" aria-label="Open reading list" title="Reading list">
-        Reading List
+      <button class="btn-rl-trigger" id="nav-rl-btn" aria-label="Open inventory" title="Inventory">
+        Inventory
         <span class="badge-count" id="rl-badge-count" aria-live="polite">0</span>
       </button>
     </div>
@@ -873,6 +976,7 @@ button { cursor: pointer; font-family: var(--font-body); }
       <!-- ISBN Lookup -->
       <div class="sidebar-section">
         <p class="sidebar-section-label">ISBN Lookup</p>
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" aria-label="Capture photo to scan ISBN barcode">
         <div class="input-wrap">
           <input
             type="text"
@@ -885,6 +989,15 @@ button { cursor: pointer; font-family: var(--font-body); }
             spellcheck="false"
             inputmode="numeric"
           >
+          <button class="btn-camera" id="camera-btn" aria-label="Scan barcode with camera" title="Camera scan (mobile)">
+            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M5 2H3a1 1 0 0 0-1 1v2M11 2h2a1 1 0 0 1 1 1v2M5 14H3a1 1 0 0 1-1-1v-2M11 14h2a1 1 0 0 0 1-1v-2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+              <rect x="4" y="5" width="2" height="6" rx="0.5" fill="currentColor" opacity="0.7"/>
+              <rect x="7" y="5" width="1" height="6" rx="0.5" fill="currentColor" opacity="0.9"/>
+              <rect x="9" y="5" width="1.5" height="6" rx="0.5" fill="currentColor" opacity="0.7"/>
+              <rect x="11" y="5" width="1" height="6" rx="0.5" fill="currentColor" opacity="0.5"/>
+            </svg>
+          </button>
         </div>
         <p class="isbn-hint" id="isbn-hint" aria-live="polite">ISBN-10 or ISBN-13 (hyphens OK)</p>
         <button class="btn-primary btn-full" id="isbn-lookup-btn" aria-label="Look up book by ISBN">
@@ -998,8 +1111,11 @@ button { cursor: pointer; font-family: var(--font-body); }
 <div class="reading-list-overlay" id="rl-overlay" role="dialog" aria-modal="true" aria-label="Reading list">
   <div class="reading-list-panel" id="rl-panel">
     <div class="rl-head">
-      <span class="rl-title">Reading List</span>
-      <button class="rl-close" id="rl-close-btn" aria-label="Close reading list">×</button>
+      <span class="rl-title">Inventory</span>
+      <div style="display:flex;align-items:center;gap:var(--space-2);">
+        <button class="btn-export-csv" id="rl-export-btn" aria-label="Export inventory to CSV">Export CSV</button>
+        <button class="rl-close" id="rl-close-btn" aria-label="Close inventory panel">×</button>
+      </div>
     </div>
     <div class="rl-list" id="rl-list" role="list">
       <!-- populated by JS -->
@@ -1033,10 +1149,10 @@ const store = {
     get() { try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); } catch { return []; } },
     save(list) { localStorage.setItem(this.KEY, JSON.stringify(list)); },
     has(isbn) { return this.get().some(b => b.isbn === isbn); },
-    add(book) {
+    add(book, condition, category) {
       const list = this.get();
       if (this.has(book.isbn)) return;
-      list.unshift({ isbn: book.isbn, title: book.title, authors: book.authors, coverUrl: book.coverUrl, read: false, addedAt: Date.now() });
+      list.unshift({ isbn: book.isbn, title: book.title, authors: book.authors, coverUrl: book.coverUrl, read: false, addedAt: Date.now(), condition: condition || '', category: category || '' });
       this.save(list);
     },
     remove(isbn) { this.save(this.get().filter(b => b.isbn !== isbn)); },
@@ -1120,9 +1236,16 @@ async function fetchByISBN(isbn) {
     authors = (await Promise.all(authorFetches)).filter(Boolean);
   }
   if (!authors.length && work?.authors?.length) {
-    authors = work.authors.slice(0, 4).map(a => a.author?.key || '').filter(Boolean);
-    // simplified: just show key as name fallback — real apps would fetch each
-    authors = [];
+    const workAuthorFetches = work.authors.slice(0, 4).map(async (a) => {
+      const key = a.author?.key;
+      if (!key) return null;
+      try {
+        const aRes = await fetch(`https://openlibrary.org${key}.json`, { signal: AbortSignal.timeout(6000) });
+        if (aRes.ok) { const d = await aRes.json(); return d.name || null; }
+      } catch { return null; }
+      return null;
+    });
+    authors = (await Promise.all(workAuthorFetches)).filter(Boolean);
   }
 
   // Description
@@ -1212,6 +1335,65 @@ function searchDocToBook(doc) {
 let currentBook = null;
 let searchTimer = null;
 let searchDropdownFocusIdx = -1;
+let inventoryState = { condition: 'good', category: '' };
+
+/* ── Camera / Barcode Scan ────────────────────────────────────── */
+async function handleCameraCapture(file) {
+  if (!file) return;
+  if (!('BarcodeDetector' in window)) {
+    toast('Camera barcode scanning is not supported in this browser. Please type the ISBN manually.', 'error');
+    return;
+  }
+  const isbnHintEl = document.getElementById('isbn-hint');
+  const isbnInputEl = document.getElementById('isbn-input');
+  isbnHintEl.textContent = 'Reading barcode…';
+  isbnHintEl.className = 'isbn-hint';
+  try {
+    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8'] });
+    const img = await createImageBitmap(file);
+    const barcodes = await detector.detect(img);
+    const barcode = barcodes.find(b => b.rawValue && (b.rawValue.length === 13 || b.rawValue.length === 10));
+    if (barcode) {
+      isbnInputEl.value = barcode.rawValue;
+      isbnInputEl.dispatchEvent(new Event('input'));
+      await doISBNLookup(barcode.rawValue);
+    } else {
+      isbnHintEl.textContent = 'No ISBN barcode found — try a clearer photo or type manually.';
+      isbnHintEl.className = 'isbn-hint err';
+      toast('No barcode found in photo', 'error');
+    }
+  } catch {
+    isbnHintEl.textContent = 'ISBN-10 or ISBN-13 (hyphens OK)';
+    isbnHintEl.className = 'isbn-hint';
+    toast('Could not read barcode — please type the ISBN', 'error');
+  }
+}
+
+/* ── CSV Export ───────────────────────────────────────────────── */
+function exportInventoryCSV() {
+  const list = store.readingList.get();
+  if (!list.length) { toast('Inventory is empty — nothing to export.', 'error'); return; }
+  const headers = ['Title', 'Authors', 'ISBN', 'Condition', 'Category', 'Date Added'];
+  const rows = list.map(b => [
+    b.title || '',
+    (b.authors || []).join('; '),
+    b.isbn || '',
+    b.condition || '',
+    b.category || '',
+    b.addedAt ? new Date(b.addedAt).toLocaleDateString() : '',
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'book-inventory.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Inventory exported to CSV', 'success');
+}
 
 /* ── Toast ────────────────────────────────────────────────────── */
 let toastTimer;
@@ -1288,7 +1470,12 @@ window.makePlaceholderEl = function() {
 };
 
 /* ── Render book detail ───────────────────────────────────────── */
+const CONDITION_LABELS = { 'like-new': 'Like New', 'good': 'Good', 'fair': 'Fair', 'poor': 'Poor' };
+const SHELF_CATEGORIES = ['Fiction', 'Non-Fiction', "Children's", 'Mystery', 'Sci-Fi / Fantasy', 'Biography', 'History', 'Self-Help', 'Reference', 'Other'];
+
 function renderBookDetail(book) {
+  // Reset inventory state for new book
+  inventoryState = { condition: 'good', category: '' };
   const inRL = store.readingList.has(book.isbn || book.title);
   const rlKey = book.isbn || book.title;
 
@@ -1325,6 +1512,29 @@ function renderBookDetail(book) {
     ? `<img src="${esc(book.coverUrl)}" alt="Cover of ${esc(book.title)}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.replaceWith(makePlaceholderEl())">`
     : coverPlaceholderSvg();
 
+  const conditionBtns = Object.entries(CONDITION_LABELS).map(([val, label]) =>
+    `<button class="condition-btn${inventoryState.condition === val ? ' active' : ''}" data-condition="${val}" aria-pressed="${inventoryState.condition === val}">${label}</button>`
+  ).join('');
+
+  const categoryOpts = SHELF_CATEGORIES.map(cat =>
+    `<option value="${esc(cat)}"${inventoryState.category === cat ? ' selected' : ''}>${esc(cat)}</option>`
+  ).join('');
+
+  const inventoryCardHtml = `
+    <div class="inventory-card" aria-label="Inventory assignment">
+      <div class="book-desc-section">
+        <span class="section-heading">Condition</span>
+        <div class="condition-row" role="group" aria-label="Select book condition">${conditionBtns}</div>
+      </div>
+      <div class="book-desc-section">
+        <span class="section-heading">Shelf / Category</span>
+        <select class="input-field category-select" id="category-select" aria-label="Assign shelf category">
+          <option value="">— Select category —</option>
+          ${categoryOpts}
+        </select>
+      </div>
+    </div>`;
+
   const html = `
     <div class="book-header">
       <div class="book-cover-wrap" aria-label="Book cover">${coverInner}</div>
@@ -1337,7 +1547,7 @@ function renderBookDetail(book) {
         ${isbnBadges ? `<div class="isbn-badges" aria-label="ISBN numbers">${isbnBadges}</div>` : ''}
         <div class="book-actions">
           <button class="btn-reading-list${inRL ? ' in-list' : ''}" id="add-rl-btn" data-isbn="${esc(rlKey)}" aria-pressed="${inRL}">
-            ${inRL ? '✓ In Reading List' : '+ Reading List'}
+            ${inRL ? '✓ In Inventory' : '+ Add to Inventory'}
           </button>
           <a href="${esc(book.olUrl)}" target="_blank" rel="noopener noreferrer" class="btn-ol-link" aria-label="View on Open Library (opens in new tab)">
             Open Library ↗
@@ -1345,6 +1555,7 @@ function renderBookDetail(book) {
         </div>
       </div>
     </div>
+    ${inventoryCardHtml}
     ${descHtml || subjectsHtml ? `<div class="book-detail-card">
       ${descHtml}
       ${subjectsHtml ? `<div class="book-desc-section"><span class="section-heading">Subjects &amp; Genres</span>${subjectsHtml}</div>` : ''}
@@ -1353,6 +1564,23 @@ function renderBookDetail(book) {
 
   const scroll = document.getElementById('book-scroll');
   scroll.innerHTML = html;
+
+  // Wire condition buttons
+  scroll.querySelectorAll('.condition-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      inventoryState.condition = btn.dataset.condition;
+      scroll.querySelectorAll('.condition-btn').forEach(b => {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+    });
+  });
+
+  // Wire category select
+  const catSelect = document.getElementById('category-select');
+  if (catSelect) {
+    catSelect.addEventListener('change', () => { inventoryState.category = catSelect.value; });
+  }
 
   // Wire author search buttons
   scroll.querySelectorAll('.author-btn').forEach(btn => {
@@ -1383,15 +1611,15 @@ function renderBookDetail(book) {
     if (isIn) {
       store.readingList.remove(isbn);
       rlBtn.classList.remove('in-list');
-      rlBtn.textContent = '+ Reading List';
+      rlBtn.textContent = '+ Add to Inventory';
       rlBtn.setAttribute('aria-pressed', 'false');
-      toast('Removed from reading list');
+      toast('Removed from inventory');
     } else {
-      store.readingList.add(book);
+      store.readingList.add(book, inventoryState.condition, inventoryState.category);
       rlBtn.classList.add('in-list');
-      rlBtn.textContent = '✓ In Reading List';
+      rlBtn.textContent = '✓ In Inventory';
       rlBtn.setAttribute('aria-pressed', 'true');
-      toast('Added to reading list', 'success');
+      toast('Added to inventory', 'success');
     }
     updateReadingListBadge();
     if (document.getElementById('rl-overlay').classList.contains('open')) {
@@ -1426,10 +1654,9 @@ async function doISBNLookup(rawIsbn) {
       showBook(book);
       toast(`Found: ${book.title}`, 'success');
     }
-  } catch (err) {
+  } catch {
     showError('Lookup failed', 'Could not reach Open Library. Check your connection and try again.');
     toast('Lookup failed — check your connection', 'error');
-    console.error(err);
   } finally {
     btnContent.textContent = 'Look Up';
     document.getElementById('isbn-lookup-btn').disabled = false;
@@ -1647,7 +1874,7 @@ function renderReadingList() {
   const list = store.readingList.get();
   const container = document.getElementById('rl-list');
   if (!list.length) {
-    container.innerHTML = '<div class="rl-empty">Your reading list is empty.<br>Add books from search results.</div>';
+    container.innerHTML = '<div class="rl-empty">Inventory is empty.<br>Look up a book and add it using the condition and category selectors.</div>';
     return;
   }
   container.innerHTML = list.map(b => {
@@ -1655,11 +1882,18 @@ function renderReadingList() {
       ? `<div class="rl-cover"><img src="${esc(b.coverUrl)}" alt="" onerror="this.parentElement.innerHTML='📖'"></div>`
       : `<div class="rl-cover">📖</div>`;
     const authors = (b.authors || []).slice(0, 2).join(', ') || 'Unknown';
+    const condLabel = CONDITION_LABELS[b.condition] || b.condition || '';
+    const condClass = b.condition ? ` cond-${b.condition}` : '';
+    const metaHtml = (condLabel || b.category) ? `<div class="rl-item-meta">
+      ${condLabel ? `<span class="rl-meta-chip${condClass}">${esc(condLabel)}</span>` : ''}
+      ${b.category ? `<span class="rl-meta-chip">${esc(b.category)}</span>` : ''}
+    </div>` : '';
     return `<div class="rl-item" role="listitem" data-isbn="${esc(b.isbn || b.title)}">
       ${thumbHtml}
       <div class="rl-info">
         <div class="rl-item-title${b.read ? ' read' : ''}">${esc(b.title)}</div>
         <div class="rl-item-author">${esc(authors)}</div>
+        ${metaHtml}
       </div>
       <div class="rl-item-actions">
         <button class="btn-rl-read${b.read ? ' is-read' : ''}" data-isbn="${esc(b.isbn || b.title)}" aria-label="${b.read ? 'Mark as unread' : 'Mark as read'}" title="${b.read ? 'Unmark read' : 'Mark read'}">${b.read ? 'Read ✓' : 'Mark read'}</button>
@@ -1684,7 +1918,7 @@ function renderReadingList() {
       updateReadingListBadge();
       renderReadingList();
       syncMainRLButton(btn.dataset.isbn);
-      toast('Removed from reading list');
+      toast('Removed from inventory');
     });
   });
 }
@@ -1694,11 +1928,25 @@ function syncMainRLButton(isbn) {
   if (!mainBtn || mainBtn.dataset.isbn !== isbn) return;
   const isIn = store.readingList.has(isbn);
   mainBtn.classList.toggle('in-list', isIn);
-  mainBtn.textContent = isIn ? '✓ In Reading List' : '+ Reading List';
+  mainBtn.textContent = isIn ? '✓ In Inventory' : '+ Add to Inventory';
   mainBtn.setAttribute('aria-pressed', String(isIn));
 }
 
-// Open/close reading list
+// Camera scan
+document.getElementById('camera-btn').addEventListener('click', () => {
+  document.getElementById('camera-input').click();
+});
+document.getElementById('camera-input').addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (file) handleCameraCapture(file);
+  // Reset so same file can be re-selected
+  e.target.value = '';
+});
+
+// Export CSV
+document.getElementById('rl-export-btn').addEventListener('click', exportInventoryCSV);
+
+// Open/close inventory panel (reading list)
 document.getElementById('nav-rl-btn').addEventListener('click', () => {
   const overlay = document.getElementById('rl-overlay');
   overlay.classList.add('open');

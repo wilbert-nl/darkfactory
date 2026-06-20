@@ -319,6 +319,7 @@ select.input-sm {
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--shadow-accent-md); }
 .btn-primary:active { transform: translateY(0); box-shadow: none; opacity: 0.9; }
 .btn-primary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
 
 .btn-ghost {
   display: inline-flex;
@@ -1141,6 +1142,7 @@ select.input-sm {
     <!-- Sidebar footer -->
     <div class="sidebar-footer">
       <button class="btn-primary" id="btn-fetch">Search jobs</button>
+      <button class="btn-ghost" id="btn-share-board">Share board link</button>
     </div>
   </aside>
 
@@ -1208,6 +1210,33 @@ select.input-sm {
         <div class="digest-output" id="digest-output" aria-live="polite"></div>
         <div id="digest-copy-wrap" style="display:none;margin-top:var(--space-2);">
           <button class="btn-ghost" id="btn-copy-digest">Copy HTML to clipboard</button>
+        </div>
+
+        <!-- Resend email integration -->
+        <div id="digest-send-section" style="display:none;margin-top:var(--space-2);">
+          <div style="display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-paper-2);">
+            <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-ink);">Send via Resend</span>
+            <div>
+              <label class="field-label" for="resend-api-key">Resend API key</label>
+              <input type="password" class="input-sm" id="resend-api-key" placeholder="re_xxxxxxxxxxxx" maxlength="100" autocomplete="off">
+            </div>
+            <div>
+              <label class="field-label" for="resend-from">From (verified Resend domain)</label>
+              <input type="email" class="input-sm" id="resend-from" placeholder="you@yourdomain.com" maxlength="100">
+            </div>
+            <div>
+              <label class="field-label" for="resend-to">Recipient email(s)</label>
+              <input type="text" class="input-sm" id="resend-to" placeholder="candidate@example.com" maxlength="300">
+            </div>
+            <div>
+              <label class="field-label" for="resend-subject">Subject</label>
+              <input type="text" class="input-sm" id="resend-subject" placeholder="Your weekly remote jobs digest" maxlength="150" value="Weekly Remote Jobs Digest">
+            </div>
+            <button class="btn-primary" id="btn-send-digest" style="width:auto;">Send digest email</button>
+            <p style="font-size:var(--text-xs);color:var(--color-ink-muted);line-height:1.5;">
+              Your API key is stored in your browser only and never transmitted to third-party servers. Requires a <a href="https://resend.com" target="_blank" rel="noopener noreferrer" style="color:var(--color-accent);">Resend account</a> with a verified sending domain.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -1855,6 +1884,27 @@ function renderProfiles() {
   });
 }
 
+// ── Email digest palette ──────────────────────────────────────
+// Intentional email-specific overrides: email clients do not support
+// CSS custom properties (var(--)), so all inline styles in email HTML
+// must use literal color values. These approximate the app's cobalt
+// theme mapped to a light background (required for broad email client
+// compatibility). Update these when rebranding.
+const EMAIL_PALETTE = {
+  pageBg:     '#f3f4f6',   // near-white page background
+  cardBg:     '#ffffff',   // card surface
+  border:     '#e5e7eb',   // card and row border
+  headerBg:   '#1e3a8a',   // cobalt blue — matches --color-accent hue (oklch 62% 0.20 256)
+  headerText: '#ffffff',
+  headerSub:  'rgba(255,255,255,0.75)',
+  titleText:  '#111827',   // near-black heading
+  metaText:   '#6b7280',   // company / muted label
+  dateText:   '#9ca3af',   // lighter muted
+  btnBg:      '#1e3a8a',   // matches headerBg
+  btnText:    '#ffffff',
+  footerText: '#9ca3af',
+};
+
 // ── Digest builder ────────────────────────────────────────────
 function generateDigest() {
   const selected = allJobs.filter(j => digestSelected.has(j.id));
@@ -1867,17 +1917,20 @@ function generateDigest() {
   digestOutput.textContent = html;
   digestOutput.classList.add('visible');
   digestCopyWrap.style.display = '';
+  document.getElementById('digest-send-section').style.display = '';
+  restoreResendFields();
   toast('Digest generated!', 'success');
 }
 
 function buildDigestHTML(jobs, recruiterName) {
+  const ep = EMAIL_PALETTE;
   const items = jobs.map(job => `
     <tr>
-      <td style="padding:16px 0;border-bottom:1px solid #e5e7eb;vertical-align:top;">
-        <p style="margin:0 0 4px;font-size:16px;font-weight:600;color:#1a2e20;">${esc(job.title)}</p>
-        <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">${esc(job.company)} &middot; Remote${job.salary ? ' &middot; ' + esc(job.salary) : ''}</p>
-        <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">Posted: ${relTime(job.postedAt)}</p>
-        <a href="${esc(job.url)}" style="display:inline-block;padding:6px 14px;background:#2d6a4f;color:#fff;font-size:12px;font-weight:600;border-radius:6px;text-decoration:none;">View &amp; Apply</a>
+      <td style="padding:16px 0;border-bottom:1px solid ${ep.border};vertical-align:top;">
+        <p style="margin:0 0 4px;font-size:16px;font-weight:600;color:${ep.titleText};">${esc(job.title)}</p>
+        <p style="margin:0 0 6px;font-size:13px;color:${ep.metaText};">${esc(job.company)} &middot; Remote${job.salary ? ' &middot; ' + esc(job.salary) : ''}</p>
+        <p style="margin:0 0 8px;font-size:12px;color:${ep.dateText};">Posted: ${relTime(job.postedAt)}</p>
+        <a href="${esc(job.url)}" style="display:inline-block;padding:6px 14px;background:${ep.btnBg};color:${ep.btnText};font-size:12px;font-weight:600;border-radius:6px;text-decoration:none;">View &amp; Apply</a>
       </td>
     </tr>
   `).join('');
@@ -1885,23 +1938,112 @@ function buildDigestHTML(jobs, recruiterName) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><title>Weekly Remote Jobs Digest</title></head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:32px auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
-    <tr><td style="padding:28px 32px;background:#2d6a4f;">
-      <h1 style="margin:0;font-size:22px;color:#fff;font-weight:600;">Weekly Remote Jobs Digest</h1>
-      <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.8);">Curated by ${esc(recruiterName)}</p>
+<body style="margin:0;padding:0;background:${ep.pageBg};font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:32px auto;background:${ep.cardBg};border-radius:12px;border:1px solid ${ep.border};overflow:hidden;">
+    <tr><td style="padding:28px 32px;background:${ep.headerBg};">
+      <h1 style="margin:0;font-size:22px;color:${ep.headerText};font-weight:600;">Weekly Remote Jobs Digest</h1>
+      <p style="margin:6px 0 0;font-size:13px;color:${ep.headerSub};">Curated by ${esc(recruiterName)}</p>
     </td></tr>
     <tr><td style="padding:0 32px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         ${items}
       </table>
     </td></tr>
-    <tr><td style="padding:24px 32px;text-align:center;font-size:12px;color:#9ca3af;">
+    <tr><td style="padding:24px 32px;text-align:center;font-size:12px;color:${ep.footerText};">
       These opportunities were hand-picked for you. Reply to this email to learn more.
     </td></tr>
   </table>
 </body>
 </html>`;
+}
+
+// ── Shareable board URL ────────────────────────────────────────
+function buildShareURL() {
+  const params = new URLSearchParams();
+  const vertical = document.getElementById('vertical-select').value;
+  const mustKw   = document.getElementById('kw-must').value.trim();
+  const excKw    = document.getElementById('kw-exclude').value.trim();
+  const name     = document.getElementById('recruiter-name').value.trim();
+  if (vertical) params.set('v', vertical);
+  if (mustKw)   params.set('m', mustKw);
+  if (excKw)    params.set('x', excKw);
+  if (name)     params.set('n', name);
+  const qs = params.toString();
+  return `${location.origin}${location.pathname}${qs ? '?' + qs : ''}`;
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(location.search);
+  if (!params.size) return;
+  if (params.has('v')) document.getElementById('vertical-select').value = params.get('v');
+  if (params.has('m')) document.getElementById('kw-must').value = params.get('m');
+  if (params.has('x')) document.getElementById('kw-exclude').value = params.get('x');
+  if (params.has('n')) document.getElementById('recruiter-name').value = params.get('n');
+  // Auto-run search when filter params are present in the URL
+  if (params.has('v') || params.has('m')) fetchJobs();
+}
+
+// ── Resend email integration ───────────────────────────────────
+const RESEND_API = 'https://api.resend.com/emails';
+const LS_RESEND_KEY  = 'nr_resend_key';
+const LS_RESEND_FROM = 'nr_resend_from';
+
+function restoreResendFields() {
+  const key  = lsGet(LS_RESEND_KEY, '');
+  const from = lsGet(LS_RESEND_FROM, '');
+  if (key)  document.getElementById('resend-api-key').value = key;
+  if (from) document.getElementById('resend-from').value = from;
+}
+
+async function sendDigestViaResend() {
+  const apiKey  = document.getElementById('resend-api-key').value.trim();
+  const fromVal = document.getElementById('resend-from').value.trim();
+  const toRaw   = document.getElementById('resend-to').value.trim();
+  const subject = document.getElementById('resend-subject').value.trim() || 'Weekly Remote Jobs Digest';
+
+  if (!apiKey)  { toast('Enter your Resend API key', 'error'); return; }
+  if (!fromVal) { toast('Enter a verified from email address', 'error'); return; }
+  if (!toRaw)   { toast('Enter at least one recipient email', 'error'); return; }
+
+  const toList = toRaw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!toList.length) { toast('Invalid recipient list', 'error'); return; }
+
+  const selected = allJobs.filter(j => digestSelected.has(j.id));
+  if (!selected.length) { toast('Select at least one job for the digest', 'error'); return; }
+
+  const recruiterName = document.getElementById('recruiter-name').value.trim() || 'Your Recruiter';
+  const htmlBody = buildDigestHTML(selected, recruiterName);
+
+  // Persist non-secret fields
+  lsSet(LS_RESEND_KEY,  apiKey);
+  lsSet(LS_RESEND_FROM, fromVal);
+
+  const btn = document.getElementById('btn-send-digest');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const res = await fetch(RESEND_API, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from: fromVal, to: toList, subject, html: htmlBody }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data?.message || data?.error || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    toast(`Digest sent to ${toList.join(', ')}`, 'success');
+  } catch (err) {
+    toast(`Send failed: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
 }
 
 // ── Tab switching ─────────────────────────────────────────────
@@ -1987,6 +2129,15 @@ document.getElementById('btn-copy-digest').addEventListener('click', () => {
     .then(() => toast('HTML copied to clipboard!', 'success'))
     .catch(() => toast('Copy failed', 'error'));
 });
+document.getElementById('btn-send-digest').addEventListener('click', sendDigestViaResend);
+
+// Share board link
+document.getElementById('btn-share-board').addEventListener('click', () => {
+  const url = buildShareURL();
+  navigator.clipboard.writeText(url)
+    .then(() => toast('Board link copied to clipboard!', 'success'))
+    .catch(() => toast('Copy failed', 'error'));
+});
 
 // ── Init ──────────────────────────────────────────────────────
 loadState();
@@ -1994,6 +2145,7 @@ renderProfiles();
 showFeedState('idle');
 updateCounts();
 switchTab('feed');
+loadFromURL();
 </script>
 </body>
 </html>

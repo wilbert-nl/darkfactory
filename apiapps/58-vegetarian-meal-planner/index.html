@@ -52,6 +52,7 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: 500;
+  font-style: normal;
   letter-spacing: -0.02em;
   color: var(--color-ink);
   flex-shrink: 0;
@@ -109,6 +110,7 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--font-display);
   font-size: var(--text-3xl);
   font-weight: 400;
+  font-style: normal;
   letter-spacing: -0.03em;
   color: var(--color-ink);
   line-height: 1.15;
@@ -456,6 +458,7 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: 400;
+  font-style: normal;
   letter-spacing: -0.02em;
   color: var(--color-ink);
 }
@@ -764,6 +767,7 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: 500;
+  font-style: normal;
   letter-spacing: -0.01em;
   color: var(--color-ink);
   flex: 1;
@@ -975,6 +979,48 @@ a { color: inherit; text-decoration: none; }
   .meal-skeleton::after { animation: none; }
   .toast { transition: opacity 0.15s var(--ease-out); transform: translateY(0); }
 }
+
+/* ── Export button group ── */
+.export-btns {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+@media (max-width: 680px) {
+  .export-btns { width: 100%; }
+  .export-btns .btn-export { flex: 1; justify-content: center; width: auto; }
+}
+
+/* ── Print / PDF export ── */
+@media print {
+  .nav,
+  section:has(.btn-save-profile),
+  section:has(.btn-primary),
+  section:has(#spoonacular-key),
+  .plan-actions,
+  .doc-footer,
+  .btn-swap,
+  .detail-overlay { display: none !important; }
+
+  body { background: #fff !important; color: #111 !important; }
+  .doc-col { padding: 0 12px !important; padding-top: 12px !important; max-width: none !important; }
+  .doc-section { border-top: 1px solid #ddd !important; }
+  .section-heading { color: #111 !important; }
+  .meal-card { break-inside: avoid; border: 1px solid #ccc !important; background: #fff !important; }
+  .meal-card-name { color: #111 !important; }
+  .meal-card-cal { color: #555 !important; }
+  .meal-card-img { height: 48px !important; }
+  .day-label { color: #555 !important; }
+  .col-header { color: #555 !important; }
+  .nutrition-bar { break-inside: avoid; background: #f5f5f5 !important; border: 1px solid #ddd !important; }
+  .nutrition-label { color: #555 !important; }
+  .nutrition-value { color: #111 !important; }
+  .nutrition-sub { color: #888 !important; }
+  .plan-title { color: #111 !important; }
+  .plan-subtitle { color: #555 !important; }
+
+  @page { margin: 16mm; size: A4 landscape; }
+}
 </style>
 </head>
 <body>
@@ -1010,6 +1056,19 @@ a { color: inherit; text-decoration: none; }
         maxlength="60"
         autocomplete="off"
         aria-label="Client name"
+      >
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" for="client-email">Client Email</label>
+      <input
+        type="email"
+        id="client-email"
+        class="input-field"
+        placeholder="client@example.com"
+        maxlength="100"
+        autocomplete="email"
+        aria-label="Client email address"
       >
     </div>
 
@@ -1079,6 +1138,24 @@ a { color: inherit; text-decoration: none; }
     </div>
   </section>
 
+  <!-- API Settings -->
+  <section class="doc-section" aria-label="API settings">
+    <h2 class="section-heading">API Settings</h2>
+    <div class="field-group">
+      <label class="field-label" for="spoonacular-key">Spoonacular API Key <span style="font-weight:400;color:var(--color-ink-muted);">(optional — enables real nutrition data)</span></label>
+      <input
+        type="password"
+        id="spoonacular-key"
+        class="input-field"
+        placeholder="Enter your Spoonacular API key…"
+        maxlength="120"
+        autocomplete="off"
+        aria-label="Spoonacular API key"
+      >
+      <span style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:var(--space-1);">Without a key, recipes are sourced from TheMealDB. Get a free key at <a href="https://spoonacular.com/food-api" target="_blank" rel="noopener" style="color:var(--color-accent);">spoonacular.com/food-api</a></span>
+    </div>
+  </section>
+
   <!-- Generate -->
   <section class="doc-section" aria-label="Generate plan">
     <button class="btn-primary" id="btn-generate" aria-label="Generate 7-day meal plan">
@@ -1102,35 +1179,40 @@ a { color: inherit; text-decoration: none; }
       <div class="meal-grid" id="meal-grid" aria-label="Weekly meal grid"></div>
 
       <!-- Nutrition summary -->
-      <div class="nutrition-bar" role="region" aria-label="Weekly nutrition summary">
+      <div class="nutrition-bar" role="region" aria-label="Daily nutrition summary">
         <div class="nutrition-stat">
-          <span class="nutrition-label">Weekly Calories</span>
+          <span class="nutrition-label">Daily Calories</span>
           <span class="nutrition-value" id="n-total-cal">—</span>
-          <span class="nutrition-sub">kcal total</span>
+          <span class="nutrition-sub">kcal / day</span>
         </div>
         <div class="nutrition-stat">
           <span class="nutrition-label">Protein</span>
           <span class="nutrition-value" id="n-protein">—</span>
-          <span class="nutrition-sub">g / week</span>
+          <span class="nutrition-sub">g / day</span>
         </div>
         <div class="nutrition-stat">
           <span class="nutrition-label">Carbs</span>
           <span class="nutrition-value" id="n-carbs">—</span>
-          <span class="nutrition-sub">g / week</span>
+          <span class="nutrition-sub">g / day</span>
         </div>
         <div class="nutrition-stat">
           <span class="nutrition-label">Fat</span>
           <span class="nutrition-value" id="n-fat">—</span>
-          <span class="nutrition-sub">g / week</span>
+          <span class="nutrition-sub">g / day</span>
         </div>
       </div>
 
       <!-- Plan actions -->
       <div class="plan-actions">
         <div class="plan-client-badge" id="plan-client-badge" aria-live="polite"></div>
-        <button class="btn-export" id="btn-export" aria-label="Export weekly plan as HTML email">
-          ↗ Export Plan
-        </button>
+        <div class="export-btns">
+          <button class="btn-export" id="btn-export-pdf" style="display:none;" aria-label="Save meal plan as PDF">
+            ↓ Save PDF
+          </button>
+          <button class="btn-export" id="btn-export-email" style="display:none;" aria-label="Email plan to client">
+            &#9993; Email to Client
+          </button>
+        </div>
       </div>
 
     </section>
@@ -1143,7 +1225,7 @@ a { color: inherit; text-decoration: none; }
 
   <!-- Footer -->
   <footer class="doc-footer" aria-label="App footer">
-    <span>Meals via <a href="https://www.themealdb.com" target="_blank" rel="noopener" style="color: var(--color-accent);">TheMealDB</a> — vegetarian category</span>
+    <span>Meals via <a href="https://www.themealdb.com" target="_blank" rel="noopener" style="color: var(--color-accent);">TheMealDB</a> or <a href="https://spoonacular.com/food-api" target="_blank" rel="noopener" style="color: var(--color-accent);">Spoonacular</a> — vegetarian recipes</span>
     <span id="footer-timestamp"></span>
   </footer>
 
@@ -1192,6 +1274,19 @@ const MEALDB_VEGETARIAN = 'https://www.themealdb.com/api/json/v1/1/filter.php?c=
 const MEALDB_AREAS      = 'https://www.themealdb.com/api/json/v1/1/list.php?a=list';
 const MEALDB_LOOKUP     = (id) => `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
 
+// Spoonacular API (used when API key is provided)
+const SPOON_SEARCH = (key) =>
+  `https://api.spoonacular.com/recipes/complexSearch?diet=vegetarian&number=100&addRecipeNutrition=true&apiKey=${key}`;
+const SPOON_INFO   = (id, key) =>
+  `https://api.spoonacular.com/recipes/${id}/information?includeNutrition=true&apiKey=${key}`;
+// Static Spoonacular cuisine list for chips (no separate endpoint needed)
+const SPOON_CUISINES = [
+  'African','American','British','Cajun','Caribbean','Chinese',
+  'Eastern European','French','German','Greek','Indian','Irish',
+  'Italian','Japanese','Korean','Latin American','Mediterranean',
+  'Mexican','Middle Eastern','Nordic','Southern','Spanish','Thai','Vietnamese',
+];
+
 const MAX_PROFILES = 8;
 const SESSION_KEY  = 'verdant_meals_cache';
 const AREAS_KEY    = 'verdant_areas_cache';
@@ -1207,7 +1302,9 @@ let currentPlan   = null; // { days: {Mon: {Breakfast: mealObj, …}, …} }
 let activeProfile = null; // current profile object
 let mealsPerDay   = 2;
 let selectedArea  = 'all';
-let detailCache   = {};   // idMeal → full detail object
+let detailCache      = {};   // idMeal → full detail object
+let spoonacularKey   = '';   // Spoonacular API key from input
+let usingSpoonacular = false; // whether current meal data is from Spoonacular
 
 // ═══════════════════════════════════════════════════════════════
 // UTILITIES
@@ -1281,6 +1378,35 @@ function setCachedAreas(data) {
 // API
 // ═══════════════════════════════════════════════════════════════
 async function fetchAllMeals() {
+  const key = document.getElementById('spoonacular-key')?.value.trim() || '';
+
+  if (key) {
+    // Try Spoonacular — key-specific cache
+    const cacheKey = SESSION_KEY + '_spoon_' + key.slice(0, 12);
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
+      if (cached) { spoonacularKey = key; usingSpoonacular = true; return cached; }
+    } catch {}
+
+    const res = await fetch(SPOON_SEARCH(key), { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`Spoonacular HTTP ${res.status} — check your API key`);
+    const data = await res.json();
+    const meals = (data.results || []).map(r => ({
+      idMeal: String(r.id),
+      strMeal: r.title,
+      strMealThumb: r.image,
+      // Attach raw nutrients for real nutrition display
+      nutrients: r.nutrition?.nutrients || [],
+    }));
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(meals)); } catch {}
+    spoonacularKey   = key;
+    usingSpoonacular = true;
+    return meals;
+  }
+
+  // Fallback: TheMealDB
+  spoonacularKey   = '';
+  usingSpoonacular = false;
   const cached = getCachedMeals();
   if (cached) return cached;
 
@@ -1314,6 +1440,39 @@ async function fetchMealDetail(id) {
   return meal;
 }
 
+/** Fetch Spoonacular recipe detail and normalise to MealDB-compatible shape */
+async function fetchMealDetailSpoonacular(id) {
+  if (detailCache[id]) return detailCache[id];
+  const res = await fetch(SPOON_INFO(id, spoonacularKey), { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`Spoonacular HTTP ${res.status}`);
+  const d = await res.json();
+
+  // Build numbered instruction steps from analyzed instructions
+  const steps = (d.analyzedInstructions || [])
+    .flatMap(block => block.steps || [])
+    .map((s, i) => `${i + 1}. ${s.step}`)
+    .join('\n');
+
+  const normalized = {
+    strMeal:         d.title || '',
+    strMealThumb:    d.image || '',
+    strArea:         (d.cuisines || [])[0] || '',
+    strCategory:     (d.dishTypes || [])[0] || '',
+    strInstructions: steps,
+    strYoutube:      '',
+  };
+
+  // Map extendedIngredients into strIngredient1…strMeasure20 slots
+  (d.extendedIngredients || []).slice(0, 20).forEach((ing, i) => {
+    const n = i + 1;
+    normalized[`strIngredient${n}`] = ing.nameClean || ing.name || '';
+    normalized[`strMeasure${n}`]    = ing.original  || `${ing.amount} ${ing.unit}`.trim();
+  });
+
+  detailCache[id] = normalized;
+  return normalized;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // INIT — fetch meals & areas on load
 // ═══════════════════════════════════════════════════════════════
@@ -1325,14 +1484,21 @@ async function init() {
   if (ts) ts.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   try {
-    const [meals, areas] = await Promise.all([fetchAllMeals(), fetchAreas()]);
-    allMeals   = meals;
-    areasCache = areas;
+    const meals = await fetchAllMeals();
+    allMeals = meals;
     applyFilter();
+
+    let areas;
+    if (usingSpoonacular) {
+      // Spoonacular has its own static cuisine list — no extra API call needed
+      areas = SPOON_CUISINES;
+    } else {
+      areas = await fetchAreas();
+      areasCache = areas;
+    }
     renderCuisineChips(areas);
-  } catch (err) {
+  } catch {
     toast('Could not load meal data. Check your connection.', 'error');
-    console.warn('[Verdant] init error:', err);
   }
 }
 
@@ -1668,10 +1834,12 @@ function updateNutritionBar() {
     }
   }
 
-  document.getElementById('n-total-cal').textContent = fmt(totalCal);
-  document.getElementById('n-protein').textContent   = fmt(totalProtein) + 'g';
-  document.getElementById('n-carbs').textContent     = fmt(totalCarb)    + 'g';
-  document.getElementById('n-fat').textContent       = fmt(totalFat)     + 'g';
+  // Divide by number of days to get daily averages
+  const numDays = DAYS.length;
+  document.getElementById('n-total-cal').textContent = fmt(Math.round(totalCal     / numDays));
+  document.getElementById('n-protein').textContent   = fmt(Math.round(totalProtein / numDays)) + 'g';
+  document.getElementById('n-carbs').textContent     = fmt(Math.round(totalCarb    / numDays)) + 'g';
+  document.getElementById('n-fat').textContent       = fmt(Math.round(totalFat     / numDays)) + 'g';
 }
 
 function updatePlanBar(profile) {
@@ -1684,7 +1852,9 @@ function updatePlanBar(profile) {
 }
 
 function updateExportButton() {
-  document.getElementById('btn-export').style.display = currentPlan ? '' : 'none';
+  const show = currentPlan ? '' : 'none';
+  document.getElementById('btn-export-pdf').style.display   = show;
+  document.getElementById('btn-export-email').style.display = show;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1701,7 +1871,9 @@ async function openDetail(mealId, mealName) {
   document.body.style.overflow = 'hidden';
 
   try {
-    const detail = await fetchMealDetail(mealId);
+    const detail = usingSpoonacular
+      ? await fetchMealDetailSpoonacular(mealId)
+      : await fetchMealDetail(mealId);
     if (!detail) throw new Error('No data');
     renderDetailPanel(detail);
   } catch {
@@ -1789,57 +1961,74 @@ function closeDetail() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT — HTML email template
+// EXPORT — PDF + branded HTML email template
 // ═══════════════════════════════════════════════════════════════
-function exportPlan() {
-  if (!currentPlan) return;
-  const slots = MEAL_LABELS_BY_COUNT[mealsPerDay];
+
+/** Resolve a CSS custom property to a computed rgb() string safe for email HTML */
+function resolveCssColor(varName) {
+  const probe = document.createElement('div');
+  probe.style.cssText = `color:var(${varName});position:absolute;top:-9999px;left:-9999px;`;
+  document.body.appendChild(probe);
+  const val = getComputedStyle(probe).color;
+  document.body.removeChild(probe);
+  return val || 'currentColor';
+}
+
+function buildExportHtml() {
+  if (!currentPlan) return '';
+  const slots       = MEAL_LABELS_BY_COUNT[mealsPerDay];
   const profileName = document.getElementById('client-name').value.trim() || 'Your';
+
+  // Resolve theme colors at export time — no hardcoded hex
+  const cAccent   = resolveCssColor('--color-accent');
+  const cInk      = resolveCssColor('--color-ink');
+  const cMuted    = resolveCssColor('--color-ink-muted');
+  const cPaper2   = resolveCssColor('--color-paper-2');
+  const cBorder   = resolveCssColor('--color-border');
 
   const rowsHtml = DAYS.map(day => {
     const cells = slots.map(slot => {
       const m = currentPlan[day]?.[slot];
-      if (!m) return `<td style="padding:8px;"></td>`;
+      if (!m) return `<td style="padding:0.5em;"></td>`;
       return `
-        <td style="padding:8px;vertical-align:top;min-width:140px;">
+        <td style="padding:0.5em;vertical-align:top;min-width:140px;">
           <img src="${esc(m.strMealThumb)}" alt="${esc(m.strMeal)}"
                width="140" height="90"
-               style="display:block;border-radius:6px;object-fit:cover;margin-bottom:6px;">
-          <div style="font-size:12px;font-weight:600;color:#1a2e1a;line-height:1.3;margin-bottom:2px;">${esc(m.strMeal)}</div>
-          <div style="font-size:11px;color:#5a7a5a;">~${m.estimatedCal} kcal</div>
+               style="display:block;border-radius:0.375em;object-fit:cover;margin-bottom:0.375em;">
+          <div style="font-size:0.75rem;font-weight:600;color:${cInk};line-height:1.3;margin-bottom:0.125em;">${esc(m.strMeal)}</div>
+          <div style="font-size:0.6875rem;color:${cMuted};">~${m.estimatedCal} kcal</div>
         </td>
       `;
     }).join('');
-
     return `
       <tr>
-        <td style="padding:8px;font-weight:700;font-size:13px;color:#1a2e1a;white-space:nowrap;border-right:2px solid #e0ece0;">${day}</td>
+        <td style="padding:0.5em;font-weight:700;font-size:0.8125rem;color:${cInk};white-space:nowrap;border-right:2px solid ${cBorder};">${day}</td>
         ${cells}
       </tr>
     `;
   }).join('');
 
   const headerCells = slots.map(s =>
-    `<th style="padding:8px 8px 12px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#5a7a5a;text-align:left;">${esc(s)}</th>`
+    `<th style="padding:0.5em 0.5em 0.75em;font-size:0.6875rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${cMuted};text-align:left;">${esc(s)}</th>`
   ).join('');
 
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>7-Day Vegetarian Meal Plan</title>
 </head>
-<body style="margin:0;padding:0;background:#f5f8f5;font-family:'Segoe UI',Arial,sans-serif;">
-<div style="max-width:800px;margin:32px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-  <div style="background:#3d7a4f;padding:32px 40px;">
-    <h1 style="margin:0;font-size:28px;font-weight:300;color:white;letter-spacing:-0.02em;">${esc(profileName)}'s 7-Day Vegetarian Plan</h1>
-    <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Generated by Verdant Meal Planner</p>
+<body style="margin:0;padding:0;background:${cPaper2};font-family:'Segoe UI',Arial,sans-serif;">
+<div style="max-width:800px;margin:2em auto;background:${cPaper2};border-radius:0.75em;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.4);">
+  <div style="background:${cAccent};padding:2em 2.5em;">
+    <h1 style="margin:0;font-size:1.75rem;font-weight:300;color:#fff;letter-spacing:-0.02em;font-style:normal;">${esc(profileName)}'s 7-Day Vegetarian Plan</h1>
+    <p style="margin:0.5em 0 0;font-size:0.875rem;color:rgba(255,255,255,0.75);">Generated by Verdant Meal Planner</p>
   </div>
-  <div style="padding:32px 40px;overflow-x:auto;">
+  <div style="padding:2em 2.5em;overflow-x:auto;background:#fff;">
     <table style="border-collapse:collapse;width:100%;min-width:600px;">
       <thead>
-        <tr style="border-bottom:2px solid #e0ece0;">
-          <th style="padding:8px 8px 12px;width:80px;"></th>
+        <tr style="border-bottom:2px solid ${cBorder};">
+          <th style="padding:0.5em 0.5em 0.75em;width:80px;"></th>
           ${headerCells}
         </tr>
       </thead>
@@ -1848,24 +2037,51 @@ function exportPlan() {
       </tbody>
     </table>
   </div>
-  <div style="padding:24px 40px;border-top:1px solid #e0ece0;background:#f5f8f5;">
-    <p style="margin:0;font-size:12px;color:#5a7a5a;">
+  <div style="padding:1.5em 2.5em;border-top:1px solid ${cBorder};background:${cPaper2};">
+    <p style="margin:0;font-size:0.75rem;color:${cMuted};">
       Calorie estimates are approximate. Nutritional values will vary based on exact ingredients and portions used.
-      All meals are vegetarian as sourced from TheMealDB.
+      All meals are vegetarian.
     </p>
   </div>
 </div>
 </body>
 </html>`;
+}
 
+/** PDF export — triggers browser print dialog (Save as PDF option) */
+function exportPdf() {
+  if (!currentPlan) return;
+  toast('Opening print dialog — choose "Save as PDF"', 'success');
+  setTimeout(() => window.print(), 400);
+}
+
+/** Email export — downloads branded HTML file and opens mailto: with client address */
+function exportEmail() {
+  if (!currentPlan) return;
+  const clientEmail = document.getElementById('client-email')?.value.trim() || '';
+  const profileName = document.getElementById('client-name')?.value.trim() || 'Client';
+
+  const html = buildExportHtml();
   const blob = new Blob([html], { type: 'text/html' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = 'vegetarian-meal-plan.html';
+  a.download = `${profileName.replace(/\s+/g, '-').toLowerCase()}-meal-plan.html`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('Plan exported as HTML!', 'success');
+
+  if (clientEmail) {
+    const subject = encodeURIComponent(`${profileName}'s 7-Day Vegetarian Meal Plan`);
+    const body    = encodeURIComponent(
+      `Hi ${profileName},\n\nYour personalized 7-day vegetarian meal plan has been prepared for you.\n\nPlease open the attached HTML file in your browser to view the full plan with images and recipe details.\n\nBest regards`
+    );
+    window.open(`mailto:${clientEmail}?subject=${subject}&body=${body}`);
+    toast('Plan downloaded — attach the file to the email that just opened.', 'success');
+  } else {
+    toast('Plan downloaded as HTML. Enter a client email above to use the mailto link.', 'success');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1897,8 +2113,9 @@ document.getElementById('btn-save-profile').addEventListener('click', saveProfil
 // Generate plan
 document.getElementById('btn-generate').addEventListener('click', generatePlan);
 
-// Export
-document.getElementById('btn-export').addEventListener('click', exportPlan);
+// Export buttons
+document.getElementById('btn-export-pdf').addEventListener('click', exportPdf);
+document.getElementById('btn-export-email').addEventListener('click', exportEmail);
 
 // Detail close
 document.getElementById('detail-close').addEventListener('click', closeDetail);

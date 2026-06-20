@@ -23,6 +23,14 @@
       --color-muted:    #8892b0;
       --color-green:    #43d9ad;
       --color-focus:    #6c63ff;
+      --color-accent-a06: rgba(108,99,255,.06);
+      --color-accent-a12: rgba(108,99,255,.12);
+      --color-accent-a15: rgba(108,99,255,.15);
+      --color-accent-a22: rgba(108,99,255,.22);
+      --color-accent-a28: rgba(108,99,255,.28);
+      --color-accent-a50: rgba(108,99,255,.50);
+      --color-accent-text: #a89fff;
+      --color-white-a04: rgba(255,255,255,.04);
       --radius-sm:      6px;
       --radius-md:      10px;
       --radius-lg:      14px;
@@ -121,9 +129,9 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-2);
-      background: rgba(108,99,255,.12);
-      border: 1px solid rgba(108,99,255,.28);
-      color: #a89fff;
+      background: var(--color-accent-a12);
+      border: 1px solid var(--color-accent-a28);
+      color: var(--color-accent-text);
       font-size: 11px;
       font-weight: 600;
       letter-spacing: .08em;
@@ -251,10 +259,10 @@
       transition: border-color .15s, color .15s, background .15s;
       white-space: nowrap;
     }
-    .filter-btn:hover { border-color: var(--color-accent); color: var(--color-accent); background: rgba(108,99,255,.06); }
-    .filter-btn.active { background: rgba(108,99,255,.15); border-color: rgba(108,99,255,.5); color: #a89fff; font-weight: 600; }
+    .filter-btn:hover { border-color: var(--color-accent); color: var(--color-accent); background: var(--color-accent-a06); }
+    .filter-btn.active { background: var(--color-accent-a15); border-color: var(--color-accent-a50); color: var(--color-accent-text); font-weight: 600; }
     .filter-btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-    .filter-btn:active { background: rgba(108,99,255,.22); }
+    .filter-btn:active { background: var(--color-accent-a22); }
 
     /* ── Output card (cols 5-13, rows 2-3) ── */
     .bento-output {
@@ -311,7 +319,7 @@
     .card:hover {
       border-color: var(--color-accent);
       transform: translateY(-1px);
-      box-shadow: 0 4px 20px rgba(108,99,255,.12);
+      box-shadow: 0 4px 20px var(--color-accent-a12);
     }
     .card:focus-visible {
       outline: 2px solid var(--color-focus);
@@ -330,8 +338,8 @@
       font-weight: 700;
       color: var(--color-accent);
       letter-spacing: .06em;
-      background: rgba(108,99,255,.12);
-      border: 1px solid rgba(108,99,255,.22);
+      background: var(--color-accent-a12);
+      border: 1px solid var(--color-accent-a22);
       border-radius: var(--radius-sm);
       padding: 2px 7px;
       flex-shrink: 0;
@@ -339,7 +347,7 @@
     .card-tag {
       font-size: 10px;
       color: var(--color-muted);
-      background: rgba(255,255,255,.04);
+      background: var(--color-white-a04);
       border-radius: var(--radius-sm);
       padding: 2px 7px;
       white-space: nowrap;
@@ -357,6 +365,37 @@
     }
 
     .hidden { display: none !important; }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-4);
+      color: var(--color-muted);
+      text-align: center;
+      padding: var(--space-8);
+    }
+    .empty-state p { font-size: .9rem; }
+    .empty-state .filter-btn { align-self: center; }
+
+    .error-toast {
+      position: fixed;
+      bottom: var(--space-6);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-paper-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-5);
+      font-size: 13px;
+      color: var(--color-text);
+      box-shadow: 0 4px 24px rgba(0,0,0,.4);
+      z-index: 200;
+      white-space: nowrap;
+      transition: opacity .2s;
+    }
 
     /* ── Footer row (cols 1-12) ── */
     .bento-footer {
@@ -485,15 +524,20 @@
   <!-- Output card: cols 5-12 -->
   <section class="bento-output" aria-label="App results">
     <div class="output-header">
-      <p class="result-count"><strong id="count">100</strong> apps</p>
+      <p class="result-count" data-testid="result-count"><strong id="count">100</strong> apps</p>
     </div>
-    <div class="grid" id="grid" role="list"></div>
+    <div class="grid" id="grid" role="list" data-testid="app-grid"></div>
+    <div class="empty-state hidden" id="empty-state" aria-live="polite" data-testid="empty-state">
+      <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <p>No apps match your search.</p>
+      <button class="filter-btn" id="clear-search">Clear search</button>
+    </div>
   </section>
 
   <!-- Footer row: cols 1-12 -->
   <footer class="bento-footer">
-    <span>Built with the <a href="https://github.com/wilbert-nl/apiapps" target="_blank" rel="noopener">Dark Factory</a> pattern</span>
     <span>All apps are free &amp; open source</span>
+    <span id="footer-status"></span>
   </footer>
 
 </main>
@@ -616,10 +660,39 @@ const BASE = '../';
 const grid = document.getElementById('grid');
 const countEl = document.getElementById('count');
 const searchEl = document.getElementById('search');
+const emptyState = document.getElementById('empty-state');
+const clearSearchBtn = document.getElementById('clear-search');
+
+let toastTimer = null;
+
+function showToast(msg) {
+  let toast = document.getElementById('error-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'error-toast';
+    toast.className = 'error-toast';
+    toast.setAttribute('role', 'alert');
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+}
 
 function renderCards(apps) {
   grid.innerHTML = '';
   countEl.textContent = apps.length;
+
+  if (apps.length === 0) {
+    grid.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    return;
+  }
+
+  grid.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+
   apps.forEach(app => {
     const a = document.createElement('a');
     a.className = 'card';
@@ -628,6 +701,9 @@ function renderCards(apps) {
     a.rel = 'noopener';
     a.setAttribute('role', 'listitem');
     a.setAttribute('aria-label', app.name);
+    a.setAttribute('data-testid', 'app-card');
+    a.setAttribute('data-slug', app.slug);
+    a.setAttribute('data-cat', app.cat);
     a.innerHTML = `
       <div class="card-top">
         <span class="card-num">#${app.num}</span>
@@ -636,6 +712,19 @@ function renderCards(apps) {
       <div class="card-name">${app.name}</div>
       <div class="card-slug">${app.slug}</div>
     `;
+
+    a.addEventListener('click', async (e) => {
+      try {
+        const res = await fetch(a.href, { method: 'HEAD', cache: 'no-store' });
+        if (!res.ok) {
+          e.preventDefault();
+          showToast(`App "${app.name}" is not available (${res.status}).`);
+        }
+      } catch {
+        /* Network error or CORS: allow navigation to proceed naturally */
+      }
+    });
+
     grid.appendChild(a);
   });
 }
@@ -652,13 +741,20 @@ function filter() {
   renderCards(results);
 }
 
-document.querySelectorAll('.filter-btn').forEach(btn => {
+document.querySelectorAll('[data-cat]').forEach(btn => {
+  if (!btn.classList.contains('filter-btn')) return;
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.filter-btn[data-cat]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeCat = btn.dataset.cat;
     filter();
   });
+});
+
+clearSearchBtn.addEventListener('click', () => {
+  searchEl.value = '';
+  filter();
+  searchEl.focus();
 });
 
 searchEl.addEventListener('input', filter);

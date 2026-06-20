@@ -840,6 +840,7 @@ button { cursor: pointer; font-family: var(--font-body); }
         <select id="alert-condition" class="select-base" aria-label="Alert condition">
           <option value="above">Price above</option>
           <option value="below">Price below</option>
+          <option value="pct_change">% change &gt; threshold</option>
           <option value="volume">Volume spike (&gt;2×avg)</option>
         </select>
         <div id="alert-threshold-wrap">
@@ -881,6 +882,13 @@ button { cursor: pointer; font-family: var(--font-body); }
           placeholder="Your notes for this ticker…"
           aria-label="Ticker notes"
         ></textarea>
+      </div>
+
+      <!-- Daily summary -->
+      <div class="input-section">
+        <span class="section-label">Daily Summary</span>
+        <p style="font-size:var(--text-xs);color:var(--color-ink-muted);line-height:1.5">Generate a summary of your watchlist to send via email. SMS delivery requires the Pro plan.</p>
+        <button class="btn-ghost" id="btn-daily-summary" style="width:100%">Open Summary in Email</button>
       </div>
 
       <!-- Portfolio -->
@@ -1140,15 +1148,24 @@ async function fetchTicker(ticker, tickerIndex) {
   try {
     const data = await fetchLive(ticker);
     stockData[ticker] = data;
+    return false; // live data
   } catch {
     stockData[ticker] = genDemoData(ticker, tickerIndex);
+    return true; // demo fallback
   }
 }
 
 async function fetchAll() {
   document.getElementById('refresh-status').textContent = 'Fetching…';
-  await Promise.all(watchlist.map((t, i) => fetchTicker(t, i)));
+  const results = await Promise.all(watchlist.map((t, i) => fetchTicker(t, i)));
+  const demoCount = results.filter(Boolean).length;
   document.getElementById('refresh-status').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  if (demoCount > 0) {
+    toast(
+      'Live data unavailable for ' + demoCount + ' ticker' + (demoCount > 1 ? 's' : '') + ' — showing sample data',
+      'warn'
+    );
+  }
   checkAlerts();
   render();
 }
@@ -1163,6 +1180,7 @@ function checkAlerts() {
     let fire = false;
     if (alert.condition === 'above' && d.price > alert.threshold) fire = true;
     if (alert.condition === 'below' && d.price < alert.threshold) fire = true;
+    if (alert.condition === 'pct_change' && Math.abs(d.changePct) >= alert.threshold) fire = true;
     if (alert.condition === 'volume' && d.volume > d.avgVol * 2) fire = true;
     if (fire) {
       alert.status = 'triggered';
@@ -1417,8 +1435,8 @@ function renderSidebarAlerts() {
     const pill = document.createElement('div');
     pill.className = 'alert-pill';
     pill.role = 'listitem';
-    const condLabel = alert.condition === 'above' ? '>' : alert.condition === 'below' ? '<' : 'vol×2';
-    const threshLabel = alert.condition === 'volume' ? '' : ' ' + fmt$(alert.threshold);
+    const condLabel = alert.condition === 'above' ? '>' : alert.condition === 'below' ? '<' : alert.condition === 'pct_change' ? '±%' : 'vol×2';
+    const threshLabel = alert.condition === 'volume' ? '' : alert.condition === 'pct_change' ? ' ' + alert.threshold + '%' : ' ' + fmt$(alert.threshold);
     const isTriggered = alert.status === 'triggered';
     pill.innerHTML = `
       <span class="alert-pill-sym">${esc(alert.ticker)}</span>
@@ -1447,8 +1465,8 @@ function renderAlertsPanel() {
     for (const alert of alerts) {
       const tr = document.createElement('tr');
       if (alert.status === 'triggered') tr.classList.add('triggered');
-      const condLabel = alert.condition === 'above' ? 'Price above' : alert.condition === 'below' ? 'Price below' : 'Volume spike';
-      const threshDisp = alert.condition === 'volume' ? '2× avg' : fmt$(alert.threshold);
+      const condLabel = alert.condition === 'above' ? 'Price above' : alert.condition === 'below' ? 'Price below' : alert.condition === 'pct_change' ? '% change >' : 'Volume spike';
+      const threshDisp = alert.condition === 'volume' ? '2× avg' : alert.condition === 'pct_change' ? alert.threshold + '%' : fmt$(alert.threshold);
       const statusClass = alert.status === 'triggered' ? 'triggered' : 'active';
       const statusLabel = alert.status === 'triggered' ? 'Triggered' : 'Active';
       tr.innerHTML = `
@@ -1483,8 +1501,8 @@ function renderAlertsPanel() {
       const item = document.createElement('div');
       item.className = 'log-item' + (log.read ? ' read' : '');
       const when = log.firedAt ? new Date(log.firedAt).toLocaleString() : '';
-      const condLabel = log.condition === 'above' ? 'rose above' : log.condition === 'below' ? 'fell below' : 'hit volume spike';
-      const threshLabel = log.condition === 'volume' ? '2× avg volume' : fmt$(log.threshold);
+      const condLabel = log.condition === 'above' ? 'rose above' : log.condition === 'below' ? 'fell below' : log.condition === 'pct_change' ? 'moved >' : 'hit volume spike';
+      const threshLabel = log.condition === 'volume' ? '2× avg volume' : log.condition === 'pct_change' ? log.threshold + '% in a day' : fmt$(log.threshold);
       item.innerHTML = `
         <span class="log-dot ${log.read ? 'read' : ''}" aria-hidden="true"></span>
         <div class="log-body">
@@ -1492,19 +1510,17 @@ function renderAlertsPanel() {
           <div class="log-sub">Triggered at ${fmt$(log.firedPrice)} · ${esc(when)}</div>
         </div>
         <div class="log-actions">
-          <button class="btn-copy-email" data-id="${esc(log.id)}" aria-label="Copy alert email draft">Copy email</button>
+          <button class="btn-copy-email" data-id="${esc(log.id)}" aria-label="Copy alert email draft">Copy</button>
+          <button class="btn-copy-email" data-id="${esc(log.id)}" data-action="mailto" aria-label="Open in email client" style="background:var(--color-paper);color:var(--color-ink-muted);border-color:var(--color-border)">Send</button>
           ${!log.read ? `<button class="btn-mark-read" data-id="${esc(log.id)}" aria-label="Mark as read">Mark read</button>` : ''}
         </div>`;
-      item.querySelector('.btn-copy-email').addEventListener('click', e => {
-        const id = e.currentTarget.dataset.id;
-        const l = triggeredLog.find(x => x.id === id);
-        if (!l) return;
-        const cond = l.condition === 'above' ? 'risen above' : l.condition === 'below' ? 'fallen below' : 'triggered a volume spike past';
-        const threshText = l.condition === 'volume' ? '2× average volume' : fmt$(l.threshold);
-        const emailText =
-`Subject: Stock Alert — ${l.ticker} ${l.condition === 'above' ? 'Price Above' : l.condition === 'below' ? 'Price Below' : 'Volume Spike'} Alert
 
-Hi,
+      const buildAlertEmail = (l) => {
+        const cond = l.condition === 'above' ? 'risen above' : l.condition === 'below' ? 'fallen below' : l.condition === 'pct_change' ? 'moved more than' : 'triggered a volume spike past';
+        const threshText = l.condition === 'volume' ? '2× average volume' : l.condition === 'pct_change' ? l.threshold + '% in a single day' : fmt$(l.threshold);
+        const subject = 'Stock Alert — ' + l.ticker + ' ' + (l.condition === 'above' ? 'Price Above' : l.condition === 'below' ? 'Price Below' : l.condition === 'pct_change' ? '% Change' : 'Volume Spike') + ' Alert';
+        const body =
+`Hi,
 
 This is an automated stock alert notification.
 
@@ -1517,10 +1533,24 @@ Please review your position and take appropriate action.
 
 Regards,
 Watchlist Alert Tool`;
+        return { subject, body };
+      };
+
+      item.querySelectorAll('.btn-copy-email').forEach(btn => btn.addEventListener('click', e => {
+        const id = e.currentTarget.dataset.id;
+        const action = e.currentTarget.dataset.action;
+        const l = triggeredLog.find(x => x.id === id);
+        if (!l) return;
+        const { subject, body } = buildAlertEmail(l);
+        if (action === 'mailto') {
+          window.open('mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
+          toast('Opening email client…', 'success');
+          return;
+        }
+        const emailText = 'Subject: ' + subject + '\n\n' + body;
         navigator.clipboard.writeText(emailText).then(() => {
           toast('Alert email draft copied to clipboard', 'success');
         }).catch(() => {
-          // fallback
           const ta = document.createElement('textarea');
           ta.value = emailText;
           ta.style.position = 'fixed'; ta.style.opacity = '0';
@@ -1530,7 +1560,7 @@ Watchlist Alert Tool`;
           document.body.removeChild(ta);
           toast('Alert email draft copied', 'success');
         });
-      });
+      }));
       const markBtn = item.querySelector('.btn-mark-read');
       if (markBtn) {
         markBtn.addEventListener('click', e => {
@@ -1779,7 +1809,15 @@ document.getElementById('input-ticker').addEventListener('keydown', e => {
 
 document.getElementById('alert-condition').addEventListener('change', () => {
   const cond = document.getElementById('alert-condition').value;
+  const threshInput = document.getElementById('alert-threshold');
   document.getElementById('alert-threshold-wrap').style.display = cond === 'volume' ? 'none' : '';
+  if (cond === 'pct_change') {
+    threshInput.placeholder = '% threshold (e.g. 5 for ±5%)';
+    threshInput.step = '0.1';
+  } else {
+    threshInput.placeholder = 'Threshold price (e.g. 200)';
+    threshInput.step = '0.01';
+  }
 });
 
 document.getElementById('btn-add-alert').addEventListener('click', () => {
@@ -1825,6 +1863,27 @@ document.getElementById('btn-clear-read').addEventListener('click', () => {
   triggeredLog = triggeredLog.filter(l => !l.read);
   saveState();
   renderAlertsPanel();
+});
+
+document.getElementById('btn-daily-summary').addEventListener('click', () => {
+  if (!watchlist.length) { toast('No tickers in watchlist', 'error'); return; }
+  const lines = watchlist.map(ticker => {
+    const d = stockData[ticker];
+    if (!d) return ticker + ': no data';
+    const sign = d.changePct >= 0 ? '+' : '';
+    return ticker + ': ' + fmt$(d.price) + ' (' + sign + d.changePct.toFixed(2) + '%)';
+  });
+  const activeAlertCount = alerts.filter(a => a.status !== 'triggered').length;
+  const unreadCount = triggeredLog.filter(l => !l.read).length;
+  const subject = 'Daily Watchlist Summary — ' + new Date().toLocaleDateString();
+  const body =
+'Daily Watchlist Summary\n' + new Date().toLocaleString() + '\n\n' +
+lines.join('\n') +
+'\n\nActive Alerts: ' + activeAlertCount +
+'\nUnread Triggered Alerts: ' + unreadCount +
+'\n\nGenerated by Watchlist Alert Tool';
+  window.open('mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
+  toast('Summary email draft opened', 'success');
 });
 
 // ── Toast ─────────────────────────────────────────────────────────────────────

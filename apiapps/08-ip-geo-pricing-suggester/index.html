@@ -847,6 +847,75 @@ a { color: inherit; text-decoration: none; }
   .pricing-table tbody td:nth-child(3) { display: none; }
 }
 
+/* ── Quota banner ── */
+.quota-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-3);
+}
+
+.quota-label {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.quota-track {
+  flex: 1;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.quota-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 3px;
+  transition: width 0.3s var(--ease-out);
+}
+
+.quota-fill.warn  { background: var(--color-warn); }
+.quota-fill.danger { background: var(--color-danger); }
+
+.quota-count {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.quota-upgrade {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  white-space: nowrap;
+}
+.quota-upgrade:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: 2px; }
+
+/* ── Input error state ── */
+.input-field.is-error { border-color: var(--color-danger); }
+.field-error {
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  margin-top: var(--space-1);
+  display: none;
+}
+.field-error.visible { display: block; }
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .btn-primary:hover { transform: none; box-shadow: none; }
@@ -950,9 +1019,20 @@ a { color: inherit; text-decoration: none; }
           ⊙ My Location
         </button>
         <div class="lookup-ip-group">
-          <input type="text" class="input-field" id="ip-input" placeholder="e.g. 8.8.8.8" aria-label="IP address to look up" maxlength="45">
+          <div class="field" style="flex:1; gap: var(--space-1);">
+            <input type="text" class="input-field" id="ip-input" placeholder="e.g. 8.8.8.8 or 2001:db8::1" aria-label="IP address to look up" maxlength="45" autocomplete="off" spellcheck="false">
+            <span class="field-error" id="ip-error" role="alert">Enter a valid IPv4 or IPv6 address</span>
+          </div>
           <button class="btn-secondary" id="btn-lookup-ip">Look Up</button>
         </div>
+      </div>
+      <div class="quota-banner" aria-label="API quota usage">
+        <span class="quota-label">Free quota</span>
+        <div class="quota-track" role="progressbar" aria-label="Quota used" aria-valuemin="0" aria-valuemax="500" id="quota-track-el">
+          <div class="quota-fill" id="quota-fill-el" style="width:0%;"></div>
+        </div>
+        <span class="quota-count" id="quota-count-el">0 / 500</span>
+        <button class="quota-upgrade" id="quota-upgrade-btn" aria-label="Upgrade to Pro for 50,000 lookups per month">Upgrade →</button>
       </div>
       <div class="calculate-row">
         <button class="btn-primary" id="btn-calculate" aria-label="Recalculate pricing table">
@@ -1067,7 +1147,8 @@ a { color: inherit; text-decoration: none; }
 
 <script>
 // ── PPP Data (World Bank GNI per capita PPP, ~2023, US=100) ──────────────────
-const PPP_DATA = [
+// Source is hardcoded as fallback; override by serving ./ppp-data.json from your backend.
+const PPP_FALLBACK = [
   { code:'US', name:'United States',   ppp:100, currency:'USD', fxSymbol:'$',    fxRate:1    },
   { code:'CA', name:'Canada',          ppp:83,  currency:'CAD', fxSymbol:'C$',   fxRate:1.36 },
   { code:'GB', name:'United Kingdom',  ppp:76,  currency:'GBP', fxSymbol:'£',    fxRate:0.79 },
@@ -1127,8 +1208,93 @@ const PPP_DATA = [
   { code:'HR', name:'Croatia',         ppp:43,  currency:'EUR', fxSymbol:'€',    fxRate:0.92 },
 ];
 
+// Live-updateable PPP dataset — replaced by fetchPPPData() if backend JSON is available
+let PPP_DATA = PPP_FALLBACK;
+
 // Tier brackets
 const TIER_BRACKETS = [9, 19, 29, 49, 79, 99, 149, 199];
+
+// ── Fetch PPP data from backend (optional) ────────────────────────────────────
+async function fetchPPPData() {
+  try {
+    const res = await fetch('./ppp-data.json');
+    if (!res.ok) return; // silently use fallback
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      PPP_DATA = data;
+      recalcAll();
+    }
+  } catch {
+    // No backend JSON available — hardcoded fallback is in use
+  }
+}
+
+// ── Quota tracking (free tier: 500 lookups/month) ─────────────────────────────
+const QUOTA_FREE = 500;
+const QUOTA_MONTH_KEY = 'geoprice_month';
+const QUOTA_COUNT_KEY = 'geoprice_lookups';
+
+function getQuotaMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getQuotaCount() {
+  const storedMonth = localStorage.getItem(QUOTA_MONTH_KEY);
+  const currentMonth = getQuotaMonth();
+  if (storedMonth !== currentMonth) {
+    localStorage.setItem(QUOTA_MONTH_KEY, currentMonth);
+    localStorage.setItem(QUOTA_COUNT_KEY, '0');
+    return 0;
+  }
+  return parseInt(localStorage.getItem(QUOTA_COUNT_KEY) || '0', 10);
+}
+
+function incrementQuota() {
+  const count = getQuotaCount() + 1;
+  localStorage.setItem(QUOTA_COUNT_KEY, String(count));
+  renderQuota();
+  return count;
+}
+
+function renderQuota() {
+  const count = getQuotaCount();
+  const pct = Math.min((count / QUOTA_FREE) * 100, 100);
+  const fillEl = document.getElementById('quota-fill-el');
+  const countEl = document.getElementById('quota-count-el');
+  const trackEl = document.getElementById('quota-track-el');
+  if (!fillEl || !countEl) return;
+  fillEl.style.width = pct + '%';
+  fillEl.className = 'quota-fill' + (pct >= 100 ? ' danger' : pct >= 80 ? ' warn' : '');
+  countEl.textContent = count + ' / ' + QUOTA_FREE;
+  if (trackEl) trackEl.setAttribute('aria-valuenow', String(count));
+}
+
+// ── IP address validation ─────────────────────────────────────────────────────
+function validateIP(ip) {
+  if (!ip) return true; // empty string = auto-detect, always valid
+  // IPv4
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const m = ip.match(ipv4);
+  if (m) return m.slice(1).every(n => parseInt(n, 10) <= 255);
+  // IPv6 — simplified: contains colons and only hex digits + colons
+  const ipv6 = /^[0-9a-fA-F:]+$/;
+  return ipv6.test(ip) && ip.split(':').length >= 3;
+}
+
+function showIPError(msg) {
+  const input = document.getElementById('ip-input');
+  const errEl = document.getElementById('ip-error');
+  if (input) input.classList.add('is-error');
+  if (errEl) { errEl.textContent = msg; errEl.classList.add('visible'); }
+}
+
+function clearIPError() {
+  const input = document.getElementById('ip-input');
+  const errEl = document.getElementById('ip-error');
+  if (input) input.classList.remove('is-error');
+  if (errEl) errEl.classList.remove('visible');
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function flagEmoji(code) {
@@ -1379,17 +1545,25 @@ function buildVanillaCode() {
   var BASE_PRICE = ${basePrice};
   var PPP_PRICES = ${JSON.stringify(map, null, 2)};
 
-  fetch('http://ip-api.com/json/?fields=countryCode')
-    .then(function(r) { return r.json(); })
+  fetch('https://ip-api.com/json/?fields=countryCode,status')
+    .then(function(r) {
+      if (!r.ok) throw new Error('Network error: ' + r.status);
+      return r.json();
+    })
     .then(function(d) {
+      if (d.status === 'fail') throw new Error('Geo lookup failed');
       var cc = d.countryCode || 'US';
       var price = PPP_PRICES[cc] || BASE_PRICE;
       // Apply price to your element:
       var el = document.getElementById('price-display');
       if (el) el.textContent = '$' + price;
     })
-    .catch(function() {
-      // Fallback to base price if geo lookup fails
+    .catch(function(err) {
+      // Fallback: show base price and log the error for debugging
+      var el = document.getElementById('price-display');
+      if (el) el.textContent = '$' + BASE_PRICE;
+      var errEl = document.getElementById('price-error');
+      if (errEl) errEl.textContent = 'Could not load geo pricing. Showing base price.';
     });
 })();
 <\/script>
@@ -1410,23 +1584,42 @@ export function useGeoPrice() {
   const [price, setPrice] = useState(BASE_PRICE);
   const [country, setCountry] = useState(null);
 
+  const [error, setError] = useState(null);
+
   useEffect(() => {
-    fetch('http://ip-api.com/json/?fields=countryCode')
-      .then(r => r.json())
+    let cancelled = false;
+    fetch('https://ip-api.com/json/?fields=countryCode,status')
+      .then(r => {
+        if (!r.ok) throw new Error('Network error: ' + r.status);
+        return r.json();
+      })
       .then(d => {
+        if (cancelled) return;
+        if (d.status === 'fail') throw new Error('Geo lookup failed');
         const cc = d.countryCode || 'US';
         setCountry(cc);
         setPrice(PPP_PRICES[cc] ?? BASE_PRICE);
       })
-      .catch(() => {}); // Fallback to base price
+      .catch(err => {
+        if (!cancelled) {
+          setPrice(BASE_PRICE); // fallback to base price
+          setError('Geo lookup unavailable — showing base price.');
+        }
+      });
+    return () => { cancelled = true; };
   }, []);
 
-  return { price, country };
+  return { price, country, error };
 }
 
 // Usage in component:
-// const { price } = useGeoPrice();
-// return <span>${'$'}{price}</span>;`;
+// const { price, error } = useGeoPrice();
+// return (
+//   <>
+//     <span>${'$'}{price}</span>
+//     {error && <p style={{color:'red', fontSize:'0.8em'}}>{error}</p>}
+//   </>
+// );`;
 }
 
 function buildNextjsCode() {
@@ -1499,9 +1692,24 @@ function renderCodeGenerator() {
 
 // ── Visitor lookup ────────────────────────────────────────────────────────────
 async function lookupIP(ip) {
+  // Validate IP before calling API
+  if (ip && !validateIP(ip)) {
+    showIPError('Enter a valid IPv4 (e.g. 8.8.8.8) or IPv6 address');
+    return;
+  }
+  clearIPError();
+
+  // Check quota before making request
+  const currentCount = getQuotaCount();
+  if (currentCount >= QUOTA_FREE) {
+    toast('Free quota exhausted (500/month). Upgrade to Pro for 50k lookups.', 'error');
+    return;
+  }
+
+  // ip-api.com requires HTTPS for production pages (mixed-content policy)
   const url = ip
-    ? `http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,query`
-    : `http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,query`;
+    ? `https://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,query`
+    : `https://ip-api.com/json/?fields=status,country,countryCode,regionName,city,query`;
 
   setStatus('Detecting location…', 'loading');
   document.getElementById('btn-my-location').disabled = true;
@@ -1542,6 +1750,7 @@ async function lookupIP(ip) {
       document.getElementById('v-discount').textContent = '0%';
     }
 
+    incrementQuota();
     renderTable();
     setStatus('Location detected: ' + data.country + ' (' + data.query + ')', 'success');
     toast('Location loaded: ' + data.country, 'success');
@@ -1674,14 +1883,25 @@ document.getElementById('btn-my-location').addEventListener('click', () => {
   lookupIP(null);
 });
 
-// Lookup specific IP
+// Lookup specific IP — validates before calling API
 document.getElementById('btn-lookup-ip').addEventListener('click', () => {
   const ip = document.getElementById('ip-input').value.trim();
+  if (ip && !validateIP(ip)) {
+    showIPError('Enter a valid IPv4 (e.g. 8.8.8.8) or IPv6 address');
+    document.getElementById('ip-input').focus();
+    return;
+  }
+  clearIPError();
   lookupIP(ip || null);
 });
 
 document.getElementById('ip-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('btn-lookup-ip').click();
+});
+
+// Clear IP error on input change
+document.getElementById('ip-input').addEventListener('input', () => {
+  clearIPError();
 });
 
 // Calculate button
@@ -1707,8 +1927,16 @@ document.getElementById('btn-copy-code').addEventListener('click', () => {
 // Export CSV
 document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
 
+// Quota upgrade info
+document.getElementById('quota-upgrade-btn').addEventListener('click', () => {
+  toast('Pro plan: $19/month for 50,000 lookups. Contact us to upgrade.', '');
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
+renderQuota();
 recalcAll();
+// Try to load live PPP data from backend JSON (falls back to hardcoded if unavailable)
+fetchPPPData();
 // Auto-detect visitor location on load
 lookupIP(null);
 </script>

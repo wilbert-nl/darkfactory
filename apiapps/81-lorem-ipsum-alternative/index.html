@@ -440,6 +440,16 @@ input[type="range"] {
 }
 .btn-generate:hover { opacity: 0.88; box-shadow: 0 4px 12px var(--color-accent-subtle); }
 .btn-generate:active { opacity: 1; box-shadow: none; }
+.btn-generate:disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; }
+
+.rate-limit-note {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: var(--space-2);
+  line-height: 1.5;
+}
+.rate-limit-note.warn { color: var(--color-warn); }
+.rate-limit-note.error { color: var(--color-neg); font-weight: 600; }
 
 /* ── Output section ── */
 .output-section {
@@ -914,6 +924,7 @@ input[type="range"] {
             <button class="btn-randomize" id="btn-randomize" aria-label="Randomize seed">↻ Randomize</button>
             <button class="btn-generate" id="btn-generate" aria-label="Generate placeholder text">Generate</button>
           </div>
+          <p class="rate-limit-note" id="rate-limit-note" aria-live="polite"></p>
         </div>
       </div>
 
@@ -931,6 +942,7 @@ input[type="range"] {
       </div>
       <div class="output-actions">
         <button class="btn-action" id="btn-regen" aria-label="Regenerate with same settings" disabled>↺ Regen</button>
+        <button class="btn-action" id="btn-share" aria-label="Copy shareable permalink" disabled>Share</button>
         <button class="btn-action" id="btn-download" aria-label="Download as text file" disabled>↓ Download</button>
         <button class="btn-action primary" id="btn-copy" aria-label="Copy to clipboard" disabled>Copy</button>
       </div>
@@ -1559,6 +1571,64 @@ function historySave(entry) {
   localStorage.setItem('fieldset_history', JSON.stringify(h));
 }
 
+/* ── Rate limiting (50/day free tier) ──────────────────────────────────── */
+const DAILY_LIMIT = 50;
+function rlKey() { return 'fieldset_rl_' + new Date().toISOString().slice(0, 10); }
+function rlCount() { return parseInt(localStorage.getItem(rlKey()) || '0', 10); }
+function rlIncrement() { localStorage.setItem(rlKey(), rlCount() + 1); }
+function rlRemaining() { return Math.max(0, DAILY_LIMIT - rlCount()); }
+function rlExceeded() { return rlCount() >= DAILY_LIMIT; }
+
+function updateRateLimitDisplay() {
+  const el = document.getElementById('rate-limit-note');
+  if (!el) return;
+  const rem = rlRemaining();
+  el.textContent = rem + ' of ' + DAILY_LIMIT + ' free generations remaining today';
+  el.className = 'rate-limit-note' + (rem === 0 ? ' error' : rem <= 10 ? ' warn' : '');
+}
+
+/* ── Shareable permalink ─────────────────────────────────────────────────── */
+function stateToParams() {
+  const p = new URLSearchParams();
+  p.set('domain', state.domain);
+  p.set('type', state.type);
+  p.set('qty', String(state.qty));
+  p.set('tone', state.tone);
+  p.set('seed', String(state.seed));
+  if (state.includeHtml) p.set('html', '1');
+  return p;
+}
+
+function loadFromParams() {
+  const p = new URLSearchParams(location.search);
+  if (p.has('domain') && DOMAINS[p.get('domain')]) state.domain = p.get('domain');
+  if (p.has('type')) {
+    const t = p.get('type');
+    if (['paragraphs', 'bullets', 'headings', 'email', 'json', 'sql'].includes(t)) state.type = t;
+  }
+  if (p.has('qty')) state.qty = Math.min(20, Math.max(1, parseInt(p.get('qty'), 10) || 3));
+  if (p.has('tone')) {
+    const tone = p.get('tone');
+    if (['formal', 'casual', 'technical', 'humorous'].includes(tone)) state.tone = tone;
+  }
+  if (p.has('seed')) {
+    const s = parseInt(p.get('seed'), 10);
+    if (!isNaN(s)) state.seed = s;
+  }
+  if (p.has('html')) state.includeHtml = p.get('html') === '1';
+}
+
+/* ── Metaphorpsum API ─────────────────────────────────────────────────────── */
+async function fetchMetaphorpsum(paragraphCount) {
+  const res = await fetch('https://metaphorpsum.com/paragraphs/' + paragraphCount, {
+    signal: AbortSignal.timeout(6000),
+  });
+  if (!res.ok) throw new Error('API error ' + res.status);
+  const text = await res.text();
+  if (!text.trim()) throw new Error('Empty response from API');
+  return text;
+}
+
 /* ── Generator ─────────────────────────────────────────────────────────── */
 function generate() {
   const rng = mulberry32(state.seed);
@@ -1807,6 +1877,7 @@ function showOutput(raw) {
   document.getElementById('btn-copy').disabled = !hasOutput;
   document.getElementById('btn-download').disabled = !hasOutput;
   document.getElementById('btn-regen').disabled = !hasOutput;
+  document.getElementById('btn-share').disabled = !hasOutput;
 }
 
 /* ── History rendering ─────────────────────────────────────────────────── */
@@ -1933,9 +2004,52 @@ document.getElementById('btn-randomize').addEventListener('click', () => {
 });
 
 // Generate
-document.getElementById('btn-generate').addEventListener('click', () => {
-  const raw = generate();
+document.getElementById('btn-generate').addEventListener('click', async () => {
+  if (rlExceeded()) {
+    toast('Daily limit reached — 50 free generations per day. Resets at midnight.', '');
+    return;
+  }
+
+  const genBtn = document.getElementById('btn-generate');
+  genBtn.disabled = true;
+  genBtn.textContent = 'Generating…';
+
+  let raw = '';
+  let apiUsed = false;
+  let apiError = false;
+
+  // For paragraphs, try Metaphorpsum API first; fall back to local corpus
+  if (state.type === 'paragraphs') {
+    try {
+      const apiText = await fetchMetaphorpsum(state.qty);
+      const paragraphs = apiText.trim().split(/\n\n+/).filter(p => p.trim());
+      if (state.includeHtml) {
+        raw = paragraphs.map(p => `<p>${p.replace(/\n/g, ' ')}</p>`).join('\n');
+      } else {
+        raw = paragraphs.map(p => p.replace(/\n/g, ' ')).join('\n\n');
+      }
+      state.currentOutput = raw;
+      apiUsed = true;
+    } catch {
+      apiError = true;
+      raw = generate();
+    }
+  } else {
+    raw = generate();
+  }
+
+  rlIncrement();
+  updateRateLimitDisplay();
+
   showOutput(raw);
+
+  if (apiError) {
+    toast('Metaphorpsum API unavailable — using local corpus', '');
+  }
+
+  // Update URL with shareable state
+  history.replaceState(null, '', '?' + stateToParams().toString());
+
   // Save to history
   historySave({
     domain: state.domain,
@@ -1947,6 +2061,9 @@ document.getElementById('btn-generate').addEventListener('click', () => {
     preview: raw.slice(0, 80),
   });
   renderHistory();
+
+  genBtn.disabled = false;
+  genBtn.textContent = 'Generate';
 });
 
 // Regenerate
@@ -1982,6 +2099,29 @@ document.getElementById('btn-download').addEventListener('click', () => {
   toast('Downloaded');
 });
 
+// Share permalink
+document.getElementById('btn-share').addEventListener('click', async () => {
+  const url = location.origin + location.pathname + '?' + stateToParams().toString();
+  history.replaceState(null, '', '?' + stateToParams().toString());
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('Permalink copied to clipboard!', 'success');
+  } catch {
+    // Fallback for browsers that block clipboard without user gesture
+    try {
+      const inp = document.createElement('input');
+      inp.value = url;
+      document.body.appendChild(inp);
+      inp.select();
+      document.execCommand('copy');
+      document.body.removeChild(inp);
+      toast('Permalink copied!', 'success');
+    } catch {
+      toast('Copy link: ' + url, '');
+    }
+  }
+});
+
 // Output tabs
 document.querySelectorAll('.output-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -2011,9 +2151,11 @@ document.addEventListener('keydown', e => {
 });
 
 /* ── Init ─────────────────────────────────────────────────────────────── */
+loadFromParams();   // restore state from URL params before syncing UI
 syncUI();
 renderHistory();
-// Auto-generate on load
+updateRateLimitDisplay();
+// Auto-generate on load (uses local corpus for instant display)
 const initialRaw = generate();
 showOutput(initialRaw);
 </script>

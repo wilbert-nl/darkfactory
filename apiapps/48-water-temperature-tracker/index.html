@@ -393,6 +393,12 @@ a { color: inherit; text-decoration: none; }
 .btn-outline:active { opacity: 0.8; }
 .btn-outline.saved { border-color: var(--color-accent); color: var(--color-accent); background: var(--color-accent-subtle); }
 
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* ── Saved chips ── */
 .saved-chips {
   display: flex;
@@ -827,6 +833,15 @@ a { color: inherit; text-decoration: none; }
   .lesson-add-form .btn-primary { grid-column: 1 / -1; }
 }
 
+@media (max-width: 374px) {
+  .btn-primary {
+    font-size: var(--text-xs);
+    padding: var(--space-2) var(--space-3);
+  }
+  .planner-grid { grid-template-columns: 1fr; }
+  .planner-grid .btn-primary { grid-column: unset; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lesson-item { animation: none; }
   .toast { transition: opacity 0.15s var(--ease-out); transform: translateY(0); }
@@ -1033,6 +1048,33 @@ a { color: inherit; text-decoration: none; }
         </div>
       </section>
 
+      <!-- Pre-Lesson Email Briefing -->
+      <section class="doc-section" aria-label="Pre-lesson email briefing">
+        <h2 class="section-title">Pre-Lesson Email Briefing</h2>
+        <p class="section-note">Add student emails to send a conditions briefing before each lesson. The briefing opens in your default mail client with current water temp, wave height, and wetsuit recommendation pre-filled.</p>
+        <div class="field-group">
+          <label class="field-label" for="student-email-input">Student email address</label>
+          <div class="custom-row">
+            <input
+              type="email"
+              class="input-field"
+              id="student-email-input"
+              placeholder="student@example.com"
+              autocomplete="off"
+              aria-label="Student email address"
+            >
+            <button class="btn-primary" id="btn-add-student">Add</button>
+          </div>
+        </div>
+        <div>
+          <span class="field-label">Student list</span>
+          <div class="saved-chips" id="student-list" role="list" aria-label="Student email list" style="margin-top:var(--space-2)">
+            <!-- populated by JS -->
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-send-briefing" disabled aria-label="Send conditions briefing to all students">Send Conditions Briefing</button>
+      </section>
+
     </div><!-- /#main-content -->
 
     <!-- Footer -->
@@ -1095,6 +1137,8 @@ let hourlyTemps = [];       // { time: Date, temp: number }[] from NOAA
 let marineData = null;      // raw Open-Meteo marine response
 let savedStations = [];     // array of station IDs, max 5
 let lessons = [];           // { id, time, size, level }
+let students = [];          // { id, email }[]
+let currentAirTempC = null; // cached air temp from Open-Meteo weather API
 
 // ── Helpers ────────────────────────────────────────────────────
 const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1141,11 +1185,13 @@ function surfConditions(waterTempC, waveHeightM) {
 function loadStorage() {
   try { savedStations = JSON.parse(localStorage.getItem('tidetemp_saved') || '[]'); } catch { savedStations = []; }
   try { lessons = JSON.parse(localStorage.getItem('tidetemp_lessons') || '[]'); } catch { lessons = []; }
+  try { students = JSON.parse(localStorage.getItem('tidetemp_students') || '[]'); } catch { students = []; }
 }
 
 function saveStorage() {
   try { localStorage.setItem('tidetemp_saved', JSON.stringify(savedStations)); } catch {}
   try { localStorage.setItem('tidetemp_lessons', JSON.stringify(lessons)); } catch {}
+  try { localStorage.setItem('tidetemp_students', JSON.stringify(students)); } catch {}
 }
 
 // ── Sidebar render ─────────────────────────────────────────────
@@ -1261,9 +1307,10 @@ async function loadStation(id) {
   renderEmptyChart();
 
   // Fetch data in parallel
-  const [noaaResult, marineResult] = await Promise.allSettled([
+  const [noaaResult, marineResult, airTempResult] = await Promise.allSettled([
     fetchNOAA(id),
     stationInfo ? fetchMarine(stationInfo.lat, stationInfo.lon) : Promise.reject('No coords'),
+    stationInfo ? fetchAirTemp(stationInfo.lat, stationInfo.lon) : Promise.reject('No coords'),
   ]);
 
   // Process NOAA water temp
@@ -1274,11 +1321,14 @@ async function loadStation(id) {
     renderChart(hourlyTemps);
     updateWaterTempDisplay(currentWaterTempC);
   } else {
-    document.getElementById('water-temp-big').textContent = 'N/A';
+    document.getElementById('water-temp-big').textContent = '—';
     document.getElementById('water-temp-timestamp').textContent = 'Data unavailable';
     toast('NOAA water temp not available for this station.', 'error');
     renderEmptyChart();
   }
+
+  // Process air temperature from Open-Meteo weather API
+  currentAirTempC = airTempResult.status === 'fulfilled' ? airTempResult.value : null;
 
   // Process Open-Meteo marine
   let currentWaveHeight = null;
@@ -1286,13 +1336,13 @@ async function loadStation(id) {
     marineData = marineResult.value;
     const marine = parseMarineCurrents(marineData);
     currentWaveHeight = marine.waveHeight;
-    document.getElementById('air-temp-val').textContent = marine.airTemp != null ? `${toDisplay(marine.airTemp)}°${unit}` : 'N/A';
-    document.getElementById('wave-height-val').textContent = marine.waveHeight != null ? `${marine.waveHeight.toFixed(1)}m` : 'N/A';
+    document.getElementById('air-temp-val').textContent = currentAirTempC != null ? `${toDisplay(currentAirTempC)}°${unit}` : '—';
+    document.getElementById('wave-height-val').textContent = marine.waveHeight != null ? `${marine.waveHeight.toFixed(1)}m` : '—';
     document.getElementById('wave-period-val').textContent = marine.wavePeriod != null ? `${marine.wavePeriod.toFixed(0)}s period` : '— period';
     renderForecast(marineData);
   } else {
-    document.getElementById('air-temp-val').textContent = 'N/A';
-    document.getElementById('wave-height-val').textContent = 'N/A';
+    document.getElementById('air-temp-val').textContent = currentAirTempC != null ? `${toDisplay(currentAirTempC)}°${unit}` : '—';
+    document.getElementById('wave-height-val').textContent = '—';
     renderEmptyForecast();
   }
 
@@ -1331,6 +1381,17 @@ async function fetchMarine(lat, lon) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Marine HTTP ${res.status}`);
   return res.json();
+}
+
+// ── Open-Meteo Weather API (air temperature) ───────────────────
+async function fetchAirTemp(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&temperature_unit=celsius`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Weather HTTP ${res.status}`);
+  const data = await res.json();
+  const t = data?.current?.temperature_2m;
+  if (t == null) throw new Error('No air temp in response');
+  return t;
 }
 
 function parseMarineCurrents(marine) {
@@ -1388,6 +1449,9 @@ function refreshDisplayedTemps() {
     document.getElementById('surf-detail').textContent = sc.detail;
   }
   // Re-render air temp if shown
+  if (currentAirTempC != null) {
+    document.getElementById('air-temp-val').textContent = `${toDisplay(currentAirTempC)}°${unit}`;
+  }
   if (marineData) {
     renderForecast(marineData);
   }
@@ -1578,6 +1642,90 @@ document.getElementById('btn-add-lesson').addEventListener('click', () => {
   toast('Lesson added!', 'success');
 });
 
+// ── Student email list ─────────────────────────────────────────
+function renderStudentList() {
+  const wrap = document.getElementById('student-list');
+  const sendBtn = document.getElementById('btn-send-briefing');
+  if (!students.length) {
+    wrap.innerHTML = '<span style="font-size:var(--text-xs);color:var(--color-ink-muted)">No students added yet.</span>';
+    sendBtn.disabled = true;
+    return;
+  }
+  wrap.innerHTML = students.map(s =>
+    `<div class="saved-chip" role="listitem" data-id="${esc(s.id)}">
+      ${esc(s.email)}
+      <span class="saved-chip-remove" data-remove="${esc(s.id)}" aria-label="Remove ${esc(s.email)}" tabindex="0" role="button">×</span>
+    </div>`
+  ).join('');
+  wrap.querySelectorAll('.saved-chip-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      students = students.filter(s => s.id !== btn.dataset.remove);
+      saveStorage();
+      renderStudentList();
+    });
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
+    });
+  });
+  sendBtn.disabled = false;
+}
+
+document.getElementById('btn-add-student').addEventListener('click', () => {
+  const input = document.getElementById('student-email-input');
+  const email = input.value.trim();
+  if (!email) { toast('Enter a student email address.', 'error'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Enter a valid email address.', 'error'); return; }
+  if (students.some(s => s.email.toLowerCase() === email.toLowerCase())) { toast('This email is already in the list.', 'error'); return; }
+  students.push({ id: uid(), email });
+  input.value = '';
+  saveStorage();
+  renderStudentList();
+  toast('Student added!', 'success');
+});
+
+document.getElementById('student-email-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-add-student').click();
+});
+
+document.getElementById('btn-send-briefing').addEventListener('click', () => {
+  if (!students.length) { toast('Add at least one student email first.', 'error'); return; }
+
+  const stationInfo = activeStationId ? STATIONS.find(s => s.id === activeStationId) : null;
+  const stationName = stationInfo ? `${stationInfo.name}, ${stationInfo.state}` : (activeStationId || 'your location');
+  const currentWaterTempC = hourlyTemps.length ? hourlyTemps[hourlyTemps.length - 1].temp : null;
+  const ws = wetsuitInfo(currentWaterTempC);
+  const waveHeight = marineData ? parseMarineCurrents(marineData).waveHeight : null;
+  const sc = surfConditions(currentWaterTempC, waveHeight);
+
+  const waterTempStr = currentWaterTempC != null ? `${toDisplay(currentWaterTempC)}°${unit}` : 'Not available';
+  const airTempStr   = currentAirTempC != null   ? `${toDisplay(currentAirTempC)}°${unit}`   : 'Not available';
+  const waveStr      = waveHeight != null         ? `${waveHeight.toFixed(1)} m`              : 'Not available';
+
+  const subject = `Surf Conditions Briefing — ${stationName}`;
+  const body = [
+    `Hi,`,
+    ``,
+    `Here are the current conditions for your upcoming surf lesson at ${stationName}:`,
+    ``,
+    `  Water Temperature : ${waterTempStr}`,
+    `  Air Temperature   : ${airTempStr}`,
+    `  Wave Height       : ${waveStr}`,
+    `  Surf Conditions   : ${sc.label}`,
+    ``,
+    `Recommended gear: ${ws.text}`,
+    ``,
+    `Please arrive dressed appropriately. See you on the water!`,
+    ``,
+    `— Sent via TideTemp`,
+  ].join('\n');
+
+  const to = students.map(s => encodeURIComponent(s.email)).join(',');
+  const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailtoLink;
+  toast('Opening email client…', 'success');
+});
+
 // ── Save station ───────────────────────────────────────────────
 document.getElementById('btn-save-station').addEventListener('click', () => {
   if (!activeStationId) return;
@@ -1650,6 +1798,7 @@ loadStorage();
 renderStationList();
 renderSavedChips();
 renderLessons();
+renderStudentList();
 </script>
 </body>
 </html>
