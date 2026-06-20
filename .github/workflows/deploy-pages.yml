@@ -1,6 +1,10 @@
 name: Sync apiapps to public repo
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'apiapps/**'
   workflow_dispatch:
 
 jobs:
@@ -10,17 +14,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Push apiapps to wilbert-nl/apiapps
+        env:
+          TOKEN: ${{ secrets.APIAPPS_DEPLOY_TOKEN }}
         run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::APIAPPS_DEPLOY_TOKEN secret is not set or empty."
+            exit 1
+          fi
+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Clone the public repo
-          git clone https://x-access-token:${{ secrets.APIAPPS_DEPLOY_TOKEN }}@github.com/wilbert-nl/apiapps.git /tmp/apiapps-public
+          git clone https://x-access-token:${TOKEN}@github.com/wilbert-nl/apiapps.git /tmp/apiapps-public
 
-          # Sync contents (apiapps/* → root of public repo)
           rsync -av --delete --exclude='.git' apiapps/ /tmp/apiapps-public/
 
-          # Commit and push if there are changes
           cd /tmp/apiapps-public
           git add -A
           if git diff --staged --quiet; then
